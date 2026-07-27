@@ -9,9 +9,18 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
-import { Problem, LeaderboardEntry, WeeklyChallenge, Contest, CommunityDiscussion } from './src/types';
+import { Problem, LeaderboardEntry, WeeklyChallenge, Contest, CommunityDiscussion } from './src/components/types';
 
 dotenv.config();
+
+// Global error handlers to surface uncaught exceptions and promise rejections
+process.on('uncaughtException', (err) => {
+  console.error('[Server] uncaughtException:', err && (err.stack || err.message || err));
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] unhandledRejection:', reason && (reason.stack || reason));
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -551,9 +560,41 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Calculix Hub] Server running at http://localhost:${PORT}`);
-  });
+  // Attempt to listen and retry on EADDRINUSE by incrementing the port
+  async function attemptListen(port: number, host = '0.0.0.0', attempts = 10): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const srv = app.listen(port, host, () => {
+        console.log(`[Calculix Hub] Server running at http://localhost:${port}`);
+        resolve(srv);
+      });
+
+      srv.on('error', (err: any) => {
+        if (err && err.code === 'EADDRINUSE') {
+          console.warn(`[Calculix Hub] Port ${port} in use, trying ${port + 1}...`);
+          try {
+            srv.close();
+          } catch (e) {}
+          if (attempts > 1) {
+            // small delay before retrying
+            setTimeout(() => {
+              attemptListen(port + 1, host, attempts - 1).then(resolve).catch(reject);
+            }, 200);
+          } else {
+            reject(err);
+          }
+        } else {
+          reject(err);
+        }
+      });
+    });
+  }
+
+  try {
+    await attemptListen(PORT, '0.0.0.0', 10);
+  } catch (e: any) {
+    console.error('[Calculix Hub] Failed to bind to a port:', e && (e.message || e));
+    process.exit(1);
+  }
 }
 
 startServer();
