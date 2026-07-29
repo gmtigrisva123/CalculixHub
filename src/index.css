@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: "Fraunces", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Brand: ink & brass. A math field-notebook, not a generic SaaS gradient. */
+  --color-ink-50: #f7f5f2;
+  --color-ink-100: #ece7e1;
+  --color-ink-200: #d8cfc4;
+  --color-ink-300: #bcae9c;
+  --color-ink-400: #96806c;
+  --color-ink-500: #6e5c4c;
+  --color-ink-600: #55473b;
+  --color-ink-700: #453b32;
+  --color-ink-750: #3d332b;
+  --color-ink-800: #342d27;
+  --color-ink-850: #2a2420;
+  --color-ink-900: #201b16;
+  --color-ink-950: #161310;
+
+  --color-paper-50: #faf7f1;
+  --color-paper-100: #f3ede1;
+  --color-paper-150: #ece3d3;
+  --color-paper-200: #e4d8c2;
+
+  --color-brass-50: #fdf6e9;
+  --color-brass-100: #faedd0;
+  --color-brass-150: #f6e2b3;
+  --color-brass-200: #f2d699;
+  --color-brass-300: #e8bc63;
+  --color-brass-400: #e0a339;
+  --color-brass-450: #d2952f;
+  --color-brass-500: #c8842a;
+  --color-brass-600: #a8681e;
+  --color-brass-700: #855116;
+  --color-brass-750: #7a4a14;
+  --color-brass-800: #6b3f12;
+  --color-brass-850: #5c360f;
+  --color-brass-900: #4d2c0c;
+  --color-brass-950: #3a2109;
+
+  --color-proof-50: #eefaf7;
+  --color-proof-100: #d7f2ec;
+  --color-proof-150: #bfe9e0;
+  --color-proof-200: #a6e0d4;
+  --color-proof-300: #74cebb;
+  --color-proof-400: #4fb8a8;
+  --color-proof-405: #4bb2a2;
+  --color-proof-500: #2f9c8c;
+  --color-proof-600: #1f7d70;
+  --color-proof-700: #185f56;
+  --color-proof-750: #145349;
+  --color-proof-800: #12483f;
+  --color-proof-850: #0f3d36;
+  --color-proof-900: #0c322c;
+  --color-proof-950: #082019;
+
+  /* Fine-grained "half-step" shades used for subtle hover/text states throughout the app */
+  --color-stone-150: #eeece9;
+  --color-stone-350: #c0bab5;
+  --color-stone-355: #beb8b3;
+  --color-stone-405: #9f9994;
+  --color-stone-450: #8f8983;
+  --color-stone-550: #67615c;
+  --color-stone-555: #66605b;
+  --color-stone-650: #4d4945;
+  --color-stone-705: #403c35;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html, body, #root {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif !important;
+  background-color: var(--color-paper-50);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Fine graph-paper grid, used behind hero / arena surfaces */
+.bp-grid {
+  background-image:
+    linear-gradient(rgba(22, 19, 16, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 19, 16, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.bp-grid-dark {
+  background-image:
+    linear-gradient(rgba(250, 247, 241, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(250, 247, 241, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Drafting-table corner brackets for "theorem card" surfaces */
+.bp-corners {
+  position: relative;
+}
+.bp-corners::before,
+.bp-corners::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: currentColor;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.bp-corners::before {
+  top: 10px;
+  left: 10px;
+  border-top: 1.5px solid;
+  border-left: 1.5px solid;
+}
+.bp-corners::after {
+  bottom: 10px;
+  right: 10px;
+  border-bottom: 1.5px solid;
+  border-right: 1.5px solid;
+}
+
+.katex { font-size: 1.02em; }
