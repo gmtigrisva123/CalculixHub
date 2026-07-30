@@ -13,5 +13,5 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
           cache-dependency-path: package-lock.json
-      - run: npm ci || true
-      - run: npm run build || true
+      - run: npm ci
+      - run: npm run build
