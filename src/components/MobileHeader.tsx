@@ -4,13 +4,19 @@
  */
 
 import React from 'react';
-import { Bell, Trophy } from 'lucide-react';
+import { Bell, Trophy, WifiOff } from 'lucide-react';
 import { screenTitle } from '../lib/navigation';
 
 interface MobileHeaderProps {
   activeTab: string;
   points: number;
   onBellClick: () => void;
+  /** False when the device has lost connectivity; reveals the offline banner. */
+  online: boolean;
+  /** Grades captured offline and awaiting replay. */
+  pendingGrades: number;
+  /** Cached problems still available without a connection. */
+  cachedProblems: number;
 }
 
 /**
@@ -24,10 +30,18 @@ interface MobileHeaderProps {
  * Dynamic Island when the PWA runs standalone, and falls back to a plain 12px
  * in a normal browser tab where the inset resolves to 0.
  */
-export default function MobileHeader({ activeTab, points, onBellClick }: MobileHeaderProps) {
+export default function MobileHeader({
+  activeTab,
+  points,
+  onBellClick,
+  online,
+  pendingGrades,
+  cachedProblems,
+}: MobileHeaderProps) {
   return (
+    <div className="md:hidden sticky top-0 z-30 shrink-0">
     <header
-      className="md:hidden sticky top-0 z-30 bg-ink-950 border-b border-ink-800 px-4 pb-3 flex items-center justify-between w-full select-none shrink-0"
+      className="bg-ink-950 border-b border-ink-800 px-4 pb-3 flex items-center justify-between w-full select-none"
       style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
       <div className="flex items-center gap-2.5">
@@ -59,5 +73,32 @@ export default function MobileHeader({ activeTab, points, onBellClick }: MobileH
         </button>
       </div>
     </header>
+
+    {/*
+      Offline banner.
+
+      Sits below the app bar rather than floating over content so it never
+      covers anything, and states what still works instead of only what does
+      not — the cached item bank means practice continues offline, which the
+      learner cannot know unless told.
+    */}
+    {!online && (
+      <div
+        role="status"
+        className="bg-brass-900 text-brass-150 px-4 py-1.5 flex items-center gap-2"
+      >
+        <WifiOff className="w-3 h-3 shrink-0" strokeWidth={2} />
+        <span className="text-[9.5px] font-semibold leading-tight tracking-[0.02em]">
+          Offline &mdash; {cachedProblems} cached {cachedProblems === 1 ? 'problem' : 'problems'}{' '}
+          available
+          {pendingGrades > 0 && (
+            <>
+              , {pendingGrades} {pendingGrades === 1 ? 'answer' : 'answers'} queued
+            </>
+          )}
+        </span>
+      </div>
+    )}
+    </div>
   );
 }

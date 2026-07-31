@@ -17,6 +17,7 @@ import {
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
 import { computeStreak } from './lib/streak';
 import { apiUrl } from './lib/apiBase';
+import { useOnlineStatus, useGradeQueueFlush } from './lib/offline';
 import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
 import MobileHeader from './components/MobileHeader';
 import MobileTabBar from './components/MobileTabBar';
@@ -60,6 +61,11 @@ export default function App() {
 
   // Deep navigation overrides for AI recommendations
   const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(undefined);
+
+  // Connectivity, and any answers captured while offline. The queue drains
+  // automatically as soon as the connection returns.
+  const online = useOnlineStatus();
+  const pendingGrades = useGradeQueueFlush(online);
 
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => sessionStorage.getItem('calculix_is_logged_in') === 'true');
@@ -393,6 +399,9 @@ export default function App() {
         activeTab={activeTab}
         points={userStats.points}
         onBellClick={() => setActiveTab('settings')}
+        online={online}
+        pendingGrades={pendingGrades}
+        cachedProblems={problems.length}
       />
 
       {/* SIDEBAR NAVIGATION BAR (Desktop only — mobile navigates via MobileTabBar) */}

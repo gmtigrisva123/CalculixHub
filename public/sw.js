@@ -13,10 +13,13 @@
  *      instead of assuming "/", which is what lets one file work unchanged on
  *      Vercel and Cloudflare (root) and GitHub Pages (/CalculixHub/).
  *
- *   2. /api/* is never cached. Those routes are Gemini-backed grading, tutoring
- *      and recommendation calls -- personalised, non-idempotent, and wrong to
- *      replay from a cache. They are network-only and fail loudly offline so the
- *      UI can surface its offline state rather than serve a stale answer.
+ *   2. Backend routes are split, not treated alike. The static item bank and the
+ *      seed data are idempotent GETs and are exactly what offline practice
+ *      needs, so they are cached. The Gemini-backed grading, tutoring and
+ *      recommendation routes are personalised and non-idempotent -- replaying a
+ *      cached grade would tell a student their answer was right because an
+ *      earlier one was -- so they are never cached and fail loudly offline,
+ *      letting the UI show its offline state instead of a stale answer.
  */
 
 const VERSION = 'v1';
@@ -112,9 +115,48 @@ async function handleAsset(request) {
   return cached ?? (await network) ?? Response.error();
 }
 
+/**
+ * Backend GETs that are safe to cache: static content, identical for every
+ * learner, and the data the app needs to run a practice session offline.
+ *
+ * An allowlist rather than a denylist. A new personalised route added later
+ * defaults to network-only, which fails visibly; the reverse mistake would
+ * silently serve one learner's data to another.
+ *
+ * Deliberately excluded:
+ *   /api/live-stats  -- real-time counters; a cached value would misreport the
+ *                       platform as busier or quieter than it is.
+ *   /api/chat, /api/evaluate, /api/recommend -- POST and Gemini-backed.
+ */
+const CACHEABLE_API_ROUTES = ['api/problems', 'api/statistics-seed'];
+
+/**
+ * Network-first with a cache fallback, for the item bank and seed data.
+ *
+ * Network-first because the item bank does change between releases and a
+ * learner online should see the current one; the cache exists so that losing
+ * connectivity leaves the already-downloaded problems available.
+ */
+async function handleCacheableApi(request) {
+  const cache = await caches.open(ASSET_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw new Error('offline and uncached');
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
+  // POSTs (grading, tutoring, recommendations) are never intercepted. Offline
+  // queueing for those lives in the app, which knows how to replay them.
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
@@ -122,8 +164,19 @@ self.addEventListener('fetch', (event) => {
   // Leave other origins (Google Fonts, analytics) to the browser's own cache.
   if (url.origin !== self.location.origin) return;
 
-  // Never serve Gemini-backed routes from cache -- see the file header.
-  if (url.pathname.startsWith(`${SCOPE_PATH}api/`) || url.pathname.startsWith('/api/')) return;
+  const apiPath = url.pathname.startsWith(`${SCOPE_PATH}api/`)
+    ? url.pathname.slice(SCOPE_PATH.length)
+    : url.pathname.startsWith('/api/')
+      ? url.pathname.slice(1)
+      : null;
+
+  if (apiPath !== null) {
+    if (CACHEABLE_API_ROUTES.includes(apiPath)) {
+      event.respondWith(handleCacheableApi(request));
+    }
+    // Everything else under /api/ falls through to the network untouched.
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigation(request));
