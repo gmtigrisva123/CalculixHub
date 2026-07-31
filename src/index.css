@@ -130,6 +130,38 @@ html, body, #root {
 .katex { font-size: 1.02em; }
 
 /*
+ * AI tutor sheet entrance.
+ *
+ * Mobile only: the panel rises from the bottom edge, which is where it lives.
+ * At md+ it is a side drawer that is already positioned correctly, and sliding
+ * it up from below would be wrong for that geometry.
+ *
+ * The easing overshoots slightly (0.3 -> 1) so the sheet settles rather than
+ * stopping dead, matching the source design's curve.
+ */
+@keyframes tutorSheetIn {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .tutor-sheet {
+    animation: tutorSheetIn 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+}
+
+/* Respect users who have asked the system for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .tutor-sheet {
+    animation: none;
+  }
+}
+
+/*
  * AI tutor launcher offset.
  *
  * On mobile the fixed bottom tab rail owns the bottom of the viewport, so the
