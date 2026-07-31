@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      viewport-fit=cover is required for env(safe-area-inset-*) to report real
+      values on notched iPhones. Without it the insets resolve to 0 and the
+      bottom tab rail sits under the home indicator.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CalculixHub — Adaptive Math OS & AI Personalization</title>
     <meta name="description" content="CalculixHub is a complete mathematics education ecosystem: AI-personalized adaptive learning (EduReach Core), live ranked competition, and real-time analytics for ambitious math students." />
     <meta name="keywords" content="calculix, calculixhub, adaptive math learning, irt, item response theory, math olympiad training, ai math tutor, amc, aime, sat math" />
@@ -21,6 +26,27 @@
 
     <!-- Inline SVG favicon: sigma mark on ink/brass field, matching the in-app brand -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23161310'/%3E%3Ctext x='50' y='68' font-family='Georgia, serif' font-size='58' font-weight='700' fill='%23c8842a' text-anchor='middle'%3E%26%23931%3B%3C/text%3E%3C/svg%3E" />
+
+    <!--
+      Installable web app.
+
+      Vite rewrites these root-relative URLs with whatever --base the build used,
+      so they stay correct on Vercel and Cloudflare (served from /) and on GitHub
+      Pages (served from /CalculixHub/). The manifest's own URLs are relative and
+      resolve against the manifest, so it needs no build-time substitution.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#161310" />
+
+    <!--
+      iOS ignores the manifest when adding to the home screen: the name comes
+      from apple-mobile-web-app-title and the icon from apple-touch-icon, which
+      must be an opaque PNG because iOS composites transparency onto black.
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CalculixHub" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
   </head>
   <body>
     <div id="root"></div>

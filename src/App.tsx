@@ -42,7 +42,19 @@ const isLegacyDemoDiscussion = (discussion: CommunityDiscussion) => {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  /**
+   * Opening tab, honouring a ?tab= query parameter.
+   *
+   * The manifest's app shortcuts ("Start practicing", "View analytics") launch
+   * ./?tab=learn and ./?tab=progress, so a long-press on the installed icon can
+   * land directly on a workspace. Read once during initial state rather than in
+   * an effect, which would otherwise flash the dashboard first. Unknown values
+   * fall through to the dashboard.
+   */
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    return NAV_ITEMS.some((item) => item.key === requested) ? requested! : 'dashboard';
+  });
 
   // Deep navigation overrides for AI recommendations
   const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(undefined);
