@@ -5,26 +5,20 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Trophy,
-  Brain,
-  Calendar,
-  TrendingUp,
-  MessageSquare,
-  User,
   Settings,
   Sparkles,
   Search,
   BookOpen,
-  Menu,
-  X,
   HelpCircle,
   Award,
   CheckCircle,
   LogOut,
-  FlaskConical,
 } from 'lucide-react';
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
 import { computeStreak } from './lib/streak';
+import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
+import MobileHeader from './components/MobileHeader';
+import MobileTabBar from './components/MobileTabBar';
 import Dashboard from './components/Dashboard';
 import Learn from './components/Learn';
 import Compete from './components/Compete';
@@ -49,7 +43,6 @@ const isLegacyDemoDiscussion = (discussion: CommunityDiscussion) => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Deep navigation overrides for AI recommendations
   const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(undefined);
@@ -353,6 +346,21 @@ export default function App() {
     }
   };
 
+  /**
+   * Tab selection shared by the desktop sidebar and the mobile bottom rail.
+   *
+   * 'learn' routes through navigateWithFilters so that selecting it from the
+   * nav clears any topic/level override left behind by an AI recommendation
+   * deep-link; the remaining tabs do not read overrideFilters.
+   */
+  const selectTab = (tab: TabKey) => {
+    if (tab === 'learn') {
+      navigateWithFilters('learn');
+      return;
+    }
+    setActiveTab(tab);
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setSaveSuccessNotify(true);
@@ -366,28 +374,17 @@ export default function App() {
   return (
     <div className="min-h-screen bg-paper-50 flex flex-col md:flex-row relative text-stone-800 antialiased font-sans">
 
-      {/* MOBILE HEADER NAVIGATION BAR */}
-      <div className="md:hidden bg-ink-950 border-b border-ink-800 text-white p-4 flex items-center justify-between w-full select-none shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2 rounded-lg text-ink-950 font-extrabold w-9 h-9 flex items-center justify-center text-sm shadow-md font-serif">
-            &#8721;
-          </div>
-          <span className="font-black text-sm tracking-widest text-stone-100 uppercase">CalculixHub</span>
-        </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="hover:bg-ink-800 p-2 rounded-lg transition-colors cursor-pointer text-stone-200"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
+      {/* MOBILE APP BAR — identity, points and reminders; navigation lives in the bottom rail */}
+      <MobileHeader
+        activeTab={activeTab}
+        points={userStats.points}
+        onBellClick={() => setActiveTab('settings')}
+      />
 
-      {/* SIDEBAR NAVIGATION BAR (Desktop persistent / Mobile sliding) */}
+      {/* SIDEBAR NAVIGATION BAR (Desktop only — mobile navigates via MobileTabBar) */}
       <aside
         id="side-nav-rail"
-        className={`fixed md:sticky top-0 left-0 h-screen z-40 bg-ink-950 border-r border-ink-850 text-stone-300 w-64 p-5 md:p-6 shrink-0 flex flex-col justify-between overflow-y-auto transition-transform duration-300 md:translate-x-0 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+        className="hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-ink-950 border-r border-ink-850 text-stone-300 w-64 p-6 shrink-0 flex-col justify-between overflow-y-auto"
       >
         <div className="space-y-8 select-none">
           {/* Logo Brand area */}
@@ -418,21 +415,12 @@ export default function App() {
 
           {/* Nav groups links */}
           <nav className="space-y-1.5 font-medium" id="side-nav-links">
-            {([
-              { key: 'dashboard', label: 'Dashboard', icon: Trophy, onClick: () => setActiveTab('dashboard') },
-              { key: 'learn', label: 'Learn', icon: Brain, onClick: () => navigateWithFilters('learn') },
-              { key: 'compete', label: 'Compete', icon: Calendar, onClick: () => setActiveTab('compete') },
-              { key: 'progress', label: 'Progress', icon: TrendingUp, onClick: () => setActiveTab('progress') },
-              { key: 'community', label: 'Community', icon: MessageSquare, onClick: () => setActiveTab('community') },
-              { key: 'profile', label: 'Profile', icon: User, onClick: () => setActiveTab('profile') },
-              { key: 'research', label: 'Research', icon: FlaskConical, onClick: () => setActiveTab('research') },
-              { key: 'settings', label: 'Settings', icon: Settings, onClick: () => setActiveTab('settings') },
-            ] as const).map((item) => {
+            {NAV_ITEMS.map((item) => {
               const ItemIcon = item.icon;
               return (
                 <button
                   key={item.key}
-                  onClick={() => { item.onClick(); setMobileMenuOpen(false); }}
+                  onClick={() => selectTab(item.key)}
                   className={`w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-xl transition-all cursor-pointer ${
                     activeTab === item.key ? 'bg-brass-600 text-ink-950 font-extrabold' : 'hover:bg-ink-850 hover:text-white'
                   }`}
@@ -473,7 +461,8 @@ export default function App() {
       </aside>
 
       {/* MAIN CONTAINER CONTENT VIEWPORT */}
-      <main className="flex-1 overflow-x-hidden p-4 md:p-8 relative">
+      {/* pb-26 on mobile clears the fixed bottom rail (~85px incl. safe area). */}
+      <main className="flex-1 overflow-x-hidden p-4 pb-26 md:p-8 relative">
         <div className="max-w-7xl mx-auto space-y-6">
           
           {/* HEADER WELCOME SEARCH ADVISOR ON DESKTOP */}
@@ -483,11 +472,7 @@ export default function App() {
             <div>
               <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">CalculixHub Workspace</p>
               <h2 className="text-lg font-extrabold tracking-tight text-stone-900 mt-0.5 font-serif">
-                {activeTab === 'dashboard' && 'Welcome back'}
-                {activeTab === 'progress' && 'EduReach Core Stats'}
-                {activeTab === 'profile' && 'Student Honor Space'}
-                {activeTab === 'research' && 'Research & Analytics'}
-                {activeTab === 'settings' && 'Workspace Configuration'}
+                {screenTitle(activeTab)}
               </h2>
             </div>
 
@@ -659,6 +644,9 @@ export default function App() {
 
       {/* CHATBOT COOPERATIVE ASSISTANT ON FLOATING LAYER */}
       <AITutorChat />
+
+      {/* MOBILE BOTTOM NAVIGATION RAIL */}
+      <MobileTabBar activeTab={activeTab} onSelect={selectTab} />
 
     </div>
   );
