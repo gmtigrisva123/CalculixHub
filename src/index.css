@@ -128,3 +128,24 @@ html, body, #root {
 }
 
 .katex { font-size: 1.02em; }
+
+/*
+ * AI tutor launcher offset.
+ *
+ * On mobile the fixed bottom tab rail owns the bottom of the viewport, so the
+ * launcher has to sit above it or it buries the last four tabs. The rail is
+ * ~46px tall plus 10px of top padding plus its safe-area bottom inset; adding
+ * ~16px of breathing room lands the launcher where the source design puts it.
+ * Expressed in CSS rather than an arbitrary Tailwind value because the
+ * calc(max(...)) nesting does not survive Tailwind's bracket parser cleanly.
+ */
+.tutor-fab {
+  bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.75rem);
+}
+
+@media (min-width: 48rem) {
+  /* Desktop has no rail — restore the original bottom-6 resting position. */
+  .tutor-fab {
+    bottom: 1.5rem;
+  }
+}

@@ -100,7 +100,7 @@ export default function AITutorChat() {
       <button
         id="btn-ai-tutor-toggle"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-5 py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer"
+        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer"
       >
         <Sparkles className="w-5 h-5 animate-pulse group-hover:scale-110 transition-transform" />
         <span className="font-bold tracking-wide text-sm">Ask AI Tutor</span>
