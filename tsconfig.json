@@ -21,7 +21,12 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    // Declares import.meta.env, which src/lib/pwa.ts reads to resolve BASE_URL.
+    // Vite substitutes it at build time; without this tsc rejects the property.
+    "types": [
+      "vite/client"
+    ]
   },
   "exclude": [
     "node_modules",
