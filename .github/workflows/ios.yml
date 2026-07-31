@@ -51,9 +51,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Node 22 explicitly, NOT .nvmrc.
+      #
+      # .nvmrc pins 20, which the rest of the repo builds against, but the
+      # Capacitor CLI hard-requires >=22 and aborts:
+      #
+      #   [fatal] The Capacitor CLI requires NodeJS >=22.0.0
+      #
+      # 22 satisfies package.json's engines range (">=20 <23"), so this raises
+      # the version only for the one job that runs `cap`, leaving every other
+      # workflow on the repo's pinned runtime.
       - uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
