@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
 import { computeStreak } from './lib/streak';
+import { apiUrl } from './lib/apiBase';
 import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
 import MobileHeader from './components/MobileHeader';
 import MobileTabBar from './components/MobileTabBar';
@@ -143,7 +144,7 @@ export default function App() {
     // 1. Fetch static math database problems
     const fetchProblems = async () => {
       try {
-        const response = await fetch('/api/problems');
+        const response = await fetch(apiUrl('/api/problems'));
         if (response.ok) {
           const data = await response.json();
           setProblems(data);
@@ -156,7 +157,7 @@ export default function App() {
     // 2. Fetch standard seeds (Leaderboard, etc.)
     const fetchSeeds = async () => {
       try {
-        const response = await fetch('/api/statistics-seed');
+        const response = await fetch(apiUrl('/api/statistics-seed'));
         if (response.ok) {
           const data = await response.json();
           setWeeklyChallenges(data.weeklyChallenges || []);
@@ -282,7 +283,7 @@ export default function App() {
     saveStatsToLocal(updatedUserStats);
 
     if (isCorrect) {
-      fetch('/api/live-stats/event', {
+      fetch(apiUrl('/api/live-stats/event'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event: 'problem-solved' }),

@@ -8,6 +8,7 @@ import { Flame, Trophy, Percent, Clock, Sparkles, Brain, Calendar, AlertTriangle
 import { UserStats, WeeklyChallenge, Contest, AIRecommendation, Topic, Level } from '../types';
 import { TOPIC_META, getRankForPoints, formatMinutes } from '../lib/topics';
 import { getLastNDateKeys } from '../lib/streak';
+import { apiUrl } from '../lib/apiBase';
 
 interface DashboardProps {
   userStats: UserStats;
@@ -33,7 +34,7 @@ export default function Dashboard({
     const fetchAIRecommendations = async () => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/recommend', {
+        const response = await fetch(apiUrl('/api/recommend'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

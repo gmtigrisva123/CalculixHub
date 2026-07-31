@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, X, Bot, HelpCircle } from 'lucide-react';
 import MathText from './MathText';
+import { apiUrl } from '../lib/apiBase';
 
 interface ChatMessage {
   id: string;
@@ -50,7 +51,7 @@ export default function AITutorChat() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

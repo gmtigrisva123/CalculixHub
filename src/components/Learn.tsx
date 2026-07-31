@@ -8,6 +8,7 @@ import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, Refres
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
 import { TOPIC_META, TOPIC_LIST, LEVEL_LIST } from '../lib/topics';
 import MathText from './MathText';
+import { apiUrl } from '../lib/apiBase';
 
 interface LearnProps {
   problems: Problem[];
@@ -70,7 +71,7 @@ export default function Learn({
     setSmartFeedback(null);
 
     try {
-      const response = await fetch('/api/evaluate', {
+      const response = await fetch(apiUrl('/api/evaluate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problemId: activeProblem.id, userAnswer: answerInput }),

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Level, Topic } from '../types';
 import MathText from './MathText';
+import { apiUrl } from '../lib/apiBase';
 import InstallAppButton from './InstallAppButton';
 import {
   IRTItem,
@@ -69,7 +70,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   useEffect(() => {
     const fetchLiveStats = async () => {
       try {
-        const res = await fetch('/api/live-stats');
+        const res = await fetch(apiUrl('/api/live-stats'));
         if (res.ok) {
           const data = await res.json();
           setLiveStats(data);
@@ -213,7 +214,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     ];
     localStorage.setItem(USER_DB_KEY, JSON.stringify(updatedUsers));
 
-    fetch('/api/live-stats/event', {
+    fetch(apiUrl('/api/live-stats/event'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'user-joined' }),
@@ -327,7 +328,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   };
 
   const handleFinishPlacement = () => {
-    fetch('/api/live-stats/event', {
+    fetch(apiUrl('/api/live-stats/event'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'test-completed' }),
