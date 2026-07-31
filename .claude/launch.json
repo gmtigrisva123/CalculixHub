@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "calculixhub-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/tsx/dist/cli.mjs", "server.ts"],
       "port": 8000
     }
   ]
