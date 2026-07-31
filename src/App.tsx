@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
 import { computeStreak } from './lib/streak';
-import { apiUrl } from './lib/apiBase';
+import { apiUrl, isNativePlatform } from './lib/apiBase';
+import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './lib/reminders';
 import { useOnlineStatus, useGradeQueueFlush, flushGradeQueue } from './lib/offline';
 import PullToRefresh from './components/PullToRefresh';
 import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
@@ -143,7 +144,48 @@ export default function App() {
   // Settings State
   const [customGoal, setCustomGoal] = useState<string>('Qualify for a regional/national math olympiad');
   const [studyPace, setStudyPace] = useState<string>('30 minutes / day');
-  const [studyReminders, setStudyReminders] = useState<boolean>(true);
+  // Reflects what is actually scheduled, not an optimistic default: the OS can
+  // refuse permission, and the toggle must not claim to be on when it is not.
+  const [studyReminders, setStudyReminders] = useState<boolean>(() => remindersEnabled());
+  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
+
+  /**
+   * Turn the daily reminder on or off.
+   *
+   * Permission is requested here rather than on load because browsers reject
+   * unsolicited prompts, and iOS only offers notifications to an installed PWA
+   * at all — so a refusal needs explaining rather than silently failing.
+   */
+  const handleToggleReminders = async (enabled: boolean) => {
+    if (!enabled) {
+      await disableReminders();
+      setStudyReminders(false);
+      setReminderNotice(null);
+      return;
+    }
+
+    const result = await enableReminders();
+
+    if (result === 'granted') {
+      setStudyReminders(true);
+      setReminderNotice(
+        isNativePlatform()
+          ? null
+          : 'Reminders are on. In a browser tab they only appear while CalculixHub is open — install the app for reminders that arrive on their own.',
+      );
+      return;
+    }
+
+    // Permission was not granted, so nothing is scheduled. Leave the toggle off.
+    setStudyReminders(false);
+    setReminderNotice(
+      result === 'denied'
+        ? 'Notifications are blocked for CalculixHub. Re-enable them in your browser or system settings, then try again.'
+        : result === 'unsupported'
+          ? 'This browser cannot show notifications. Install the app to get streak reminders.'
+          : 'Reminders need notification permission. Tap the toggle again and choose Allow.',
+    );
+  };
   const [saveSuccessNotify, setSaveSuccessNotify] = useState<boolean>(false);
 
   // 1. Fetch static math database problems
@@ -187,6 +229,11 @@ export default function App() {
   useEffect(() => {
     fetchProblems();
     fetchSeeds();
+
+    // Re-arm the daily reminder. Normally a no-op, since iOS keeps scheduled
+    // notifications across restarts; it matters after a reinstall, where the
+    // stored preference says enabled but nothing is actually scheduled.
+    void syncReminders();
 
     // 3. Sync local storage states
     const localCompleted = localStorage.getItem('calculix_completed');
@@ -623,20 +670,34 @@ export default function App() {
                   </div>
 
                   {/* Toggle Reminders */}
-                  <div className="flex items-center justify-between p-3.5 bg-stone-50/60 rounded-xl border border-stone-100">
-                    <div>
-                      <span className="text-xs font-bold text-stone-800 block">Enable adaptive reminders</span>
-                      <span className="text-[10px] text-stone-400 block font-medium mt-0.5">Periodic email summaries of your weak-point analysis.</span>
+                  <div className="p-3.5 bg-stone-50/60 rounded-xl border border-stone-100 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-stone-800 block">Daily streak reminder</span>
+                        <span className="text-[10px] text-stone-400 block font-medium mt-0.5">
+                          A nudge at 6pm on the days you haven&rsquo;t practised yet.
+                        </span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={studyReminders}
+                          onChange={(e) => handleToggleReminders(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brass-600"></div>
+                      </label>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={studyReminders}
-                        onChange={(e) => setStudyReminders(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brass-600"></div>
-                    </label>
+
+                    {/*
+                      States the actual outcome. A toggle that reports "on" while
+                      the OS is blocking notifications is worse than no toggle.
+                    */}
+                    {reminderNotice && (
+                      <p className="text-[10px] font-semibold leading-relaxed text-brass-700 bg-brass-50 border border-brass-100 rounded-lg px-2.5 py-2">
+                        {reminderNotice}
+                      </p>
+                    )}
                   </div>
 
                   {/* Install entry point — hides itself when already installed */}
