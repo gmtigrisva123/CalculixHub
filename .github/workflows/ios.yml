@@ -46,7 +46,18 @@ on:
 jobs:
   build:
     name: Build iOS app
-    runs-on: macos-14
+    # macos-15, not macos-14.
+    #
+    # macos-14 defaults to Xcode 15.4, and Capacitor 8 requires Xcode 16. On
+    # 15.4 the LocalNotifications plugin fails to compile against the Capacitor
+    # core it links, with errors that look like a broken dependency but are
+    # really a toolchain mismatch:
+    #
+    #   error: value of type 'PluginConfig' has no member 'getArray'
+    #   error: type 'JSTypes' has no member 'coerceDictionaryToJSObject'
+    #
+    # macos-15 ships Xcode 16, which is the supported combination.
+    runs-on: macos-15
 
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +83,19 @@ jobs:
       # green; a build that cannot fail cannot tell you the app is broken.
       - name: Install dependencies
         run: npm ci
+
+      # Select Xcode 16 explicitly rather than trusting the image default, which
+      # changes as runner images are updated. Capacitor 8 requires 16+; on 15.4
+      # its plugins fail to compile against Capacitor core.
+      - name: Select Xcode 16
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error title=No Xcode 16::Capacitor 8 requires Xcode 16 or newer. Available: $(ls -d /Applications/Xcode*.app | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "Selecting $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
 
       - name: Report toolchain
         run: |
