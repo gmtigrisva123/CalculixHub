@@ -128,14 +128,59 @@ def render(size: int, maskable: bool) -> Image.Image:
     return img.resize((size, size), Image.LANCZOS)
 
 
+def render_splash(size: int = 2732) -> Image.Image:
+    """iOS launch image: the mark centred on the ink field.
+
+    Square at 2732px because iOS crops the same asset to every device aspect
+    ratio; anything off-centre or near an edge gets cut on some screen. The mark
+    is kept small for that reason.
+    """
+    img = Image.new("RGB", (size, size), INK_950)
+    mark = render(round(size * 0.16), maskable=False)
+    offset = (size - mark.width) // 2
+    img.paste(mark, (offset, offset))
+    return img
+
+
+def write_ios_assets(root: pathlib.Path) -> None:
+    """Replace Capacitor's placeholder icon and splash, when the platform exists.
+
+    Skipped silently if ios/ has not been generated yet, so the script stays
+    usable for web-only checkouts.
+    """
+    assets = root / "ios" / "App" / "App" / "Assets.xcassets"
+    if not assets.is_dir():
+        print("  (ios/ not present — skipping native assets)")
+        return
+
+    icon_path = assets / "AppIcon.appiconset" / "AppIcon-512@2x.png"
+    if icon_path.parent.is_dir():
+        # The iOS app icon must be opaque and must not be pre-rounded: iOS
+        # applies its own corner mask, so a transparent or pre-masked icon
+        # shows dark corners on the home screen.
+        render(1024, maskable=False).save(icon_path, "PNG", optimize=True)
+        print(f"  {icon_path.relative_to(root)}  1024x1024")
+
+    splash_dir = assets / "Splash.imageset"
+    if splash_dir.is_dir():
+        splash = render_splash()
+        # Capacitor references the same square asset at 1x, 2x and 3x.
+        for name in ("splash-2732x2732.png", "splash-2732x2732-1.png", "splash-2732x2732-2.png"):
+            splash.save(splash_dir / name, "PNG", optimize=True)
+        print(f"  {splash_dir.relative_to(root)}/splash-2732x2732*.png  2732x2732")
+
+
 def main() -> None:
-    out_dir = pathlib.Path(__file__).resolve().parent.parent / "public" / "icons"
+    root = pathlib.Path(__file__).resolve().parent.parent
+    out_dir = root / "public" / "icons"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for name, size, maskable in TARGETS:
         path = out_dir / name
         render(size, maskable).save(path, "PNG", optimize=True)
-        print(f"  {path.relative_to(path.parent.parent.parent)}  {size}x{size}")
+        print(f"  {path.relative_to(root)}  {size}x{size}")
+
+    write_ios_assets(root)
 
 
 if __name__ == "__main__":
