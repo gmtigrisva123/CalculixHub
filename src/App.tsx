@@ -17,7 +17,8 @@ import {
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
 import { computeStreak } from './lib/streak';
 import { apiUrl } from './lib/apiBase';
-import { useOnlineStatus, useGradeQueueFlush } from './lib/offline';
+import { useOnlineStatus, useGradeQueueFlush, flushGradeQueue } from './lib/offline';
+import PullToRefresh from './components/PullToRefresh';
 import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
 import MobileHeader from './components/MobileHeader';
 import MobileTabBar from './components/MobileTabBar';
@@ -145,36 +146,45 @@ export default function App() {
   const [studyReminders, setStudyReminders] = useState<boolean>(true);
   const [saveSuccessNotify, setSaveSuccessNotify] = useState<boolean>(false);
 
+  // 1. Fetch static math database problems
+  //
+  // Declared outside the mount effect because pull-to-refresh re-runs both
+  // fetches on demand. Offline these resolve from the service worker cache, so
+  // a refresh with no connection still repopulates rather than blanking the UI.
+  const fetchProblems = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/problems'));
+      if (response.ok) {
+        const data = await response.json();
+        setProblems(data);
+      }
+    } catch (err) {
+      console.error('Error fetching math catalog:', err);
+    }
+  };
+
+  // 2. Fetch standard seeds (Leaderboard, etc.)
+  const fetchSeeds = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/statistics-seed'));
+      if (response.ok) {
+        const data = await response.json();
+        setWeeklyChallenges(data.weeklyChallenges || []);
+        setContests(data.contests || []);
+        setLeaderboard(data.leaderboard || []);
+      }
+    } catch (err) {
+      console.error('Error fetching math seeds:', err);
+    }
+  };
+
+  /** Pull-to-refresh handler: re-read server data and replay anything queued. */
+  const handleRefresh = async () => {
+    await Promise.all([fetchProblems(), fetchSeeds(), flushGradeQueue()]);
+  };
+
   // Load from database seeds & localStorage on mount
   useEffect(() => {
-    // 1. Fetch static math database problems
-    const fetchProblems = async () => {
-      try {
-        const response = await fetch(apiUrl('/api/problems'));
-        if (response.ok) {
-          const data = await response.json();
-          setProblems(data);
-        }
-      } catch (err) {
-        console.error('Error fetching math catalog:', err);
-      }
-    };
-
-    // 2. Fetch standard seeds (Leaderboard, etc.)
-    const fetchSeeds = async () => {
-      try {
-        const response = await fetch(apiUrl('/api/statistics-seed'));
-        if (response.ok) {
-          const data = await response.json();
-          setWeeklyChallenges(data.weeklyChallenges || []);
-          setContests(data.contests || []);
-          setLeaderboard(data.leaderboard || []);
-        }
-      } catch (err) {
-        console.error('Error fetching math seeds:', err);
-      }
-    };
-
     fetchProblems();
     fetchSeeds();
 
@@ -486,6 +496,7 @@ export default function App() {
       {/* MAIN CONTAINER CONTENT VIEWPORT */}
       {/* pb-26 on mobile clears the fixed bottom rail (~85px incl. safe area). */}
       <main className="flex-1 overflow-x-hidden p-4 pb-26 md:p-8 relative">
+        <PullToRefresh onRefresh={handleRefresh}>
         <div className="max-w-7xl mx-auto space-y-6">
           
           {/* HEADER WELCOME SEARCH ADVISOR ON DESKTOP */}
@@ -666,6 +677,7 @@ export default function App() {
           )}
 
         </div>
+        </PullToRefresh>
       </main>
 
       {/* CHATBOT COOPERATIVE ASSISTANT ON FLOATING LAYER */}
