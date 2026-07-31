@@ -5,26 +5,25 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Trophy,
-  Brain,
-  Calendar,
-  TrendingUp,
-  MessageSquare,
-  User,
   Settings,
   Sparkles,
   Search,
   BookOpen,
-  Menu,
-  X,
   HelpCircle,
   Award,
   CheckCircle,
   LogOut,
-  FlaskConical,
 } from 'lucide-react';
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
 import { computeStreak } from './lib/streak';
+import { apiUrl, isNativePlatform } from './lib/apiBase';
+import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './lib/reminders';
+import { useOnlineStatus, useGradeQueueFlush, flushGradeQueue } from './lib/offline';
+import PullToRefresh from './components/PullToRefresh';
+import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
+import MobileHeader from './components/MobileHeader';
+import MobileTabBar from './components/MobileTabBar';
+import InstallAppButton from './components/InstallAppButton';
 import Dashboard from './components/Dashboard';
 import Learn from './components/Learn';
 import Compete from './components/Compete';
@@ -48,11 +47,27 @@ const isLegacyDemoDiscussion = (discussion: CommunityDiscussion) => {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  /**
+   * Opening tab, honouring a ?tab= query parameter.
+   *
+   * The manifest's app shortcuts ("Start practicing", "View analytics") launch
+   * ./?tab=learn and ./?tab=progress, so a long-press on the installed icon can
+   * land directly on a workspace. Read once during initial state rather than in
+   * an effect, which would otherwise flash the dashboard first. Unknown values
+   * fall through to the dashboard.
+   */
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    return NAV_ITEMS.some((item) => item.key === requested) ? requested! : 'dashboard';
+  });
 
   // Deep navigation overrides for AI recommendations
   const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(undefined);
+
+  // Connectivity, and any answers captured while offline. The queue drains
+  // automatically as soon as the connection returns.
+  const online = useOnlineStatus();
+  const pendingGrades = useGradeQueueFlush(online);
 
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => sessionStorage.getItem('calculix_is_logged_in') === 'true');
@@ -129,41 +144,96 @@ export default function App() {
   // Settings State
   const [customGoal, setCustomGoal] = useState<string>('Qualify for a regional/national math olympiad');
   const [studyPace, setStudyPace] = useState<string>('30 minutes / day');
-  const [studyReminders, setStudyReminders] = useState<boolean>(true);
+  // Reflects what is actually scheduled, not an optimistic default: the OS can
+  // refuse permission, and the toggle must not claim to be on when it is not.
+  const [studyReminders, setStudyReminders] = useState<boolean>(() => remindersEnabled());
+  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
+
+  /**
+   * Turn the daily reminder on or off.
+   *
+   * Permission is requested here rather than on load because browsers reject
+   * unsolicited prompts, and iOS only offers notifications to an installed PWA
+   * at all — so a refusal needs explaining rather than silently failing.
+   */
+  const handleToggleReminders = async (enabled: boolean) => {
+    if (!enabled) {
+      await disableReminders();
+      setStudyReminders(false);
+      setReminderNotice(null);
+      return;
+    }
+
+    const result = await enableReminders();
+
+    if (result === 'granted') {
+      setStudyReminders(true);
+      setReminderNotice(
+        isNativePlatform()
+          ? null
+          : 'Reminders are on. In a browser tab they only appear while CalculixHub is open — install the app for reminders that arrive on their own.',
+      );
+      return;
+    }
+
+    // Permission was not granted, so nothing is scheduled. Leave the toggle off.
+    setStudyReminders(false);
+    setReminderNotice(
+      result === 'denied'
+        ? 'Notifications are blocked for CalculixHub. Re-enable them in your browser or system settings, then try again.'
+        : result === 'unsupported'
+          ? 'This browser cannot show notifications. Install the app to get streak reminders.'
+          : 'Reminders need notification permission. Tap the toggle again and choose Allow.',
+    );
+  };
   const [saveSuccessNotify, setSaveSuccessNotify] = useState<boolean>(false);
+
+  // 1. Fetch static math database problems
+  //
+  // Declared outside the mount effect because pull-to-refresh re-runs both
+  // fetches on demand. Offline these resolve from the service worker cache, so
+  // a refresh with no connection still repopulates rather than blanking the UI.
+  const fetchProblems = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/problems'));
+      if (response.ok) {
+        const data = await response.json();
+        setProblems(data);
+      }
+    } catch (err) {
+      console.error('Error fetching math catalog:', err);
+    }
+  };
+
+  // 2. Fetch standard seeds (Leaderboard, etc.)
+  const fetchSeeds = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/statistics-seed'));
+      if (response.ok) {
+        const data = await response.json();
+        setWeeklyChallenges(data.weeklyChallenges || []);
+        setContests(data.contests || []);
+        setLeaderboard(data.leaderboard || []);
+      }
+    } catch (err) {
+      console.error('Error fetching math seeds:', err);
+    }
+  };
+
+  /** Pull-to-refresh handler: re-read server data and replay anything queued. */
+  const handleRefresh = async () => {
+    await Promise.all([fetchProblems(), fetchSeeds(), flushGradeQueue()]);
+  };
 
   // Load from database seeds & localStorage on mount
   useEffect(() => {
-    // 1. Fetch static math database problems
-    const fetchProblems = async () => {
-      try {
-        const response = await fetch('/api/problems');
-        if (response.ok) {
-          const data = await response.json();
-          setProblems(data);
-        }
-      } catch (err) {
-        console.error('Error fetching math catalog:', err);
-      }
-    };
-
-    // 2. Fetch standard seeds (Leaderboard, etc.)
-    const fetchSeeds = async () => {
-      try {
-        const response = await fetch('/api/statistics-seed');
-        if (response.ok) {
-          const data = await response.json();
-          setWeeklyChallenges(data.weeklyChallenges || []);
-          setContests(data.contests || []);
-          setLeaderboard(data.leaderboard || []);
-        }
-      } catch (err) {
-        console.error('Error fetching math seeds:', err);
-      }
-    };
-
     fetchProblems();
     fetchSeeds();
+
+    // Re-arm the daily reminder. Normally a no-op, since iOS keeps scheduled
+    // notifications across restarts; it matters after a reinstall, where the
+    // stored preference says enabled but nothing is actually scheduled.
+    void syncReminders();
 
     // 3. Sync local storage states
     const localCompleted = localStorage.getItem('calculix_completed');
@@ -276,7 +346,7 @@ export default function App() {
     saveStatsToLocal(updatedUserStats);
 
     if (isCorrect) {
-      fetch('/api/live-stats/event', {
+      fetch(apiUrl('/api/live-stats/event'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event: 'problem-solved' }),
@@ -353,6 +423,21 @@ export default function App() {
     }
   };
 
+  /**
+   * Tab selection shared by the desktop sidebar and the mobile bottom rail.
+   *
+   * 'learn' routes through navigateWithFilters so that selecting it from the
+   * nav clears any topic/level override left behind by an AI recommendation
+   * deep-link; the remaining tabs do not read overrideFilters.
+   */
+  const selectTab = (tab: TabKey) => {
+    if (tab === 'learn') {
+      navigateWithFilters('learn');
+      return;
+    }
+    setActiveTab(tab);
+  };
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setSaveSuccessNotify(true);
@@ -366,28 +451,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-paper-50 flex flex-col md:flex-row relative text-stone-800 antialiased font-sans">
 
-      {/* MOBILE HEADER NAVIGATION BAR */}
-      <div className="md:hidden bg-ink-950 border-b border-ink-800 text-white p-4 flex items-center justify-between w-full select-none shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2 rounded-lg text-ink-950 font-extrabold w-9 h-9 flex items-center justify-center text-sm shadow-md font-serif">
-            &#8721;
-          </div>
-          <span className="font-black text-sm tracking-widest text-stone-100 uppercase">CalculixHub</span>
-        </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="hover:bg-ink-800 p-2 rounded-lg transition-colors cursor-pointer text-stone-200"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
+      {/* MOBILE APP BAR — identity, points and reminders; navigation lives in the bottom rail */}
+      <MobileHeader
+        activeTab={activeTab}
+        points={userStats.points}
+        onBellClick={() => setActiveTab('settings')}
+        online={online}
+        pendingGrades={pendingGrades}
+        cachedProblems={problems.length}
+      />
 
-      {/* SIDEBAR NAVIGATION BAR (Desktop persistent / Mobile sliding) */}
+      {/* SIDEBAR NAVIGATION BAR (Desktop only — mobile navigates via MobileTabBar) */}
       <aside
         id="side-nav-rail"
-        className={`fixed md:sticky top-0 left-0 h-screen z-40 bg-ink-950 border-r border-ink-850 text-stone-300 w-64 p-5 md:p-6 shrink-0 flex flex-col justify-between overflow-y-auto transition-transform duration-300 md:translate-x-0 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+        className="hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-ink-950 border-r border-ink-850 text-stone-300 w-64 p-6 shrink-0 flex-col justify-between overflow-y-auto"
       >
         <div className="space-y-8 select-none">
           {/* Logo Brand area */}
@@ -418,21 +495,12 @@ export default function App() {
 
           {/* Nav groups links */}
           <nav className="space-y-1.5 font-medium" id="side-nav-links">
-            {([
-              { key: 'dashboard', label: 'Dashboard', icon: Trophy, onClick: () => setActiveTab('dashboard') },
-              { key: 'learn', label: 'Learn', icon: Brain, onClick: () => navigateWithFilters('learn') },
-              { key: 'compete', label: 'Compete', icon: Calendar, onClick: () => setActiveTab('compete') },
-              { key: 'progress', label: 'Progress', icon: TrendingUp, onClick: () => setActiveTab('progress') },
-              { key: 'community', label: 'Community', icon: MessageSquare, onClick: () => setActiveTab('community') },
-              { key: 'profile', label: 'Profile', icon: User, onClick: () => setActiveTab('profile') },
-              { key: 'research', label: 'Research', icon: FlaskConical, onClick: () => setActiveTab('research') },
-              { key: 'settings', label: 'Settings', icon: Settings, onClick: () => setActiveTab('settings') },
-            ] as const).map((item) => {
+            {NAV_ITEMS.map((item) => {
               const ItemIcon = item.icon;
               return (
                 <button
                   key={item.key}
-                  onClick={() => { item.onClick(); setMobileMenuOpen(false); }}
+                  onClick={() => selectTab(item.key)}
                   className={`w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-xl transition-all cursor-pointer ${
                     activeTab === item.key ? 'bg-brass-600 text-ink-950 font-extrabold' : 'hover:bg-ink-850 hover:text-white'
                   }`}
@@ -473,7 +541,9 @@ export default function App() {
       </aside>
 
       {/* MAIN CONTAINER CONTENT VIEWPORT */}
-      <main className="flex-1 overflow-x-hidden p-4 md:p-8 relative">
+      {/* pb-26 on mobile clears the fixed bottom rail (~85px incl. safe area). */}
+      <main className="flex-1 overflow-x-hidden p-4 pb-26 md:p-8 relative">
+        <PullToRefresh onRefresh={handleRefresh}>
         <div className="max-w-7xl mx-auto space-y-6">
           
           {/* HEADER WELCOME SEARCH ADVISOR ON DESKTOP */}
@@ -483,11 +553,7 @@ export default function App() {
             <div>
               <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">CalculixHub Workspace</p>
               <h2 className="text-lg font-extrabold tracking-tight text-stone-900 mt-0.5 font-serif">
-                {activeTab === 'dashboard' && 'Welcome back'}
-                {activeTab === 'progress' && 'EduReach Core Stats'}
-                {activeTab === 'profile' && 'Student Honor Space'}
-                {activeTab === 'research' && 'Research & Analytics'}
-                {activeTab === 'settings' && 'Workspace Configuration'}
+                {screenTitle(activeTab)}
               </h2>
             </div>
 
@@ -604,21 +670,38 @@ export default function App() {
                   </div>
 
                   {/* Toggle Reminders */}
-                  <div className="flex items-center justify-between p-3.5 bg-stone-50/60 rounded-xl border border-stone-100">
-                    <div>
-                      <span className="text-xs font-bold text-stone-800 block">Enable adaptive reminders</span>
-                      <span className="text-[10px] text-stone-400 block font-medium mt-0.5">Periodic email summaries of your weak-point analysis.</span>
+                  <div className="p-3.5 bg-stone-50/60 rounded-xl border border-stone-100 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-stone-800 block">Daily streak reminder</span>
+                        <span className="text-[10px] text-stone-400 block font-medium mt-0.5">
+                          A nudge at 6pm on the days you haven&rsquo;t practised yet.
+                        </span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={studyReminders}
+                          onChange={(e) => handleToggleReminders(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brass-600"></div>
+                      </label>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={studyReminders}
-                        onChange={(e) => setStudyReminders(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brass-600"></div>
-                    </label>
+
+                    {/*
+                      States the actual outcome. A toggle that reports "on" while
+                      the OS is blocking notifications is worse than no toggle.
+                    */}
+                    {reminderNotice && (
+                      <p className="text-[10px] font-semibold leading-relaxed text-brass-700 bg-brass-50 border border-brass-100 rounded-lg px-2.5 py-2">
+                        {reminderNotice}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Install entry point — hides itself when already installed */}
+                  <InstallAppButton variant="row" />
 
                 </div>
 
@@ -655,10 +738,14 @@ export default function App() {
           )}
 
         </div>
+        </PullToRefresh>
       </main>
 
       {/* CHATBOT COOPERATIVE ASSISTANT ON FLOATING LAYER */}
       <AITutorChat />
+
+      {/* MOBILE BOTTOM NAVIGATION RAIL */}
+      <MobileTabBar activeTab={activeTab} onSelect={selectTab} />
 
     </div>
   );

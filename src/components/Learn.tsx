@@ -8,6 +8,8 @@ import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, Refres
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
 import { TOPIC_META, TOPIC_LIST, LEVEL_LIST } from '../lib/topics';
 import MathText from './MathText';
+import { apiUrl } from '../lib/apiBase';
+import { gradeLocally, queueGrade } from '../lib/offline';
 
 interface LearnProps {
   problems: Problem[];
@@ -62,6 +64,27 @@ export default function Learn({
     setShowFullSolution(false);
   };
 
+  /**
+   * Apply a verdict from either grading path.
+   *
+   * Shared so that an offline result awards points, marks completion and
+   * reveals the solution on exactly the same terms as an online one — a learner
+   * without a connection should not quietly lose progress.
+   */
+  const applyVerdict = (feedback: SmartFeedback, correct: boolean) => {
+    if (!activeProblem) return;
+
+    setSmartFeedback(feedback);
+
+    if (correct) {
+      const isFresh = !completedProblems.includes(activeProblem.id);
+      onSolveProblem(activeProblem.id, true, isFresh ? activeProblem.points : 0);
+      setShowFullSolution(true);
+    } else {
+      onSolveProblem(activeProblem.id, false, 0);
+    }
+  };
+
   const handleSubmitAnswer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!answerInput.trim() || !activeProblem || evaluating) return;
@@ -70,7 +93,7 @@ export default function Learn({
     setSmartFeedback(null);
 
     try {
-      const response = await fetch('/api/evaluate', {
+      const response = await fetch(apiUrl('/api/evaluate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problemId: activeProblem.id, userAnswer: answerInput }),
@@ -78,18 +101,31 @@ export default function Learn({
 
       if (response.ok) {
         const data: SmartFeedback = await response.json();
-        setSmartFeedback(data);
-
-        if (data.correct) {
-          const isFresh = !completedProblems.includes(activeProblem.id);
-          onSolveProblem(activeProblem.id, true, isFresh ? activeProblem.points : 0);
-          setShowFullSolution(true);
-        } else {
-          onSolveProblem(activeProblem.id, false, 0);
-        }
+        applyVerdict(data, data.correct);
       }
     } catch (err) {
-      console.error('Error submitting answer:', err);
+      // The request never reached the server. Rather than dropping work the
+      // learner has already done, grade offline and defer the AI explanation.
+      //
+      // The verdict itself is not degraded: server.ts decides correctness with
+      // the same normalised comparison, and correctAnswer is present in the
+      // cached item bank. Only the personalised wording needs the network.
+      console.warn('Grading offline; queueing for explanation:', err);
+
+      const correct = gradeLocally(answerInput, activeProblem.correctAnswer);
+      queueGrade(activeProblem.id, answerInput);
+
+      applyVerdict(
+        {
+          correct,
+          explanation: correct
+            ? 'Correct. Your answer matches — the full solution is below.'
+            : 'Not quite. The worked solution is below; compare it against your approach.',
+          guidance:
+            "You're offline, so this was graded on your device. Your answer is saved and the AI tutor will add a personalised explanation once you reconnect.",
+        },
+        correct,
+      );
     } finally {
       setEvaluating(false);
     }

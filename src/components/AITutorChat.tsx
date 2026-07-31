@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, X, Bot, HelpCircle } from 'lucide-react';
 import MathText from './MathText';
+import { apiUrl } from '../lib/apiBase';
 
 interface ChatMessage {
   id: string;
@@ -50,7 +51,7 @@ export default function AITutorChat() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +101,7 @@ export default function AITutorChat() {
       <button
         id="btn-ai-tutor-toggle"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-5 py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer"
+        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer"
       >
         <Sparkles className="w-5 h-5 animate-pulse group-hover:scale-110 transition-transform" />
         <span className="font-bold tracking-wide text-sm">Ask AI Tutor</span>
@@ -109,10 +110,23 @@ export default function AITutorChat() {
 
       {/* Slide-out Sidebar Drawer for Chat */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs transition-opacity duration-300">
+        /*
+          Bottom sheet on mobile, right-hand drawer at md+.
+
+          flex-col puts the dismiss area above the panel so the sheet rises from
+          the bottom edge, where a thumb already is; flex-row at md+ restores
+          the original side drawer. Both share the same dismiss-on-backdrop
+          child, so there is one panel, not two.
+        */
+        <div className="fixed inset-0 z-50 flex flex-col md:flex-row md:justify-end bg-black/40 backdrop-blur-xs transition-opacity duration-300">
           <div className="flex-1" onClick={() => setIsOpen(false)} />
 
-          <div id="panel-ai-tutor" className="w-full max-w-md h-full bg-white shadow-2xl flex flex-col relative border-l border-stone-100">
+          <div
+            id="panel-ai-tutor"
+            className="tutor-sheet w-full md:max-w-md h-[76%] md:h-full bg-white shadow-2xl flex flex-col relative border-l border-stone-100 rounded-t-3xl md:rounded-none overflow-hidden"
+          >
+            {/* Grab handle: the affordance that says this panel is dismissable. */}
+            <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1 rounded-full bg-white/25 z-10" />
             <div className="bg-ink-950 text-white p-4 flex items-center justify-between border-b border-ink-800">
               <div className="flex items-center gap-2.5">
                 <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2 rounded-lg"><Bot className="w-5 h-5 text-ink-950" /></div>
