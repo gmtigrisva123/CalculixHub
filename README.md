@@ -12,7 +12,11 @@ Adaptive assessment built on real psychometrics, competition training, and learn
 [![License: MIT](https://img.shields.io/badge/License-MIT-c8842a.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520%20%3C23-5FA04E.svg)](.nvmrc)
 
-[Live demo](https://gmtigrisva123.github.io/CalculixHub/) · [Adaptive engine](#the-adaptive-engine) · [API](#api-reference) · [Getting started](#getting-started) · [Contributing](#contributing)
+<a href="https://gmtigrisva123.github.io/CalculixHub/"><img src="https://img.shields.io/badge/Live%20demo-c8842a?style=for-the-badge" alt="Live demo"></a>
+<a href="#the-adaptive-engine"><img src="https://img.shields.io/badge/Adaptive%20engine-2f9c8c?style=for-the-badge" alt="Adaptive engine"></a>
+<a href="#api-reference"><img src="https://img.shields.io/badge/API-0ea5e9?style=for-the-badge" alt="API reference"></a>
+<a href="#getting-started"><img src="https://img.shields.io/badge/Getting%20started-64748b?style=for-the-badge" alt="Getting started"></a>
+<a href="#contributing"><img src="https://img.shields.io/badge/Contributing-855116?style=for-the-badge" alt="Contributing"></a>
 
 </div>
 
@@ -20,23 +24,152 @@ Adaptive assessment built on real psychometrics, competition training, and learn
 
 ## Table of contents
 
-- [What this is](#what-this-is)
-- [Project status and what is simulated](#project-status-and-what-is-simulated)
-- [Feature tour](#feature-tour)
-- [The adaptive engine](#the-adaptive-engine)
-- [The analytics layer](#the-analytics-layer)
-- [The AI layer](#the-ai-layer)
-- [Architecture](#architecture)
-- [API reference](#api-reference)
-- [Tech stack](#tech-stack)
-- [Getting started](#getting-started)
-- [Scripts](#scripts)
-- [Project structure](#project-structure)
-- [Deployment](#deployment)
-- [Continuous integration](#continuous-integration)
-- [Contributing](#contributing)
-- [Roadmap](#roadmap)
-- [License](#license)
+<table>
+<tr>
+<td width="33%" valign="top" align="center">
+
+<a href="#what-this-is"><img src="https://img.shields.io/badge/What%20this%20is-c8842a?style=for-the-badge" alt="What this is"></a>
+
+The problem, and why a calibrated estimator answers it
+
+</td>
+<td width="33%" valign="top" align="center">
+
+<a href="#project-status-and-what-is-simulated"><img src="https://img.shields.io/badge/Project%20status-c8842a?style=for-the-badge" alt="Project status and what is simulated"></a>
+
+What is real engineering, what is illustrative data
+
+</td>
+<td width="33%" valign="top" align="center">
+
+<a href="#feature-tour"><img src="https://img.shields.io/badge/Feature%20tour-c8842a?style=for-the-badge" alt="Feature tour"></a>
+
+The eight sections of the app, one line each
+
+</td>
+</tr>
+<tr>
+<td valign="top" align="center">
+
+<a href="#the-adaptive-engine"><img src="https://img.shields.io/badge/Adaptive%20engine-2f9c8c?style=for-the-badge" alt="The adaptive engine"></a>
+
+3PL IRT, EAP estimation, Fisher-information selection
+
+<sub><a href="#response-model">Response model</a> · <a href="#ability-estimation--eap-not-mle">Ability estimation</a> · <a href="#item-selection--maximum-fisher-information">Item selection</a> · <a href="#stopping-rule">Stopping rule</a> · <a href="#score-reporting">Score reporting</a> · <a href="#item-bank-composition">Item bank</a></sub>
+
+</td>
+<td valign="top" align="center">
+
+<a href="#the-analytics-layer"><img src="https://img.shields.io/badge/Analytics%20layer-2f9c8c?style=for-the-badge" alt="The analytics layer"></a>
+
+Forecasting, error classification, learning paths
+
+</td>
+<td valign="top" align="center">
+
+<a href="#the-ai-layer"><img src="https://img.shields.io/badge/AI%20layer-8b5cf6?style=for-the-badge" alt="The AI layer"></a>
+
+Server-side Gemini, and the no-key fallback path
+
+</td>
+</tr>
+<tr>
+<td valign="top" align="center">
+
+<a href="#architecture"><img src="https://img.shields.io/badge/Architecture-0ea5e9?style=for-the-badge" alt="Architecture"></a>
+
+How the SPA, the Express server and Gemini fit together
+
+</td>
+<td valign="top" align="center">
+
+<a href="#api-reference"><img src="https://img.shields.io/badge/API%20reference-0ea5e9?style=for-the-badge" alt="API reference"></a>
+
+Seven endpoints, and which ones degrade gracefully
+
+</td>
+<td valign="top" align="center">
+
+<a href="#tech-stack"><img src="https://img.shields.io/badge/Tech%20stack-0ea5e9?style=for-the-badge" alt="Tech stack"></a>
+
+React 19, Vite 6, Tailwind 4, Express 4, KaTeX
+
+</td>
+</tr>
+<tr>
+<td valign="top" align="center">
+
+<a href="#getting-started"><img src="https://img.shields.io/badge/Getting%20started-64748b?style=for-the-badge" alt="Getting started"></a>
+
+From clone to running locally, in three commands
+
+<sub><a href="#prerequisites">Prerequisites</a> · <a href="#install">Install</a> · <a href="#configure-optional">Configure</a> · <a href="#run">Run</a> · <a href="#production-build">Production build</a></sub>
+
+</td>
+<td valign="top" align="center">
+
+<a href="#scripts"><img src="https://img.shields.io/badge/Scripts-64748b?style=for-the-badge" alt="Scripts"></a>
+
+Every npm script, and what it actually runs
+
+</td>
+<td valign="top" align="center">
+
+<a href="#project-structure"><img src="https://img.shields.io/badge/Project%20structure-64748b?style=for-the-badge" alt="Project structure"></a>
+
+Annotated file tree; the two files that carry the substance
+
+</td>
+</tr>
+<tr>
+<td valign="top" align="center">
+
+<a href="#deployment"><img src="https://img.shields.io/badge/Deployment-64748b?style=for-the-badge" alt="Deployment"></a>
+
+Vercel, Cloudflare, and the static-Pages caveat
+
+</td>
+<td valign="top" align="center">
+
+<a href="#continuous-integration"><img src="https://img.shields.io/badge/Continuous%20integration-64748b?style=for-the-badge" alt="Continuous integration"></a>
+
+Which workflows are real, and which are scaffolding
+
+</td>
+<td valign="top" align="center">
+
+<a href="#contributing"><img src="https://img.shields.io/badge/Contributing-855116?style=for-the-badge" alt="Contributing"></a>
+
+Branch, verify, PR — and the commit conventions
+
+<sub><a href="#workflow">Workflow</a> · <a href="#commit-and-merge-conventions">Commit conventions</a> · <a href="#where-to-start">Where to start</a></sub>
+
+</td>
+</tr>
+<tr>
+<td valign="top" align="center">
+
+<a href="#roadmap"><img src="https://img.shields.io/badge/Roadmap-855116?style=for-the-badge" alt="Roadmap"></a>
+
+Testing, persistence, real auth, `strict` mode
+
+</td>
+<td valign="top" align="center">
+
+<a href="#license"><img src="https://img.shields.io/badge/License-855116?style=for-the-badge" alt="License"></a>
+
+MIT, plus a note on the stale SPDX headers
+
+</td>
+<td valign="top" align="center">
+
+<a href="https://gmtigrisva123.github.io/CalculixHub/"><img src="https://img.shields.io/badge/Live%20demo-c8842a?style=for-the-badge" alt="Live demo"></a>
+
+Run the client-side engine in the browser
+
+</td>
+</tr>
+</table>
 
 ---
 
