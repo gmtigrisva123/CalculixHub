@@ -19,6 +19,7 @@ import { computeStreak } from './lib/streak';
 import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
 import MobileHeader from './components/MobileHeader';
 import MobileTabBar from './components/MobileTabBar';
+import InstallAppButton from './components/InstallAppButton';
 import Dashboard from './components/Dashboard';
 import Learn from './components/Learn';
 import Compete from './components/Compete';
@@ -616,6 +617,9 @@ export default function App() {
                       <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brass-600"></div>
                     </label>
                   </div>
+
+                  {/* Install entry point — hides itself when already installed */}
+                  <InstallAppButton variant="row" />
 
                 </div>
 

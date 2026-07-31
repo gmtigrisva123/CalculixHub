@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Level, Topic } from '../types';
 import MathText from './MathText';
+import InstallAppButton from './InstallAppButton';
 import {
   IRTItem,
   ResponseRecord,
@@ -467,11 +468,17 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         {/* STICKY NAVBAR */}
         <header className="sticky top-0 z-50 backdrop-blur-md bg-ink-950/85 border-b border-ink-800 select-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-lg font-serif">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-lg font-serif shrink-0">
                 &#8721;
               </div>
-              <div>
+              {/*
+                The wordmark costs ~120px of a 320px header, which does not
+                survive alongside the action buttons on an iPhone SE. Below sm
+                the sigma mark carries the brand on its own; the hero headline
+                names the product immediately underneath.
+              */}
+              <div className="hidden sm:block">
                 <h1 className="font-extrabold text-sm tracking-widest text-stone-100 uppercase">CalculixHub</h1>
                 <span className="text-[10px] font-bold text-stone-500 block -mt-1 uppercase tracking-wider">Math OS Platform</span>
               </div>
@@ -486,20 +493,28 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               <a href="#impact" className="hover:text-white transition-colors">Impact</a>
             </nav>
 
-            <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-1.5 sm:gap-3.5">
+              <InstallAppButton />
               <button
                 type="button"
                 onClick={() => setAuthMode('login')}
-                className="text-xs font-bold text-stone-400 hover:text-white transition-colors cursor-pointer px-3 py-1.5 rounded-lg hover:bg-ink-900"
+                className="text-xs font-bold text-stone-400 hover:text-white transition-colors cursor-pointer px-2 sm:px-3 py-1.5 rounded-lg hover:bg-ink-900 whitespace-nowrap"
               >
                 Sign in
               </button>
               <button
                 type="button"
                 onClick={() => setAuthMode('register')}
-                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-4.5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-brass-500/20 hover:shadow-lg active:scale-95 cursor-pointer"
+                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-3 sm:px-4.5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-brass-500/20 hover:shadow-lg active:scale-95 cursor-pointer whitespace-nowrap"
               >
-                Take the placement test
+                {/*
+                  Shortened below sm so the header fits a 375px viewport now that
+                  it carries a third button. Nothing is lost: the hero's
+                  full-width "Start free — take the placement test" CTA sits
+                  directly beneath it on mobile.
+                */}
+                <span className="sm:hidden">Start free</span>
+                <span className="hidden sm:inline">Take the placement test</span>
               </button>
             </div>
           </div>
