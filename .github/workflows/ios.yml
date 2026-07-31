@@ -1,0 +1,158 @@
+name: iOS
+
+# Builds the Capacitor iOS app.
+#
+# This exists because the app cannot be built on the maintainer's machine:
+# macOS 12 Monterey caps Xcode at 14.2, below what Capacitor 8 requires. A macOS
+# runner supplies a current Xcode, so the native build is verified here rather
+# than locally.
+#
+# The archive produced is UNSIGNED. Signing needs an Apple Developer account
+# ($99/yr), a distribution certificate and a provisioning profile, none of which
+# this project has yet. An unsigned archive still proves the project compiles,
+# links and bundles correctly -- which is the failure mode worth catching on
+# every change. See the "Signing" notes at the bottom of this file for what to
+# add when an account exists.
+
+on:
+  push:
+    branches: [main, master]
+    # Skip the ~10 minute macOS job when nothing it builds has changed.
+    paths:
+      - 'ios/**'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'ios/**'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - '.github/workflows/ios.yml'
+  # Allows building on demand, e.g. to produce an archive for a manual install.
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS app
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      # Note the absence of `|| true` anywhere in this workflow. Several older
+      # workflows in this repo append it, which silently turned real failures
+      # green; a build that cannot fail cannot tell you the app is broken.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Report toolchain
+        run: |
+          echo "Xcode: $(xcodebuild -version | head -1)"
+          echo "Node:  $(node --version)"
+          xcodebuild -showsdks | grep -i iphoneos || true
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Build web bundle
+        env:
+          # Consumed by src/lib/apiBase.ts. Without it the native app cannot
+          # reach /api/*, so the app would build but its AI features would fail
+          # at runtime. Set this repository variable to the deployed backend
+          # origin, e.g. https://your-project.vercel.app
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          if [ -z "$VITE_API_BASE_URL" ]; then
+            echo "::warning title=No API base URL::VITE_API_BASE_URL repository variable is not set. The app will build, but the AI tutor, grading and recommendations will not work in the installed app. Set it under Settings > Secrets and variables > Actions > Variables."
+          fi
+          npx vite build
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      # Resolves the Swift Package dependencies Capacitor 8 uses in place of
+      # CocoaPods. Done as its own step so a dependency resolution failure is
+      # distinguishable from a compile failure.
+      - name: Resolve Swift packages
+        working-directory: ios/App
+        run: xcodebuild -resolvePackageDependencies -project App.xcodeproj -scheme App
+
+      - name: Build for simulator
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      # A device archive exercises the release configuration and the real iOS
+      # SDK, catching problems the simulator build cannot -- architecture
+      # differences, release-only optimisation settings, bitcode-era flags.
+      - name: Archive for device (unsigned)
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$RUNNER_TEMP/CalculixHub.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: CalculixHub-unsigned-xcarchive
+          path: ${{ runner.temp }}/CalculixHub.xcarchive
+          retention-days: 14
+          if-no-files-found: error
+
+# ---------------------------------------------------------------------------
+# Signing, for when an Apple Developer account exists
+#
+# The archive above cannot be installed on a device or uploaded to TestFlight --
+# unsigned builds are rejected by both. To produce a distributable .ipa:
+#
+#   1. Export the distribution certificate as a .p12 and base64 it, then store
+#      it as the secret IOS_DIST_CERT_P12, with its password as
+#      IOS_DIST_CERT_PASSWORD.
+#   2. Store the provisioning profile the same way as IOS_PROVISIONING_PROFILE.
+#   3. Import both into a temporary keychain in a step before the archive
+#      (apple-actions/import-codesign-certs handles this).
+#   4. Drop the CODE_SIGNING_* overrides from the archive step and add
+#      DEVELOPMENT_TEAM=<team id>.
+#   5. Add an export step:
+#        xcodebuild -exportArchive \
+#          -archivePath "$RUNNER_TEMP/CalculixHub.xcarchive" \
+#          -exportPath "$RUNNER_TEMP/export" \
+#          -exportOptionsPlist ios/ExportOptions.plist
+#
+# Uploading to TestFlight then uses xcrun altool or fastlane pilot with an App
+# Store Connect API key.
+# ---------------------------------------------------------------------------
