@@ -28,9 +28,22 @@
       "vite/client"
     ]
   },
+  // Everything server-side is checked by `tsconfig.server.json` instead, which
+  // enables `strict`. It is excluded here rather than checked twice: this
+  // configuration has `strictNullChecks` off, under which TypeScript cannot
+  // narrow a discriminated union on a boolean discriminant and Zod infers every
+  // field as optional. Checking correct strict code with it produces errors
+  // that describe the configuration rather than the code.
+  //
+  // Each file therefore has exactly one owning configuration, and `npm run
+  // lint` runs both. Client directories move to the strict config over time.
   "exclude": [
     "node_modules",
     "dist",
-    "calculix_realtime_patch"
+    "calculix_realtime_patch",
+    "src/server",
+    "api",
+    "server.ts",
+    "vitest.config.ts"
   ]
 }

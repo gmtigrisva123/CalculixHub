@@ -1,0 +1,27 @@
+{
+  // Strict type checking for the server, the tests, and the deployment
+  // adapters.
+  //
+  // The root `tsconfig.json` does not enable `strict`, so `strictNullChecks`
+  // and `noImplicitAny` are both off across the project. That is not a
+  // preference -- it actively breaks correct code: without `strictNullChecks`,
+  // Zod infers every field of a schema as optional and TypeScript stops
+  // narrowing discriminated unions on a boolean discriminant. A validation
+  // layer type-checked that way cannot express what it guarantees.
+  //
+  // Turning `strict` on project-wide would surface a large number of errors in
+  // the existing client and turn a security change into an unreviewable
+  // refactor. So the boundary is drawn here instead: everything written from
+  // now on is strict, `npm run lint` checks both configurations, and the
+  // remaining client directories move across one at a time.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src/server/**/*", "api/**/*", "server.ts", "vitest.config.ts", "src/types.ts"]
+}
