@@ -4,12 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Award, Sparkles, BookOpenCheck } from 'lucide-react';
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
 import { TOPIC_META, TOPIC_LIST, LEVEL_LIST } from '../lib/topics';
 import MathText from './MathText';
 import { apiUrl } from '../lib/apiBase';
 import { gradeLocally, queueGrade } from '../lib/offline';
+import { duration, ease, spring, travel } from '../lib/motion';
+import { useAmbient } from '../lib/useAmbient';
+import { Collapse, StaggerItem } from './motion';
 
 interface LearnProps {
   problems: Problem[];
@@ -131,10 +135,32 @@ export default function Learn({
     }
   };
 
+  // The idle-state sparkle in the feedback panel, paused when out of view.
+  const idleSparkleRef = useAmbient<SVGSVGElement>();
+
   return (
     <div className="space-y-6">
+      {/*
+        Browsing the catalogue and working a problem are two different places,
+        not two states of one screen, so moving between them gets a directional
+        transition: the list recedes and the workspace comes forward from
+        slightly below, and the reverse on the way back. That direction is what
+        makes "Back to problem list" feel like going back rather than like
+        another unrelated screen appearing.
+
+        `mode="wait"` because the two views are full-width and would otherwise
+        overlap mid-transition.
+      */}
+      <AnimatePresence mode="wait" initial={false}>
       {!activeProblem ? (
-        <div className="space-y-6">
+        <m.div
+          key="problem-list"
+          initial={{ opacity: 0, y: travel.sm, scale: 0.995 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.99, transition: { duration: duration.instant, ease: ease.exit } }}
+          transition={spring.smooth}
+          className="space-y-6"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
             <div>
               <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2 font-serif">
@@ -155,24 +181,28 @@ export default function Learn({
             <div className="space-y-1.5 flex-1 select-none">
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">Topic</span>
               <div className="flex flex-wrap gap-2 pt-0.5">
-                <button
+                <m.button
                   onClick={() => setSelectedTopic('All')}
-                  className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
+                  whileTap={{ scale: 0.95 }}
+                  transition={spring.press}
+                  className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
                     selectedTopic === 'All' ? 'bg-ink-950 border border-ink-950 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >
                   All topics
-                </button>
+                </m.button>
                 {TOPIC_LIST.map((topic) => (
-                  <button
+                  <m.button
                     key={topic}
                     onClick={() => setSelectedTopic(topic)}
-                    className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    whileTap={{ scale: 0.95 }}
+                    transition={spring.press}
+                    className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
                       selectedTopic === topic ? 'bg-ink-950 border border-ink-950 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
                     {TOPIC_META[topic].label}
-                  </button>
+                  </m.button>
                 ))}
               </div>
             </div>
@@ -180,24 +210,28 @@ export default function Learn({
             <div className="space-y-1.5 select-none shrink-0">
               <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">Difficulty</span>
               <div className="flex gap-2 pt-0.5">
-                <button
+                <m.button
                   onClick={() => setSelectedLevel('All')}
-                  className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
+                  whileTap={{ scale: 0.95 }}
+                  transition={spring.press}
+                  className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
                     selectedLevel === 'All' ? 'bg-ink-950 border border-ink-800 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >
                   All
-                </button>
+                </m.button>
                 {LEVEL_LIST.map((lvl) => (
-                  <button
+                  <m.button
                     key={lvl}
                     onClick={() => setSelectedLevel(lvl)}
-                    className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    whileTap={{ scale: 0.95 }}
+                    transition={spring.press}
+                    className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
                       selectedLevel === lvl ? 'bg-ink-950 border border-ink-800 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
                     {lvl}
-                  </button>
+                  </m.button>
                 ))}
               </div>
             </div>
@@ -209,13 +243,24 @@ export default function Learn({
               No problems match your current filters.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredProblems.map((prob) => {
+            /*
+              Keyed on the active filters, so changing a filter replays the
+              stagger. That is deliberate: the grid re-populating is the only
+              confirmation the filter did anything, and without it a filter that
+              happens to match a similar number of problems looks like nothing
+              happened at all.
+            */
+            <div
+              key={`${selectedTopic}-${selectedLevel}`}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+            >
+              {filteredProblems.map((prob, index) => {
                 const isCompleted = completedProblems.includes(prob.id);
                 return (
-                  <div
+                  <StaggerItem
                     key={prob.id}
-                    className={`bg-white border rounded-2xl p-5 hover:border-stone-300 hover:shadow-xs transition-all relative flex flex-col justify-between group ${
+                    index={index}
+                    className={`bg-white border rounded-2xl p-5 hover:border-stone-300 hover:shadow-xs transition-[border-color,box-shadow] duration-160 ease-standard relative flex flex-col justify-between group ${
                       isCompleted ? 'border-proof-100 bg-proof-50/10' : 'border-stone-100'
                     }`}
                   >
@@ -231,7 +276,7 @@ export default function Learn({
                         <span className="text-[10px] text-stone-400 font-bold whitespace-nowrap">{TOPIC_META[prob.topic].label}</span>
                       </div>
 
-                      <h3 className="font-extrabold text-stone-800 text-sm leading-snug group-hover:text-brass-700 transition-colors">{prob.title}</h3>
+                      <h3 className="font-extrabold text-stone-800 text-sm leading-snug group-hover:text-brass-700 transition-colors duration-160 ease-standard">{prob.title}</h3>
 
                       <MathText text={prob.question} as="p" className="text-xs text-stone-500 mt-2 line-clamp-3 leading-relaxed" />
                     </div>
@@ -243,28 +288,43 @@ export default function Learn({
                           <CheckCircle className="w-4 h-4 text-proof-500 shrink-0" /> Solved
                         </span>
                       ) : (
-                        <button
+                        <m.button
                           onClick={() => handleSelectProblem(prob)}
-                          className="bg-ink-950 text-white font-bold text-[11px] px-3.5 py-2 rounded-xl hover:bg-black transition-all cursor-pointer flex items-center gap-1 group-hover:translate-x-0.5"
+                          whileTap={{ scale: 0.94 }}
+                          transition={spring.press}
+                          className="bg-ink-950 text-white font-bold text-[11px] px-3.5 py-2 rounded-xl hover:bg-black transition-[background-color,transform] duration-160 ease-standard cursor-pointer flex items-center gap-1 group-hover:translate-x-0.5"
                         >
                           Practice <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
+                        </m.button>
                       )}
                     </div>
-                  </div>
+                  </StaggerItem>
                 );
               })}
             </div>
           )}
-        </div>
+        </m.div>
       ) : (
-        <div className="max-w-4xl mx-auto space-y-6 pb-16">
-          <button
+        <m.div
+          key="problem-workspace"
+          initial={{ opacity: 0, y: travel.md, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: travel.sm, scale: 0.99, transition: { duration: duration.instant, ease: ease.exit } }}
+          transition={spring.smooth}
+          className="max-w-4xl mx-auto space-y-6 pb-16"
+        >
+          {/*
+            The back control nudges left on hover, pointing at where it goes.
+          */}
+          <m.button
             onClick={handleCloseWorkspace}
-            className="flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors text-xs font-bold cursor-pointer border border-stone-200 bg-white px-3.5 py-2 rounded-xl hover:shadow-2xs self-start"
+            whileHover={{ x: -travel.xs / 2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={spring.press}
+            className="flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-[color,box-shadow] duration-160 ease-standard text-xs font-bold cursor-pointer border border-stone-200 bg-white px-3.5 py-2 rounded-xl hover:shadow-2xs self-start"
           >
             <ArrowLeft className="w-4 h-4" /> Back to problem list
-          </button>
+          </m.button>
 
           <div className="bg-white border border-stone-100 rounded-3xl shadow-xl overflow-hidden">
             <div className="bg-ink-950 text-white p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ink-800">
@@ -299,44 +359,78 @@ export default function Learn({
                         value={answerInput}
                         onChange={(e) => setAnswerInput(e.target.value)}
                         disabled={evaluating || completedProblems.includes(activeProblem.id)}
-                        className="flex-1 border border-stone-200 focus:border-stone-900 rounded-xl px-4 py-3 text-sm font-bold outline-hidden transition-all text-stone-800 bg-stone-50/50 disabled:opacity-55 disabled:cursor-not-allowed"
+                        className="flex-1 border border-stone-200 focus:border-stone-900 rounded-xl px-4 py-3 text-sm font-bold outline-hidden transition-[border-color,opacity] duration-160 ease-standard text-stone-800 bg-stone-50/50 disabled:opacity-55 disabled:cursor-not-allowed"
                       />
-                      <button
+                      <m.button
                         id="btn-submit-answer"
                         type="submit"
                         disabled={evaluating || !answerInput.trim() || completedProblems.includes(activeProblem.id)}
-                        className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 h-11 rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center shrink-0"
+                        whileTap={{ scale: 0.95 }}
+                        transition={spring.press}
+                        className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 h-11 rounded-xl transition-[background-color,opacity] duration-160 ease-standard shadow-md disabled:opacity-40 cursor-pointer flex items-center justify-center shrink-0"
                       >
-                        {evaluating ? (<span className="flex items-center gap-1"><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Grading...</span>) : ('Submit answer')}
-                      </button>
+                        {/*
+                          Grading is the one genuinely slow action in the app.
+                          Crossfading the label keeps the button the same object
+                          throughout instead of blinking between two states.
+                        */}
+                        <AnimatePresence mode="wait" initial={false}>
+                          {evaluating ? (
+                            <m.span
+                              key="grading"
+                              className="flex items-center gap-1"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: duration.instant, ease: ease.standard }}
+                            >
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Grading...
+                            </m.span>
+                          ) : (
+                            <m.span
+                              key="submit"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: duration.instant, ease: ease.standard }}
+                            >
+                              Submit answer
+                            </m.span>
+                          )}
+                        </AnimatePresence>
+                      </m.button>
                     </div>
 
                     <div className="flex gap-2">
-                      <button
+                      <m.button
                         id="btn-show-hint"
                         type="button"
                         onClick={() => setShowHint(!showHint)}
-                        className="text-xs bg-stone-100 hover:bg-stone-200/80 text-stone-700 px-4 py-2 rounded-lg border border-stone-200 transition-all cursor-pointer flex items-center gap-1.5"
+                        whileTap={{ scale: 0.95 }}
+                        transition={spring.press}
+                        className="text-xs bg-stone-100 hover:bg-stone-200/80 text-stone-700 px-4 py-2 rounded-lg border border-stone-200 transition-colors duration-160 ease-standard cursor-pointer flex items-center gap-1.5"
                       >
                         <HelpCircle className="w-4 h-4 text-stone-500" />
                         {showHint ? 'Hide hint' : 'Show hint'}
-                      </button>
+                      </m.button>
 
-                      <button
+                      <m.button
                         type="button"
                         onClick={() => setShowFullSolution(!showFullSolution)}
-                        className="text-xs bg-brass-50 hover:bg-brass-100 text-brass-700 px-4 py-2 rounded-lg border border-brass-100 transition-all cursor-pointer flex items-center gap-1.5 font-semibold"
+                        whileTap={{ scale: 0.95 }}
+                        transition={spring.press}
+                        className="text-xs bg-brass-50 hover:bg-brass-100 text-brass-700 px-4 py-2 rounded-lg border border-brass-100 transition-colors duration-160 ease-standard cursor-pointer flex items-center gap-1.5 font-semibold"
                       >
                         <BookOpenCheck className="w-4 h-4 text-brass-600" />
                         View full solution
-                      </button>
+                      </m.button>
                     </div>
 
-                    {showHint && (
+                    <Collapse open={showHint}>
                       <div className="p-4.5 bg-amber-50/60 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed font-medium">
                         <strong>Hint:</strong> <MathText text={activeProblem.hint} />
                       </div>
-                    )}
+                    </Collapse>
                   </form>
                 </div>
 
@@ -346,37 +440,85 @@ export default function Learn({
                     <span className="text-[10px] text-stone-400 font-bold">Automatic feedback</span>
                   </div>
 
+                  {/*
+                    The verdict is the emotional peak of the whole product —
+                    the moment the learner finds out whether they were right.
+                    It gets the most expressive motion here, and it is the only
+                    place bounce is used at any strength: the icon lands with a
+                    spring, then the explanation and next step follow it in.
+                    Everything else on this screen is deliberately quieter so
+                    this reads as the answer.
+                  */}
+                  <AnimatePresence mode="wait" initial={false}>
                   {smartFeedback ? (
-                    <div className="space-y-3.5">
+                    <m.div
+                      key={`verdict-${smartFeedback.correct}`}
+                      initial={{ opacity: 0, y: travel.sm }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, transition: { duration: duration.instant, ease: ease.exit } }}
+                      transition={spring.smooth}
+                      className="space-y-3.5"
+                    >
                       <div className="flex items-center gap-2">
-                        {smartFeedback.correct ? (
-                          <div className="bg-proof-50 text-proof-700 border border-proof-100 p-1 rounded-full flex items-center justify-center shrink-0"><CheckCircle className="w-4 h-4" /></div>
-                        ) : (
-                          <div className="bg-rose-50 text-rose-700 border border-rose-100 p-1 rounded-full flex items-center justify-center shrink-0"><AlertCircle className="w-4 h-4" /></div>
-                        )}
-                        <span className={`text-xs font-black uppercase tracking-wider ${smartFeedback.correct ? 'text-proof-700' : 'text-rose-700'}`}>
+                        <m.div
+                          initial={{ scale: 0.4, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.45 }}
+                          className="shrink-0"
+                        >
+                          {smartFeedback.correct ? (
+                            <div className="bg-proof-50 text-proof-700 border border-proof-100 p-1 rounded-full flex items-center justify-center"><CheckCircle className="w-4 h-4" /></div>
+                          ) : (
+                            <div className="bg-rose-50 text-rose-700 border border-rose-100 p-1 rounded-full flex items-center justify-center"><AlertCircle className="w-4 h-4" /></div>
+                          )}
+                        </m.div>
+                        <m.span
+                          initial={{ opacity: 0, x: -travel.xs }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ ...spring.snappy, delay: 0.06 }}
+                          className={`text-xs font-black uppercase tracking-wider ${smartFeedback.correct ? 'text-proof-700' : 'text-rose-700'}`}
+                        >
                           {smartFeedback.correct ? 'Correct' : 'Not quite'}
-                        </span>
+                        </m.span>
                       </div>
 
-                      <div className="space-y-2">
+                      <m.div
+                        initial={{ opacity: 0, y: travel.xs }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...spring.smooth, delay: 0.1 }}
+                        className="space-y-2"
+                      >
                         <p className="text-stone-850 text-xs leading-relaxed font-semibold italic">&ldquo;{smartFeedback.explanation}&rdquo;</p>
                         <p className="text-stone-600 text-[11px] leading-relaxed border-t border-stone-200 pt-2 font-medium">
                           <strong>Next step:</strong> {smartFeedback.guidance}
                         </p>
-                      </div>
-                    </div>
+                      </m.div>
+                    </m.div>
                   ) : (
-                    <div className="text-center py-6 text-stone-400 text-xs space-y-1">
-                      <Sparkles className="w-5 h-5 text-stone-300 mx-auto animate-pulse" />
+                    <m.div
+                      key="verdict-idle"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, transition: { duration: duration.instant, ease: ease.exit } }}
+                      transition={{ duration: duration.base, ease: ease.standard }}
+                      className="text-center py-6 text-stone-400 text-xs space-y-1"
+                    >
+                      <Sparkles ref={idleSparkleRef} className="w-5 h-5 text-stone-300 mx-auto animate-pulse" />
                       <p className="font-semibold">Waiting for your answer</p>
                       <p className="text-[9px]">Submit an answer to get AI-guided feedback.</p>
-                    </div>
+                    </m.div>
                   )}
+                  </AnimatePresence>
                 </div>
               </div>
 
-              {showFullSolution && (
+              {/*
+                The worked solution is a large dark panel appearing at the
+                bottom of a light card. Dropping it in fully formed shifts the
+                page under the reader; expanding it keeps the scroll position
+                honest and reads as the card opening up.
+              */}
+              <Collapse open={showFullSolution}>
                 <div className="border-t border-stone-100 pt-6 space-y-4">
                   <div className="flex items-center gap-2 text-violet-800">
                     <Award className="w-5 h-5 text-violet-600" />
@@ -390,11 +532,12 @@ export default function Learn({
                     </div>
                   </div>
                 </div>
-              )}
+              </Collapse>
             </div>
           </div>
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

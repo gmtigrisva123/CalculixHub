@@ -4,11 +4,15 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { Flame, Trophy, Percent, Clock, Sparkles, Brain, Calendar, AlertTriangle, ChevronRight } from 'lucide-react';
 import { UserStats, WeeklyChallenge, Contest, AIRecommendation, Topic, Level } from '../types';
 import { TOPIC_META, getRankForPoints, formatMinutes } from '../lib/topics';
 import { getLastNDateKeys } from '../lib/streak';
 import { apiUrl } from '../lib/apiBase';
+import { duration, ease, spring, staggerDelay, travel } from '../lib/motion';
+import { useAmbient } from '../lib/useAmbient';
+import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 
 interface DashboardProps {
   userStats: UserStats;
@@ -60,6 +64,11 @@ export default function Dashboard({
 
   const rank = getRankForPoints(userStats.points);
 
+  // Ambient loops on this screen: the streak flame and the recommendation
+  // sparkle. Both keep their appearance and stop costing frames off-screen.
+  const flameRef = useAmbient<SVGSVGElement>();
+  const aiSparkleRef = useAmbient<SVGSVGElement>();
+
   return (
     <div className="space-y-8">
       {/* Welcome Hero */}
@@ -77,25 +86,37 @@ export default function Dashboard({
             Welcome back to <b>CalculixHub</b>. Every session here is built to strengthen structural reasoning, not rote memorization &mdash; practice that actually moves your ceiling.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
-            <button
+            <m.button
               onClick={() => onNavigateToTab('learn')}
-              className="bg-white hover:bg-stone-100 text-ink-950 font-bold text-sm px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+              className="bg-white hover:bg-stone-100 text-ink-950 font-bold text-sm px-6 py-3 rounded-xl shadow-lg transition-[background-color,box-shadow] duration-160 ease-standard flex items-center gap-2 cursor-pointer"
             >
               <Brain className="w-4 h-4 text-ink-950" /> Start practicing
-            </button>
-            <button
+            </m.button>
+            <m.button
               onClick={() => onNavigateToTab('progress')}
-              className="bg-ink-800 hover:bg-ink-700 text-white font-medium text-sm px-5 py-3 rounded-xl transition-all border border-ink-700 cursor-pointer"
+              whileTap={{ scale: 0.96 }}
+              transition={spring.press}
+              className="bg-ink-800 hover:bg-ink-700 text-white font-medium text-sm px-5 py-3 rounded-xl transition-[background-color,border-color] duration-160 ease-standard border border-ink-700 cursor-pointer"
             >
               View analytics
-            </button>
+            </m.button>
           </div>
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/*
+        Stats grid.
+
+        The four cards arrive in a short left-to-right wave rather than all at
+        once, which gives the row a reading order. Every figure inside counts to
+        its value and every bar springs to its width, so a session that earned
+        points shows the gain happening instead of presenting a number that was
+        apparently always there.
+      */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={0} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Rank tier</p>
@@ -107,23 +128,31 @@ export default function Dashboard({
           </div>
           <div className="mt-4">
             <div className="flex justify-between text-xs font-medium text-stone-500 mb-1.5">
-              <span>{userStats.points} pts</span>
+              <span><AnimatedNumber value={userStats.points} /> pts</span>
               <span>{userStats.level} tier</span>
             </div>
-            <div className="w-full bg-stone-100 rounded-full h-1.5">
-              <div className="bg-ink-950 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (userStats.points / 500) * 100)}%` }} />
-            </div>
+            <SpringBar
+              value={(userStats.points / 500) * 100}
+              track="w-full bg-stone-100 rounded-full h-1.5"
+              fill="bg-ink-950 h-1.5 rounded-full"
+              label="Progress toward 500 points"
+            />
           </div>
-        </div>
+        </StaggerItem>
 
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={1} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Daily streak</p>
-              <h3 className="font-extrabold text-stone-900 text-lg mt-0.5">{userStats.streak} days</h3>
+              <h3 className="font-extrabold text-stone-900 text-lg mt-0.5">
+                <AnimatedNumber value={userStats.streak} /> days
+              </h3>
             </div>
             <div className={`p-2.5 rounded-xl border ${userStats.streak > 0 ? 'bg-orange-50 border-orange-100' : 'bg-stone-50 border-stone-100'}`}>
-              <Flame className={`w-5 h-5 ${userStats.streak > 0 ? 'text-orange-500 animate-pulse' : 'text-stone-400'}`} />
+              <Flame
+                ref={flameRef}
+                className={`w-5 h-5 ${userStats.streak > 0 ? 'text-orange-500 animate-pulse' : 'text-stone-400'}`}
+              />
             </div>
           </div>
           <p className="text-xs text-stone-500 mt-4 leading-relaxed">
@@ -131,13 +160,15 @@ export default function Dashboard({
               ? 'Streak is live — keep it going to hold your compounding gains.'
               : 'Solve at least one problem today to light the streak.'}
           </p>
-        </div>
+        </StaggerItem>
 
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={2} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Accuracy</p>
-              <h3 className="font-extrabold text-stone-900 text-lg mt-0.5">{userStats.accuracy}%</h3>
+              <h3 className="font-extrabold text-stone-900 text-lg mt-0.5">
+                <AnimatedNumber value={userStats.accuracy} />%
+              </h3>
             </div>
             <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100">
               <Percent className="w-5 h-5 text-sky-500" />
@@ -145,16 +176,19 @@ export default function Dashboard({
           </div>
           <div className="mt-4">
             <div className="flex justify-between text-xs font-medium text-stone-500 mb-1.5">
-              <span>{userStats.completedCount} solved</span>
+              <span><AnimatedNumber value={userStats.completedCount} /> solved</span>
               <span>Target: 80%</span>
             </div>
-            <div className="w-full bg-stone-100 rounded-full h-1.5">
-              <div className="bg-ink-950 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${userStats.accuracy}%` }} />
-            </div>
+            <SpringBar
+              value={userStats.accuracy}
+              track="w-full bg-stone-100 rounded-full h-1.5"
+              fill="bg-ink-950 h-1.5 rounded-full"
+              label="Current accuracy"
+            />
           </div>
-        </div>
+        </StaggerItem>
 
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={3} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Time invested</p>
@@ -167,7 +201,7 @@ export default function Dashboard({
           <p className="text-xs text-stone-500 mt-4 leading-relaxed">
             Roughly <b>{Math.max(1, Math.round(userStats.timeSpent / 25))} focused Pomodoro sessions</b> so far.
           </p>
-        </div>
+        </StaggerItem>
       </div>
 
       {/* Streak calendar: which of the last 7 real calendar days had activity */}
@@ -185,7 +219,7 @@ export default function Dashboard({
         </div>
 
         <div className="grid grid-cols-7 gap-2 sm:gap-3">
-          {getLastNDateKeys(7).map((dateKey) => {
+          {getLastNDateKeys(7).map((dateKey, index) => {
             const isActive = (userStats.learningTimeline || []).some((t) => t.date === dateKey);
             const isToday = dateKey === new Date().toISOString().slice(0, 10);
             const dayLabel = new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
@@ -193,13 +227,22 @@ export default function Dashboard({
             return (
               <div key={dateKey} className="flex flex-col items-center gap-1.5">
                 <span className="text-[9px] font-bold uppercase text-stone-400 tracking-wider">{dayLabel}</span>
-                <div
-                  className={`w-full aspect-square rounded-xl border flex items-center justify-center transition-all ${
+                {/*
+                  The week lights up left to right, one day at a time. It is the
+                  one place in the product where a stagger is not just ordering
+                  — the sequence is the week passing, and an active day landing
+                  with a spring is the small reward for having shown up.
+                */}
+                <m.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...spring.snappy, delay: staggerDelay(index, 0.04) }}
+                  className={`w-full aspect-square rounded-xl border flex items-center justify-center transition-[background-color,border-color] duration-240 ease-standard ${
                     isActive ? 'bg-orange-50 border-orange-200' : 'bg-stone-50 border-stone-100'
                   } ${isToday ? 'ring-2 ring-brass-400 ring-offset-1' : ''}`}
                 >
                   <Flame className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'text-orange-500' : 'text-stone-300'}`} />
-                </div>
+                </m.div>
                 <span className={`text-[9px] font-semibold ${isToday ? 'text-brass-700' : 'text-stone-400'}`}>{dayNum}</span>
               </div>
             );
@@ -218,7 +261,7 @@ export default function Dashboard({
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-stone-900 flex items-center gap-2 font-serif">
-              <Sparkles className="w-5 h-5 text-brass-600 animate-pulse" /> AI Recommendation
+              <Sparkles ref={aiSparkleRef} className="w-5 h-5 text-brass-600 animate-pulse" /> AI Recommendation
             </h2>
             <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">EduReach Core Engine</span>
           </div>
@@ -228,14 +271,38 @@ export default function Dashboard({
               <Sparkles className="w-4 h-4" />
             </div>
 
+            {/*
+              Skeleton to content.
+
+              Previously the placeholder blocks were replaced in a single frame,
+              which made the panel flash and change height with no continuity
+              between the two states. Cross-fading through AnimatePresence in
+              wait mode gives the arrival of a real recommendation a beat of its
+              own, and the height settles on a spring rather than jumping.
+            */}
+            <AnimatePresence mode="wait" initial={false}>
             {loadingAI ? (
-              <div className="space-y-3 py-4">
+              <m.div
+                key="ai-loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: duration.instant, ease: ease.exit } }}
+                transition={{ duration: duration.base, ease: ease.standard }}
+                className="space-y-3 py-4"
+              >
                 <div className="h-5 bg-brass-200/50 rounded-md w-1/3 animate-pulse" />
                 <div className="h-16 bg-brass-100/50 rounded-lg animate-pulse" />
                 <div className="h-8 bg-brass-100/50 rounded-lg animate-pulse" />
-              </div>
+              </m.div>
             ) : recommendation ? (
-              <div className="space-y-4">
+              <m.div
+                key="ai-loaded"
+                initial={{ opacity: 0, y: travel.sm }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: duration.instant, ease: ease.exit } }}
+                transition={spring.smooth}
+                className="space-y-4"
+              >
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-block bg-brass-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md">Focus topic</span>
@@ -260,18 +327,30 @@ export default function Dashboard({
                 </div>
 
                 <div className="pt-2">
-                  <button
+                  <m.button
                     onClick={() => onNavigateToTab('learn', { topic: recommendation.recommendedTopic, level: recommendation.suggestedLevel })}
-                    className="w-full sm:w-auto bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 group"
+                    whileTap={{ scale: 0.96 }}
+                    transition={spring.press}
+                    className="w-full sm:w-auto bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-md cursor-pointer flex items-center justify-center gap-1.5 group"
                   >
                     Reinforce {TOPIC_META[recommendation.recommendedTopic].label}
-                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-160 ease-standard" />
+                  </m.button>
                 </div>
-              </div>
+              </m.div>
             ) : (
-              <div className="text-center py-6 text-stone-500 text-xs">No recommendation available yet &mdash; solve a few more problems.</div>
+              <m.div
+                key="ai-empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: duration.base, ease: ease.standard }}
+                className="text-center py-6 text-stone-500 text-xs"
+              >
+                No recommendation available yet &mdash; solve a few more problems.
+              </m.div>
             )}
+            </AnimatePresence>
           </div>
 
           <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs space-y-4">
@@ -313,8 +392,13 @@ export default function Dashboard({
           </div>
 
           <div className="space-y-3.5">
-            {contests.slice(0, 2).map((cont) => (
-              <div key={cont.id} className="bg-white border border-stone-200 rounded-2xl p-4.5 hover:border-stone-300 transition-all shadow-2xs flex flex-col justify-between">
+            {contests.slice(0, 2).map((cont, index) => (
+              <StaggerItem
+                key={cont.id}
+                index={index}
+                inView
+                className="bg-white border border-stone-200 rounded-2xl p-4.5 hover:border-stone-300 transition-[border-color] duration-160 ease-standard shadow-2xs flex flex-col justify-between"
+              >
                 <div className="flex justify-between items-start gap-2">
                   <div className="space-y-0.5">
                     <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
@@ -328,16 +412,34 @@ export default function Dashboard({
                   <div className="text-xs text-stone-400 font-medium">
                     Date: <span className="text-stone-800 font-semibold">{cont.date}</span>
                   </div>
-                  <button
+                  <m.button
                     onClick={() => onJoinContest(cont.id)}
-                    className={`text-xs font-bold px-4 py-2 rounded-lg transition-all cursor-pointer ${
-                      cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100' : 'bg-ink-950 hover:bg-black text-white hover:shadow-xs active:scale-95'
+                    whileTap={{ scale: 0.95 }}
+                    transition={spring.press}
+                    className={`text-xs font-bold px-4 py-2 rounded-lg transition-[background-color,box-shadow,color] duration-160 ease-standard cursor-pointer ${
+                      cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100' : 'bg-ink-950 hover:bg-black text-white hover:shadow-xs'
                     }`}
                   >
-                    {cont.joined ? 'Registered' : 'Join now'}
-                  </button>
+                    {/*
+                      Registering swaps the label in place. Keying the text
+                      makes that read as a confirmation rather than as the
+                      button having been relabelled behind the user's back.
+                    */}
+                    <AnimatePresence mode="wait" initial={false}>
+                      <m.span
+                        key={cont.joined ? 'joined' : 'join'}
+                        className="block"
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: duration.fast, ease: ease.standard }}
+                      >
+                        {cont.joined ? 'Registered' : 'Join now'}
+                      </m.span>
+                    </AnimatePresence>
+                  </m.button>
                 </div>
-              </div>
+              </StaggerItem>
             ))}
           </div>
 
@@ -354,14 +456,16 @@ export default function Dashboard({
                   <span className="text-[10px] text-stone-500">
                     Registered: <b>{weeklyChallenges[0].participants}</b>
                   </span>
-                  <button
+                  <m.button
                     onClick={() => { onJoinChallenge(weeklyChallenges[0].id); onNavigateToTab('compete'); }}
-                    className={`text-xs font-bold px-4 py-2 rounded-lg cursor-pointer ${
-                      weeklyChallenges[0].completed ? 'bg-ink-800 text-stone-400' : 'bg-brass-500 hover:bg-brass-600 text-ink-950 font-extrabold active:scale-95 transition-all'
+                    whileTap={{ scale: 0.95 }}
+                    transition={spring.press}
+                    className={`text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-colors duration-160 ease-standard ${
+                      weeklyChallenges[0].completed ? 'bg-ink-800 text-stone-400' : 'bg-brass-500 hover:bg-brass-600 text-ink-950 font-extrabold'
                     }`}
                   >
                     {weeklyChallenges[0].completed ? 'Completed' : 'View challenge'}
-                  </button>
+                  </m.button>
                 </div>
               </div>
             )}

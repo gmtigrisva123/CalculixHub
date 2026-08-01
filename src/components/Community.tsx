@@ -4,9 +4,12 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { MessageSquare, Sparkles, Send, ThumbsUp, ThumbsDown, Reply, Award, UserCheck, BadgeCheck } from 'lucide-react';
 import { CommunityDiscussion, Problem } from '../types';
 import MathText from './MathText';
+import { duration, ease, spring, travel } from '../lib/motion';
+import { StaggerItem } from './motion';
 
 interface CommunityProps {
   discussions: CommunityDiscussion[];
@@ -100,24 +103,28 @@ export default function Community({ discussions, problems, onAddComment }: Commu
           <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl space-y-2 select-none">
             <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">Filter by problem</span>
             <div className="flex gap-2 overflow-x-auto pb-1 scroll-smooth">
-              <button
+              <m.button
                 onClick={() => setSelectedProblemId('All')}
-                className={`text-xs font-bold px-4 py-2 rounded-xl border whitespace-nowrap transition-all cursor-pointer ${
+                whileTap={{ scale: 0.95 }}
+                transition={spring.press}
+                className={`text-xs font-bold px-4 py-2 rounded-xl border whitespace-nowrap transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer ${
                   selectedProblemId === 'All' ? 'bg-ink-950 border-ink-950 text-white' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
                 }`}
               >
                 All threads
-              </button>
+              </m.button>
               {problems.map((prob) => (
-                <button
+                <m.button
                   key={prob.id}
                   onClick={() => setSelectedProblemId(prob.id)}
-                  className={`text-xs font-bold px-4 py-2 rounded-xl border whitespace-nowrap transition-all cursor-pointer ${
+                  whileTap={{ scale: 0.95 }}
+                  transition={spring.press}
+                  className={`text-xs font-bold px-4 py-2 rounded-xl border whitespace-nowrap transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer ${
                     selectedProblemId === prob.id ? 'bg-ink-950 border-ink-950 text-white' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >
                   {prob.title}
-                </button>
+                </m.button>
               ))}
             </div>
           </div>
@@ -139,19 +146,21 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                 value={newCommentText}
                 onChange={(e) => setNewCommentText(e.target.value)}
                 rows={3}
-                className="w-full border border-stone-200 focus:border-stone-900 rounded-2xl p-4 text-xs font-medium outline-hidden transition-all text-stone-800 bg-stone-50 placeholder:text-stone-400"
+                className="w-full border border-stone-200 focus:border-stone-900 rounded-2xl p-4 text-xs font-medium outline-hidden transition-[border-color] duration-160 ease-standard text-stone-800 bg-stone-50 placeholder:text-stone-400"
               />
 
               <div className="flex justify-between items-center bg-stone-50/50 p-2 rounded-xl">
                 <span className="text-[10px] text-stone-400 font-semibold italic">* Keep it constructive &mdash; explain your reasoning, don't just paste an answer.</span>
-                <button
+                <m.button
                   id="btn-submit-comment"
                   type="submit"
                   disabled={!newCommentText.trim()}
-                  className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-4.5 py-2 rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-40 cursor-pointer flex items-center gap-1.5 shrink-0"
+                  whileTap={{ scale: 0.95 }}
+                  transition={spring.press}
+                  className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-4.5 py-2 rounded-xl transition-[background-color,opacity] duration-160 ease-standard shadow-md disabled:opacity-40 cursor-pointer flex items-center gap-1.5 shrink-0"
                 >
                   <Send className="w-3.5 h-3.5" /> Post
-                </button>
+                </m.button>
               </div>
             </div>
           </form>
@@ -162,12 +171,27 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                 No discussion here yet &mdash; be the first to post.
               </div>
             )}
-            {filteredDiscussions.map((disc) => {
+            {/*
+              A newly posted thread is prepended to this list. AnimatePresence
+              plus `layout` means it expands into place and pushes the existing
+              threads down, rather than the whole column jumping by the height
+              of a card the moment Post is pressed.
+            */}
+            <AnimatePresence initial={false}>
+            {filteredDiscussions.map((disc, index) => {
               const myVote = votes[disc.id] || 0;
               const netLikes = disc.likes + myVote;
               const verified = isVerifiedSolution(disc);
               return (
-                <div key={disc.id} className="bg-white border border-stone-100 rounded-3xl p-5 md:p-6 shadow-xs space-y-4 transition-all hover:border-stone-200">
+                <m.div
+                  key={disc.id}
+                  layout
+                  initial={{ opacity: 0, y: -travel.sm, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97, transition: { duration: duration.fast, ease: ease.exit } }}
+                  transition={{ ...spring.smooth, delay: Math.min(index * 0.03, 0.18) }}
+                  className="bg-white border border-stone-100 rounded-3xl p-5 md:p-6 shadow-xs space-y-4 transition-[border-color] duration-160 ease-standard hover:border-stone-200"
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-stone-100 border border-stone-150 flex items-center justify-center font-bold text-sm text-stone-600 select-none">
@@ -200,21 +224,45 @@ export default function Community({ discussions, problems, onAddComment }: Commu
 
                   <div className="flex items-center gap-4 border-t border-stone-100 pt-3 text-xs select-none">
                     <div className="flex items-center gap-1.5">
-                      <button
+                      {/*
+                        Voting is a one-tap action with a tiny visual result —
+                        an icon fills in and a number changes by one. The kick
+                        on press is what confirms the tap registered at all.
+                      */}
+                      <m.button
                         onClick={() => castVote(disc.id, 1)}
-                        className={`hover:text-brass-600 transition-colors cursor-pointer ${myVote === 1 ? 'text-brass-600' : 'text-stone-400'}`}
+                        whileTap={{ scale: 0.8 }}
+                        animate={{ scale: myVote === 1 ? 1.12 : 1 }}
+                        transition={spring.press}
+                        className={`hover:text-brass-600 transition-colors duration-160 ease-standard cursor-pointer ${myVote === 1 ? 'text-brass-600' : 'text-stone-400'}`}
                         title="Upvote"
                       >
                         <ThumbsUp className={`w-4 h-4 ${myVote === 1 ? 'fill-brass-500 text-brass-500' : ''}`} />
-                      </button>
-                      <span className="font-mono font-bold text-stone-600 w-6 text-center">{netLikes}</span>
-                      <button
+                      </m.button>
+                      <span className="font-mono font-bold text-stone-600 w-6 text-center overflow-hidden">
+                        <AnimatePresence mode="wait" initial={false}>
+                          <m.span
+                            key={netLikes}
+                            className="block"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: duration.fast, ease: ease.standard }}
+                          >
+                            {netLikes}
+                          </m.span>
+                        </AnimatePresence>
+                      </span>
+                      <m.button
                         onClick={() => castVote(disc.id, -1)}
-                        className={`hover:text-rose-600 transition-colors cursor-pointer ${myVote === -1 ? 'text-rose-600' : 'text-stone-400'}`}
+                        whileTap={{ scale: 0.8 }}
+                        animate={{ scale: myVote === -1 ? 1.12 : 1 }}
+                        transition={spring.press}
+                        className={`hover:text-rose-600 transition-colors duration-160 ease-standard cursor-pointer ${myVote === -1 ? 'text-rose-600' : 'text-stone-400'}`}
                         title="Downvote"
                       >
                         <ThumbsDown className={`w-4 h-4 ${myVote === -1 ? 'fill-rose-500 text-rose-500' : ''}`} />
-                      </button>
+                      </m.button>
                     </div>
 
                     <button className="flex items-center gap-1.5 text-stone-400 hover:text-stone-800 transition-colors font-semibold">
@@ -222,9 +270,10 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                       <span>{disc.replies} replies</span>
                     </button>
                   </div>
-                </div>
+                </m.div>
               );
             })}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -262,13 +311,13 @@ export default function Community({ discussions, problems, onAddComment }: Commu
             <div className="space-y-3.5 pt-1 text-xs">
               {topContributors.length === 0 && <p className="text-stone-400 text-[11px]">No contributions yet.</p>}
               {topContributors.map(([user, count], idx) => (
-                <div key={user} className="flex justify-between items-center">
+                <StaggerItem key={user} index={idx} inView className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-stone-400 w-4">{medal(idx)}</span>
                     <span className="font-bold text-stone-800">{user}</span>
                   </div>
                   <span className="text-[10px] bg-stone-100 font-semibold px-2 py-0.5 rounded-md text-stone-600 shrink-0">{count} posts</span>
-                </div>
+                </StaggerItem>
               ))}
             </div>
           </div>
