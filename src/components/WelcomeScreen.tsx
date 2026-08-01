@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import {
   Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
   ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
@@ -14,6 +15,9 @@ import { Level, Topic } from '../types';
 import MathText from './MathText';
 import { apiUrl } from '../lib/apiBase';
 import InstallAppButton from './InstallAppButton';
+import { duration, ease, spring, travel } from '../lib/motion';
+import { useAmbient } from '../lib/useAmbient';
+import { AnimatedNumber, Reveal, SpringBar } from './motion';
 import {
   IRTItem,
   ResponseRecord,
@@ -85,6 +89,20 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   }, []);
 
   // --- LANDING PAGE INTERACTIVE STATES ---
+  /*
+   * Ambient loops on the landing page.
+   *
+   * The hero badge sparkle, the "live system status" ping and the slowly
+   * rotating ring around the EduReach core all run forever. Each ref keeps the
+   * animation identical while visible and pauses it once it scrolls away or the
+   * tab is backgrounded — which matters most here, because this is the page
+   * people leave open in a tab.
+   */
+  const heroSparkleRef = useAmbient<SVGSVGElement>();
+  const livePingRef = useAmbient<HTMLSpanElement>();
+  const coreRingRef = useAmbient<SVGCircleElement>();
+  const telemetryPulseRef = useAmbient<SVGSVGElement>();
+
   const [hoveredNode, setHoveredNode] = useState<number | null>(null);
   const [activeArchTab, setActiveArchTab] = useState<'engine' | 'ai' | 'compete' | 'analytics'>('engine');
   const [isArchExpanded, setIsArchExpanded] = useState<boolean>(false);
@@ -503,10 +521,12 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               >
                 Sign in
               </button>
-              <button
+              <m.button
                 type="button"
                 onClick={() => setAuthMode('register')}
-                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-3 sm:px-4.5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-brass-500/20 hover:shadow-lg active:scale-95 cursor-pointer whitespace-nowrap"
+                whileTap={{ scale: 0.95 }}
+                transition={spring.press}
+                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-3 sm:px-4.5 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard shadow-md hover:shadow-brass-500/20 hover:shadow-lg cursor-pointer whitespace-nowrap"
               >
                 {/*
                   Shortened below sm so the header fits a 375px viewport now that
@@ -516,19 +536,32 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 */}
                 <span className="sm:hidden">Start free</span>
                 <span className="hidden sm:inline">Take the placement test</span>
-              </button>
+              </m.button>
             </div>
           </div>
         </header>
 
         <main className="flex-1 relative z-10">
 
-          {/* HERO */}
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          {/*
+            HERO
+
+            Animates on mount rather than on scroll: it is already in view when
+            the page loads, and a whileInView reveal above the fold either fires
+            instantly (pointless) or, worse, waits for a scroll that never
+            comes. The two columns arrive together, with the visualiser a beat
+            behind the copy so the headline is read first.
+          */}
+          <m.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...spring.smooth, opacity: { duration: duration.slower, ease: ease.standard } }}
+            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"
+          >
 
             <div className="lg:col-span-7 space-y-7 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-brass-500/10 border border-brass-500/25 px-3 py-1.5 rounded-full text-[10px] font-black uppercase text-brass-400 tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 animate-pulse" /> An AI-native operating system for mathematical thinking
+                <Sparkles ref={heroSparkleRef} className="w-3.5 h-3.5 animate-pulse" /> An AI-native operating system for mathematical thinking
               </div>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.15] text-white font-serif">
@@ -543,17 +576,19 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-3">
-                <button
+                <m.button
                   type="button"
                   onClick={() => setAuthMode('register')}
-                  className="bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 font-extrabold text-xs px-7 py-4.5 rounded-2xl shadow-xl hover:shadow-brass-500/10 hover:shadow-2xl transition-all flex items-center justify-center gap-2 cursor-pointer group active:scale-98"
+                  whileTap={{ scale: 0.98 }}
+                  transition={spring.press}
+                  className="bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 font-extrabold text-xs px-7 py-4.5 rounded-2xl shadow-xl hover:shadow-brass-500/10 hover:shadow-2xl transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-2 cursor-pointer group"
                 >
                   Start free &mdash; take the placement test
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </button>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-240 ease-standard" />
+                </m.button>
                 <a
                   href="#impact"
-                  className="bg-ink-900/60 hover:bg-ink-900 border border-ink-800 text-stone-350 hover:text-white font-bold text-xs px-6 py-4.5 rounded-2xl transition-all flex items-center justify-center gap-1.5"
+                  className="bg-ink-900/60 hover:bg-ink-900 border border-ink-800 text-stone-350 hover:text-white font-bold text-xs px-6 py-4.5 rounded-2xl transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-1.5"
                 >
                   View the research report
                 </a>
@@ -561,22 +596,22 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
               <div className="pt-8 border-t border-ink-800/70 max-w-xl mx-auto lg:mx-0">
                 <p className="text-[10px] uppercase font-black tracking-widest text-stone-500 mb-3 flex items-center justify-center lg:justify-start gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-proof-500 animate-ping" /> Live system status (real-time)
+                  <span ref={livePingRef} className="w-2 h-2 rounded-full bg-proof-500 animate-ping" /> Live system status (real-time)
                 </p>
                 <div className="grid grid-cols-3 gap-6 text-center lg:text-left">
                   <div className="space-y-1">
                     <span className="text-[9px] uppercase font-bold text-stone-500 block">Learners online</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight">{liveStats.activeUsers.toLocaleString()}</span>
+                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.activeUsers} format={(n) => Math.round(n).toLocaleString()} /></span>
                     <span className="text-[8px] text-proof-400 font-bold block">+3.4/min</span>
                   </div>
                   <div className="space-y-1 border-x border-ink-800/60 px-4">
                     <span className="text-[9px] uppercase font-bold text-stone-500 block">Assessments run</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight">{liveStats.testsCompleted.toLocaleString()}</span>
+                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.testsCompleted} format={(n) => Math.round(n).toLocaleString()} /></span>
                     <span className="text-[8px] text-brass-400 font-bold block">Auto-adaptive</span>
                   </div>
                   <div className="space-y-1">
                     <span className="text-[9px] uppercase font-bold text-stone-500 block">Live in the arena</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight">{liveStats.activeContestsCount}</span>
+                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.activeContestsCount} /></span>
                     <span className="text-[8px] text-violet-400 font-bold block">Ranked matches</span>
                   </div>
                 </div>
@@ -589,10 +624,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               <div className="bg-ink-950/40 border border-ink-800 p-6 sm:p-8 rounded-[32px] backdrop-blur-md shadow-2xl relative bp-corners text-brass-500">
 
                 <svg viewBox="0 0 450 400" className="w-full h-auto max-w-[380px] sm:max-w-[450px] mx-auto overflow-visible select-none">
-                  <line x1="225" y1="200" x2="90" y2="90" stroke={hoveredNode === 1 ? '#c8842a' : '#342d27'} strokeWidth={hoveredNode === 1 ? '3' : '2'} strokeDasharray={hoveredNode === 1 ? 'none' : '4 4'} className="transition-all duration-300" />
-                  <line x1="225" y1="200" x2="360" y2="90" stroke={hoveredNode === 2 ? '#2f9c8c' : '#342d27'} strokeWidth={hoveredNode === 2 ? '3' : '2'} strokeDasharray={hoveredNode === 2 ? 'none' : '4 4'} className="transition-all duration-300" />
-                  <line x1="225" y1="200" x2="90" y2="310" stroke={hoveredNode === 3 ? '#8b5cf6' : '#342d27'} strokeWidth={hoveredNode === 3 ? '3' : '2'} strokeDasharray={hoveredNode === 3 ? 'none' : '4 4'} className="transition-all duration-300" />
-                  <line x1="225" y1="200" x2="360" y2="310" stroke={hoveredNode === 4 ? '#0ea5e9' : '#342d27'} strokeWidth={hoveredNode === 4 ? '3' : '2'} strokeDasharray={hoveredNode === 4 ? 'none' : '4 4'} className="transition-all duration-300" />
+                  <line x1="225" y1="200" x2="90" y2="90" stroke={hoveredNode === 1 ? '#c8842a' : '#342d27'} strokeWidth={hoveredNode === 1 ? '3' : '2'} strokeDasharray={hoveredNode === 1 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
+                  <line x1="225" y1="200" x2="360" y2="90" stroke={hoveredNode === 2 ? '#2f9c8c' : '#342d27'} strokeWidth={hoveredNode === 2 ? '3' : '2'} strokeDasharray={hoveredNode === 2 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
+                  <line x1="225" y1="200" x2="90" y2="310" stroke={hoveredNode === 3 ? '#8b5cf6' : '#342d27'} strokeWidth={hoveredNode === 3 ? '3' : '2'} strokeDasharray={hoveredNode === 3 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
+                  <line x1="225" y1="200" x2="360" y2="310" stroke={hoveredNode === 4 ? '#0ea5e9' : '#342d27'} strokeWidth={hoveredNode === 4 ? '3' : '2'} strokeDasharray={hoveredNode === 4 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
 
                   {hoveredNode === 1 && <circle r="4.5" fill="#c8842a"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 90 90" /></circle>}
                   {hoveredNode === 2 && <circle r="4.5" fill="#2f9c8c"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 360 90" /></circle>}
@@ -600,8 +635,8 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   {hoveredNode === 4 && <circle r="4.5" fill="#0ea5e9"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 360 310" /></circle>}
 
                   <g className="group cursor-pointer">
-                    <circle cx="225" cy="200" r="45" fill="#201b16" stroke="#c8842a" strokeWidth="2.5" className="transition-all duration-300 group-hover:stroke-brass-400 group-hover:scale-105" />
-                    <circle cx="225" cy="200" r="55" fill="none" stroke="#c8842a" strokeWidth="1" strokeDasharray="5 5" className="animate-spin" style={{ transformOrigin: '225px 200px', animationDuration: '20s' }} />
+                    <circle cx="225" cy="200" r="45" fill="#201b16" stroke="#c8842a" strokeWidth="2.5" className="transition-[stroke,transform] duration-300 ease-standard group-hover:stroke-brass-400 group-hover:scale-105" />
+                    <circle ref={coreRingRef} cx="225" cy="200" r="55" fill="none" stroke="#c8842a" strokeWidth="1" strokeDasharray="5 5" className="animate-spin" style={{ transformOrigin: '225px 200px', animationDuration: '20s' }} />
                     <foreignObject x="207" y="182" width="36" height="36">
                       <div className="w-full h-full flex items-center justify-center text-brass-400">
                         <Brain className="w-7 h-7" />
@@ -611,27 +646,27 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   </g>
 
                   <g onMouseEnter={() => setHoveredNode(1)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="90" cy="90" r="30" fill="#161310" stroke={hoveredNode === 1 ? '#c8842a' : '#342d27'} strokeWidth="2" className="transition-all duration-300" />
+                    <circle cx="90" cy="90" r="30" fill="#161310" stroke={hoveredNode === 1 ? '#c8842a' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
                     <text x="90" y="93" fill="#e0a339" fontSize="9" fontWeight="bold" textAnchor="middle">ALGEBRA</text>
-                    <circle cx="90" cy="90" r="35" fill="none" stroke="#c8842a" strokeWidth={hoveredNode === 1 ? '1.5' : '0'} className="transition-all duration-300 animate-ping" />
+                    <circle cx="90" cy="90" r="35" fill="none" stroke="#c8842a" strokeWidth={hoveredNode === 1 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
                   </g>
 
                   <g onMouseEnter={() => setHoveredNode(2)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="360" cy="90" r="30" fill="#161310" stroke={hoveredNode === 2 ? '#2f9c8c' : '#342d27'} strokeWidth="2" className="transition-all duration-300" />
+                    <circle cx="360" cy="90" r="30" fill="#161310" stroke={hoveredNode === 2 ? '#2f9c8c' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
                     <text x="360" y="93" fill="#4fb8a8" fontSize="9" fontWeight="bold" textAnchor="middle">GEOMETRY</text>
-                    <circle cx="360" cy="90" r="35" fill="none" stroke="#2f9c8c" strokeWidth={hoveredNode === 2 ? '1.5' : '0'} className="transition-all duration-300 animate-ping" />
+                    <circle cx="360" cy="90" r="35" fill="none" stroke="#2f9c8c" strokeWidth={hoveredNode === 2 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
                   </g>
 
                   <g onMouseEnter={() => setHoveredNode(3)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="90" cy="310" r="30" fill="#161310" stroke={hoveredNode === 3 ? '#8b5cf6' : '#342d27'} strokeWidth="2" className="transition-all duration-300" />
+                    <circle cx="90" cy="310" r="30" fill="#161310" stroke={hoveredNode === 3 ? '#8b5cf6' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
                     <text x="90" y="313" fill="#a78bfa" fontSize="9" fontWeight="bold" textAnchor="middle">COMBINATORICS</text>
-                    <circle cx="90" cy="310" r="35" fill="none" stroke="#8b5cf6" strokeWidth={hoveredNode === 3 ? '1.5' : '0'} className="transition-all duration-300 animate-ping" />
+                    <circle cx="90" cy="310" r="35" fill="none" stroke="#8b5cf6" strokeWidth={hoveredNode === 3 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
                   </g>
 
                   <g onMouseEnter={() => setHoveredNode(4)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="360" cy="310" r="30" fill="#161310" stroke={hoveredNode === 4 ? '#0ea5e9' : '#342d27'} strokeWidth="2" className="transition-all duration-300" />
+                    <circle cx="360" cy="310" r="30" fill="#161310" stroke={hoveredNode === 4 ? '#0ea5e9' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
                     <text x="360" y="313" fill="#38bdf8" fontSize="9" fontWeight="bold" textAnchor="middle">NUMBER THEORY</text>
-                    <circle cx="360" cy="310" r="35" fill="none" stroke="#0ea5e9" strokeWidth={hoveredNode === 4 ? '1.5' : '0'} className="transition-all duration-300 animate-ping" />
+                    <circle cx="360" cy="310" r="35" fill="none" stroke="#0ea5e9" strokeWidth={hoveredNode === 4 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
                   </g>
                 </svg>
 
@@ -652,10 +687,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               </div>
             </div>
 
-          </section>
+          </m.section>
 
           {/* WHAT WE ARE / ARE NOT */}
-          <section id="definition" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-ink-800">
+          <Reveal as="section" distance={14} amount={0.12} id="definition" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-ink-800">
             <div className="text-center space-y-3 pb-12">
               <h2 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest">Core positioning</h2>
               <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">We redefine the approach to mathematics</h3>
@@ -665,7 +700,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              <div className="border border-rose-900/40 bg-gradient-to-b from-rose-950/10 to-transparent p-6 sm:p-8 rounded-3xl space-y-6 transition-all duration-300 hover:border-rose-800/60 hover:shadow-xl hover:shadow-rose-950/10 group">
+              <div className="border border-rose-900/40 bg-gradient-to-b from-rose-950/10 to-transparent p-6 sm:p-8 rounded-3xl space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-rose-800/60 hover:shadow-xl hover:shadow-rose-950/10 group">
                 <div className="flex items-center gap-3">
                   <div className="bg-rose-500/10 p-2.5 rounded-2xl border border-rose-500/20 text-rose-500"><X className="w-5 h-5" /></div>
                   <div>
@@ -698,7 +733,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 </ul>
               </div>
 
-              <div className="border border-proof-800/40 bg-gradient-to-b from-proof-950/10 to-transparent p-6 sm:p-8 rounded-3xl space-y-6 transition-all duration-300 hover:border-proof-600/60 hover:shadow-xl hover:shadow-proof-950/10 group">
+              <div className="border border-proof-800/40 bg-gradient-to-b from-proof-950/10 to-transparent p-6 sm:p-8 rounded-3xl space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-proof-600/60 hover:shadow-xl hover:shadow-proof-950/10 group">
                 <div className="flex items-center gap-3">
                   <div className="bg-proof-500/10 p-2.5 rounded-2xl border border-proof-500/20 text-proof-400"><Check className="w-5 h-5" /></div>
                   <div>
@@ -731,10 +766,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 </ul>
               </div>
             </div>
-          </section>
+          </Reveal>
 
           {/* MISSION */}
-          <section id="mission" className="bg-ink-900/40 border-y border-ink-800 py-20">
+          <Reveal as="section" distance={14} amount={0.12} id="mission" className="bg-ink-900/40 border-y border-ink-800 py-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="max-w-3xl mx-auto text-center space-y-6">
                 <h3 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest">Core mission</h3>
@@ -745,27 +780,27 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-16 max-w-5xl mx-auto">
-                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-all duration-300 hover:scale-[1.02] group">
-                  <div className="mx-auto bg-brass-500/10 p-3 rounded-2xl border border-brass-500/20 text-brass-400 w-fit group-hover:bg-brass-600 group-hover:text-ink-950 transition-all"><Globe className="w-6 h-6" /></div>
+                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
+                  <div className="mx-auto bg-brass-500/10 p-3 rounded-2xl border border-brass-500/20 text-brass-400 w-fit group-hover:bg-brass-600 group-hover:text-ink-950 transition-colors duration-240 ease-standard"><Globe className="w-6 h-6" /></div>
                   <h5 className="font-extrabold text-stone-100 text-sm">Reach, without degradation</h5>
                   <p className="text-[11px] text-stone-450 leading-relaxed">Advanced curricula and AI infrastructure, delivered on demand to every region, regardless of geography.</p>
                 </div>
-                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-all duration-300 hover:scale-[1.02] group">
-                  <div className="mx-auto bg-proof-500/10 p-3 rounded-2xl border border-proof-500/20 text-proof-400 w-fit group-hover:bg-proof-600 group-hover:text-white transition-all"><Shield className="w-6 h-6" /></div>
+                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
+                  <div className="mx-auto bg-proof-500/10 p-3 rounded-2xl border border-proof-500/20 text-proof-400 w-fit group-hover:bg-proof-600 group-hover:text-white transition-colors duration-240 ease-standard"><Shield className="w-6 h-6" /></div>
                   <h5 className="font-extrabold text-stone-100 text-sm">Personalization by default</h5>
                   <p className="text-[11px] text-stone-450 leading-relaxed">EduReach Core diagnoses gaps automatically and builds an individual path for every learner.</p>
                 </div>
-                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-all duration-300 hover:scale-[1.02] group">
-                  <div className="mx-auto bg-violet-500/10 p-3 rounded-2xl border border-violet-500/20 text-violet-400 w-fit group-hover:bg-violet-600 group-hover:text-white transition-all"><TrendingUp className="w-6 h-6" /></div>
+                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
+                  <div className="mx-auto bg-violet-500/10 p-3 rounded-2xl border border-violet-500/20 text-violet-400 w-fit group-hover:bg-violet-600 group-hover:text-white transition-colors duration-240 ease-standard"><TrendingUp className="w-6 h-6" /></div>
                   <h5 className="font-extrabold text-stone-100 text-sm">Governed by real data</h5>
                   <p className="text-[11px] text-stone-450 leading-relaxed">Every system decision is measured against empirical telemetry, not assumptions.</p>
                 </div>
               </div>
             </div>
-          </section>
+          </Reveal>
 
           {/* ARCHITECTURE (4 LAYERS) */}
-          <section id="architecture" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <Reveal as="section" distance={14} amount={0.12} id="architecture" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="text-center space-y-3 pb-12">
               <h2 className="text-xs uppercase font-extrabold text-proof-400 tracking-widest font-mono">Infrastructure</h2>
               <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">Four-Layer Core Architecture</h3>
@@ -782,27 +817,57 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 ] as const).map((tab) => {
                   const TabIcon = tab.icon;
                   return (
-                    <button
+                    <m.button
                       key={tab.key}
                       type="button"
                       onClick={() => { setActiveArchTab(tab.key); setIsArchExpanded(false); }}
-                      className={`w-full text-left p-4.5 rounded-2xl border text-xs font-extrabold transition-all shrink-0 cursor-pointer flex items-center justify-between ${
+                      whileTap={{ scale: 0.98 }}
+                      transition={spring.press}
+                      className={`relative w-full text-left p-4.5 rounded-2xl border text-xs font-extrabold transition-[border-color,color,box-shadow] duration-240 ease-standard shrink-0 cursor-pointer flex items-center justify-between ${
                         activeArchTab === tab.key
-                          ? 'bg-brass-600/10 border-brass-500 text-brass-400 shadow-md'
+                          ? 'border-brass-500 text-brass-400 shadow-md'
                           : 'bg-ink-900/40 border-ink-800 text-stone-400 hover:border-ink-750 hover:text-white'
                       }`}
                     >
-                      <span className="flex items-center gap-2.5"><TabIcon className="w-4 h-4" /> {tab.label}</span>
-                      <ChevronRight className={`w-3.5 h-3.5 hidden lg:block transition-transform ${activeArchTab === tab.key ? 'translate-x-1' : ''}`} />
-                    </button>
+                      {/*
+                        Same shared-indicator pattern as the sidebar and the
+                        leaderboard's segmented control. Four layers presented
+                        as a stack read as a stack when the highlight travels
+                        between them.
+                      */}
+                      {activeArchTab === tab.key && (
+                        <m.span
+                          layoutId="arch-tab-highlight"
+                          className="absolute inset-0 bg-brass-600/10 rounded-2xl"
+                          transition={spring.snappy}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-2.5"><TabIcon className="w-4 h-4" /> {tab.label}</span>
+                      <ChevronRight className={`relative z-10 w-3.5 h-3.5 hidden lg:block transition-transform duration-240 ease-standard ${activeArchTab === tab.key ? 'translate-x-1' : ''}`} />
+                    </m.button>
                   );
                 })}
               </div>
 
-              <div className="lg:col-span-8 bg-ink-900/40 border border-ink-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between backdrop-blur-md shadow-2xl relative transition-all duration-300 bp-corners">
+              <div className="lg:col-span-8 bg-ink-900/40 border border-ink-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between backdrop-blur-md shadow-2xl relative bp-corners">
                 <div className="absolute top-4 right-4 text-ink-700 font-mono text-[9px]">Calculix Engine Core v2.6</div>
 
-                <div className="space-y-5">
+                {/*
+                  The four layer descriptions occupy the same panel, and used to
+                  swap instantly — the heading, icon and body all changing in
+                  one frame with nothing tying them to the tab that was pressed.
+                  Keying on the active tab gives the panel a hand-off matching
+                  the highlight sliding in the list beside it.
+                */}
+                <AnimatePresence mode="wait" initial={false}>
+                <m.div
+                  key={activeArchTab}
+                  initial={{ opacity: 0, y: travel.sm }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
+                  transition={spring.smooth}
+                  className="space-y-5"
+                >
                   {activeArchTab === 'engine' && (
                     <>
                       <div className="flex items-center gap-3">
@@ -866,7 +931,8 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       </ul>
                     </>
                   )}
-                </div>
+                </m.div>
+                </AnimatePresence>
 
                 <div className="pt-6 border-t border-ink-800 mt-6 space-y-4">
                   {isArchExpanded ? (
@@ -902,17 +968,17 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       <button type="button" onClick={() => setIsArchExpanded(false)} className="text-[10px] font-bold text-brass-400 hover:underline block pt-1 cursor-pointer">Collapse detail [-]</button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setIsArchExpanded(true)} className="bg-ink-900 border border-ink-800 hover:border-ink-750 text-stone-350 hover:text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5">
+                    <button type="button" onClick={() => setIsArchExpanded(true)} className="bg-ink-900 border border-ink-800 hover:border-ink-750 text-stone-350 hover:text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer inline-flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-brass-400" /> View technical detail
                     </button>
                   )}
                 </div>
               </div>
             </div>
-          </section>
+          </Reveal>
 
           {/* COMMUNITY (MOCK FORUM) */}
-          <section id="community" className="bg-ink-900/40 border-y border-ink-800 py-20">
+          <Reveal as="section" distance={14} amount={0.12} id="community" className="bg-ink-900/40 border-y border-ink-800 py-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center space-y-3 pb-12">
                 <h2 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest font-mono">Academic community</h2>
@@ -926,13 +992,13 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   <button
                     type="button"
                     onClick={() => setCommunityDarkMode(!communityDarkMode)}
-                    className="bg-ink-800 hover:bg-ink-750 border border-ink-700 text-stone-300 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    className="bg-ink-800 hover:bg-ink-750 border border-ink-700 text-stone-300 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-xl transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer flex items-center gap-1.5"
                   >
                     {communityDarkMode ? (<><Sun className="w-3.5 h-3.5 text-amber-400" /> Switch to light mode</>) : (<><Moon className="w-3.5 h-3.5 text-violet-400" /> Switch to dark mode</>)}
                   </button>
                 </div>
 
-                <div className={`border rounded-3xl p-6 transition-all duration-300 shadow-xl space-y-6 ${communityDarkMode ? 'bg-ink-900/90 border-ink-800 text-stone-200 shadow-ink-950/20' : 'bg-paper-50 border-stone-200 text-stone-800 shadow-stone-200/50'}`}>
+                <div className={`border rounded-3xl p-6 transition-[background-color,border-color,color,box-shadow] duration-300 ease-standard shadow-xl space-y-6 ${communityDarkMode ? 'bg-ink-900/90 border-ink-800 text-stone-200 shadow-ink-950/20' : 'bg-paper-50 border-stone-200 text-stone-800 shadow-stone-200/50'}`}>
                   <div className="border-b pb-4 flex justify-between items-start gap-4" style={{ borderColor: communityDarkMode ? '#342d27' : '#f3ede1' }}>
                     <div className="space-y-1">
                       <h4 className={`text-base font-black tracking-tight leading-tight font-serif ${communityDarkMode ? 'text-white' : 'text-stone-900'}`}>
@@ -1034,10 +1100,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 </div>
               </div>
             </div>
-          </section>
+          </Reveal>
 
           {/* USER FLOW TIMELINE */}
-          <section id="flow" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <Reveal as="section" distance={14} amount={0.12} id="flow" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="text-center space-y-3 pb-16">
               <h2 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest font-mono">Learning flow</h2>
               <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">The Full Learning Cycle</h3>
@@ -1066,7 +1132,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     key={step.n}
                     onMouseEnter={() => setHoveredStep(step.n)}
                     onMouseLeave={() => setHoveredStep(null)}
-                    className={`bg-ink-900/40 border p-5 rounded-2xl space-y-3 transition-all duration-300 relative select-none ${
+                    className={`bg-ink-900/40 border p-5 rounded-2xl space-y-3 transition-[border-color,box-shadow] duration-300 ease-standard relative select-none ${
                       isHovered ? `${colorMap[step.color]} scale-[1.03] bg-ink-900 shadow-lg` : 'border-ink-800 hover:border-ink-750'
                     }`}
                   >
@@ -1080,10 +1146,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 );
               })}
             </div>
-          </section>
+          </Reveal>
 
           {/* SOCIAL ACQUISITION FUNNEL */}
-          <section className="bg-ink-900/40 border-y border-ink-800 py-20">
+          <Reveal as="section" distance={14} amount={0.12} className="bg-ink-900/40 border-y border-ink-800 py-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center max-w-5xl mx-auto">
                 <div className="lg:col-span-6 space-y-5 text-center lg:text-left">
@@ -1101,7 +1167,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   ].map((chan) => {
                     const ChanIcon = chan.icon;
                     return (
-                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-2xl p-4 flex items-center justify-between transition-all hover:border-ink-700">
+                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-2xl p-4 flex items-center justify-between transition-[border-color] duration-240 ease-standard hover:border-ink-700">
                         <div className="flex items-center gap-3">
                           <div className={`p-2.5 rounded-xl ${chan.color === 'brass' ? 'bg-brass-600/10 text-brass-500' : chan.color === 'violet' ? 'bg-violet-600/10 text-violet-400' : 'bg-rose-600/10 text-rose-500'}`}><ChanIcon className="w-5 h-5" /></div>
                           <div><h5 className="font-extrabold text-xs text-stone-200">{chan.name}</h5><p className="text-[9px] text-stone-500 font-medium">{chan.desc}</p></div>
@@ -1116,10 +1182,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 </div>
               </div>
             </div>
-          </section>
+          </Reveal>
 
           {/* IMPACT */}
-          <section id="impact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <Reveal as="section" distance={14} amount={0.12} id="impact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
             <div className="max-w-4xl mx-auto bg-ink-900 border border-ink-800 rounded-[32px] p-6 sm:p-10 relative overflow-hidden shadow-2xl bp-corners">
               <div className="absolute top-0 right-0 w-64 h-64 bg-brass-500/5 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
@@ -1135,9 +1201,12 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                         <span>Monthly active learners (currently {liveStats.activeUsers})</span>
                         <span className="text-brass-400 font-mono">Target: 10,000</span>
                       </div>
-                      <div className="w-full bg-ink-950 rounded-full h-2 border border-ink-850">
-                        <div className="bg-gradient-to-r from-brass-500 to-proof-500 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (liveStats.activeUsers / 10000) * 100)}%` }} />
-                      </div>
+                      <SpringBar
+                        value={(liveStats.activeUsers / 10000) * 100}
+                        track="w-full bg-ink-950 rounded-full h-2 border border-ink-850"
+                        fill="bg-gradient-to-r from-brass-500 to-proof-500 h-1.5 rounded-full"
+                        label="Learners online against the 10,000 target"
+                      />
                     </div>
                     <div className="flex items-center gap-8 text-center pt-2">
                       <div>
@@ -1160,14 +1229,14 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       <h5 className="font-extrabold text-xs text-stone-200">Export impact report</h5>
                       <p className="text-[9px] text-stone-500 mt-1 leading-normal">A live report compiled directly from the database.</p>
                     </div>
-                    <button type="button" onClick={handleExportImpactReport} className="w-full bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs py-3 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 active:scale-95">
+                    <m.button type="button" onClick={handleExportImpactReport} whileTap={{ scale: 0.97 }} transition={spring.press} className="w-full bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs py-3 rounded-xl transition-colors duration-240 ease-standard cursor-pointer shadow-md flex items-center justify-center gap-1.5">
                       <Download className="w-3.5 h-3.5" /> Download PDF report
-                    </button>
+                    </m.button>
                   </div>
                 </div>
               </div>
             </div>
-          </section>
+          </Reveal>
 
         </main>
 
@@ -1197,7 +1266,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       <div className="fixed -top-40 -left-40 w-96 h-96 bg-brass-400/10 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed top-2/3 -right-20 w-96 h-96 bg-proof-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full min-h-screen bg-white grid grid-cols-1 md:grid-cols-12 relative z-10 transition-all duration-300">
+      <div className="w-full min-h-screen bg-white grid grid-cols-1 md:grid-cols-12 relative z-10">
 
         {/* Left column: value proposition */}
         <div className="md:col-span-4 bg-ink-950 text-stone-300 p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
@@ -1238,6 +1307,20 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         <div className="md:col-span-8 p-8 md:p-16 flex flex-col justify-center bg-white min-h-screen">
 
           {/*
+            Auth pane transitions.
+
+            Sign in, register and the placement test all render into the same
+            right-hand column, and used to replace one another instantly — the
+            column simply became different content, with nothing connecting the
+            "Sign in" press to the form that resulted. Keying the panes gives
+            each a short lift-in and gives the outgoing one somewhere to go.
+
+            `mode="wait"` matters more here than elsewhere: these are forms, and
+            two overlapping forms would briefly duplicate autofill targets and
+            focusable inputs.
+          */}
+          <AnimatePresence mode="wait" initial={false}>
+          {/*
             No `authMode === 'landing'` pane here.
 
             This component returns renderLandingPage() early for the 'landing'
@@ -1249,7 +1332,15 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             are the landing page's own header and hero.
           */}
           {authMode === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <m.form
+              key="auth-login"
+              onSubmit={handleLoginSubmit}
+              initial={{ opacity: 0, y: travel.sm }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
+              transition={spring.smooth}
+              className="space-y-4"
+            >
               <button type="button" onClick={() => { setAuthMode('landing'); setErrorMessage(''); }} className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-bold mb-2 transition-colors cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
               <div className="space-y-1"><h3 className="text-xl font-black text-stone-900 tracking-tight font-serif">Welcome back</h3><p className="text-[11px] text-stone-500">Enter your account details to sign back in to CalculixHub.</p></div>
 
@@ -1279,11 +1370,19 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-md cursor-pointer flex justify-center items-center gap-1.5">Sign in</button>
                 <button type="button" onClick={() => setAuthMode('register')} className="text-center text-[11px] font-bold text-brass-700 hover:underline pt-2 cursor-pointer">Don't have an account? Create one for free &rarr;</button>
               </div>
-            </form>
+            </m.form>
           )}
 
           {authMode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+            <m.form
+              key="auth-register"
+              onSubmit={handleRegisterSubmit}
+              initial={{ opacity: 0, y: travel.sm }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
+              transition={spring.smooth}
+              className="space-y-4"
+            >
               <button type="button" onClick={() => { setAuthMode('landing'); setErrorMessage(''); }} className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-bold mb-1 transition-colors cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
               <div className="space-y-1"><h3 className="text-xl font-black text-stone-900 tracking-tight font-serif">Create a new account</h3><p className="text-[11px] text-stone-500">Set up your profile, then take the adaptive IRT placement test to find your tier.</p></div>
 
@@ -1319,11 +1418,18 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-md cursor-pointer justify-center items-center flex gap-1.5">Create profile &amp; take the IRT test <ArrowRight className="w-4 h-4" /></button>
                 <button type="button" onClick={() => setAuthMode('login')} className="text-center text-[11px] font-bold text-brass-700 hover:underline pt-1.5 cursor-pointer">Already a member? Back to sign in &rarr;</button>
               </div>
-            </form>
+            </m.form>
           )}
 
           {authMode === 'placement' && (
-            <div className="space-y-5">
+            <m.div
+              key="auth-placement"
+              initial={{ opacity: 0, y: travel.sm }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
+              transition={spring.smooth}
+              className="space-y-5"
+            >
               {!testCompleted ? (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   {/* Active item */}
@@ -1352,53 +1458,107 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     </div>
 
                     {/* Progress toward the minimum item count */}
-                    <div className="w-full bg-stone-100 rounded-full h-1">
-                      <div
-                        className="bg-violet-600 h-1 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (responses.length / MIN_ITEMS) * 100)}%` }}
-                      />
-                    </div>
+                    <SpringBar
+                      value={(responses.length / MIN_ITEMS) * 100}
+                      track="w-full bg-stone-100 rounded-full h-1"
+                      fill="bg-violet-600 h-1 rounded-full"
+                      label="Placement test progress"
+                    />
 
-                    <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100 shadow-xs">
-                      <MathText as="p" className="text-stone-800 text-xs font-bold leading-relaxed" text={currentItem.question} />
-                    </div>
+                    {/*
+                      Each adaptive item replaces the last in place. Keying the
+                      question and its options on the item id turns that into a
+                      visible hand-off — the answered question leaves, the newly
+                      selected one arrives — which is the only cue the learner
+                      gets that the engine picked a different item for them.
+                    */}
+                    <AnimatePresence mode="wait" initial={false}>
+                      <m.div
+                        key={currentItem.id}
+                        initial={{ opacity: 0, y: travel.md }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -travel.sm, transition: { duration: duration.instant, ease: ease.exit } }}
+                        transition={spring.smooth}
+                        className="space-y-4"
+                      >
+                        <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100 shadow-xs">
+                          <MathText as="p" className="text-stone-800 text-xs font-bold leading-relaxed" text={currentItem.question} />
+                        </div>
 
-                    {errorMessage && (
-                      <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-[10px] font-semibold">{errorMessage}</div>
-                    )}
+                        <div className="space-y-2">
+                          {currentItem.options.map((option, oIdx) => {
+                            const isSelected = selectedAnswerIdx === oIdx;
+                            return (
+                              <m.button
+                                key={oIdx}
+                                type="button"
+                                onClick={() => setSelectedAnswerIdx(oIdx)}
+                                initial={{ opacity: 0, x: -travel.sm }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ ...spring.snappy, delay: 0.05 + oIdx * 0.04 }}
+                                whileTap={{ scale: 0.99 }}
+                                className={`w-full p-3.5 text-left text-xs rounded-xl border transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer flex items-center justify-between gap-3 ${
+                                  isSelected ? 'border-violet-600 bg-violet-50/40 text-violet-900 font-bold shadow-xs scale-[1.01]' : 'border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-650'
+                                }`}
+                              >
+                                <MathText text={option} />
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors duration-160 ease-standard ${isSelected ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-300'}`}>
+                                  {/*
+                                    The radio dot springs in. It is 6px across
+                                    and it is the entire confirmation that a
+                                    choice registered, so it is worth animating.
+                                  */}
+                                  <AnimatePresence>
+                                    {isSelected && (
+                                      <m.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
+                                        transition={{ type: 'spring', visualDuration: 0.2, bounce: 0.5 }}
+                                        className="w-1.5 h-1.5 bg-white rounded-full"
+                                      />
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </m.button>
+                            );
+                          })}
+                        </div>
 
-                    <div className="space-y-2">
-                      {currentItem.options.map((option, oIdx) => {
-                        const isSelected = selectedAnswerIdx === oIdx;
-                        return (
-                          <button
-                            key={oIdx}
-                            type="button"
-                            onClick={() => setSelectedAnswerIdx(oIdx)}
-                            className={`w-full p-3.5 text-left text-xs rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 ${
-                              isSelected ? 'border-violet-600 bg-violet-50/40 text-violet-900 font-bold shadow-xs scale-[1.01]' : 'border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-650'
-                            }`}
-                          >
-                            <MathText text={option} />
-                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-300'}`}>
-                              {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                        {/*
+                          The hint lives inside the keyed block rather than
+                          beside it. It is per-item content, and leaving it
+                          outside meant the next item's hint appeared under the
+                          previous item's question for the length of the
+                          transition — a small thing that read as a glitch.
+                        */}
+                        <div className="bg-amber-50/30 border border-amber-200/40 rounded-xl p-3 flex gap-2">
+                          <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-[10px] font-bold text-stone-600 block">Hint:</span>
+                            <MathText as="p" className="text-[9px] text-stone-500 mt-0.5 leading-relaxed" text={currentItem.hint} />
+                          </div>
+                        </div>
+                      </m.div>
+                    </AnimatePresence>
 
-                    <div className="bg-amber-50/30 border border-amber-200/40 rounded-xl p-3 flex gap-2">
-                      <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="text-[10px] font-bold text-stone-600 block">Hint:</span>
-                        <MathText as="p" className="text-[9px] text-stone-500 mt-0.5 leading-relaxed" text={currentItem.hint} />
-                      </div>
-                    </div>
+                    <AnimatePresence initial={false}>
+                      {errorMessage && (
+                        <m.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard } }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-[10px] font-semibold">{errorMessage}</div>
+                        </m.div>
+                      )}
+                    </AnimatePresence>
 
-                    <button type="button" onClick={handleNextIrtQuestion} className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl transition-all cursor-pointer flex justify-center items-center gap-1">
+                    <m.button type="button" onClick={handleNextIrtQuestion} whileTap={{ scale: 0.98 }} transition={spring.press} className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl transition-colors duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1">
                       Score &amp; continue <ChevronRight className="w-4 h-4" />
-                    </button>
+                    </m.button>
                     <p className="text-[9px] text-stone-400 text-center leading-relaxed">
                       The test ends automatically once your ability estimate is precise enough &mdash; typically {MIN_ITEMS}&ndash;{MAX_ITEMS} items.
                     </p>
@@ -1407,7 +1567,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   {/* Live IRT telemetry */}
                   <div className="lg:col-span-5 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-stone-150">
-                      <Activity className="w-3.5 h-3.5 text-violet-600 animate-pulse" />
+                      <Activity ref={telemetryPulseRef} className="w-3.5 h-3.5 text-violet-600 animate-pulse" />
                       <h4 className="text-[10px] font-black uppercase text-stone-800 tracking-wider">Live 3PL IRT Analysis</h4>
                     </div>
 
@@ -1417,7 +1577,18 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                         <span className="text-violet-700 font-mono">{theta > 0 ? '+' : ''}{theta.toFixed(2)}</span>
                       </div>
                       <div className="relative w-full h-2 bg-stone-200 rounded-full overflow-hidden">
-                        <div className="absolute h-full bg-violet-600 transition-all duration-500" style={{ width: `${((theta + 3.0) / 6.0) * 100}%` }} />
+                        {/*
+                          Not a SpringBar: this track also carries an overlaid
+                          confidence band, so the fill is animated in place
+                          rather than through the shared track/fill component.
+                          The estimate moves after every answer, and springing
+                          it is what shows the adaptive engine converging.
+                        */}
+                        <m.div
+                          className="absolute h-full bg-violet-600"
+                          animate={{ width: `${((theta + 3.0) / 6.0) * 100}%` }}
+                          transition={spring.data}
+                        />
                         {/* Confidence band: theta +/- SEM */}
                         <div
                           className="absolute h-full bg-violet-400/40"
@@ -1525,9 +1696,12 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                             <span className="font-bold text-stone-700">{d}</span>
                             <span className="font-mono text-stone-500">{pct}% <span className="text-stone-400">({asked} {asked === 1 ? 'item' : 'items'})</span></span>
                           </div>
-                          <div className="w-full bg-stone-100 rounded-full h-1.5">
-                            <div className="bg-violet-500 h-1.5 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-                          </div>
+                          <SpringBar
+                            value={pct}
+                            track="w-full bg-stone-100 rounded-full h-1.5"
+                            fill="bg-violet-500 h-1.5 rounded-full"
+                            label={`${d} ability`}
+                          />
                         </div>
                       );
                     })}
@@ -1543,13 +1717,14 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     </ul>
                   </div>
 
-                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex justify-center items-center gap-1.5">
+                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1.5">
                     Enter CalculixHub <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               )}
-            </div>
+            </m.div>
           )}
+          </AnimatePresence>
 
         </div>
       </div>
