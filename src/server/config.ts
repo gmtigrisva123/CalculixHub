@@ -154,6 +154,26 @@ const envSchema = z.object({
   GEMINI_MODEL: z.string().trim().min(1).default('gemini-2.5-flash'),
 
   /**
+   * Supabase project URL, e.g. "https://abcd.supabase.co".
+   *
+   * Optional: without it the API still serves problems and AI routes, and the
+   * client still runs the offline IRT engine. Only account-backed features stop.
+   */
+  SUPABASE_URL: z.string().trim().url().optional().or(z.literal('').transform(() => undefined)),
+
+  /** Anon key. Public by design; used only to verify a caller's access token. */
+  SUPABASE_ANON_KEY: z.string().trim().optional().transform((v) => v || undefined),
+
+  /**
+   * Service-role key. Bypasses every row-level security policy in the project.
+   *
+   * Used for exactly one thing: writing graded attempts, which no client is
+   * permitted to write. Never prefixed VITE_ (that would inline it into the
+   * browser bundle) and never included in any response or log line.
+   */
+  SUPABASE_SERVICE_ROLE_KEY: z.string().trim().optional().transform((v) => v || undefined),
+
+  /**
    * Deadline for one upstream call.
    *
    * Without it a hung upstream holds a serverless invocation open until the
@@ -180,6 +200,9 @@ export type AppConfig = Readonly<{
   aiMaxOutputTokens: number;
   geminiModel: string;
   aiTimeoutMs: number;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+  supabaseServiceRoleKey?: string;
 }>;
 
 /**
@@ -238,6 +261,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     aiMaxOutputTokens: raw.AI_MAX_OUTPUT_TOKENS,
     geminiModel: raw.GEMINI_MODEL,
     aiTimeoutMs: raw.AI_TIMEOUT_MS,
+    supabaseUrl: raw.SUPABASE_URL,
+    supabaseAnonKey: raw.SUPABASE_ANON_KEY,
+    supabaseServiceRoleKey: raw.SUPABASE_SERVICE_ROLE_KEY,
   });
 }
 

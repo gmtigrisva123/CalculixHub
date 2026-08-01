@@ -24,6 +24,8 @@
 import { Type } from '@google/genai';
 import type { ZodType } from 'zod';
 import type { Level, Topic } from '../../types';
+import { recordAttempt } from '../attempts';
+import { verifyAccessToken } from '../auth/supabaseAdmin';
 import { findProblem } from '../data';
 import { parseJsonReply, type ModelClient } from '../gemini';
 import { json, problem, readJsonBody } from '../http';
@@ -158,12 +160,32 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
     const parsed = await parseBody(context, evaluateRequestSchema(context.config.maxTextChars));
     if (!parsed.ok) return parsed.response;
 
-    const { problemId, userAnswer } = parsed.value;
+    const { problemId, userAnswer, durationMs } = parsed.value;
     const item = findProblem(problemId);
     if (!item) return problem(404, 'not-found', 'Problem not found', 'No item with that identifier.');
 
     // The verdict, decided here and nowhere else.
     const correct = gradeAnswer(userAnswer, item.correctAnswer);
+
+    // Persist for a signed-in learner. Identity comes from the verified bearer
+    // token, never from the request body -- a `userId` field in JSON is a claim
+    // anyone can make, while a signature is proof.
+    //
+    // Anonymous practice is still allowed and still graded; it simply is not
+    // recorded, so it cannot appear on a leaderboard.
+    let pointsAwarded = 0;
+    const caller = await verifyAccessToken(context.request.headers.get('authorization'));
+
+    if (caller) {
+      const outcome = await recordAttempt({
+        userId: caller.id,
+        problem: item,
+        submittedAnswer: userAnswer,
+        isCorrect: correct,
+        durationMs,
+      });
+      pointsAwarded = outcome.pointsAwarded;
+    }
 
     if (model) {
       const result = await model.generate({
@@ -196,14 +218,16 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
         });
 
         if (commentary) {
-          // `correct` comes from `gradeAnswer`, never from the parsed reply.
-          return json({ correct, ...commentary, isFallback: false });
+          // `correct` and `pointsAwarded` come from the server, never from the
+          // parsed reply. The model supplies prose and nothing else.
+          return json({ correct, pointsAwarded, ...commentary, isFallback: false });
         }
       }
     }
 
     return json({
       correct,
+      pointsAwarded,
       explanation: correct
         ? `Correct! You reasoned through the logical structure of this ${item.topic} problem cleanly.`
         : `Not quite - that isn't the expected answer. You likely slipped somewhere in the intermediate steps, or the hint's technique hasn't clicked yet.`,
