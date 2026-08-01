@@ -21,7 +21,16 @@ export interface Problem {
 }
 
 export interface UserStats {
-  level: string;
+  /**
+   * Tier label, absent until a learner is placed.
+   *
+   * Optional because that is what the code actually does: both initialisers —
+   * the first-run default and the post-logout reset — omit it, and it is only
+   * populated once the adaptive placement test resolves a tier (or a returning
+   * user's saved stats are rehydrated). Call sites already reflect this, most
+   * guarding with `|| 'Foundation'`.
+   */
+  level?: string;
   rank: number;
   points: number;
   streak: number;

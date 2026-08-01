@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight, Star,
+  Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
   ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
   Globe, Shield, TrendingUp, Users, Check, X, Download,
   ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare
@@ -1237,26 +1237,17 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         {/* Right column: auth + placement */}
         <div className="md:col-span-8 p-8 md:p-16 flex flex-col justify-center bg-white min-h-screen">
 
-          {authMode === 'landing' && (
-            <div className="space-y-6 text-center md:text-left">
-              <div className="inline-flex items-center gap-1.5 bg-brass-50 border border-brass-100 px-3 py-1 rounded-full text-[10px] font-black uppercase text-brass-700 tracking-wider">
-                <Star className="w-3.5 h-3.5 text-brass-600 fill-brass-100" /> Math Operating System
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-stone-900 tracking-tight font-serif">Welcome to CalculixHub</h3>
-                <p className="text-xs text-stone-550 max-w-lg leading-relaxed">Sign in or create an account to start your adaptive IRT-powered learning path.</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <button type="button" onClick={() => setAuthMode('register')} className="bg-ink-950 hover:bg-black text-white font-extrabold text-xs px-6 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer group">
-                  Create a new account <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </button>
-                <button type="button" onClick={() => setAuthMode('login')} className="bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs px-6 py-4 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                  Sign in
-                </button>
-              </div>
-            </div>
-          )}
+          {/*
+            No `authMode === 'landing'` pane here.
 
+            This component returns renderLandingPage() early for the 'landing'
+            mode, so a landing branch at this point is unreachable — TypeScript
+            reports the comparison as having no overlap once React's types are
+            installed. The markup that used to sit here (a "Welcome to
+            CalculixHub" panel with Sign in / Create account buttons) had been
+            dead since the early return was introduced; the real entry points
+            are the landing page's own header and hero.
+          */}
           {authMode === 'login' && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <button type="button" onClick={() => { setAuthMode('landing'); setErrorMessage(''); }} className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-bold mb-2 transition-colors cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
