@@ -4,9 +4,13 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { Sparkles, Send, X, Bot, HelpCircle } from 'lucide-react';
 import MathText from './MathText';
 import { apiUrl } from '../lib/apiBase';
+import { backdrop, duration, ease, spring, travel } from '../lib/motion';
+import { useAmbient } from '../lib/useAmbient';
+import { useIsDesktop } from '../lib/useBreakpoint';
 
 interface ChatMessage {
   id: string;
@@ -28,6 +32,16 @@ export default function AITutorChat() {
   const [inputVal, setInputVal] = useState('');
   const [loading, setLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // The launcher's two perpetual loops. Both stop once the button scrolls out
+  // of view or the app is backgrounded; neither changes appearance while shown.
+  const sparkleRef = useAmbient<SVGSVGElement>();
+  const pingRef = useAmbient<HTMLDivElement>();
+  const statusDotRef = useAmbient<HTMLSpanElement>();
+
+  // Picks the axis the panel travels along: up from the bottom on a phone,
+  // in from the right on a desktop.
+  const isDesktop = useIsDesktop();
 
   useEffect(() => {
     if (chatBottomRef.current) {
@@ -98,17 +112,26 @@ export default function AITutorChat() {
   return (
     <>
       {/* Floating Chat Button */}
-      <button
+      <m.button
         id="btn-ai-tutor-toggle"
         onClick={() => setIsOpen(!isOpen)}
-        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer"
+        whileTap={{ scale: 0.95 }}
+        transition={spring.press}
+        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-[box-shadow,background-color] duration-300 ease-standard group cursor-pointer"
       >
-        <Sparkles className="w-5 h-5 animate-pulse group-hover:scale-110 transition-transform" />
+        <Sparkles
+          ref={sparkleRef}
+          className="w-5 h-5 animate-pulse group-hover:scale-110 transition-transform duration-160 ease-standard"
+        />
         <span className="font-bold tracking-wide text-sm">Ask AI Tutor</span>
-        <div className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-proof-400 ring-2 ring-white animate-ping" />
-      </button>
+        <div
+          ref={pingRef}
+          className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-proof-400 ring-2 ring-white animate-ping"
+        />
+      </m.button>
 
       {/* Slide-out Sidebar Drawer for Chat */}
+      <AnimatePresence>
       {isOpen && (
         /*
           Bottom sheet on mobile, right-hand drawer at md+.
@@ -117,13 +140,37 @@ export default function AITutorChat() {
           the bottom edge, where a thumb already is; flex-row at md+ restores
           the original side drawer. Both share the same dismiss-on-backdrop
           child, so there is one panel, not two.
+
+          The scrim and the panel animate as two separate elements rather than
+          one. The scrim is a plain crossfade — blurring and un-blurring a
+          full-screen backdrop is the single most expensive thing this component
+          can do, so it is kept to opacity and given the shortest exit that
+          still reads. The panel travels on a spring underneath it.
         */
-        <div className="fixed inset-0 z-50 flex flex-col md:flex-row md:justify-end bg-black/40 backdrop-blur-xs transition-opacity duration-300">
+        <m.div
+          variants={backdrop}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="fixed inset-0 z-50 flex flex-col md:flex-row md:justify-end bg-black/40 backdrop-blur-xs"
+        >
           <div className="flex-1" onClick={() => setIsOpen(false)} />
 
-          <div
+          <m.div
             id="panel-ai-tutor"
-            className="tutor-sheet w-full md:max-w-md h-[76%] md:h-full bg-white shadow-2xl flex flex-col relative border-l border-stone-100 rounded-t-3xl md:rounded-none overflow-hidden"
+            /*
+              One panel, two geometries. Below md it is a bottom sheet and rises
+              from the bottom edge; at md+ it is a right-hand drawer and comes
+              in from the side. Both are declared here and selected at runtime,
+              because animating the wrong axis for the current breakpoint is
+              worse than not animating at all — the original CSS keyframe had to
+              be disabled at md+ for exactly this reason.
+            */
+            initial={isDesktop ? { x: '100%' } : { y: '100%' }}
+            animate={isDesktop ? { x: 0 } : { y: 0 }}
+            exit={isDesktop ? { x: '100%' } : { y: '100%' }}
+            transition={spring.gentle}
+            className="w-full md:max-w-md h-[76%] md:h-full bg-white shadow-2xl flex flex-col relative border-l border-stone-100 rounded-t-3xl md:rounded-none overflow-hidden"
           >
             {/* Grab handle: the affordance that says this panel is dismissable. */}
             <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1 rounded-full bg-white/25 z-10" />
@@ -133,7 +180,11 @@ export default function AITutorChat() {
                 <div>
                   <h3 className="font-bold text-sm tracking-wide">Calculix AI Tutor</h3>
                   <p className="text-[11px] text-proof-400 font-medium flex items-center gap-1">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-proof-400 animate-pulse" /> Socratic math coach
+                    <span
+                      ref={statusDotRef}
+                      className="inline-block w-1.5 h-1.5 rounded-full bg-proof-400 animate-pulse"
+                    />{' '}
+                    Socratic math coach
                   </p>
                 </div>
               </div>
@@ -148,8 +199,21 @@ export default function AITutorChat() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50/50">
+              {/*
+                Each message arrives from the side it belongs to — the
+                learner's from the right, the tutor's from the left — so the
+                direction of travel reinforces who is speaking before the
+                colour of the bubble is even read. The offset is small; this is
+                a cue, not a slide-in.
+              */}
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <m.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: travel.sm, x: msg.sender === 'user' ? travel.md : -travel.md }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
+                  transition={spring.smooth}
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
                   <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
                     {msg.sender === 'tutor' && (
                       <div className="bg-stone-100 p-1.5 rounded-lg shrink-0 border border-stone-200"><Bot className="w-4 h-4 text-stone-700" /></div>
@@ -161,34 +225,49 @@ export default function AITutorChat() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </m.div>
               ))}
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-2.5">
-                    <div className="bg-stone-100 p-1.5 rounded-lg border border-stone-200"><Bot className="w-4 h-4 text-stone-500 animate-bounce" /></div>
-                    <div className="bg-white text-stone-500 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none border border-stone-100 shadow-xs flex items-center gap-1.5 italic">
-                      <span className="animate-bounce">&bull;</span>
-                      <span className="animate-bounce delay-75">&bull;</span>
-                      <span className="animate-bounce delay-150">&bull;</span>
-                      Thinking...
+              {/*
+                The thinking indicator gets a real exit, so the reply does not
+                appear in the same frame the dots vanish. The three dots keep
+                their CSS bounce, which is already the right idiom and costs
+                nothing while the panel is open.
+              */}
+              <AnimatePresence>
+                {loading && (
+                  <m.div
+                    key="thinking"
+                    initial={{ opacity: 0, y: travel.sm, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.96, transition: { duration: duration.instant, ease: ease.exit } }}
+                    transition={spring.snappy}
+                    className="flex justify-start"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="bg-stone-100 p-1.5 rounded-lg border border-stone-200"><Bot className="w-4 h-4 text-stone-500 animate-bounce" /></div>
+                      <div className="bg-white text-stone-500 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none border border-stone-100 shadow-xs flex items-center gap-1.5 italic">
+                        <span className="animate-bounce">&bull;</span>
+                        <span className="animate-bounce delay-75">&bull;</span>
+                        <span className="animate-bounce delay-150">&bull;</span>
+                        Thinking...
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  </m.div>
+                )}
+              </AnimatePresence>
               <div ref={chatBottomRef} />
             </div>
 
             <div className="px-4 py-2 bg-white border-t border-stone-100 flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar scroll-smooth">
-              <button onClick={() => sendQuickOption('Walk me through the handshake lemma')} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-all shrink-0 cursor-pointer">
+              <m.button onClick={() => sendQuickOption('Walk me through the handshake lemma')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-colors duration-160 ease-standard shrink-0 cursor-pointer">
                 Handshake lemma
-              </button>
-              <button onClick={() => sendQuickOption('How do I apply the AM-GM inequality?')} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-all shrink-0 cursor-pointer">
+              </m.button>
+              <m.button onClick={() => sendQuickOption('How do I apply the AM-GM inequality?')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-colors duration-160 ease-standard shrink-0 cursor-pointer">
                 AM-GM inequality
-              </button>
-              <button onClick={() => sendQuickOption('Give me a hint on combinatorial geometry')} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-all shrink-0 cursor-pointer">
+              </m.button>
+              <m.button onClick={() => sendQuickOption('Give me a hint on combinatorial geometry')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-colors duration-160 ease-standard shrink-0 cursor-pointer">
                 Combinatorial geometry
-              </button>
+              </m.button>
             </div>
 
             <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-stone-100 flex gap-2">
@@ -199,20 +278,23 @@ export default function AITutorChat() {
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 disabled={loading}
-                className="flex-1 bg-stone-50 border border-stone-200 focus:border-brass-500 rounded-xl px-4 py-3 text-sm outline-hidden transition-all text-stone-800 disabled:opacity-55 placeholder:text-stone-400"
+                className="flex-1 bg-stone-50 border border-stone-200 focus:border-brass-500 rounded-xl px-4 py-3 text-sm outline-hidden transition-[border-color,opacity] duration-160 ease-standard text-stone-800 disabled:opacity-55 placeholder:text-stone-400"
               />
-              <button
+              <m.button
                 id="btn-send-chat"
                 type="submit"
                 disabled={!inputVal.trim() || loading}
-                className="bg-ink-950 hover:bg-black text-white p-3 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
+                whileTap={{ scale: 0.92 }}
+                transition={spring.press}
+                className="bg-ink-950 hover:bg-black text-white p-3 rounded-xl shadow-md transition-[background-color,opacity] duration-160 ease-standard disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
               >
                 <Send className="w-4 h-4 text-white" />
-              </button>
+              </m.button>
             </form>
-          </div>
-        </div>
+          </m.div>
+        </m.div>
       )}
+      </AnimatePresence>
     </>
   );
 }

@@ -4,7 +4,9 @@
  */
 
 import React from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { TAB_BAR_ITEMS, type TabKey } from '../lib/navigation';
+import { duration, ease, spring } from '../lib/motion';
 
 interface MobileTabBarProps {
   activeTab: string;
@@ -38,28 +40,66 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
         const isActive = activeTab === item.key;
 
         return (
-          <button
+          /*
+            `layout` is what makes the rail's width change survivable as
+            motion. The active tab grows from flex 1 to 1.6, which is a layout
+            property no amount of CSS transition can animate smoothly across
+            eight siblings. Motion measures before and after and projects the
+            difference through transforms, so the reflow happens in a single
+            frame and everything the user sees is composited.
+          */
+          <m.button
             key={item.key}
             type="button"
+            layout
+            transition={spring.snappy}
             onClick={() => onSelect(item.key)}
             aria-current={isActive ? 'page' : undefined}
             // The icon carries the label for inactive tabs, whose text is not
             // rendered -- so the accessible name has to come from the button.
             aria-label={item.label}
             style={{ flex: isActive ? 1.6 : 1 }}
-            className={`min-w-0 h-11.5 rounded-2xl flex flex-col items-center justify-center gap-0.5 px-1.5 cursor-pointer transition-colors duration-150 ${
-              isActive
-                ? 'bg-brass-600 text-ink-950'
-                : 'text-stone-500 active:bg-ink-850'
+            className={`relative min-w-0 h-11.5 rounded-2xl flex flex-col items-center justify-center gap-0.5 px-1.5 cursor-pointer transition-colors duration-160 ease-standard ${
+              isActive ? 'text-ink-950' : 'text-stone-500 active:bg-ink-850'
             }`}
           >
-            <ItemIcon className="w-[17px] h-[17px] shrink-0" strokeWidth={2} />
+            {/*
+              One brass pill shared by all eight tabs, rather than a background
+              switched on per button. Selecting a tab slides the indicator
+              across the rail, which is the same gesture language as the
+              desktop sidebar and as iOS's own tab bars.
+            */}
             {isActive && (
-              <span className="text-[8px] font-extrabold tracking-wide whitespace-nowrap leading-none">
-                {item.shortLabel}
-              </span>
+              <m.span
+                layoutId="tabbar-active-pill"
+                className="absolute inset-0 bg-brass-600 rounded-2xl"
+                transition={spring.snappy}
+              />
             )}
-          </button>
+
+            <ItemIcon className="w-[17px] h-[17px] shrink-0 relative z-10" strokeWidth={2} />
+
+            {/*
+              The label fades rather than appearing instantly, so it arrives
+              with the pill instead of popping in ahead of it. `layout` keeps it
+              centred while the button around it is still resizing.
+            */}
+            <AnimatePresence initial={false}>
+              {isActive && (
+                <m.span
+                  key="label"
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: duration.fast, ease: ease.standard }}
+                  className="relative z-10 text-[8px] font-extrabold tracking-wide whitespace-nowrap leading-none"
+                >
+                  {item.shortLabel}
+                </m.span>
+              )}
+            </AnimatePresence>
+          </m.button>
         );
       })}
     </nav>

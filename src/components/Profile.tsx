@@ -4,9 +4,12 @@
  */
 
 import React from 'react';
+import { m } from 'motion/react';
 import { User, CheckCircle, Star, LogOut } from 'lucide-react';
 import { UserStats, Problem } from '../types';
 import { TOPIC_META, getRankForPoints } from '../lib/topics';
+import { spring } from '../lib/motion';
+import { AnimatedNumber, StaggerItem } from './motion';
 
 interface ProfileProps {
   userStats: UserStats;
@@ -54,16 +57,18 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
                 </div>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-4 text-xs pt-1">
                   <span>Level: <strong className="text-brass-400">{userStats.level}</strong></span>
-                  <span>Points: <strong className="text-violet-400">{userStats.points}</strong></span>
+                  <span>Points: <strong className="text-violet-400"><AnimatedNumber value={userStats.points} /></strong></span>
                 </div>
               </div>
 
-              <button
+              <m.button
                 onClick={onLogout}
-                className="bg-ink-800 hover:bg-ink-700 border border-ink-700 p-2.5 rounded-xl text-stone-300 hover:text-white transition-all text-xs font-bold cursor-pointer flex gap-1.5"
+                whileTap={{ scale: 0.95 }}
+                transition={spring.press}
+                className="bg-ink-800 hover:bg-ink-700 border border-ink-700 p-2.5 rounded-xl text-stone-300 hover:text-white transition-[background-color,color] duration-160 ease-standard text-xs font-bold cursor-pointer flex gap-1.5"
               >
                 <LogOut className="w-4 h-4 shrink-0" /> Log out
-              </button>
+              </m.button>
             </div>
           </div>
 
@@ -73,15 +78,25 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {badges.map((b) => (
-                <div key={b.id} className={`border rounded-2xl p-4 flex gap-3 transition-all ${b.unlocked ? 'bg-stone-50/50 border-stone-200' : 'border-stone-100 bg-stone-50/20 opacity-40'}`}>
+              {badges.map((b, index) => (
+                /*
+                  Locked badges sit at 40% opacity, so unlocking one is a change
+                  the learner should catch. The stagger gives the wall a reading
+                  order, and the opacity change now eases rather than snapping.
+                */
+                <StaggerItem
+                  key={b.id}
+                  index={index}
+                  inView
+                  className={`border rounded-2xl p-4 flex gap-3 transition-[opacity,background-color,border-color] duration-340 ease-standard ${b.unlocked ? 'bg-stone-50/50 border-stone-200' : 'border-stone-100 bg-stone-50/20 opacity-40'}`}
+                >
                   <div className="text-2xl pt-0.5 self-center">{b.icon}</div>
                   <div className="space-y-0.5">
                     <h4 className="font-black text-stone-800 text-xs">{b.title}</h4>
                     <p className="text-[10px] text-stone-500 leading-normal">{b.desc}</p>
                     <span className="inline-block mt-1 text-[8px] uppercase font-bold text-stone-400">{b.unlocked ? 'Unlocked' : 'Locked'}</span>
                   </div>
-                </div>
+                </StaggerItem>
               ))}
             </div>
           </div>
@@ -99,14 +114,14 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             <div className="text-center py-8 text-stone-400 text-xs italic">Empty for now &mdash; solve a problem to add it here.</div>
           ) : (
             <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
-              {solvedQuestions.map((q) => (
-                <div key={q.id} className="p-3 bg-stone-50 rounded-xl border border-stone-150 flex items-center justify-between gap-3">
+              {solvedQuestions.map((q, index) => (
+                <StaggerItem key={q.id} index={index} className="p-3 bg-stone-50 rounded-xl border border-stone-150 flex items-center justify-between gap-3">
                   <div className="space-y-0.5 min-w-0">
                     <span className="block text-[10px] font-black text-stone-900 tracking-tight truncate">{q.title}</span>
                     <span className="block text-[9px] text-stone-400 font-bold uppercase">{TOPIC_META[q.topic].label}</span>
                   </div>
                   <span className="text-[10px] font-extrabold text-proof-600 whitespace-nowrap bg-proof-50 px-2 py-0.5 rounded border border-proof-100">+{q.points}</span>
-                </div>
+                </StaggerItem>
               ))}
             </div>
           )}

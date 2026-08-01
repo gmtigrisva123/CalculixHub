@@ -3,10 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { m } from 'motion/react';
 import React, { useMemo } from 'react';
 import { FlaskConical, Download, ShieldCheck, Layers, Users2, AlertTriangle } from 'lucide-react';
 import { ITEM_BANK } from '../lib/itemBank';
 import { ItemSource, Domain, probCorrect } from '../lib/irt';
+import { duration, ease, spring, staggerDelay } from '../lib/motion';
+import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 
 /**
  * Research & Analytics dashboard — the "internal view" from the blueprint.
@@ -116,22 +119,22 @@ export default function ResearchAnalytics() {
 
       {/* Bank summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+        <StaggerItem index={0} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Calibrated items</span>
-          <span className="text-2xl font-black text-stone-900 font-mono">{ITEM_BANK.length}</span>
-        </div>
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={ITEM_BANK.length} /></span>
+        </StaggerItem>
+        <StaggerItem index={1} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Contest sources</span>
-          <span className="text-2xl font-black text-stone-900 font-mono">{SOURCES.length}</span>
-        </div>
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={SOURCES.length} /></span>
+        </StaggerItem>
+        <StaggerItem index={2} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Domains</span>
-          <span className="text-2xl font-black text-stone-900 font-mono">{DOMAINS.length}</span>
-        </div>
-        <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={DOMAINS.length} /></span>
+        </StaggerItem>
+        <StaggerItem index={3} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Concepts tagged</span>
-          <span className="text-2xl font-black text-stone-900 font-mono">{concepts.length}</span>
-        </div>
+          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={concepts.length} /></span>
+        </StaggerItem>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -155,12 +158,12 @@ export default function ResearchAnalytics() {
                     n={row.count} &middot; b&#772;={row.meanB.toFixed(2)} &middot; a&#772;={row.meanA.toFixed(2)}
                   </span>
                 </div>
-                <div className="w-full bg-stone-100 rounded-full h-2 relative overflow-hidden">
-                  <div
-                    className="bg-brass-500 h-2 rounded-full transition-all duration-700"
-                    style={{ width: `${((row.meanB + 3) / 6) * 100}%` }}
-                  />
-                </div>
+                <SpringBar
+                  value={((row.meanB + 3) / 6) * 100}
+                  track="w-full bg-stone-100 rounded-full h-2 relative overflow-hidden"
+                  fill="bg-brass-500 h-2 rounded-full"
+                  label={`Mean difficulty for ${row.source}`}
+                />
               </div>
             ))}
             <div className="flex justify-between text-[9px] text-stone-400 font-mono pt-1">
@@ -202,16 +205,31 @@ export default function ResearchAnalytics() {
         </div>
 
         <div className="flex items-end gap-1.5 h-40 border-b border-l border-stone-200 pl-2 pb-1">
-          {distribution.map((b) => (
+          {distribution.map((b, index) => (
             <div key={b.theta} className="flex-1 flex flex-col items-center justify-end h-full gap-0.5 group relative">
-              <div
-                className="w-full bg-proof-500/70 rounded-t transition-all duration-700 group-hover:bg-proof-600"
+              {/*
+                Bars scale up from the axis rather than animating their height,
+                so the whole histogram is one composited transform instead of a
+                row of simultaneous layout writes. `origin-bottom` is what makes
+                that read as growing out of the baseline.
+              */}
+              <m.div
+                className="w-full bg-proof-500/70 rounded-t origin-bottom transition-colors duration-160 ease-standard group-hover:bg-proof-600"
                 style={{ height: `${b.infoPct}%` }}
+                initial={{ scaleY: 0, opacity: 0 }}
+                whileInView={{ scaleY: 1, opacity: 1 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ ...spring.smooth, delay: staggerDelay(index, 0.02, 0.3) }}
                 title={`theta ${b.theta.toFixed(1)}: information ${b.info.toFixed(1)}`}
               />
-              <div
+              {/* The density marker fades in once the bars have landed. */}
+              <m.div
                 className="absolute w-1.5 h-1.5 rounded-full bg-brass-500"
                 style={{ bottom: `${b.densityPct}%` }}
+                initial={{ opacity: 0, scale: 0 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ ...spring.snappy, delay: 0.32 + staggerDelay(index, 0.02, 0.3) }}
               />
             </div>
           ))}
@@ -261,12 +279,14 @@ export default function ResearchAnalytics() {
             calibration analysis. Contains no learner data.
           </p>
         </div>
-        <button
+        <m.button
           onClick={exportDataset}
-          className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-5 py-3 rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2 active:scale-95 shrink-0"
+          whileTap={{ scale: 0.96 }}
+          transition={spring.press}
+          className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors duration-160 ease-standard cursor-pointer shadow-md flex items-center gap-2 shrink-0"
         >
           <Download className="w-4 h-4" /> Download CSV
-        </button>
+        </m.button>
       </div>
     </div>
   );

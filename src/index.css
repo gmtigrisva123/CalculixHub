@@ -69,6 +69,41 @@
   --color-stone-555: #66605b;
   --color-stone-650: #4d4945;
   --color-stone-705: #403c35;
+
+  /*
+   * MOTION DESIGN SYSTEM — CSS mirror of src/lib/motion.ts
+   *
+   * Registering these under @theme is what lets Tailwind emit `duration-base`,
+   * `ease-standard` and friends as real utilities, so a CSS transition written
+   * in a className and a spring written in a Motion component are tuned from
+   * the same numbers. Keep the two files in step: motion.ts holds the same
+   * values in seconds, which is Motion's unit.
+   *
+   * Timings are short by design. Apple's own UIKit defaults and the classic
+   * 100ms "instant" threshold both sit well under a third of a second, and past
+   * --duration-slower an interface stops reading as considered and starts
+   * reading as sluggish.
+   */
+  /*
+   * Easings live in Tailwind's `--ease-*` namespace, so `ease-standard` and
+   * `ease-emphasized` are real utilities usable directly in a className.
+   */
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /*
+   * Durations have no theme namespace in Tailwind v4 — `duration-*` takes bare
+   * millisecond values — so these are emitted as plain custom properties for
+   * the hand-written CSS below. In classNames, use the matching bare number
+   * (duration-160, duration-240, ...) to stay on the same scale.
+   */
+  --mo-duration-instant: 100ms;
+  --mo-duration-fast: 160ms;
+  --mo-duration-base: 240ms;
+  --mo-duration-slow: 340ms;
+  --mo-duration-slower: 480ms;
 }
 
 html {
@@ -85,6 +120,34 @@ html, body, #root {
     scroll-behavior: auto;
   }
 }
+
+/*
+ * Touch feedback.
+ *
+ * Mobile Safari paints a grey flash over any tapped control by default. Inside
+ * the Capacitor WKWebView that flash lands on top of the app's own press
+ * animation, so the two fight and the result reads as a double response.
+ * Suppressing it leaves `whileTap` as the only feedback, which is the point.
+ *
+ * Note on `will-change`: it is intentionally absent. Motion applies and removes
+ * it around the animations it drives, and a permanent hint costs a retained
+ * compositor layer per element whether or not anything is moving.
+ */
+button,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * Press feedback deliberately does NOT live here.
+ *
+ * An early version of this system had a `.mo-press` class alongside Motion's
+ * `whileTap`, which meant two independent definitions of how a press feels.
+ * Every interactive control now uses `whileTap` with `spring.press`, so the
+ * press curve is defined once, in src/lib/motion.ts, and a CSS class cannot
+ * drift away from it.
+ */
 
 /* Fine graph-paper grid, used behind hero / arena surfaces */
 .bp-grid {
@@ -130,34 +193,51 @@ html, body, #root {
 .katex { font-size: 1.02em; }
 
 /*
- * AI tutor sheet entrance.
- *
- * Mobile only: the panel rises from the bottom edge, which is where it lives.
- * At md+ it is a side drawer that is already positioned correctly, and sliding
- * it up from below would be wrong for that geometry.
- *
- * The easing overshoots slightly (0.3 -> 1) so the sheet settles rather than
- * stopping dead, matching the source design's curve.
+ * The AI tutor sheet's entrance used to live here as a hand-written keyframe.
+ * It is now driven by Motion (see AITutorChat), which gives it a real exit
+ * animation, an interruptible spring, and the same reduced-motion handling as
+ * every other surface. Its original curve survives as --ease-emphasized above,
+ * so the sheet still settles the way it always did.
  */
-@keyframes tutorSheetIn {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
 
-@media (max-width: 47.99rem) {
-  .tutor-sheet {
-    animation: tutorSheetIn 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
-  }
-}
-
-/* Respect users who have asked the system for less motion. */
+/*
+ * Reduced motion.
+ *
+ * Motion-driven animation is handled by `reducedMotion="user"` on MotionConfig,
+ * which keeps opacity and drops movement. This block is the equivalent contract
+ * for everything CSS owns.
+ *
+ * It is deliberately not the usual `animation: none !important` sledgehammer.
+ * Several loops here are status indicators — the live-feed dots, the offline
+ * ping, the grading spinner — and silencing them entirely would remove
+ * information, not decoration. Instead transitions collapse to near-instant and
+ * looping animations slow to a near-still breath, so state is still legible
+ * without anything travelling across the screen.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .tutor-sheet {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    animation-delay: 0ms !important;
+  }
+
+  /* Spinners keep turning — a frozen spinner reads as a hung app. */
+  .animate-spin {
+    animation-duration: 1.8s !important;
+  }
+
+  /*
+   * Scaling loops (ping/pulse/bounce) are the ones that actually cause
+   * discomfort, so they hold still and communicate through opacity alone.
+   */
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
+  }
+  .animate-pulse {
+    animation-duration: 4s !important;
   }
 }
 

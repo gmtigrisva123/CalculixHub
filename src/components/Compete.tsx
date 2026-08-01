@@ -4,10 +4,14 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { Trophy, Calendar, Zap, HelpCircle, Check, Medal, Flag, Users2, Swords, Gauge, Target, Repeat, TrendingUp } from 'lucide-react';
 import { WeeklyChallenge, Contest, LeaderboardEntry, UserStats } from '../types';
 import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
 import { computeMetrics } from '../lib/analytics';
+import { duration, ease, spring, travel } from '../lib/motion';
+import { useAmbient } from '../lib/useAmbient';
+import { AnimatedNumber, StaggerItem } from './motion';
 
 interface CompeteProps {
   weeklyChallenges: WeeklyChallenge[];
@@ -121,11 +125,24 @@ export default function Compete({
           {next && <span className="text-[11px] text-stone-400 font-medium">{next.minPoints - userPoints} pts to {next.name}</span>}
         </div>
         <div className="grid grid-cols-4 gap-1.5">
-          {RANK_TIERS.map((tier) => {
+          {RANK_TIERS.map((tier, index) => {
             const active = tier.name === rank.name;
             const reached = userPoints >= tier.minPoints;
             return (
-              <div key={tier.name} className={`h-2 rounded-full ${reached ? (active ? 'bg-brass-600' : 'bg-proof-500') : 'bg-stone-150'}`} title={tier.name} />
+              /*
+                The ladder fills left to right as tiers are reached. Scaling on
+                the x axis from the left edge is the cheapest possible way to
+                say "you have got this far", and reads as a single continuous
+                bar rather than four independent blocks.
+              */
+              <m.div
+                key={tier.name}
+                title={tier.name}
+                className={`h-2 rounded-full origin-left ${reached ? (active ? 'bg-brass-600' : 'bg-proof-500') : 'bg-stone-150'}`}
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ ...spring.smooth, delay: index * 0.06 }}
+              />
             );
           })}
         </div>
@@ -147,8 +164,12 @@ export default function Compete({
               {contests.length === 0 && (
                 <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No contests scheduled right now.</div>
               )}
-              {contests.map((cont) => (
-                <div key={cont.id} className={`bg-white border rounded-2xl p-5 hover:border-stone-300 transition-all ${cont.status === 'past' ? 'opacity-70' : ''}`}>
+              {contests.map((cont, index) => (
+                <StaggerItem
+                  key={cont.id}
+                  index={index}
+                  className={`bg-white border rounded-2xl p-5 hover:border-stone-300 transition-[border-color,opacity] duration-160 ease-standard ${cont.status === 'past' ? 'opacity-70' : ''}`}
+                >
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1">
                       <div className="flex gap-2 items-center">
@@ -168,19 +189,32 @@ export default function Compete({
                     <div className="text-xs text-stone-500 font-medium">
                       Date: <span className="text-stone-900 font-extrabold">{cont.date}</span>
                     </div>
-                    <button
+                    <m.button
                       onClick={() => onJoinContest(cont.id)}
                       disabled={cont.status === 'past'}
-                      className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${
+                      whileTap={cont.status === 'past' ? undefined : { scale: 0.95 }}
+                      transition={spring.press}
+                      className={`text-xs font-bold px-4 py-2 rounded-xl transition-[background-color,box-shadow,color,border-color] duration-160 ease-standard cursor-pointer ${
                         cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100'
                         : cont.status === 'past' ? 'bg-stone-50 text-stone-300 border border-stone-100 pointer-events-none'
-                        : 'bg-ink-950 hover:bg-black text-white hover:shadow-xs active:scale-95'
+                        : 'bg-ink-950 hover:bg-black text-white hover:shadow-xs'
                       }`}
                     >
-                      {cont.joined ? 'Registered' : cont.status === 'past' ? 'Ended' : 'Register'}
-                    </button>
+                      <AnimatePresence mode="wait" initial={false}>
+                        <m.span
+                          key={cont.joined ? 'registered' : cont.status === 'past' ? 'ended' : 'register'}
+                          className="block"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: duration.fast, ease: ease.standard }}
+                        >
+                          {cont.joined ? 'Registered' : cont.status === 'past' ? 'Ended' : 'Register'}
+                        </m.span>
+                      </AnimatePresence>
+                    </m.button>
                   </div>
-                </div>
+                </StaggerItem>
               ))}
             </div>
           </div>
@@ -217,16 +251,45 @@ export default function Compete({
                       <span>Due: <b className="text-stone-200">{wc.dueDate}</b></span>
                       <span><b className="text-stone-200">{wc.participants}</b> participating</span>
                     </div>
-                    <button
+                    <m.button
                       onClick={() => handleRegisterChallenge(wc.id)}
-                      className={`font-semibold px-4.5 py-2.5 rounded-xl transition-all h-9 flex items-center justify-center cursor-pointer ${
-                        wc.completed ? 'bg-ink-800 text-stone-400 border border-ink-700' : 'bg-white hover:bg-stone-100 text-ink-950 font-bold active:scale-95'
+                      whileTap={{ scale: 0.95 }}
+                      transition={spring.press}
+                      className={`font-semibold px-4.5 py-2.5 rounded-xl transition-colors duration-160 ease-standard h-9 flex items-center justify-center cursor-pointer ${
+                        wc.completed ? 'bg-ink-800 text-stone-400 border border-ink-700' : 'bg-white hover:bg-stone-100 text-ink-950 font-bold'
                       }`}
                     >
-                      {registeredChallengeId === wc.id ? (
-                        <span className="flex items-center gap-1 text-proof-600"><Check className="w-3.5 h-3.5" /> Joined</span>
-                      ) : wc.completed ? ('Registered') : ('Join challenge')}
-                    </button>
+                      {/*
+                        Joining flips the label to a tick for three seconds and
+                        then back. That confirmation is the whole point of the
+                        interaction, so the tick lands on a spring with real
+                        bounce while the surrounding text just crossfades.
+                      */}
+                      <AnimatePresence mode="wait" initial={false}>
+                        {registeredChallengeId === wc.id ? (
+                          <m.span
+                            key="joined"
+                            className="flex items-center gap-1 text-proof-600"
+                            initial={{ opacity: 0, scale: 0.7 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ type: 'spring', visualDuration: 0.28, bounce: 0.45 }}
+                          >
+                            <Check className="w-3.5 h-3.5" /> Joined
+                          </m.span>
+                        ) : (
+                          <m.span
+                            key={wc.completed ? 'registered' : 'join'}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: duration.fast, ease: ease.standard }}
+                          >
+                            {wc.completed ? 'Registered' : 'Join challenge'}
+                          </m.span>
+                        )}
+                      </AnimatePresence>
+                    </m.button>
                   </div>
                 </div>
               ))}
@@ -271,11 +334,26 @@ export default function Compete({
                 <button
                   key={tab.key}
                   onClick={() => setActiveAxis(tab.key)}
-                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                    activeAxis === tab.key ? 'bg-white text-stone-950 shadow-2xs' : 'text-stone-500 hover:text-stone-900'
+                  className={`relative flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors duration-160 ease-standard cursor-pointer flex items-center justify-center gap-1 ${
+                    activeAxis === tab.key ? 'text-stone-950' : 'text-stone-500 hover:text-stone-900'
                   }`}
                 >
-                  <TabIcon className="w-3.5 h-3.5" /> {tab.label}
+                  {/*
+                    A segmented control is the clearest case in the product for
+                    a shared indicator: the white thumb slides between the three
+                    axes exactly the way iOS's own UISegmentedControl does,
+                    instead of one segment losing its background while another
+                    gains one.
+                  */}
+                  {activeAxis === tab.key && (
+                    <m.span
+                      layoutId="leaderboard-axis-thumb"
+                      className="absolute inset-0 bg-white rounded-lg shadow-2xs"
+                      transition={spring.snappy}
+                    />
+                  )}
+                  <TabIcon className="w-3.5 h-3.5 relative z-10" />
+                  <span className="relative z-10">{tab.label}</span>
                 </button>
               );
             })}
@@ -288,17 +366,19 @@ export default function Compete({
               {dimensions.map((d) => {
                 const DimIcon = d.icon;
                 return (
-                  <button
+                  <m.button
                     key={d.key}
                     onClick={() => setDimension(d.key)}
-                    className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
+                    whileTap={{ scale: 0.94 }}
+                    transition={spring.press}
+                    className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer flex items-center gap-1 ${
                       dimension === d.key
                         ? 'bg-ink-950 border-ink-950 text-white'
                         : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
                     <DimIcon className="w-3 h-3" /> {d.label}
-                  </button>
+                  </m.button>
                 );
               })}
             </div>
@@ -315,7 +395,9 @@ export default function Compete({
                 { label: 'Improve', value: myMetrics.improvement },
               ].map((m) => (
                 <div key={m.label}>
-                  <span className="text-sm font-black text-stone-900 font-mono block">{m.value}</span>
+                  <span className="text-sm font-black text-stone-900 font-mono block">
+                    <AnimatedNumber value={m.value} />
+                  </span>
                   <span className="text-[8px] uppercase font-bold text-stone-400">{m.label}</span>
                 </div>
               ))}
@@ -335,9 +417,29 @@ export default function Compete({
               const isCurrentUser = entry.name === userName;
               const entryRank = getRankForPoints(entry.points);
               return (
-                <div
-                  key={`${entry.name}-${entry.rank}`}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                /*
+                  Reordering is the point of this list.
+
+                  Switching the ranking dimension between points, speed,
+                  accuracy, consistency and improvement re-sorts every row. It
+                  used to snap, so there was no way to follow where you had
+                  moved to — the one question a leaderboard exists to answer.
+                  With `layout`, rows glide to their new positions and the
+                  learner can watch themselves rise or fall.
+
+                  This requires the key to be a stable identity. It used to
+                  include the rank, which changes on exactly the re-sorts we
+                  want to animate, so React treated a moved row as a brand new
+                  one. Name alone is unique here: the current user is merged
+                  into the seeded leaderboard by name rather than appended.
+                */
+                <m.div
+                  key={entry.name}
+                  layout
+                  transition={spring.smooth}
+                  initial={{ opacity: 0, y: travel.sm }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-[background-color,border-color] duration-160 ease-standard ${
                     isCurrentUser ? 'bg-brass-50/60 border-brass-200' : 'bg-white hover:bg-stone-50 border-stone-100'
                   }`}
                 >
@@ -368,7 +470,7 @@ export default function Compete({
                       <span className="text-[8px] uppercase font-bold text-stone-400 block">{activeDimension.label}</span>
                     )}
                   </div>
-                </div>
+                </m.div>
               );
             })}
           </div>

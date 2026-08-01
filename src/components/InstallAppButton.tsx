@@ -4,12 +4,15 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, m } from 'motion/react';
 import { Check, Download, Share, Smartphone, SquarePlus, X } from 'lucide-react';
 import {
   isInstalled,
   isIosSafari,
   type BeforeInstallPromptEvent,
 } from '../lib/pwa';
+import { backdrop, scaleIn, spring, staggerDelay } from '../lib/motion';
+import { useMediaQuery } from '../lib/useBreakpoint';
 
 type Variant = 'nav' | 'row';
 
@@ -103,19 +106,23 @@ export default function InstallAppButton({ variant = 'nav' }: InstallAppButtonPr
   return (
     <>
       {variant === 'nav' ? (
-        <button
+        <m.button
           type="button"
           onClick={handleClick}
-          className="flex items-center gap-1.5 border border-brass-500/40 text-brass-300 hover:text-ink-950 hover:bg-brass-500 hover:border-brass-500 font-extrabold text-xs px-3 sm:px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
+          whileTap={{ scale: 0.95 }}
+          transition={spring.press}
+          className="flex items-center gap-1.5 border border-brass-500/40 text-brass-300 hover:text-ink-950 hover:bg-brass-500 hover:border-brass-500 font-extrabold text-xs px-3 sm:px-4 py-2.5 rounded-xl transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer"
         >
           <Smartphone className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden sm:inline whitespace-nowrap">Get the app</span>
-        </button>
+        </m.button>
       ) : (
-        <button
+        <m.button
           type="button"
           onClick={handleClick}
-          className="w-full flex items-center justify-between gap-3 p-3.5 bg-stone-50/60 hover:bg-stone-100/70 rounded-xl border border-stone-100 transition-colors cursor-pointer text-left"
+          whileTap={{ scale: 0.99 }}
+          transition={spring.press}
+          className="w-full flex items-center justify-between gap-3 p-3.5 bg-stone-50/60 hover:bg-stone-100/70 rounded-xl border border-stone-100 transition-colors duration-160 ease-standard cursor-pointer text-left"
         >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-ink-950 text-brass-400 shrink-0">
@@ -129,10 +136,12 @@ export default function InstallAppButton({ variant = 'nav' }: InstallAppButtonPr
             </div>
           </div>
           <Download className="w-4 h-4 text-stone-400 shrink-0" />
-        </button>
+        </m.button>
       )}
 
-      {open && <InstallSheet path={path} onClose={() => setOpen(false)} />}
+      <AnimatePresence>
+        {open && <InstallSheet path={path} onClose={() => setOpen(false)} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -158,15 +167,32 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  /*
+    Below sm this is a bottom sheet and rises from the bottom edge; above it, a
+    centred dialog that scales up in place. Two different presentations deserve
+    two different entrances, and picking the wrong one is what makes a
+    responsive modal feel borrowed from the other breakpoint.
+  */
+  const isSheet = useMediaQuery('(max-width: 39.99rem)');
+
   return (
-    <div
+    <m.div
+      variants={backdrop}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-ink-950/60 backdrop-blur-xs p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="install-sheet-title"
       onClick={onClose}
     >
-      <div
+      <m.div
+        variants={isSheet ? undefined : scaleIn}
+        initial={isSheet ? { y: '100%' } : 'hidden'}
+        animate={isSheet ? { y: 0 } : 'visible'}
+        exit={isSheet ? { y: '100%' } : 'exit'}
+        transition={spring.gentle}
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-stone-200 shadow-2xl overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
@@ -184,14 +210,16 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
               </p>
             </div>
           </div>
-          <button
+          <m.button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-stone-500 hover:text-white transition-colors cursor-pointer p-1 -m-1 shrink-0"
+            whileTap={{ scale: 0.88 }}
+            transition={spring.press}
+            className="text-stone-500 hover:text-white transition-colors duration-160 ease-standard cursor-pointer p-1 -m-1 shrink-0"
           >
             <X className="w-4 h-4" />
-          </button>
+          </m.button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -213,17 +241,23 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
                 'Its own icon, no browser address bar',
                 'Cached problems that work without a connection',
                 'Streak reminders sent to your device',
-              ].map((line) => (
-                <li key={line} className="flex items-start gap-1.5 text-[11px] text-stone-600 font-medium">
+              ].map((line, index) => (
+                <m.li
+                  key={line}
+                  className="flex items-start gap-1.5 text-[11px] text-stone-600 font-medium"
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ ...spring.snappy, delay: 0.12 + staggerDelay(index, 0.05) }}
+                >
                   <Check className="w-3 h-3 text-proof-500 mt-0.5 shrink-0" />
                   <span>{line}</span>
-                </li>
+                </m.li>
               ))}
             </ul>
           </div>
         </div>
-      </div>
-    </div>
+      </m.div>
+    </m.div>
   );
 }
 

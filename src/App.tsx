@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { m } from 'motion/react';
 import {
   Settings,
   Sparkles,
@@ -33,6 +34,8 @@ import Profile from './components/Profile';
 import ResearchAnalytics from './components/ResearchAnalytics';
 import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
+import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components/motion';
+import { spring } from './lib/motion';
 
 const DISCUSSION_CLEANUP_KEY = 'calculix_discussions_demo_cleanup_v1';
 const LEGACY_DEMO_DISCUSSION_IDS = new Set(['disc-1', 'disc-2']);
@@ -483,30 +486,48 @@ export default function App() {
             <span className="text-[9px] uppercase font-bold text-stone-500 tracking-wider">Learning status</span>
             <div className="flex justify-between items-center">
               <span className="font-bold text-xs text-stone-200">You</span>
-              <span className="text-xs font-black text-brass-400">{userStats.points} pts</span>
+              <span className="text-xs font-black text-brass-400">
+                <AnimatedNumber value={userStats.points} /> pts
+              </span>
             </div>
-            <div className="w-full bg-ink-800 rounded-full h-1 mt-2.5">
-              <div
-                className="bg-brass-500 h-1 rounded-full transition-all duration-400"
-                style={{ width: `${Math.min(100, (userStats.points / 500) * 100)}%` }}
-              />
-            </div>
+            <SpringBar
+              value={(userStats.points / 500) * 100}
+              track="w-full bg-ink-800 rounded-full h-1 mt-2.5"
+              fill="bg-brass-500 h-1 rounded-full"
+              label="Progress toward 500 points"
+            />
           </div>
 
           {/* Nav groups links */}
           <nav className="space-y-1.5 font-medium" id="side-nav-links">
             {NAV_ITEMS.map((item) => {
               const ItemIcon = item.icon;
+              const isActive = activeTab === item.key;
               return (
                 <button
                   key={item.key}
                   onClick={() => selectTab(item.key)}
-                  className={`w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-xl transition-all cursor-pointer ${
-                    activeTab === item.key ? 'bg-brass-600 text-ink-950 font-extrabold' : 'hover:bg-ink-850 hover:text-white'
+                  className={`relative w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-xl transition-colors duration-160 ease-standard cursor-pointer ${
+                    isActive ? 'text-ink-950 font-extrabold' : 'hover:bg-ink-850 hover:text-white'
                   }`}
                 >
-                  <ItemIcon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  {/*
+                    The brass highlight is one element shared across all eight
+                    links rather than a background toggled per button, so
+                    selecting a tab slides the indicator to it instead of having
+                    one rectangle blink out and another blink in. This is the
+                    clearest signal in the sidebar that the workspaces are a set
+                    you move within, not eight unrelated destinations.
+                  */}
+                  {isActive && (
+                    <m.span
+                      layoutId="sidebar-active-tab"
+                      className="absolute inset-0 bg-brass-600 rounded-xl"
+                      transition={spring.snappy}
+                    />
+                  )}
+                  <ItemIcon className="w-4 h-4 shrink-0 relative z-10" />
+                  <span className="relative z-10">{item.label}</span>
                 </button>
               );
             })}
@@ -527,7 +548,7 @@ export default function App() {
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs rounded-xl bg-rose-950/40 hover:bg-rose-900/40 active:bg-rose-900/60 text-rose-300 hover:text-white border border-rose-900/30 hover:border-rose-800/60 font-bold transition-all cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs rounded-xl bg-rose-950/40 hover:bg-rose-900/40 active:bg-rose-900/60 text-rose-300 hover:text-white border border-rose-900/30 hover:border-rose-800/60 font-bold transition-[background-color,color,border-color] duration-160 ease-standard cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Log out</span>
@@ -565,6 +586,7 @@ export default function App() {
           </header>
 
           {/* RENDER DYNAMIC TAB CONTENT VIEW */}
+          <TabTransition tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <Dashboard
               userStats={userStats}
@@ -632,11 +654,17 @@ export default function App() {
                 </p>
               </div>
 
-              {saveSuccessNotify && (
+              {/*
+                The confirmation is the only feedback that the form did
+                anything, and it used to appear and vanish instantly, shifting
+                everything beneath it. Growing it out of the heading ties it to
+                the action that produced it.
+              */}
+              <Collapse open={saveSuccessNotify}>
                 <div className="p-3 bg-proof-50 text-proof-800 border border-proof-150 rounded-xl text-xs font-semibold flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-proof-500" /> Your settings have been applied to the OS.
                 </div>
-              )}
+              </Collapse>
 
               <form onSubmit={handleSaveSettings} className="space-y-5">
                 <div className="space-y-4">
@@ -685,7 +713,15 @@ export default function App() {
                           onChange={(e) => handleToggleReminders(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brass-600"></div>
+                        {/*
+                          The knob rides --ease-emphasized so it settles into
+                          each end rather than stopping dead, which is what
+                          makes an iOS switch feel like a physical throw. The
+                          track's colour change is a plain crossfade underneath
+                          it — previously it snapped, so the switch appeared to
+                          change colour before the knob had finished moving.
+                        */}
+                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer transition-colors duration-240 ease-standard peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-transform after:duration-240 after:ease-emphasized peer-checked:bg-brass-600"></div>
                       </label>
                     </div>
 
@@ -693,11 +729,11 @@ export default function App() {
                       States the actual outcome. A toggle that reports "on" while
                       the OS is blocking notifications is worse than no toggle.
                     */}
-                    {reminderNotice && (
+                    <Collapse open={Boolean(reminderNotice)}>
                       <p className="text-[10px] font-semibold leading-relaxed text-brass-700 bg-brass-50 border border-brass-100 rounded-lg px-2.5 py-2">
                         {reminderNotice}
                       </p>
-                    )}
+                    </Collapse>
                   </div>
 
                   {/* Install entry point — hides itself when already installed */}
@@ -706,23 +742,27 @@ export default function App() {
                 </div>
 
                 <div className="pt-2 border-t border-stone-100 flex gap-2">
-                  <button
+                  <m.button
                     id="btn-save-settings"
                     type="submit"
-                    className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md cursor-pointer"
+                    whileTap={{ scale: 0.97 }}
+                    transition={spring.press}
+                    className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-md cursor-pointer"
                   >
                     Apply settings
-                  </button>
-                  <button
+                  </m.button>
+                  <m.button
                     type="button"
                     onClick={() => {
                       localStorage.clear();
                       window.location.reload();
                     }}
-                    className="bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs px-4 py-3 rounded-xl transition-all border border-rose-100 cursor-pointer"
+                    whileTap={{ scale: 0.97 }}
+                    transition={spring.press}
+                    className="bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs px-4 py-3 rounded-xl transition-colors duration-160 ease-standard border border-rose-100 cursor-pointer"
                   >
                     Reset training data
-                  </button>
+                  </m.button>
                 </div>
               </form>
 
@@ -736,6 +776,7 @@ export default function App() {
               </div>
             </div>
           )}
+          </TabTransition>
 
         </div>
         </PullToRefresh>

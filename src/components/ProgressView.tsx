@@ -5,6 +5,10 @@
 
 import React from 'react';
 import { AreaChart, TrendingUp, AlertTriangle, BookOpen, Clock, Lightbulb, Radar as RadarIcon, Route, Sparkles, Bug, CheckCircle2 } from 'lucide-react';
+// No section-level Reveal here: the radar and velocity charts run their own
+// in-view draw, and every list below staggers itself. Wrapping the cards too
+// would animate the same content twice on one scroll.
+import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 import { UserStats, Topic } from '../types';
 import { TOPIC_META, formatMinutes } from '../lib/topics';
 import { forecastProgress, analyzeErrorPatterns, buildLearningPath, computeMetrics } from '../lib/analytics';
@@ -78,19 +82,24 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
           </div>
 
           <div className="space-y-4 pt-2 border-t border-stone-100">
-            {skillEntries.map(([skillName, pct]) => (
-              <div key={skillName} className="space-y-1.5">
+            {skillEntries.map(([skillName, pct], index) => (
+              <StaggerItem key={skillName} index={index} inView className="space-y-1.5">
                 <div className="flex justify-between items-center text-xs">
                   <div>
                     <span className="font-extrabold text-stone-900 block">{TOPIC_META[skillName].label}</span>
                     <span className="text-[10px] text-stone-400 font-medium block mt-0.5">{SKILL_DESCRIPTIONS[skillName]}</span>
                   </div>
-                  <span className="font-extrabold text-violet-700 shrink-0 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-md">{pct}%</span>
+                  <span className="font-extrabold text-violet-700 shrink-0 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-md">
+                    <AnimatedNumber value={pct} />%
+                  </span>
                 </div>
-                <div className="w-full bg-stone-100 rounded-full h-2">
-                  <div className="bg-violet-600 h-2 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
+                <SpringBar
+                  value={pct}
+                  track="w-full bg-stone-100 rounded-full h-2"
+                  fill="bg-violet-600 h-2 rounded-full"
+                  label={`${TOPIC_META[skillName].label} mastery`}
+                />
+              </StaggerItem>
             ))}
           </div>
         </div>
@@ -145,9 +154,12 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
                   <span>Pace vs. {targetMinutesPerProblem}-min target</span>
                   <span>{Math.round(paceRatio)}%</span>
                 </div>
-                <div className="w-full bg-ink-800 rounded-full h-1.5">
-                  <div className="bg-violet-500 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${paceRatio}%` }} />
-                </div>
+                <SpringBar
+                  value={paceRatio}
+                  track="w-full bg-ink-800 rounded-full h-1.5"
+                  fill="bg-violet-500 h-1.5 rounded-full"
+                  label="Pace against the four-minute target"
+                />
               </div>
             )}
           </div>
@@ -193,22 +205,22 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">Velocity</span>
-                <span className="text-lg font-extrabold text-stone-900 font-mono">{forecast.velocity}</span>
+                <span className="text-lg font-extrabold text-stone-900 font-mono"><AnimatedNumber value={forecast.velocity} /></span>
                 <span className="text-[9px] text-stone-400 block">pts / active day</span>
               </div>
               <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">In 7 days</span>
-                <span className="text-lg font-extrabold text-brass-700 font-mono">{forecast.projected7d}</span>
+                <span className="text-lg font-extrabold text-brass-700 font-mono"><AnimatedNumber value={forecast.projected7d} /></span>
                 <span className="text-[9px] text-stone-400 block">projected points</span>
               </div>
               <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">In 30 days</span>
-                <span className="text-lg font-extrabold text-brass-700 font-mono">{forecast.projected30d}</span>
+                <span className="text-lg font-extrabold text-brass-700 font-mono"><AnimatedNumber value={forecast.projected30d} /></span>
                 <span className="text-[9px] text-stone-400 block">projected points</span>
               </div>
               <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">Mastery @30d</span>
-                <span className="text-lg font-extrabold text-proof-600 font-mono">{forecast.projectedMastery30d}%</span>
+                <span className="text-lg font-extrabold text-proof-600 font-mono"><AnimatedNumber value={forecast.projectedMastery30d} />%</span>
                 <span className="text-[9px] text-stone-400 block">projected average</span>
               </div>
             </div>
@@ -242,8 +254,8 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {errorPatterns.map((pattern) => (
-              <div key={pattern.topic} className="border border-stone-200 rounded-2xl p-4 space-y-2.5">
+            {errorPatterns.map((pattern, index) => (
+              <StaggerItem key={pattern.topic} index={index} inView className="border border-stone-200 rounded-2xl p-4 space-y-2.5">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-sm text-stone-900">{TOPIC_META[pattern.topic].label}</span>
@@ -263,7 +275,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
                   <Lightbulb className="w-3.5 h-3.5 text-brass-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-stone-700 leading-relaxed font-medium">{pattern.remediation}</p>
                 </div>
-              </div>
+              </StaggerItem>
             ))}
           </div>
         )}
@@ -281,10 +293,12 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         </div>
 
         <div className="space-y-3">
-          {learningPath.map((step) => (
-            <div
+          {learningPath.map((step, index) => (
+            <StaggerItem
               key={step.topic}
-              className={`rounded-2xl border p-4 flex gap-4 items-start transition-all ${
+              index={index}
+              inView
+              className={`rounded-2xl border p-4 flex gap-4 items-start transition-[background-color,border-color] duration-240 ease-standard ${
                 step.status === 'current' ? 'bg-violet-50/50 border-violet-200' : 'bg-white border-stone-200'
               }`}
             >
@@ -311,7 +325,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
                 <p className="text-[11px] text-stone-700 font-medium">{step.focus}</p>
                 <p className="text-[10px] text-stone-400 leading-relaxed">{step.rationale}</p>
               </div>
-            </div>
+            </StaggerItem>
           ))}
         </div>
       </div>
