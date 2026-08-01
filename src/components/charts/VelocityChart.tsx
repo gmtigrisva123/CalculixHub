@@ -4,6 +4,8 @@
  */
 
 import React from 'react';
+import { m } from 'motion/react';
+import { duration, ease, spring, transition } from '../../lib/motion';
 
 interface VelocityDatum {
   date: string;
@@ -20,6 +22,9 @@ interface VelocityChartProps {
 // (no hardcoded coordinates) — renders an empty state when there isn't
 // enough history yet instead of faking a trend line.
 export default function VelocityChart({ data, color = '#c8842a', unit = 'pts' }: VelocityChartProps) {
+  /** Shared viewport config, so every layer of the chart reveals together. */
+  const viewport = { once: true, amount: 0.3 } as const;
+
   const width = 700;
   const height = 220;
   const padLeft = 50;
@@ -61,11 +66,59 @@ export default function VelocityChart({ data, color = '#c8842a', unit = 'pts' }:
         <line x1={padLeft} y1={padTop + plotH} x2={width - padRight} y2={padTop + plotH} stroke="#e2e8f0" strokeWidth={1.5} />
         <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + plotH} stroke="#e2e8f0" strokeWidth={1.5} />
 
-        <path d={areaPath} fill={`url(#velocityGradient)`} opacity={0.15} />
-        <path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        {/*
+          The area fills in under the line rather than with it, so the line
+          stays the thing being read while it is being drawn.
+        */}
+        <m.path
+          d={areaPath}
+          fill={`url(#velocityGradient)`}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 0.15 }}
+          viewport={viewport}
+          transition={{ duration: duration.slower, ease: ease.standard, delay: 0.25 }}
+        />
+        {/*
+          `pathLength` is the one place a stroke draw-on is the honest
+          animation: this is a timeline, and tracing it left to right is the
+          direction the data actually runs. Motion implements it as
+          strokeDasharray/offset, so it composites and never re-lays out.
+        */}
+        <m.path
+          d={linePath}
+          fill="none"
+          stroke={color}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          whileInView={{ pathLength: 1 }}
+          viewport={viewport}
+          transition={transition.draw}
+        />
 
+        {/*
+          Each marker pops as the line reaches it. The delay is spread across
+          the same window the draw occupies, so the two read as one gesture.
+        */}
         {data.map((d, i) => (
-          <circle key={i} cx={xAt(i)} cy={yAt(d.value)} r={4} fill={color} stroke="#fff" strokeWidth={1.5} />
+          <m.circle
+            key={i}
+            cx={xAt(i)}
+            cy={yAt(d.value)}
+            r={4}
+            fill={color}
+            stroke="#fff"
+            strokeWidth={1.5}
+            style={{ transformOrigin: `${xAt(i)}px ${yAt(d.value)}px` }}
+            initial={{ scale: 0 }}
+            whileInView={{ scale: 1 }}
+            viewport={viewport}
+            transition={{
+              ...spring.snappy,
+              delay: (i / Math.max(1, data.length - 1)) * duration.deliberate,
+            }}
+          />
         ))}
 
         {gridLines.map((g) => (
