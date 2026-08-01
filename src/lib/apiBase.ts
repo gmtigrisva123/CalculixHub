@@ -50,3 +50,31 @@ export function apiUrl(path: string): string {
 
   return normalized;
 }
+
+/**
+ * Fetch an API route with the caller's session attached.
+ *
+ * The access token goes in an `Authorization: Bearer` header, which the server
+ * verifies with Supabase before trusting the identity in it. It is deliberately
+ * not sent as a cookie: a bearer header is not attached automatically by the
+ * browser to cross-site requests, so this API has no CSRF surface to defend.
+ *
+ * Anonymous calls are normal and are simply unauthenticated -- practice works
+ * signed out, it just is not recorded against a learner.
+ */
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const { supabase } = await import('./supabase');
+
+  const headers = new Headers(init.headers);
+  if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
+
+  if (supabase) {
+    // Reads the persisted session and refreshes it if it is close to expiry,
+    // so a long practice session does not start failing mid-way.
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return fetch(apiUrl(path), { ...init, headers });
+}

@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { apiUrl } from './apiBase';
+import { apiFetch } from './apiBase';
 
 const QUEUE_KEY = 'calculix_pending_grades';
 
@@ -124,9 +124,8 @@ export async function flushGradeQueue(): Promise<number> {
 
   for (const entry of queue) {
     try {
-      const response = await fetch(apiUrl('/api/evaluate'), {
+      const response = await apiFetch('/api/evaluate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         // Field name matches the server contract in server.ts (`userAnswer`).
         body: JSON.stringify({
           problemId: entry.problemId,
