@@ -9,7 +9,7 @@ import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, Refres
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
 import { TOPIC_META, TOPIC_LIST, LEVEL_LIST } from '../lib/topics';
 import MathText from './MathText';
-import { apiUrl } from '../lib/apiBase';
+import { apiUrl, apiFetch } from '../lib/apiBase';
 import { gradeLocally, queueGrade } from '../lib/offline';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../lib/useAmbient';
@@ -97,9 +97,11 @@ export default function Learn({
     setSmartFeedback(null);
 
     try {
-      const response = await fetch(apiUrl('/api/evaluate'), {
+      // apiFetch attaches the session token, so the server can record this
+      // attempt against the learner and award points itself. Without a session
+      // the answer is still graded, just not recorded.
+      const response = await apiFetch('/api/evaluate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ problemId: activeProblem.id, userAnswer: answerInput }),
       });
 

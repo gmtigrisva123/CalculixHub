@@ -24,6 +24,7 @@
     "@capacitor/ios": "^8.4.2",
     "@capacitor/local-notifications": "^8.2.1",
     "@google/genai": "^2.4.0",
+    "@supabase/supabase-js": "^2.111.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-react": "^5.0.4",
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
+    "@electric-sql/pglite": "^0.5.4",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.18",

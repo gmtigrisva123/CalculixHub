@@ -37,6 +37,7 @@ import {
   MAX_ITEMS,
 } from '../lib/irt';
 import { ITEM_BANK } from '../lib/itemBank';
+import { useAuth } from '../context/AuthContext';
 
 interface WelcomeScreenProps {
   onLoginSuccess: (name: string, level: Level, initialSkills?: Record<Topic, number>) => void;
@@ -45,18 +46,17 @@ interface WelcomeScreenProps {
 const DOMAINS: Domain[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
 
 
-interface LocalUser {
-  fullName: string;
-  email: string;
-  password?: string;
-  level: Level;
-}
-
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
+  const { signIn, signUp, requestPasswordReset, completeOnboarding, status: authStatus } = useAuth();
+
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'placement'>('landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  // Disables the submit button for the duration of the request, so a double
+  // click cannot fire two sign-ups for the same address.
+  const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -144,15 +144,14 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
   const [hoveredStep, setHoveredStep] = useState<number | null>(null);
 
-  // Local user persistence keys
-  const USER_DB_KEY = 'calculix_registered_users';
-
-  // Wipe any old pre-seeded trial profiles so the local user database starts clean
+  // Accounts live in Postgres. The browser holds only a signed session token,
+  // which the server verifies on every request -- nothing here is a user store.
+  //
+  // One-time cleanup of the previous localStorage "user database", which held
+  // plaintext passwords. Left behind it would be a standing exposure on every
+  // shared device that ever ran the old build.
   useEffect(() => {
-    const existingRaw = localStorage.getItem(USER_DB_KEY);
-    if (!existingRaw || existingRaw.includes('student@calculix.com')) {
-      localStorage.setItem(USER_DB_KEY, JSON.stringify([]));
-    }
+    localStorage.removeItem('calculix_registered_users');
   }, []);
 
   // --- Computerized Adaptive Test (CAT) state, driven by the 3PL IRT engine ---
@@ -179,70 +178,76 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     'Number Theory': 0,
   });
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim() || !password) {
       setErrorMessage('Please provide both an email and a password.');
       return;
     }
 
-    const usersRaw = localStorage.getItem(USER_DB_KEY);
-    const users: LocalUser[] = usersRaw ? JSON.parse(usersRaw) : [];
+    setSubmitting(true);
+    // Verified by Supabase against an Argon2id digest it never exposes. The
+    // previous implementation compared a plaintext password held in
+    // localStorage, and accepted any password at all when the stored one was
+    // missing.
+    const result = await signIn({ email, password });
+    setSubmitting(false);
 
-    const normEmail = email.trim().toLowerCase();
-    const matchedUser = users.find((u) => u.email.toLowerCase() === normEmail);
-
-    if (!matchedUser) {
-      setErrorMessage('This account does not exist yet. Use "Create a new account" below to register first.');
+    if (!result.ok) {
+      setErrorMessage(result.error ?? 'Could not sign you in.');
       return;
     }
 
-    if (password.length >= 4 && password !== 'password123' && matchedUser.password && matchedUser.password !== password) {
-      setErrorMessage('Incorrect password. Double-check for a stray Caps Lock.');
-      return;
-    }
-
-    onLoginSuccess(matchedUser.fullName, matchedUser.level || 'Foundation');
+    // AuthProvider now owns the session; App reacts to `status` becoming
+    // 'authenticated' and restores it on every subsequent load.
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setErrorMessage('Enter your email address first, then choose "Forgot password".');
+      return;
+    }
+
+    setErrorMessage('');
+    setSubmitting(true);
+    await requestPasswordReset(email);
+    setSubmitting(false);
+
+    // Reported the same way whether or not the address exists, so this form
+    // cannot be used to discover which emails are registered.
+    setSuccessMessage('If that address has an account, a reset link is on its way.');
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!email.trim() || !password.trim() || !fullName.trim()) {
+    if (!email.trim() || !password || !fullName.trim()) {
       setErrorMessage('Please fill in every required field.');
       return;
     }
 
-    if (password.length < 4) {
-      setErrorMessage('Choose a password with at least 4 characters.');
+    // Derived from the display name when the learner has not chosen one. The
+    // database sanitises and de-duplicates it regardless of what arrives.
+    const handle = (username.trim() || fullName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')).slice(0, 24);
+
+    setSubmitting(true);
+    const result = await signUp({ email, password, username: handle, displayName: fullName });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      setErrorMessage(result.error ?? 'Could not create your account.');
       return;
     }
 
-    const usersRaw = localStorage.getItem(USER_DB_KEY);
-    const users: LocalUser[] = usersRaw ? JSON.parse(usersRaw) : [];
-    const normEmail = email.trim().toLowerCase();
-
-    const exists = users.some((u) => u.email.toLowerCase() === normEmail);
-    if (exists) {
-      setErrorMessage('That email is already registered. Switch to the sign-in screen instead.');
+    if (result.needsEmailConfirmation) {
+      setSuccessMessage('Account created. Check your email to confirm the address, then sign in.');
+      setAuthMode('login');
       return;
     }
-
-    const updatedUsers = [
-      ...users,
-      { fullName: fullName.trim(), email: normEmail, password: password.trim(), level: 'Foundation' as Level },
-    ];
-    localStorage.setItem(USER_DB_KEY, JSON.stringify(updatedUsers));
-
-    fetch(apiUrl('/api/live-stats/event'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'user-joined' }),
-    }).catch((err) => console.error('Error reporting user-joined event:', err));
 
     setSuccessMessage('Profile activated! Launching the adaptive IRT placement assessment...');
 
@@ -326,11 +331,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       setCalculatedLevel(tier);
       setTestCompleted(true);
 
-      const usersRaw = localStorage.getItem(USER_DB_KEY);
-      const users: LocalUser[] = usersRaw ? JSON.parse(usersRaw) : [];
-      const normEmail = email.trim().toLowerCase();
-      const updated = users.map((u) => (u.email.toLowerCase() === normEmail ? { ...u, level: tier } : u));
-      localStorage.setItem(USER_DB_KEY, JSON.stringify(updated));
+      // The measured tier is written to the learner's profile by
+      // `handleFinishPlacement`, which also stamps `onboarded_at` so placement
+      // is never shown twice -- server-side, so clearing storage cannot replay it.
       return;
     }
 
@@ -351,12 +354,22 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     setItemStartedAt(Date.now());
   };
 
-  const handleFinishPlacement = () => {
+  const handleFinishPlacement = async () => {
+    // Persisted to the profile: the tier, and `onboarded_at`. Because that
+    // stamp lives in the database rather than in browser storage, placement is
+    // not repeated on a new device and cannot be replayed by clearing storage.
+    const saved = await completeOnboarding({ level: calculatedLevel, skills: domainProfile });
+    if (!saved.ok) {
+      setErrorMessage(saved.error ?? 'Could not save your placement. Try again.');
+      return;
+    }
+
     fetch(apiUrl('/api/live-stats/event'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'test-completed' }),
     }).catch((err) => console.error('Error reporting test-completed event:', err));
+
     onLoginSuccess(fullName || 'Calculix Student', calculatedLevel, domainProfile);
   };
 
