@@ -173,16 +173,15 @@ export const problems: Problem[] = [
   },
 ];
 
-export const initialLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, name: 'Minh Anh', points: 890, country: 'Vietnam', age: 17, avatarSeed: 'minh', speed: 88, accuracy: 94, consistency: 91, improvement: 72 },
-  { rank: 2, name: 'Wei Zhang', points: 845, country: 'China', age: 16, avatarSeed: 'wei', speed: 95, accuracy: 89, consistency: 84, improvement: 68 },
-  { rank: 3, name: 'Priya Sharma', points: 810, country: 'India', age: 17, avatarSeed: 'priya', speed: 79, accuracy: 96, consistency: 88, improvement: 81 },
-  { rank: 4, name: 'Hoang Nam', points: 720, country: 'Vietnam', age: 15, avatarSeed: 'nam', speed: 82, accuracy: 85, consistency: 76, improvement: 90 },
-  { rank: 5, name: 'Aiden Cole', points: 650, country: 'USA', age: 16, avatarSeed: 'aiden', speed: 91, accuracy: 78, consistency: 69, improvement: 74 },
-  { rank: 6, name: 'Thu Trang', points: 540, country: 'Vietnam', age: 14, avatarSeed: 'trang', speed: 68, accuracy: 88, consistency: 94, improvement: 86 },
-  { rank: 7, name: 'Yuki Tanaka', points: 480, country: 'Japan', age: 16, avatarSeed: 'yuki', speed: 86, accuracy: 81, consistency: 72, improvement: 63 },
-  { rank: 8, name: 'Duc Anh', points: 310, country: 'Vietnam', age: 17, avatarSeed: 'duc', speed: 74, accuracy: 76, consistency: 65, improvement: 79 },
-];
+/**
+ * The leaderboard is no longer a fixture.
+ *
+ * It used to be eight invented people -- "Minh Anh", "Wei Zhang" and others --
+ * with invented points, ages and countries, served as though they were users.
+ * Ranking is now computed by `public.leaderboard_view` from real attempts, so
+ * an empty platform shows an empty leaderboard, which is the honest rendering.
+ */
+export const initialLeaderboard: LeaderboardEntry[] = [];
 
 export const initialWeeklyChallenges: WeeklyChallenge[] = [
   {
@@ -191,7 +190,9 @@ export const initialWeeklyChallenges: WeeklyChallenge[] = [
     description: 'Five short problems on stars-and-bars, inclusion-exclusion, and circular permutations. Built to sharpen your counting reflexes in under 20 minutes.',
     dueDate: 'Sunday, 11:59 PM',
     points: 60,
-    participants: 214,
+    // Real participation requires a challenge_completions table; until that
+    // exists this is zero rather than an invented number.
+    participants: 0,
     completed: false,
   },
 ];
@@ -215,32 +216,13 @@ export const initialContests: Contest[] = [
   },
 ];
 
-export const initialDiscussions: CommunityDiscussion[] = [
-  {
-    id: 'disc-1',
-    problemId: 'comb-f01',
-    problemTitle: 'The Handshake Problem',
-    user: 'Nam L.',
-    role: 'Student',
-    content: 'The $C^2_{10}$ explanation is really clean and intuitive. If you\'re new to this, drawing 10 dots and connecting the lines by hand also gets you to 45 edges!',
-    timestamp: '2 hours ago',
-    likes: 12,
-    replies: 2,
-    avatarSeed: 'triet',
-  },
-  {
-    id: 'disc-2',
-    problemId: 'alg-a01',
-    problemTitle: 'Minimum Fraction Value',
-    user: 'Mentor Hoang',
-    role: 'Mentor',
-    content: 'Important note for anyone prepping for a selective exam: when using Cauchy-Schwarz or AM-GM in fraction form, the EQUALITY CONDITION is essential. Don\'t just pick a convenient point without checking it satisfies $a+b+c=1$.',
-    timestamp: '1 day ago',
-    likes: 34,
-    replies: 5,
-    avatarSeed: 'hoang',
-  },
-];
+/**
+ * Discussions come from `public.posts`, written by real people.
+ *
+ * The two seeded threads that used to live here were attributed to invented
+ * users ("Nam L.", "Mentor Hoang") and presented as community activity.
+ */
+export const initialDiscussions: CommunityDiscussion[] = [];
 
 /**
  * Index by identifier, built once.
