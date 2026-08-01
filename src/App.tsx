@@ -36,6 +36,7 @@ import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
 import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components/motion';
 import { spring } from './lib/motion';
+import { useAuth } from './context/AuthContext';
 
 const DISCUSSION_CLEANUP_KEY = 'calculix_discussions_demo_cleanup_v1';
 const LEGACY_DEMO_DISCUSSION_IDS = new Set(['disc-1', 'disc-2']);
@@ -72,13 +73,23 @@ export default function App() {
   const online = useOnlineStatus();
   const pendingGrades = useGradeQueueFlush(online);
 
-  // Authentication State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => sessionStorage.getItem('calculix_is_logged_in') === 'true');
+  /**
+   * Authentication.
+   *
+   * `sessionStorage.getItem('calculix_is_logged_in') === 'true'` used to stand
+   * in for this. That was not authentication: the browser owned the string, so
+   * anyone could set it from a console, and it carried no identity the server
+   * could act on. The session now comes from a server-signed JWT that Supabase
+   * verifies on every request and that every row-level security policy reads.
+   *
+   * `status` distinguishes "still restoring" from "definitely signed out",
+   * which is what stops a refresh flashing the landing page at a signed-in
+   * learner before the session is rehydrated.
+   */
+  const { status: authStatus, profile, signOut } = useAuth();
+  const isLoggedIn = authStatus === 'authenticated';
 
   const handleLoginSuccess = (name: string, level: Level, initialSkills?: Record<Topic, number>) => {
-    sessionStorage.setItem('calculix_is_logged_in', 'true');
-    sessionStorage.setItem('calculix_user_name', name);
-    setIsLoggedIn(true);
 
     // Seed the learner's tier and, when they came through the adaptive
     // placement test, their measured per-domain skill profile.
@@ -90,16 +101,23 @@ export default function App() {
     saveStatsToLocal(updatedStats);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('calculix_is_logged_in');
-    sessionStorage.removeItem('calculix_user_name');
-    localStorage.removeItem('calculix_is_logged_in');
-    localStorage.removeItem('calculix_user_name');
-    localStorage.removeItem('calculix_stats');
-    localStorage.removeItem('calculix_completed');
-    localStorage.removeItem('calculix_discussions');
-    localStorage.removeItem('calculix_contests');
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    // Revokes the refresh token server-side, so signing out actually ends the
+    // session rather than only hiding it from this tab.
+    await signOut();
+
+    // Clear the local caches from the pre-database build. Progress now lives in
+    // Postgres, so nothing of value is lost, but stale copies would otherwise
+    // be shown to the next person to use this browser.
+    for (const key of [
+      'calculix_is_logged_in', 'calculix_user_name', 'calculix_stats',
+      'calculix_completed', 'calculix_discussions', 'calculix_contests',
+      'calculix_registered_users',
+    ]) {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+
     setActiveTab('dashboard');
     setCompletedProblems([]);
     setUserStats({
@@ -539,7 +557,7 @@ export default function App() {
           {/* User Name Info */}
           <div className="flex items-center justify-between text-xs text-stone-400 px-1 select-none">
             <span className="truncate max-w-[125px] font-semibold text-stone-200">
-              {sessionStorage.getItem('calculix_user_name') || localStorage.getItem('calculix_user_name') || 'Student'}
+              {profile?.display_name ?? profile?.username ?? 'Student'}
             </span>
             <span className="bg-violet-900 border border-violet-700/50 text-violet-200 text-[8px] font-black uppercase px-2 py-0.5 rounded shrink-0 scale-90 tracking-wide">
               {userStats.level || 'Foundation'}
