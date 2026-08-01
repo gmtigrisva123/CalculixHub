@@ -77,7 +77,13 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         const res = await fetch(apiUrl('/api/live-stats'));
         if (res.ok) {
           const data = await res.json();
-          setLiveStats(data);
+          // Merge rather than replace. These values are rendered with
+          // `.toLocaleString()` and used in arithmetic, so a response missing a
+          // field would not degrade a number -- it would throw and take the
+          // whole landing page down. Merging keeps every key defined no matter
+          // what the server sends, which also lets the API drop a field without
+          // a lockstep client release.
+          setLiveStats((previous) => ({ ...previous, ...(data as object) }));
         }
       } catch (err) {
         console.error('Error fetching live stats from server:', err);
