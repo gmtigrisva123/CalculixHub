@@ -25,8 +25,21 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const MIGRATIONS_DIR = new URL('../../../supabase/migrations', import.meta.url).pathname;
+/*
+ * `fileURLToPath`, not `.pathname`.
+ *
+ * A file URL is not a filesystem path, and the two only look alike on POSIX.
+ * `.pathname` hands back the URL's own encoding: a leading slash before the
+ * drive letter and every space still percent-escaped, so on Windows this
+ * resolved to "/D:/DESKTOP%20ALL%20FILES%202/..." and `readdirSync` failed with
+ * ENOENT before a single migration could be read. `fileURLToPath` performs the
+ * real conversion -- decoding the escapes and producing a native separator and
+ * drive form -- and is a no-op difference on Linux and macOS, which is why the
+ * bug survived CI.
+ */
+const MIGRATIONS_DIR = fileURLToPath(new URL('../../../supabase/migrations', import.meta.url));
 
 /**
  * Minimal stand-in for the schema GoTrue owns.
