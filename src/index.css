@@ -1,13 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+/**
+ * CalculixHub stylesheet entry.
+ *
+ * The layers, in the order they load:
+ *
+ *   tokens      — semantic colour, elevation and radius; owns the theme flip
+ *   materials   — paper grain, brass, glass, graph paper, focus
+ *   typography  — the type scale and mathematical notation
+ *
+ * Everything below this block is what belongs to the app shell itself and has no
+ * home in a layer: platform quirks, the reduced-motion contract, and the one
+ * fixed-position offset that Tailwind's bracket syntax cannot express.
+ *
+ * Webfonts are loaded from index.html rather than with `@import url(...)` here.
+ * A remote `@import` inside the app stylesheet serialises the download — the
+ * browser must fetch and parse this file before it discovers the font CSS, then
+ * fetch that before it discovers the font files — which puts three round trips
+ * in front of first paint. The `<link rel="preconnect">` pair in the head opens
+ * the connection during HTML parse instead.
+ */
+
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
+@import "./styles/tokens.css";
+@import "./styles/materials.css";
+@import "./styles/typography.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-serif: "Fraunces", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Brand: ink & brass. A math field-notebook, not a generic SaaS gradient. */
+  /*
+   * Brand: ink & brass. A math field-notebook, not a generic SaaS gradient.
+   *
+   * These are the palette primitives and they are theme-independent — `brass-500`
+   * is #c8842a in daylight and at midnight. Screens should almost never reach for
+   * them directly; the semantic tokens in styles/tokens.css (`surface`, `content`,
+   * `line`, `accent`) are the ones that know about lighting. Use a primitive only
+   * when a colour is genuinely absolute, such as a brand mark or a fixed
+   * data-series colour that must stay identifiable across themes.
+   */
   --color-ink-50: #f7f5f2;
   --color-ink-100: #ece7e1;
   --color-ink-200: #d8cfc4;
@@ -59,16 +91,17 @@
   --color-proof-900: #0c322c;
   --color-proof-950: #082019;
 
-  /* Fine-grained "half-step" shades used for subtle hover/text states throughout the app */
-  --color-stone-150: #eeece9;
-  --color-stone-350: #c0bab5;
-  --color-stone-355: #beb8b3;
-  --color-stone-405: #9f9994;
-  --color-stone-450: #8f8983;
-  --color-stone-550: #67615c;
-  --color-stone-555: #66605b;
-  --color-stone-650: #4d4945;
-  --color-stone-705: #403c35;
+  /*
+   * The "half-step" stone shades that used to be declared here now live in
+   * styles/tokens.css alongside the rest of the neutral ramp.
+   *
+   * They had to move: this block is emitted after the imports, so a definition
+   * here would override the themed one and those particular shades — and only
+   * those — would stay locked to their daylight values at night. Keeping the
+   * whole ramp in one file is also the only way the scale stays coherent, since
+   * a half-step is meaningless unless it is defined relative to the steps on
+   * either side of it.
+   */
 
   /*
    * MOTION DESIGN SYSTEM — CSS mirror of src/lib/motion.ts
@@ -108,11 +141,27 @@
 
 html {
   scroll-behavior: smooth;
+  /*
+   * Keeps the rubber-band area at the top and bottom of an over-scrolled iOS
+   * page the same colour as the app, instead of the white the WKWebView paints
+   * by default — which at night flashes a bright band above the header.
+   */
+  background-color: var(--sf);
 }
 
-html, body, #root {
-  font-family: "Inter", ui-sans-serif, system-ui, sans-serif !important;
-  background-color: var(--color-paper-50);
+body,
+#root {
+  font-family: var(--font-sans);
+  background-color: var(--sf);
+  color: var(--ct);
+}
+
+/* The page ground is paper, with tooth. */
+body {
+  background-image: var(--grain);
+  background-size: 140px 140px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -149,56 +198,62 @@ a,
  * drift away from it.
  */
 
-/* Fine graph-paper grid, used behind hero / arena surfaces */
-.bp-grid {
-  background-image:
-    linear-gradient(rgba(22, 19, 16, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 19, 16, 0.05) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-.bp-grid-dark {
-  background-image:
-    linear-gradient(rgba(250, 247, 241, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(250, 247, 241, 0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-/* Drafting-table corner brackets for "theorem card" surfaces */
-.bp-corners {
-  position: relative;
-}
-.bp-corners::before,
-.bp-corners::after {
-  content: '';
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: currentColor;
-  opacity: 0.35;
-  pointer-events: none;
-}
-.bp-corners::before {
-  top: 10px;
-  left: 10px;
-  border-top: 1.5px solid;
-  border-left: 1.5px solid;
-}
-.bp-corners::after {
-  bottom: 10px;
-  right: 10px;
-  border-bottom: 1.5px solid;
-  border-right: 1.5px solid;
-}
-
-.katex { font-size: 1.02em; }
+/* --------------------------------------------------------------------------
+ * Theme change
+ * ------------------------------------------------------------------------ */
 
 /*
- * The AI tutor sheet's entrance used to live here as a hand-written keyframe.
- * It is now driven by Motion (see AITutorChat), which gives it a real exit
- * animation, an interruptible spring, and the same reduced-motion handling as
- * every other surface. Its original curve survives as --ease-emphasized above,
- * so the sheet still settles the way it always did.
+ * The switch between day and night is a wipe from the control that triggered it,
+ * driven by the View Transitions API.
+ *
+ * Cross-fading the whole document is the obvious alternative and it looks wrong:
+ * for the length of the fade every surface is a half-mixed colour that exists in
+ * neither theme, which reads as a rendering fault. A hard-edged circular reveal
+ * never shows an intermediate state — each pixel is fully day or fully night,
+ * and the boundary is the only thing that moves.
+ *
+ * The whole block is progressive enhancement. Browsers without view transitions
+ * simply repaint, which is instant and perfectly acceptable; nothing here is
+ * required for the theme to work.
  */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/*
+ * The outgoing frame stays put and the incoming one is clipped over it, so the
+ * old theme is never animated — only revealed away from.
+ */
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-wipe 520ms var(--ease-standard);
+}
+
+@keyframes theme-wipe {
+  from {
+    clip-path: circle(0% at var(--theme-origin-x, 50%) var(--theme-origin-y, 50%));
+  }
+  to {
+    clip-path: circle(150% at var(--theme-origin-x, 50%) var(--theme-origin-y, 50%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * A 150%-radius wipe is a large moving edge, which is exactly what this
+   * preference is about. Fall back to an instant swap rather than a slow one:
+   * the point is to remove the travel, not to draw it out.
+   */
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
 
 /*
  * Reduced motion.

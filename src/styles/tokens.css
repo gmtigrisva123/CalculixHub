@@ -1,0 +1,418 @@
+/**
+ * CalculixHub design tokens — the two-layer colour system.
+ *
+ * Layer 1 is the palette: `ink`, `paper`, `brass`, `proof`. Those are the brand,
+ * they are absolute, and they never change meaning. A component asking for
+ * `brass-500` gets #c8842a in every theme, on every platform, forever.
+ *
+ * Layer 2 is the semantic layer defined here: `surface`, `content`, `line`,
+ * `accent`. These say what a colour is *for* rather than what it *is*, and they
+ * are the only ones a screen should reach for. `bg-surface-raised` means "this
+ * is a card"; it resolves to white on paper in the day theme and to warm ink at
+ * night, and the component never learns which.
+ *
+ * That indirection is the whole reason dark mode is possible here. The previous
+ * build wrote `bg-white border-stone-200` directly into 6,500 lines of JSX,
+ * which hard-codes not just a colour but a *lighting condition* — and no theme
+ * switch can reach inside a literal.
+ *
+ * `@theme inline` is what makes the flip work. Without `inline`, Tailwind bakes
+ * the value into the utility at build time and the utility can never change.
+ * With it, `bg-surface-raised` compiles to `background-color: var(--sf-raised)`,
+ * so re-pointing `--sf-raised` under `[data-theme='dark']` re-colours every
+ * surface in the product from one declaration.
+ */
+
+@theme inline {
+  /* Surfaces — an elevation ladder, from below the page to above everything. */
+  --color-surface-sunken: var(--sf-sunken);
+  --color-surface: var(--sf);
+  --color-surface-raised: var(--sf-raised);
+  --color-surface-overlay: var(--sf-overlay);
+  --color-surface-inverse: var(--sf-inverse);
+  /*
+   * The desktop navigation rail, which needs its own token because it is the
+   * one surface whose relationship to the page reverses between themes.
+   *
+   * In daylight it is the ink spine the brand is built around — the darkest
+   * thing on screen. At night that same treatment would make it invisible
+   * against an already-dark page, and inverting it to paper would put a
+   * floodlit column beside content someone is reading in a dim room. So after
+   * dark it becomes the *recessed* surface instead: a channel milled into the
+   * desk, below the page rather than above it. Different geometry, same job.
+   */
+  --color-surface-rail: var(--sf-rail);
+  --color-content-rail: var(--ct-rail);
+
+  /* Content — text and icons, in descending order of voice. */
+  --color-content: var(--ct);
+  --color-content-muted: var(--ct-muted);
+  --color-content-subtle: var(--ct-subtle);
+  --color-content-inverse: var(--ct-inverse);
+
+  /* Lines — hairlines, dividers, card edges. */
+  --color-line-faint: var(--ln-faint);
+  --color-line: var(--ln);
+  --color-line-strong: var(--ln-strong);
+
+  /*
+   * Accents.
+   *
+   * Brass is the primary action; proof-teal marks anything verified or correct.
+   * Both shift a step brighter at night: a mid-tone that reads as rich on paper
+   * reads as muddy on ink, because perceived contrast is against the ground, not
+   * an absolute.
+   */
+  --color-accent: var(--ac);
+  --color-accent-hover: var(--ac-hover);
+  --color-accent-muted: var(--ac-muted);
+  --color-accent-contrast: var(--ac-contrast);
+
+  --color-proof: var(--pf);
+  --color-proof-muted: var(--pf-muted);
+
+  /* Status. Deliberately few: an interface with nine states has none. */
+  --color-positive: var(--st-positive);
+  --color-caution: var(--st-caution);
+  --color-critical: var(--st-critical);
+
+  /*
+   * Elevation.
+   *
+   * Registered under Tailwind's `--shadow-*` namespace, so `shadow-e1` through
+   * `shadow-e5` are real utilities. The values live in `--ev-*` below because a
+   * theme has to be able to replace them wholesale — night elevation is not a
+   * dimmer version of day elevation, it is a different physical model.
+   */
+  --shadow-e1: var(--ev-1);
+  --shadow-e2: var(--ev-2);
+  --shadow-e3: var(--ev-3);
+  --shadow-e4: var(--ev-4);
+  --shadow-e5: var(--ev-5);
+  --shadow-brass: var(--ev-brass);
+  --shadow-inset-well: var(--ev-well);
+
+  /*
+   * Radii, named by component role rather than by size.
+   *
+   * The old build used six numeric radii scattered across the app with no rule
+   * for which went where, so a button and the panel containing it could land on
+   * the same curve and flatten the hierarchy. Naming the role makes the rule
+   * automatic: controls are tighter than cards, cards are tighter than panels.
+   */
+  --radius-field: 0.625rem;
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-panel: 1.375rem;
+  --radius-pill: 999px;
+}
+
+/* --------------------------------------------------------------------------
+ * Day — paper on a drafting table
+ * ------------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+
+  --sf-sunken: #f2ebdf;
+  --sf: #faf7f1;
+  --sf-raised: #fffdf9;
+  --sf-overlay: #fffefb;
+  --sf-inverse: #161310;
+  --sf-rail: #161310;
+  --ct-rail: #bcae9c;
+
+  --ct: #1d1915;
+  --ct-muted: #55473b;
+  --ct-subtle: #8a7a6a;
+  --ct-inverse: #faf7f1;
+
+  --ln-faint: #efe8dc;
+  --ln: #e4dbcc;
+  --ln-strong: #d3c7b4;
+
+  --ac: #b8761f;
+  --ac-hover: #a8681e;
+  --ac-muted: #fbf1de;
+  --ac-contrast: #fffdf9;
+
+  --pf: #1f7d70;
+  --pf-muted: #e2f3ef;
+
+  --st-positive: #1f7d70;
+  --st-caution: #a8681e;
+  --st-critical: #a8342a;
+
+  /*
+   * Shadow colour is the brand's ink, not black.
+   *
+   * This is the single highest-leverage line in the file. A neutral shadow on a
+   * warm ground desaturates everything it touches and is the main reason the
+   * previous cards read as generic — the palette said "field notebook" while
+   * every shadow underneath said "default framework". Real paper under warm
+   * light throws a warm shadow.
+   */
+  --shadow-hue: 30 22% 12%;
+
+  /*
+   * Each level is built from up to three lights: a tight *contact* shadow that
+   * anchors the element to the surface, a broader *key* shadow for the sense of
+   * height, and a wide low-opacity *ambient* wash. One-layer shadows are what
+   * make an interface look cheap; the eye reads a single blur as a sticker and
+   * a layered falloff as an object.
+   */
+  --ev-1:
+    0 1px 1px hsl(var(--shadow-hue) / 0.04),
+    0 2px 4px -2px hsl(var(--shadow-hue) / 0.06);
+  --ev-2:
+    0 1px 1px hsl(var(--shadow-hue) / 0.05),
+    0 3px 6px -2px hsl(var(--shadow-hue) / 0.07),
+    0 8px 16px -6px hsl(var(--shadow-hue) / 0.06);
+  --ev-3:
+    0 1px 2px hsl(var(--shadow-hue) / 0.06),
+    0 6px 12px -4px hsl(var(--shadow-hue) / 0.09),
+    0 16px 28px -10px hsl(var(--shadow-hue) / 0.08);
+  --ev-4:
+    0 2px 4px hsl(var(--shadow-hue) / 0.06),
+    0 12px 24px -8px hsl(var(--shadow-hue) / 0.11),
+    0 28px 48px -16px hsl(var(--shadow-hue) / 0.10);
+  --ev-5:
+    0 4px 8px hsl(var(--shadow-hue) / 0.07),
+    0 20px 40px -12px hsl(var(--shadow-hue) / 0.14),
+    0 48px 80px -24px hsl(var(--shadow-hue) / 0.12);
+
+  /*
+   * The brass glow, for the primary action only. It is tinted with the accent
+   * rather than the shadow hue, so the button looks like it is *emitting* a
+   * little light instead of merely floating above the page.
+   */
+  --ev-brass:
+    0 1px 2px hsl(32 71% 30% / 0.20),
+    0 6px 14px -4px hsl(32 71% 42% / 0.28),
+    0 12px 28px -12px hsl(32 71% 48% / 0.24);
+
+  /* Inset well, for progress tracks and anything recessed into the page. */
+  --ev-well:
+    inset 0 1px 2px hsl(var(--shadow-hue) / 0.10),
+    inset 0 0 0 1px hsl(var(--shadow-hue) / 0.04);
+}
+
+/* --------------------------------------------------------------------------
+ * Night — the same table under a task lamp
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Night is not inverted day.
+ *
+ * Inverting a paper theme gives you grey cards on a grey page and throws away
+ * the identity. This theme keeps the drafting table and changes the *lighting*:
+ * the ground becomes the deep warm brown-black of ink in shadow, brass warms up
+ * the way real metal does under a tungsten lamp, and proof-teal reads as chalk.
+ * Nothing here is neutral grey, because nothing in the day theme was either.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --sf-sunken: #0f0d0b;
+  --sf: #17130f;
+  --sf-raised: #201b16;
+  --sf-overlay: #2a2420;
+  --sf-inverse: #faf7f1;
+  --sf-rail: #0f0d0b;
+  --ct-rail: #b6a897;
+
+  /*
+   * Never pure white on a dark ground. #f2ece2 carries the paper's warmth and
+   * avoids the halation that makes #fff text on near-black vibrate and tire the
+   * eye — which matters when the content is dense mathematical notation being
+   * read for an hour at a time.
+   */
+  --ct: #f2ece2;
+  --ct-muted: #b6a897;
+  --ct-subtle: #8a7c6d;
+  --ct-inverse: #161310;
+
+  --ln-faint: #241f1a;
+  --ln: #302823;
+  --ln-strong: #423830;
+
+  --ac: #e0a339;
+  --ac-hover: #e8bc63;
+  --ac-muted: #2b2113;
+  --ac-contrast: #161310;
+
+  --pf: #4fb8a8;
+  --pf-muted: #12312c;
+
+  --st-positive: #4fb8a8;
+  --st-caution: #e0a339;
+  --st-critical: #e0796b;
+
+  /*
+   * Elevation at night works the other way round.
+   *
+   * A shadow is the absence of light, and on a near-black ground there is no
+   * light to remove — which is why dark interfaces that only darken their
+   * shadows end up looking flat. Height is signalled instead by a *rim light*:
+   * a one-pixel inset highlight along the top edge, exactly where a lamp above
+   * the table would catch a raised edge. The outer shadow stays, deeper and
+   * tighter, purely to keep the contact edge from dissolving into the ground.
+   */
+  --shadow-hue: 24 30% 3%;
+
+  --ev-1:
+    inset 0 1px 0 hsl(40 40% 90% / 0.045),
+    0 1px 2px hsl(var(--shadow-hue) / 0.45);
+  --ev-2:
+    inset 0 1px 0 hsl(40 40% 90% / 0.055),
+    0 2px 4px hsl(var(--shadow-hue) / 0.45),
+    0 6px 14px -4px hsl(var(--shadow-hue) / 0.40);
+  --ev-3:
+    inset 0 1px 0 hsl(40 40% 90% / 0.07),
+    0 4px 8px hsl(var(--shadow-hue) / 0.50),
+    0 14px 28px -8px hsl(var(--shadow-hue) / 0.45);
+  --ev-4:
+    inset 0 1px 0 hsl(40 40% 90% / 0.08),
+    0 8px 16px hsl(var(--shadow-hue) / 0.55),
+    0 24px 48px -12px hsl(var(--shadow-hue) / 0.50);
+  --ev-5:
+    inset 0 1px 0 hsl(40 40% 90% / 0.09),
+    0 12px 24px hsl(var(--shadow-hue) / 0.60),
+    0 40px 72px -16px hsl(var(--shadow-hue) / 0.55);
+
+  --ev-brass:
+    inset 0 1px 0 hsl(40 80% 80% / 0.28),
+    0 2px 6px hsl(32 71% 8% / 0.50),
+    0 8px 24px -6px hsl(38 85% 50% / 0.30);
+
+  --ev-well:
+    inset 0 1px 3px hsl(var(--shadow-hue) / 0.60),
+    inset 0 0 0 1px hsl(40 40% 90% / 0.03);
+}
+
+/* --------------------------------------------------------------------------
+ * The neutral ramp
+ * ------------------------------------------------------------------------ */
+
+/*
+ * `stone` is redefined rather than replaced.
+ *
+ * The app carries roughly 800 uses of `text-stone-500`, `border-stone-200` and
+ * friends across eleven screens. Rewriting each one by hand would be a very
+ * large diff with a real chance of a wrong call in the middle of it, and it
+ * would have to be repeated for every screen added afterwards. Tailwind resolves
+ * `text-stone-500` through `var(--color-stone-500)`, so pointing that variable
+ * at a themed value re-tiles every existing usage at once, correctly, with no
+ * diff at the call sites at all.
+ *
+ * Two things change in the process.
+ *
+ * First, the ramp warms up. Tailwind's stone is very close to neutral, and a
+ * neutral grey on a #faf7f1 ground is the quiet reason the old cards read as
+ * generic: the palette said "field notebook" and every label, rule and divider
+ * on top of it said "default framework". These greys carry the paper's hue.
+ *
+ * Second, the ramp *inverts* at night. That sounds alarming and is in fact what
+ * makes the bridge safe, because the codebase uses the scale by role and not by
+ * value — low numbers are backgrounds and high numbers are text, consistently,
+ * on every screen. Flipping the ends preserves every one of those relationships:
+ * `bg-stone-50` stays "the quietest background" and `text-stone-900` stays "the
+ * loudest text", in both themes.
+ *
+ * `white` is deliberately not bridged. It does two unrelated jobs here —
+ * `bg-white` is a card, `text-white` is text on an ink ground — and a single
+ * variable cannot flip for one and hold for the other. Those are migrated by
+ * hand to `surface`/`content-inverse` instead.
+ *
+ * This is a bridge, not an endpoint. New work should use the semantic tokens and
+ * the `Panel` primitive; this exists so that adopting them is incremental rather
+ * than a flag day.
+ */
+
+@theme inline {
+  --color-stone-50: var(--sn-50);
+  --color-stone-100: var(--sn-100);
+  --color-stone-150: var(--sn-150);
+  --color-stone-200: var(--sn-200);
+  --color-stone-300: var(--sn-300);
+  --color-stone-350: var(--sn-350);
+  --color-stone-355: var(--sn-350);
+  --color-stone-400: var(--sn-400);
+  --color-stone-405: var(--sn-405);
+  --color-stone-450: var(--sn-450);
+  --color-stone-500: var(--sn-500);
+  --color-stone-550: var(--sn-550);
+  --color-stone-555: var(--sn-555);
+  --color-stone-600: var(--sn-600);
+  --color-stone-650: var(--sn-650);
+  --color-stone-700: var(--sn-700);
+  --color-stone-705: var(--sn-705);
+  --color-stone-800: var(--sn-800);
+  /*
+   * 850 is used by the mobile header and has never existed in Tailwind's scale,
+   * so every one of those classes has silently produced no rule at all. Defining
+   * it here fixes a bug that predates this work.
+   */
+  --color-stone-850: var(--sn-850);
+  --color-stone-900: var(--sn-900);
+  --color-stone-950: var(--sn-950);
+}
+
+:root {
+  --sn-50: #f6f2ea;
+  --sn-100: #eee8dc;
+  --sn-150: #e9e2d4;
+  --sn-200: #e4dbcc;
+  --sn-300: #d3c7b4;
+  --sn-350: #c6b9a4;
+  --sn-400: #a89883;
+  --sn-405: #a49480;
+  --sn-450: #988872;
+  --sn-500: #8a7a6a;
+  --sn-550: #7a6b5c;
+  --sn-555: #776859;
+  --sn-600: #55473b;
+  --sn-650: #4d4034;
+  --sn-700: #453b32;
+  --sn-705: #423830;
+  --sn-800: #342d27;
+  --sn-850: #2a2420;
+  --sn-900: #241f1a;
+  --sn-950: #1d1915;
+}
+
+:root[data-theme='dark'] {
+  --sn-50: #18140f;
+  --sn-100: #1c1712;
+  --sn-150: #201b16;
+  --sn-200: #2e2721;
+  --sn-300: #40372f;
+  --sn-350: #4a4038;
+  --sn-400: #756858;
+  --sn-405: #7a6d5d;
+  --sn-450: #817465;
+  --sn-500: #918375;
+  --sn-550: #a19384;
+  --sn-555: #a49685;
+  --sn-600: #b6a897;
+  --sn-650: #c0b3a2;
+  --sn-700: #cabdad;
+  --sn-705: #cdc0b0;
+  --sn-800: #dcd0c1;
+  --sn-850: #e5dacd;
+  --sn-900: #ebe2d7;
+  --sn-950: #f2ece2;
+}
+
+/*
+ * There is deliberately no `@media (prefers-color-scheme: dark)` block here.
+ *
+ * Following the OS is a *preference*, not a third set of colours, and writing it
+ * as its own media query would mean maintaining two identical copies of every
+ * value above — the kind of duplication that silently drifts the first time
+ * someone tunes a single shade. Instead `data-theme` on <html> always holds the
+ * *resolved* theme, only ever `light` or `dark`, and the preference (which may
+ * be `system`) lives in storage. src/lib/theme.ts owns that resolution and
+ * subscribes to the media query, so an OS switch still repaints live.
+ */
+

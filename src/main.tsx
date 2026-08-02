@@ -6,6 +6,7 @@ import {registerServiceWorker} from './lib/pwa';
 import { Analytics } from "@vercel/analytics/react";
 import MotionProvider from './components/motion/MotionProvider';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -19,11 +20,21 @@ createRoot(document.getElementById('root')!).render(
       MotionProvider sits inside it so the landing page, the authenticated
       shell and every overlay share one motion runtime, one reduced-motion
       decision, and one lazily-loaded feature bundle.
+
+      ThemeProvider sits between the two. It has to be inside nothing in
+      particular -- it writes to <html> rather than rendering chrome -- but it
+      must wrap everything that reads `useTheme`, and putting it above
+      MotionProvider means the theme is resolved before the first animated
+      surface mounts. The document already carries the correct theme by this
+      point: the inline boot script in index.html applied it before paint, and
+      this provider takes ownership of it from here.
     */}
     <AuthProvider>
-      <MotionProvider>
-        <App />
-      </MotionProvider>
+      <ThemeProvider>
+        <MotionProvider>
+          <App />
+        </MotionProvider>
+      </ThemeProvider>
     </AuthProvider>
     <Analytics />
   </StrictMode>,

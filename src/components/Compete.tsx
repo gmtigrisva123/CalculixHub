@@ -116,7 +116,7 @@ export default function Compete({
       </div>
 
       {/* Skill ladder progress */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+      <div className="bg-surface-raised border border-stone-200 rounded-2xl p-5 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border ${rank.bg} ${rank.text} ${rank.border}`}>{rank.name}</span>
@@ -162,13 +162,13 @@ export default function Compete({
 
             <div className="space-y-3">
               {contests.length === 0 && (
-                <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No contests scheduled right now.</div>
+                <div className="text-center py-8 bg-surface-raised rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No contests scheduled right now.</div>
               )}
               {contests.map((cont, index) => (
                 <StaggerItem
                   key={cont.id}
                   index={index}
-                  className={`bg-white border rounded-2xl p-5 hover:border-stone-300 transition-[border-color,opacity] duration-160 ease-standard ${cont.status === 'past' ? 'opacity-70' : ''}`}
+                  className={`bg-surface-raised border rounded-2xl p-5 hover:border-stone-300 transition-[border-color,opacity] duration-160 ease-standard ${cont.status === 'past' ? 'opacity-70' : ''}`}
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1">
@@ -197,7 +197,7 @@ export default function Compete({
                       className={`text-xs font-bold px-4 py-2 rounded-xl transition-[background-color,box-shadow,color,border-color] duration-160 ease-standard cursor-pointer ${
                         cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100'
                         : cont.status === 'past' ? 'bg-stone-50 text-stone-300 border border-stone-100 pointer-events-none'
-                        : 'bg-ink-950 hover:bg-black text-white hover:shadow-xs'
+                        : 'bg-content hover:bg-content-muted text-surface-raised hover:shadow-e1'
                       }`}
                     >
                       <AnimatePresence mode="wait" initial={false}>
@@ -227,10 +227,10 @@ export default function Compete({
 
             <div className="space-y-3.5">
               {weeklyChallenges.length === 0 && (
-                <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No active weekly challenge right now.</div>
+                <div className="text-center py-8 bg-surface-raised rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No active weekly challenge right now.</div>
               )}
               {weeklyChallenges.map((wc) => (
-                <div key={wc.id} className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-6 relative overflow-hidden shadow-lg">
+                <div key={wc.id} className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-6 relative overflow-hidden shadow-e3">
                   <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-brass-500/10 to-proof-500/10 rounded-full blur-2xl pointer-events-none" />
 
                   <div className="flex justify-between items-start gap-4 mb-3">
@@ -256,7 +256,7 @@ export default function Compete({
                       whileTap={{ scale: 0.95 }}
                       transition={spring.press}
                       className={`font-semibold px-4.5 py-2.5 rounded-xl transition-colors duration-160 ease-standard h-9 flex items-center justify-center cursor-pointer ${
-                        wc.completed ? 'bg-ink-800 text-stone-400 border border-ink-700' : 'bg-white hover:bg-stone-100 text-ink-950 font-bold'
+                        wc.completed ? 'bg-ink-800 text-stone-400 border border-ink-700' : 'bg-surface-raised hover:bg-stone-100 text-ink-950 font-bold'
                       }`}
                     >
                       {/*
@@ -302,7 +302,7 @@ export default function Compete({
               <Swords className="w-5 h-5 text-violet-600" /> Seasonal Tournament
               <span className="text-[9px] font-bold uppercase bg-stone-100 text-stone-500 px-2 py-0.5 rounded-md tracking-wider">Preview</span>
             </h2>
-            <div className="bg-white border border-stone-200 rounded-2xl p-5">
+            <div className="bg-surface-raised border border-stone-200 rounded-2xl p-5">
               <p className="text-xs text-stone-500 mb-4">A multi-stage championship league &mdash; qualifiers, brackets, and live finals. Full scheduling is coming soon.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {['Qualifiers', 'Round of 16', 'Semifinal', 'Final'].map((stage, idx) => (
@@ -318,7 +318,7 @@ export default function Compete({
         </div>
 
         {/* Leaderboard */}
-        <div className="lg:col-span-5 bg-white border border-stone-100 rounded-3xl p-5 shadow-xs h-fit space-y-5">
+        <div className="lg:col-span-5 bg-surface-raised border border-stone-100 rounded-3xl p-5 shadow-e1 h-fit space-y-5">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2 font-serif">
               <Medal className="w-5 h-5 text-brass-600" /> Leaderboard
@@ -348,7 +348,7 @@ export default function Compete({
                   {activeAxis === tab.key && (
                     <m.span
                       layoutId="leaderboard-axis-thumb"
-                      className="absolute inset-0 bg-white rounded-lg shadow-2xs"
+                      className="absolute inset-0 bg-surface-raised rounded-lg shadow-e1"
                       transition={spring.snappy}
                     />
                   )}
@@ -374,7 +374,7 @@ export default function Compete({
                     className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer flex items-center gap-1 ${
                       dimension === d.key
                         ? 'bg-ink-950 border-ink-950 text-white'
-                        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                        : 'bg-surface-raised border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
                     <DimIcon className="w-3 h-3" /> {d.label}
@@ -440,7 +440,7 @@ export default function Compete({
                   initial={{ opacity: 0, y: travel.sm }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex items-center justify-between p-3 rounded-xl border transition-[background-color,border-color] duration-160 ease-standard ${
-                    isCurrentUser ? 'bg-brass-50/60 border-brass-200' : 'bg-white hover:bg-stone-50 border-stone-100'
+                    isCurrentUser ? 'bg-brass-50/60 border-brass-200' : 'bg-surface-raised hover:bg-stone-50 border-stone-100'
                   }`}
                 >
                   <div className="flex items-center gap-3">

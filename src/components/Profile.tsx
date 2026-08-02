@@ -42,11 +42,11 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-ink-950 border border-ink-800 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-xl bp-corners">
+          <div className="bg-surface-inverse rounded-panel p-6 md:p-8 text-content-inverse relative overflow-hidden shadow-e4 bp-corners">
             <div className="absolute right-0 top-0 w-80 h-80 bg-gradient-to-br from-violet-500/15 to-brass-500/15 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
             <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
-              <div className="w-20 h-20 bg-gradient-to-tr from-violet-500 to-brass-600 rounded-full border-4 border-ink-800 flex items-center justify-center font-black text-2xl text-white shadow-lg font-serif">
+              <div className="w-20 h-20 bg-gradient-to-tr from-violet-500 to-brass-600 rounded-full border-4 border-ink-800 flex items-center justify-center font-black text-2xl text-white shadow-e3 font-serif">
                 {displayName.substring(0, 1).toUpperCase()}
               </div>
 
@@ -72,7 +72,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             </div>
           </div>
 
-          <div className="bg-white border border-stone-200 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
+          <div className="bg-surface-raised border border-stone-200 rounded-3xl p-5 md:p-6 shadow-e1 space-y-4">
             <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5">
               <Star className="w-4.5 h-4.5 text-brass-500" /> Achievement Badges
             </h3>
@@ -102,7 +102,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-white border border-stone-200 rounded-3xl p-5 shadow-xs space-y-5 h-fit">
+        <div className="lg:col-span-4 bg-surface-raised border border-stone-200 rounded-3xl p-5 shadow-e1 space-y-5 h-fit">
           <div className="space-y-1">
             <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5">
               <CheckCircle className="w-4.5 h-4.5 text-proof-500" /> Solved Problems Notebook

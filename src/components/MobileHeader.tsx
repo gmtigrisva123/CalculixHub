@@ -9,6 +9,7 @@ import { Bell, Trophy, WifiOff } from 'lucide-react';
 import { screenTitle } from '../lib/navigation';
 import { duration, ease, spring } from '../lib/motion';
 import { AnimatedNumber } from './motion';
+import ThemeToggle from './ThemeToggle';
 
 interface MobileHeaderProps {
   activeTab: string;
@@ -44,15 +45,20 @@ export default function MobileHeader({
   return (
     <div className="md:hidden sticky top-0 z-30 shrink-0">
     <header
-      className="bg-ink-950 border-b border-ink-800 px-4 pb-3 flex items-center justify-between w-full select-none"
+      className="material-glass border-b border-line px-4 pb-3 flex items-center justify-between w-full select-none"
       style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
       <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brass-500 to-brass-700 text-ink-950 font-extrabold flex items-center justify-center text-[15px] font-serif shadow-md shadow-brass-500/35">
+        {/*
+          The mark is the one piece of real metal in the header: a brass tile
+          with a light top edge and its own faint glow. It is the only element
+          here that should catch the eye before the content does.
+        */}
+        <div className="w-8 h-8 rounded-control material-brass text-ink-950 font-extrabold flex items-center justify-center text-[15px] font-serif">
           &#8721;
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-[11px] font-extrabold tracking-[0.16em] uppercase text-ink-50 leading-none">
+          <span className="text-[11px] font-extrabold tracking-[0.16em] uppercase text-content leading-none">
             CalculixHub
           </span>
           {/*
@@ -62,7 +68,7 @@ export default function MobileHeader({
             the tab crossfades the old title out and lifts the new one in, so the
             header confirms the navigation the thumb just performed.
           */}
-          <span className="text-[8px] font-bold tracking-[0.12em] uppercase text-ink-500 leading-none overflow-hidden">
+          <span className="text-[8px] font-bold tracking-[0.12em] uppercase text-content-subtle leading-none overflow-hidden">
             <AnimatePresence mode="wait" initial={false}>
               <m.span
                 key={activeTab}
@@ -80,19 +86,25 @@ export default function MobileHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 bg-ink-850 border border-brass-500/30 px-2.5 py-1.5 rounded-full">
-          <Trophy className="w-3 h-3 text-brass-400" strokeWidth={2.2} />
-          <span className="text-[11px] font-bold font-mono text-brass-300 leading-none">
+        <div className="flex items-center gap-1.5 bg-surface-sunken border border-line px-2.5 py-1.5 rounded-pill shadow-inset-well">
+          <Trophy className="w-3 h-3 text-accent" strokeWidth={2.2} />
+          {/*
+            `tnum` fixes the digit width. The total animates on every solved
+            problem, and proportional figures make it shuffle sideways as it
+            counts because a 1 is narrower than an 8.
+          */}
+          <span className="text-[11px] font-bold font-mono text-accent leading-none tnum">
             <AnimatedNumber value={points} />
           </span>
         </div>
+        <ThemeToggle variant="bar" />
         <m.button
           type="button"
           onClick={onBellClick}
           aria-label="Notifications and reminders"
           whileTap={{ scale: 0.92 }}
           transition={spring.press}
-          className="w-9 h-9 rounded-xl bg-ink-850 text-ink-300 flex items-center justify-center cursor-pointer active:bg-ink-800 transition-colors duration-160 ease-standard"
+          className="w-9 h-9 rounded-control bg-surface-sunken text-content-muted flex items-center justify-center cursor-pointer active:bg-surface transition-colors duration-160 ease-standard"
         >
           <Bell className="w-4 h-4" strokeWidth={2} />
         </m.button>

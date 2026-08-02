@@ -1,0 +1,296 @@
+/**
+ * Materials — what the surfaces are made of.
+ *
+ * The palette says "ink and brass"; this file is what makes those words mean
+ * something physical. A card here is a sheet of paper with tooth, the primary
+ * button is a piece of milled metal catching light from above, and the grid
+ * behind a hero is real graph paper with major and minor rules rather than a
+ * single repeating line.
+ *
+ * The constraint throughout is the iOS target. CalculixHub ships as a Capacitor
+ * WKWebView, so every effect here has to survive a mid-range phone scrolling at
+ * 120Hz. That rules out full-screen blend layers and animated filters, and it is
+ * why the grain lives in `background-image` on the element that needs it instead
+ * of one composited overlay across the viewport.
+ */
+
+/* --------------------------------------------------------------------------
+ * Paper
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Fractal noise, inlined as a data URI.
+ *
+ * Two reasons it is not a file: the artifact CSP forbids external fetches, and
+ * a 400-byte SVG filter beats shipping a noise PNG that would have to be large
+ * enough not to tile visibly. `baseFrequency` at 0.9 lands in the range that
+ * reads as fibre rather than television static.
+ */
+:root {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+  --grain-strength: 0.055;
+}
+
+:root[data-theme='dark'] {
+  /*
+   * Grain has to be lighter at night. The noise texture is dark-on-transparent,
+   * so on an ink ground it subtracts almost nothing and the surface goes back to
+   * looking like flat vector fill. Raising the strength and letting it lift
+   * rather than deepen keeps the tooth visible.
+   */
+  --grain-strength: 0.09;
+}
+
+/*
+ * The page ground carries grain in its own background rather than an overlay,
+ * so no compositing layer sits between the user and the content, and text is
+ * never rendered through a texture.
+ */
+.material-paper {
+  background-image: var(--grain);
+  background-repeat: repeat;
+  background-size: 140px 140px;
+}
+
+/*
+ * Raised paper: a card. The grain rides on a pseudo-element so the element's own
+ * `background-color` stays free for the semantic surface token, and so the
+ * texture can be masked away from the edges where it would fight the hairline.
+ */
+.material-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.material-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--grain);
+  background-size: 140px 140px;
+  opacity: var(--grain-strength);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+ * Brass
+ * ------------------------------------------------------------------------ */
+
+/*
+ * The primary action, as a milled metal face.
+ *
+ * Three things separate metal from a coloured rectangle, and all three are here:
+ * a vertical value gradient (light collects at the top), a hairline specular
+ * highlight on the top edge, and a darker lower edge where the face turns away
+ * from the light. The brass glow in `--ev-brass` finishes it by letting the
+ * control cast a little of its own colour onto the page.
+ */
+.material-brass {
+  background-image: linear-gradient(
+    180deg,
+    hsl(38 72% 56%) 0%,
+    hsl(34 74% 47%) 45%,
+    hsl(30 76% 41%) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 hsl(44 90% 82% / 0.55),
+    inset 0 -1px 0 hsl(28 70% 22% / 0.30),
+    var(--ev-brass);
+}
+
+/*
+ * The sheen sweep.
+ *
+ * A single band of light travelling across the face on hover. It is a transform
+ * on a pseudo-element — no filter, no repaint of the button itself — so it stays
+ * on the compositor. Pointer-only by design: on a touch device the finger covers
+ * the control at the exact moment the sweep would play.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .material-brass {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .material-brass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      hsl(46 100% 92% / 0.34) 50%,
+      transparent 65%
+    );
+    transform: translateX(-100%);
+    transition: transform 620ms var(--ease-standard);
+  }
+
+  .material-brass:hover::after {
+    transform: translateX(100%);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Glass
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Translucent chrome for the mobile header and tab rail.
+ *
+ * `saturate` is the part people leave out. Blur alone averages the colours
+ * underneath toward grey, which on a warm palette reads as a smudge; pushing
+ * saturation back up keeps the brass and paper showing through recognisably.
+ *
+ * The `@supports` guard matters on the iOS target: without backdrop-filter the
+ * fallback has to be near-opaque, because translucent-without-blur leaves text
+ * sitting on whatever is scrolling behind it.
+ */
+.material-glass {
+  background-color: color-mix(in srgb, var(--sf) 86%, transparent);
+  border-color: var(--ln);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .material-glass {
+    background-color: color-mix(in srgb, var(--sf) 68%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Graph paper
+ * ------------------------------------------------------------------------ */
+
+/*
+ * One theme-aware grid replaces the old `.bp-grid` / `.bp-grid-dark` pair, which
+ * forced every caller to know which theme it was in — exactly the coupling the
+ * semantic tokens exist to remove.
+ *
+ * Real graph paper has a minor rule every square and a major rule every fifth,
+ * and that hierarchy is most of why it reads as an instrument rather than as a
+ * background pattern. Four gradients: two minor, two major.
+ */
+.bp-grid {
+  --grid-minor: color-mix(in srgb, var(--ct) 7%, transparent);
+  --grid-major: color-mix(in srgb, var(--ct) 13%, transparent);
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size:
+    140px 140px,
+    140px 140px,
+    28px 28px,
+    28px 28px;
+}
+
+/*
+ * Grids drawn over the inverse surface (the ink hero in day, paper hero at
+ * night) need the opposite ink, since `--ct` is the colour of text on the *page*
+ * and here the ground is flipped.
+ */
+.bp-grid-inverse {
+  --grid-minor: color-mix(in srgb, var(--ct-inverse) 7%, transparent);
+  --grid-major: color-mix(in srgb, var(--ct-inverse) 14%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+ * Drafting brackets
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Registration marks on a theorem card.
+ *
+ * The previous version drew two corners, top-left and bottom-right, because two
+ * is all you get from `::before` and `::after`. Two corners reads as a mistake;
+ * four reads as a drawing that has been registered on the table. Eight
+ * background gradients get all four without adding a wrapper element or
+ * spending the pseudo-elements, which the card still needs for its grain.
+ */
+.bp-corners {
+  --bracket: 14px;
+  --bracket-inset: 10px;
+  --bracket-weight: 1.5px;
+  background-image:
+    linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor),
+    linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor);
+  background-size:
+    var(--bracket) var(--bracket-weight), var(--bracket-weight) var(--bracket),
+    var(--bracket) var(--bracket-weight), var(--bracket-weight) var(--bracket),
+    var(--bracket) var(--bracket-weight), var(--bracket-weight) var(--bracket),
+    var(--bracket) var(--bracket-weight), var(--bracket-weight) var(--bracket);
+  background-position:
+    left var(--bracket-inset) top var(--bracket-inset),
+    left var(--bracket-inset) top var(--bracket-inset),
+    right var(--bracket-inset) top var(--bracket-inset),
+    right var(--bracket-inset) top var(--bracket-inset),
+    right var(--bracket-inset) bottom var(--bracket-inset),
+    right var(--bracket-inset) bottom var(--bracket-inset),
+    left var(--bracket-inset) bottom var(--bracket-inset),
+    left var(--bracket-inset) bottom var(--bracket-inset);
+  background-repeat: no-repeat;
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+ * Focus
+ * ------------------------------------------------------------------------ */
+
+/*
+ * A single visible focus style for the whole product.
+ *
+ * `:focus-visible` rather than `:focus` so a mouse press does not leave a ring
+ * behind, and an offset ring rather than an outline on the border so it stays
+ * legible on brass, on ink, and on paper. There was no custom focus style before
+ * this, which meant the ring was the browser default — invisible against the
+ * dark hero surfaces.
+ */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 2px;
+  border-radius: var(--radius-field);
+}
+
+/* --------------------------------------------------------------------------
+ * Incidentals
+ * ------------------------------------------------------------------------ */
+
+::selection {
+  background-color: color-mix(in srgb, var(--ac) 28%, transparent);
+  color: var(--ct);
+}
+
+/*
+ * Scrollbars, on the desktop web only. iOS overlays its own and ignores these.
+ */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--ln-strong);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ct-subtle);
+  }
+}

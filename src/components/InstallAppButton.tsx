@@ -193,7 +193,7 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
         animate={isSheet ? { y: 0 } : 'visible'}
         exit={isSheet ? { y: '100%' } : 'exit'}
         transition={spring.gentle}
-        className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-stone-200 shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-md bg-surface-raised rounded-t-3xl sm:rounded-3xl border border-stone-200 shadow-e4 overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="bg-ink-950 px-5 py-4 flex items-start justify-between gap-3">
