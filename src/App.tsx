@@ -37,6 +37,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components/motion';
 import { spring } from './lib/motion';
 import { useAuth } from './context/AuthContext';
+import { useLearnerSnapshot } from './lib/data/people';
 
 const DISCUSSION_CLEANUP_KEY = 'calculix_discussions_demo_cleanup_v1';
 const LEGACY_DEMO_DISCUSSION_IDS = new Set(['disc-1', 'disc-2']);
@@ -161,6 +162,48 @@ export default function App() {
     weaknesses: [],
     learningTimeline: [],
   });
+
+  /**
+   * Progress, restored from the database.
+   *
+   * This is what makes an account mean something. Everything above initialises
+   * `userStats` from localStorage, which is per-browser and per-device: a
+   * learner who signed in on a second machine, cleared their cache, or simply
+   * reinstalled the app saw zeros, no matter how much work the server had
+   * faithfully recorded against their user id.
+   *
+   * The write half of this loop already existed and was already correct --
+   * `/api/evaluate` verifies the caller's token and calls `recordAttempt`, and a
+   * database trigger derives `user_stats` and `skill_mastery` from the appended
+   * rows so the totals cannot drift from the attempts behind them. Only the read
+   * back was missing, so the numbers accumulated where nothing displayed them.
+   *
+   * `useLearnerSnapshot` also subscribes to realtime changes on this learner's
+   * row, which means a solve on the phone moves the total on the laptop without
+   * a refresh.
+   */
+  const { data: snapshot } = useLearnerSnapshot(isLoggedIn ? profile?.id ?? null : null);
+
+  useEffect(() => {
+    // Signed out, practice is still local and localStorage remains correct.
+    if (!isLoggedIn || !snapshot.stats) return;
+
+    const row = snapshot.stats;
+
+    setUserStats((previous) => ({
+      ...previous,
+      level: profile?.level ?? previous.level,
+      points: row.points,
+      streak: row.current_streak,
+      completedCount: row.problems_solved,
+      // Null until the learner has attempted anything; keeping the previous
+      // value avoids flashing 0% accuracy at someone who has simply not started.
+      accuracy: snapshot.accuracyPct ?? previous.accuracy,
+      // The column is seconds and the UI is minutes.
+      timeSpent: Math.round(row.time_spent_seconds / 60),
+      skills: snapshot.skills,
+    }));
+  }, [isLoggedIn, snapshot, profile?.level]);
 
   // Settings State
   const [customGoal, setCustomGoal] = useState<string>('Qualify for a regional/national math olympiad');
