@@ -1,0 +1,236 @@
+/**
+ * Typography.
+ *
+ * The faces were already chosen and they are good ones, so nothing here changes
+ * them. What changes is how they are *set*: the previous build used Fraunces as
+ * if it were a static font, which meant downloading a variable face with a
+ * 9–144 optical-size axis and then rendering every size from the same master.
+ *
+ * Optical sizing is the difference between a display face that looks drawn for
+ * the headline and one that looks scaled up from body copy. At 9pt Fraunces
+ * thickens its hairlines and opens its counters so it survives small sizes; at
+ * 144 it lets the contrast run high and the serifs go sharp. Browsers will do
+ * this automatically from `font-optical-sizing: auto`, but only for fonts that
+ * actually carry the axis — so this is one declaration in exchange for a
+ * typographic quality the app was already paying the bytes for.
+ */
+
+:root {
+  /*
+   * Type scale, a 1.25 (major third) ratio anchored at 16px.
+   *
+   * A named scale rather than ad-hoc `text-3xl md:text-4xl` pairs, because the
+   * ratio is what makes a page feel composed and it cannot survive being
+   * re-decided at each call site.
+   */
+  --text-caption: 0.75rem;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-heading: 1.375rem;
+  --text-title: 1.875rem;
+  --text-display: 2.75rem;
+  --text-hero: clamp(2.5rem, 1.6rem + 4vw, 4.5rem);
+
+  /*
+   * Measure. Around 66 characters is the long-standing comfortable line, and
+   * prose that ignores it is the most common reason a wide layout is tiring to
+   * read regardless of how good the type is.
+   */
+  --measure: 66ch;
+  --measure-tight: 46ch;
+}
+
+/*
+ * Optical sizing, applied wherever the serif is used.
+ *
+ * `font-optical-sizing: auto` is the default in modern engines, but it is stated
+ * explicitly because Safari has shipped builds where an inherited
+ * `font-variation-settings` silently disables it — and Safari is the engine this
+ * app runs inside on iOS.
+ */
+.font-serif,
+h1, h2, h3 {
+  font-optical-sizing: auto;
+}
+
+/* --------------------------------------------------------------------------
+ * Roles
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Tracking tightens as size grows, which is the one typographic rule that does
+ * most of the work. Letter-spacing that looks correct at 14px is visibly loose
+ * at 44px, because spacing is optical and does not scale linearly with the
+ * glyphs.
+ */
+
+.type-hero {
+  font-family: var(--font-serif);
+  font-size: var(--text-hero);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+.type-display {
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+.type-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.016em;
+  text-wrap: balance;
+}
+
+.type-heading {
+  font-family: var(--font-sans);
+  font-size: var(--text-heading);
+  font-weight: 650;
+  line-height: 1.28;
+  letter-spacing: -0.011em;
+  text-wrap: balance;
+}
+
+/*
+ * Eyebrow labels.
+ *
+ * Set in the mono face, not the sans. On an instrument the small all-caps label
+ * is engraved or printed, never typeset — using JetBrains Mono here is what ties
+ * the label to the readouts it introduces, and it gives the uppercase tracking
+ * somewhere to sit without looking stretched.
+ */
+.type-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.type-body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  letter-spacing: -0.003em;
+  text-wrap: pretty;
+  max-width: var(--measure);
+}
+
+.type-lead {
+  font-family: var(--font-sans);
+  font-size: var(--text-lead);
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+  text-wrap: pretty;
+  max-width: var(--measure);
+}
+
+.type-caption {
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  color: var(--ct-subtle);
+}
+
+/*
+ * Numeric readouts: scores, timers, ranks, point totals.
+ *
+ * `tabular-nums` is not decoration. Every counter in this app animates — the
+ * dashboard's points, the contest clock — and proportional digits make the
+ * number jitter horizontally as it counts, because a `1` is narrower than a `8`.
+ * Fixing the advance width is what lets a value change without the layout
+ * twitching.
+ */
+.type-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  letter-spacing: -0.02em;
+}
+
+/*
+ * Any element carrying a live figure, whether or not it uses the mono face.
+ * Applied to the animated counters directly.
+ */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.measure {
+  max-width: var(--measure);
+}
+
+.measure-tight {
+  max-width: var(--measure-tight);
+}
+
+/* --------------------------------------------------------------------------
+ * Mathematical notation
+ * ------------------------------------------------------------------------ */
+
+.katex {
+  font-size: 1.02em;
+}
+
+/*
+ * KaTeX inherits its colour, which is what makes it theme-aware for free — but
+ * only as long as no ancestor sets an explicit colour on it. Stating it keeps a
+ * formula legible when a card's own text colour changes at night.
+ */
+.katex,
+.katex .mord,
+.katex .mbin,
+.katex .mrel,
+.katex .mopen,
+.katex .mclose {
+  color: inherit;
+}
+
+/*
+ * Display math on a narrow screen.
+ *
+ * A long derivation is wider than a phone and KaTeX does not wrap — it simply
+ * overflows, and on a page with `overflow-x: hidden` the right-hand side of the
+ * equation is silently unreachable. Giving the display block its own scroll
+ * container is the only correct fix, and the negative margin lets the scrollable
+ * area run to the card's edges so the cut-off is visibly a scroll rather than
+ * looking like the formula ends there.
+ */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.5rem;
+  margin-inline: -0.25rem;
+  padding-inline: 0.25rem;
+  scrollbar-width: thin;
+}
+
+/*
+ * A fading edge that appears only when there is more formula to reach. Pure CSS
+ * scroll-driven shadow: the gradient is pinned to the scroll container's right
+ * edge and `background-attachment: local` removes it once the content is fully
+ * scrolled.
+ */
+.katex-display {
+  background-image: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--sf-raised) 92%, transparent),
+    transparent 2.5rem
+  );
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: 2.5rem 100%;
+  background-attachment: local;
+}

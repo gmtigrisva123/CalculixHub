@@ -119,19 +119,19 @@ export default function ResearchAnalytics() {
 
       {/* Bank summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StaggerItem index={0} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+        <StaggerItem index={0} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Calibrated items</span>
           <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={ITEM_BANK.length} /></span>
         </StaggerItem>
-        <StaggerItem index={1} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+        <StaggerItem index={1} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Contest sources</span>
           <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={SOURCES.length} /></span>
         </StaggerItem>
-        <StaggerItem index={2} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+        <StaggerItem index={2} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Domains</span>
           <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={DOMAINS.length} /></span>
         </StaggerItem>
-        <StaggerItem index={3} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs">
+        <StaggerItem index={3} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1">
           <span className="text-[10px] text-stone-400 font-bold uppercase block">Concepts tagged</span>
           <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={concepts.length} /></span>
         </StaggerItem>
@@ -139,7 +139,7 @@ export default function ResearchAnalytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Difficulty calibration by source */}
-        <div className="lg:col-span-7 bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+        <div className="lg:col-span-7 bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
               <Layers className="w-5 h-5 text-brass-600" /> Difficulty Calibration by Source
@@ -173,7 +173,7 @@ export default function ResearchAnalytics() {
         </div>
 
         {/* Domain coverage */}
-        <div className="lg:col-span-5 bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+        <div className="lg:col-span-5 bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
               <Users2 className="w-5 h-5 text-violet-600" /> Domain Coverage
@@ -195,7 +195,7 @@ export default function ResearchAnalytics() {
       </div>
 
       {/* Test information curve */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950">Test Information vs. Population Density</h2>
           <p className="text-[11px] text-stone-500 leading-relaxed">
@@ -246,7 +246,7 @@ export default function ResearchAnalytics() {
       </div>
 
       {/* Concept frequency */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" /> Concept Coverage Map
@@ -271,7 +271,7 @@ export default function ResearchAnalytics() {
       </div>
 
       {/* Export */}
-      <div className="bg-ink-950 border border-ink-800 rounded-3xl p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-ink-950 border border-ink-800 rounded-3xl p-6 shadow-e1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <h3 className="text-sm font-extrabold text-white font-serif">Export research dataset</h3>
           <p className="text-[11px] text-stone-400 leading-relaxed max-w-md">
@@ -283,7 +283,7 @@ export default function ResearchAnalytics() {
           onClick={exportDataset}
           whileTap={{ scale: 0.96 }}
           transition={spring.press}
-          className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors duration-160 ease-standard cursor-pointer shadow-md flex items-center gap-2 shrink-0"
+          className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-5 py-3 rounded-xl transition-colors duration-160 ease-standard cursor-pointer shadow-e2 flex items-center gap-2 shrink-0"
         >
           <Download className="w-4 h-4" /> Download CSV
         </m.button>

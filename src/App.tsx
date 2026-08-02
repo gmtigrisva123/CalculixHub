@@ -35,6 +35,7 @@ import ResearchAnalytics from './components/ResearchAnalytics';
 import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
 import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components/motion';
+import ThemeToggle from './components/ThemeToggle';
 import { spring } from './lib/motion';
 import { useAuth } from './context/AuthContext';
 
@@ -470,7 +471,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-paper-50 flex flex-col md:flex-row relative text-stone-800 antialiased font-sans">
+    <div className="min-h-screen bg-surface flex flex-col md:flex-row relative text-content antialiased font-sans">
 
       {/* MOBILE APP BAR — identity, points and reminders; navigation lives in the bottom rail */}
       <MobileHeader
@@ -485,12 +486,12 @@ export default function App() {
       {/* SIDEBAR NAVIGATION BAR (Desktop only — mobile navigates via MobileTabBar) */}
       <aside
         id="side-nav-rail"
-        className="hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-ink-950 border-r border-ink-850 text-stone-300 w-64 p-6 shrink-0 flex-col justify-between overflow-y-auto"
+        className="hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-surface-rail border-r border-line text-content-rail w-64 p-6 shrink-0 flex-col justify-between overflow-y-auto"
       >
         <div className="space-y-8 select-none">
           {/* Logo Brand area */}
           <div className="hidden md:flex items-center gap-3">
-            <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-base shadow-lg font-serif">
+            <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-base shadow-e3 font-serif">
               &#8721;
             </div>
             <div>
@@ -662,7 +663,7 @@ export default function App() {
           {activeTab === 'research' && <ResearchAnalytics />}
 
           {activeTab === 'settings' && (
-            <div className="max-w-2xl bg-white border border-stone-200 rounded-3xl p-6 md:p-8 shadow-xs space-y-6">
+            <div className="max-w-2xl bg-surface-raised border border-stone-200 rounded-3xl p-6 md:p-8 shadow-e1 space-y-6">
               <div className="border-b border-stone-100 pb-3">
                 <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-1.5 font-serif">
                   <Settings className="w-5 h-5 text-stone-700" /> Personal Learning Settings
@@ -683,6 +684,22 @@ export default function App() {
                   <CheckCircle className="w-4 h-4 text-proof-500" /> Your settings have been applied to the OS.
                 </div>
               </Collapse>
+
+              {/*
+                Appearance sits outside the form on purpose. Everything below is
+                a draft until "Save" is pressed, whereas the theme applies the
+                moment it is chosen — putting a live control inside a deferred
+                form teaches two different rules for what a click does.
+              */}
+              <div className="p-3.5 bg-surface-sunken rounded-control border border-line-faint flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <span className="text-xs font-bold text-content block">Appearance</span>
+                  <span className="text-[10px] text-content-subtle block font-medium mt-0.5">
+                    Daylight for a lit room, lamplight for a dark one.
+                  </span>
+                </div>
+                <ThemeToggle />
+              </div>
 
               <form onSubmit={handleSaveSettings} className="space-y-5">
                 <div className="space-y-4">
@@ -739,7 +756,7 @@ export default function App() {
                           it — previously it snapped, so the switch appeared to
                           change colour before the knob had finished moving.
                         */}
-                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer transition-colors duration-240 ease-standard peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-transform after:duration-240 after:ease-emphasized peer-checked:bg-brass-600"></div>
+                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer transition-colors duration-240 ease-standard peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-raised after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-transform after:duration-240 after:ease-emphasized peer-checked:bg-brass-600"></div>
                       </label>
                     </div>
 
@@ -765,7 +782,7 @@ export default function App() {
                     type="submit"
                     whileTap={{ scale: 0.97 }}
                     transition={spring.press}
-                    className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-md cursor-pointer"
+                    className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer"
                   >
                     Apply settings
                   </m.button>

@@ -28,6 +28,66 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23161310'/%3E%3Ctext x='50' y='68' font-family='Georgia, serif' font-size='58' font-weight='700' fill='%23c8842a' text-anchor='middle'%3E%26%23931%3B%3C/text%3E%3C/svg%3E" />
 
     <!--
+      Webfonts.
+
+      Loaded here rather than with `@import url(...)` at the top of index.css.
+      A remote @import inside the app stylesheet cannot start downloading until
+      that stylesheet has itself been fetched and parsed, which stacks three
+      round trips in front of first paint; a <link> in the head starts during
+      HTML parse. The preconnect pair warms the TLS handshake to both Google
+      hosts before the stylesheet URL is even known — fonts.gstatic.com is where
+      the font binaries live and it is crossorigin, hence the separate hint.
+
+      Fraunces is requested across its full 9..144 optical-size axis. That is
+      what styles/typography.css spends via `font-optical-sizing: auto`, so the
+      range is paid for and used rather than downloaded and ignored.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
+    />
+
+    <!--
+      Theme boot.
+
+      This runs before the first paint, and it has to: the alternative is the
+      browser painting the default theme and React correcting it a beat later,
+      which is a full-screen white flash on every cold load for anyone using the
+      night theme. That flash is the single most visible way an app announces
+      that its theming was added late.
+
+      Deliberately inline and synchronous. A module script is deferred by
+      definition and would run after paint, and an external file would be a
+      blocking request for ~15 lines. Kept in sync with src/lib/theme.ts, which
+      owns the same logic for every switch after this one.
+
+      `data-theme` always holds the *resolved* theme, never `system` — that is
+      what lets styles/tokens.css describe night exactly once instead of
+      duplicating it under a `prefers-color-scheme` media query.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('calculix_theme');
+          var pref = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+          var resolved =
+            pref === 'system'
+              ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+              : pref;
+          document.documentElement.dataset.theme = resolved;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#17130f' : '#faf7f1');
+        } catch (e) {
+          // Private browsing can throw on localStorage access. Daylight is a
+          // safe floor, and the app corrects itself once React mounts.
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
+
+    <!--
       Installable web app.
 
       Vite rewrites these root-relative URLs with whatever --base the build used,

@@ -188,7 +188,7 @@ export default function Learn({
                   whileTap={{ scale: 0.95 }}
                   transition={spring.press}
                   className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                    selectedTopic === 'All' ? 'bg-ink-950 border border-ink-950 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
+                    selectedTopic === 'All' ? 'bg-ink-950 border border-ink-950 text-white shadow-e1' : 'bg-surface-raised border border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >
                   All topics
@@ -200,7 +200,7 @@ export default function Learn({
                     whileTap={{ scale: 0.95 }}
                     transition={spring.press}
                     className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                      selectedTopic === topic ? 'bg-ink-950 border border-ink-950 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
+                      selectedTopic === topic ? 'bg-ink-950 border border-ink-950 text-white shadow-e1' : 'bg-surface-raised border border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
                     {TOPIC_META[topic].label}
@@ -217,7 +217,7 @@ export default function Learn({
                   whileTap={{ scale: 0.95 }}
                   transition={spring.press}
                   className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                    selectedLevel === 'All' ? 'bg-ink-950 border border-ink-800 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
+                    selectedLevel === 'All' ? 'bg-ink-950 border border-ink-800 text-white shadow-e1' : 'bg-surface-raised border border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >
                   All
@@ -229,7 +229,7 @@ export default function Learn({
                     whileTap={{ scale: 0.95 }}
                     transition={spring.press}
                     className={`text-xs font-bold px-4 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                      selectedLevel === lvl ? 'bg-ink-950 border border-ink-800 text-white shadow-xs' : 'bg-white border border-stone-200 text-stone-600 hover:bg-stone-50'
+                      selectedLevel === lvl ? 'bg-ink-950 border border-ink-800 text-white shadow-e1' : 'bg-surface-raised border border-stone-200 text-stone-600 hover:bg-stone-50'
                     }`}
                   >
                     {lvl}
@@ -240,7 +240,7 @@ export default function Learn({
           </div>
 
           {filteredProblems.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-stone-200 text-stone-400 text-sm">
+            <div className="text-center py-12 bg-surface-raised rounded-2xl border border-dashed border-stone-200 text-stone-400 text-sm">
               <AlertCircle className="w-8 h-8 text-stone-300 mx-auto mb-2" />
               No problems match your current filters.
             </div>
@@ -262,7 +262,7 @@ export default function Learn({
                   <StaggerItem
                     key={prob.id}
                     index={index}
-                    className={`bg-white border rounded-2xl p-5 hover:border-stone-300 hover:shadow-xs transition-[border-color,box-shadow] duration-160 ease-standard relative flex flex-col justify-between group ${
+                    className={`bg-surface-raised border rounded-2xl p-5 hover:border-stone-300 hover:shadow-e1 transition-[border-color,box-shadow] duration-160 ease-standard relative flex flex-col justify-between group ${
                       isCompleted ? 'border-proof-100 bg-proof-50/10' : 'border-stone-100'
                     }`}
                   >
@@ -323,12 +323,12 @@ export default function Learn({
             whileHover={{ x: -travel.xs / 2 }}
             whileTap={{ scale: 0.96 }}
             transition={spring.press}
-            className="flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-[color,box-shadow] duration-160 ease-standard text-xs font-bold cursor-pointer border border-stone-200 bg-white px-3.5 py-2 rounded-xl hover:shadow-2xs self-start"
+            className="flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-[color,box-shadow] duration-160 ease-standard text-xs font-bold cursor-pointer border border-stone-200 bg-surface-raised px-3.5 py-2 rounded-xl hover:shadow-e1 self-start"
           >
             <ArrowLeft className="w-4 h-4" /> Back to problem list
           </m.button>
 
-          <div className="bg-white border border-stone-100 rounded-3xl shadow-xl overflow-hidden">
+          <div className="bg-surface-raised border border-stone-100 rounded-3xl shadow-e3 overflow-hidden">
             <div className="bg-ink-950 text-white p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ink-800">
               <div className="space-y-1">
                 <div className="flex gap-2 items-center">
@@ -369,7 +369,7 @@ export default function Learn({
                         disabled={evaluating || !answerInput.trim() || completedProblems.includes(activeProblem.id)}
                         whileTap={{ scale: 0.95 }}
                         transition={spring.press}
-                        className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 h-11 rounded-xl transition-[background-color,opacity] duration-160 ease-standard shadow-md disabled:opacity-40 cursor-pointer flex items-center justify-center shrink-0"
+                        className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 h-11 rounded-xl transition-[background-color,opacity] duration-160 ease-standard shadow-e2 disabled:opacity-40 cursor-pointer flex items-center justify-center shrink-0"
                       >
                         {/*
                           Grading is the one genuinely slow action in the app.
@@ -527,7 +527,7 @@ export default function Learn({
                     <h3 className="font-extrabold text-sm uppercase tracking-wider">Full Solution</h3>
                   </div>
 
-                  <div className="p-5 md:p-6 bg-ink-950 text-stone-100 rounded-2xl border border-ink-850 shadow-inner leading-relaxed text-sm space-y-3.5">
+                  <div className="p-5 md:p-6 bg-ink-950 text-stone-100 rounded-2xl border border-ink-850 shadow-inset-well leading-relaxed text-sm space-y-3.5">
                     <MathText text={activeProblem.solution} as="div" className="font-medium text-stone-300" />
                     <div className="pt-2 bg-ink-850 p-3 rounded-xl border border-ink-800 text-xs text-violet-300 font-medium">
                       What did this solution teach you? Save the key idea to your personal notebook to build the habit of dissecting structure.

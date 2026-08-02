@@ -69,7 +69,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Skill radar */}
-        <div className="lg:col-span-7 bg-white border border-stone-200 rounded-3xl p-5 md:p-6 shadow-xs space-y-6">
+        <div className="lg:col-span-7 bg-surface-raised border border-stone-200 rounded-3xl p-5 md:p-6 shadow-e1 space-y-6">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
               <RadarIcon className="w-5 h-5 text-stone-700" /> Skill Mastery Radar
@@ -106,7 +106,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
 
         {/* Weakness + focus time */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white border border-stone-200 rounded-3xl p-5 md:p-6 shadow-xs space-y-4">
+          <div className="bg-surface-raised border border-stone-200 rounded-3xl p-5 md:p-6 shadow-e1 space-y-4">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" /> Weakness Detection
             </h2>
@@ -133,7 +133,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
             </div>
           </div>
 
-          <div className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-5 shadow-xs space-y-4 relative overflow-hidden">
+          <div className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-5 shadow-e1 space-y-4 relative overflow-hidden">
             <div className="absolute right-0 bottom-0 w-24 h-24 bg-violet-500/10 rounded-full blur-xl pointer-events-none" />
 
             <h3 className="font-bold text-xs uppercase text-stone-400 tracking-wider">Focus time</h3>
@@ -167,7 +167,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Learning timeline */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5 pb-8">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5 pb-8">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <AreaChart className="w-5 h-5 text-stone-700" /> Learning Timeline
@@ -179,7 +179,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Progress prediction */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
@@ -235,7 +235,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Error pattern analysis */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <Bug className="w-5 h-5 text-rose-600" /> Error Analysis
@@ -282,7 +282,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Personalized learning path */}
-      <div className="bg-white border border-stone-200 rounded-3xl p-6 shadow-xs space-y-5">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <Route className="w-5 h-5 text-violet-600" /> Your Learning Path
@@ -299,7 +299,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
               index={index}
               inView
               className={`rounded-2xl border p-4 flex gap-4 items-start transition-[background-color,border-color] duration-240 ease-standard ${
-                step.status === 'current' ? 'bg-violet-50/50 border-violet-200' : 'bg-white border-stone-200'
+                step.status === 'current' ? 'bg-violet-50/50 border-violet-200' : 'bg-surface-raised border-stone-200'
               }`}
             >
               <div
@@ -330,7 +330,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         </div>
       </div>
 
-      <div className="bg-white border border-stone-200 rounded-3xl p-5 shadow-xs flex items-start gap-3">
+      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-5 shadow-e1 flex items-start gap-3">
         <BookOpen className="w-5 h-5 text-stone-500 shrink-0 mt-0.5" />
         <p className="text-xs text-stone-500 leading-relaxed">
           All charts on this page are computed live from your actual session data (stored locally in your browser) &mdash; nothing here is a placeholder.

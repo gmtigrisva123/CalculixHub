@@ -13,6 +13,7 @@ import { apiUrl } from '../lib/apiBase';
 import { duration, ease, spring, staggerDelay, travel } from '../lib/motion';
 import { useAmbient } from '../lib/useAmbient';
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
+import { TiltCard, TiltLayer } from './surface';
 
 interface DashboardProps {
   userStats: UserStats;
@@ -71,40 +72,69 @@ export default function Dashboard({
 
   return (
     <div className="space-y-8">
-      {/* Welcome Hero */}
-      <div className="bg-ink-950 border border-ink-800 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xl text-white bp-corners">
-        <div className="absolute inset-0 bp-grid-dark opacity-40 pointer-events-none" />
-        <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-br from-brass-500/10 to-proof-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-1.5 bg-brass-500/15 border border-brass-400/30 text-brass-300 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider backdrop-blur-md">
-            <Trophy className="w-3.5 h-3.5" /> CalculixHub Operating System
-          </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight font-serif">
-            Sharpen how you think, not just what you remember
-          </h1>
-          <p className="text-stone-400 text-sm leading-relaxed max-w-xl">
-            Welcome back to <b>CalculixHub</b>. Every session here is built to strengthen structural reasoning, not rote memorization &mdash; practice that actually moves your ceiling.
-          </p>
-          <div className="flex flex-wrap gap-3 pt-2">
-            <m.button
-              onClick={() => onNavigateToTab('learn')}
-              whileTap={{ scale: 0.96 }}
-              transition={spring.press}
-              className="bg-white hover:bg-stone-100 text-ink-950 font-bold text-sm px-6 py-3 rounded-xl shadow-lg transition-[background-color,box-shadow] duration-160 ease-standard flex items-center gap-2 cursor-pointer"
-            >
-              <Brain className="w-4 h-4 text-ink-950" /> Start practicing
-            </m.button>
-            <m.button
-              onClick={() => onNavigateToTab('progress')}
-              whileTap={{ scale: 0.96 }}
-              transition={spring.press}
-              className="bg-ink-800 hover:bg-ink-700 text-white font-medium text-sm px-5 py-3 rounded-xl transition-[background-color,border-color] duration-160 ease-standard border border-ink-700 cursor-pointer"
-            >
-              View analytics
-            </m.button>
-          </div>
+      {/*
+        Welcome hero.
+
+        The one surface in the product that is made of the opposite material to
+        the page around it: an ink block on paper by day, a lit sheet on a dark
+        desk by night. `surface-inverse` is what flips it, so the contrast
+        against the page is preserved in both themes rather than the block going
+        ink-on-ink after dark.
+
+        It tilts, very slightly. Three and a half degrees is well under the six
+        a small card can carry, because rotation throws the corners of a
+        full-width surface much further than it does a stat tile — enough for the
+        graph paper to shift under the light and the headline to stay perfectly
+        square to the reader.
+      */}
+      <TiltCard maxTilt={3.5} glare={0.06}>
+        <div className="bg-surface-inverse rounded-panel p-6 md:p-8 relative overflow-hidden shadow-e4 text-content-inverse bp-corners">
+          {/*
+            Graph paper and the lamp glow are separate layers from the brackets
+            because all three want `background-image` and an element only has
+            one. Keeping them apart is also what lets them sit at different
+            depths inside the tilt.
+          */}
+          <div className="absolute inset-0 bp-grid bp-grid-inverse opacity-60 pointer-events-none" />
+          <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-br from-brass-500/12 to-proof-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+
+          <TiltLayer depth={26} className="relative z-10 max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-1.5 bg-brass-500/15 border border-brass-400/30 text-brass-300 px-3 py-1 rounded-pill type-eyebrow backdrop-blur-md">
+              <Trophy className="w-3.5 h-3.5" /> CalculixHub Operating System
+            </div>
+            <h1 className="type-display">
+              Sharpen how you think, not just what you remember
+            </h1>
+            <p className="type-body text-sm opacity-70">
+              Welcome back to <b>CalculixHub</b>. Every session here is built to strengthen structural reasoning, not rote memorization &mdash; practice that actually moves your ceiling.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              {/*
+                The primary action is the product's one piece of milled metal:
+                a value gradient, a specular top edge, and a glow of its own
+                colour on the surface below. Everything else on this hero is
+                deliberately flat so that this is the thing the eye lands on.
+              */}
+              <m.button
+                onClick={() => onNavigateToTab('learn')}
+                whileTap={{ scale: 0.96 }}
+                transition={spring.press}
+                className="material-brass text-ink-950 font-bold text-sm px-6 py-3 rounded-control flex items-center gap-2 cursor-pointer"
+              >
+                <Brain className="w-4 h-4 text-ink-950" /> Start practicing
+              </m.button>
+              <m.button
+                onClick={() => onNavigateToTab('progress')}
+                whileTap={{ scale: 0.96 }}
+                transition={spring.press}
+                className="bg-content-inverse/10 hover:bg-content-inverse/16 text-content-inverse font-medium text-sm px-5 py-3 rounded-control transition-colors duration-160 ease-standard border border-content-inverse/20 cursor-pointer"
+              >
+                View analytics
+              </m.button>
+            </div>
+          </TiltLayer>
         </div>
-      </div>
+      </TiltCard>
 
       {/*
         Stats grid.
@@ -116,7 +146,7 @@ export default function Dashboard({
         apparently always there.
       */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StaggerItem index={0} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={0} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Rank tier</p>
@@ -140,7 +170,7 @@ export default function Dashboard({
           </div>
         </StaggerItem>
 
-        <StaggerItem index={1} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={1} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Daily streak</p>
@@ -162,7 +192,7 @@ export default function Dashboard({
           </p>
         </StaggerItem>
 
-        <StaggerItem index={2} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={2} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Accuracy</p>
@@ -188,7 +218,7 @@ export default function Dashboard({
           </div>
         </StaggerItem>
 
-        <StaggerItem index={3} className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs flex flex-col justify-between">
+        <StaggerItem index={3} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Time invested</p>
@@ -205,7 +235,7 @@ export default function Dashboard({
       </div>
 
       {/* Streak calendar: which of the last 7 real calendar days had activity */}
-      <div className="bg-white border border-stone-200 p-5 md:p-6 rounded-2xl shadow-xs">
+      <div className="bg-surface-raised border border-stone-200 p-5 md:p-6 rounded-2xl shadow-e1">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-bold text-sm text-stone-800 flex items-center gap-2">
@@ -266,7 +296,7 @@ export default function Dashboard({
             <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">EduReach Core Engine</span>
           </div>
 
-          <div className="bg-gradient-to-br from-brass-50 to-proof-50/40 border border-brass-100 p-6 rounded-2xl shadow-xs space-y-5 relative">
+          <div className="bg-gradient-to-br from-brass-50 to-proof-50/40 border border-brass-100 p-6 rounded-2xl shadow-e1 space-y-5 relative">
             <div className="absolute right-4 top-4.5 bg-brass-500/10 p-1.5 rounded-lg border border-brass-500/20 text-brass-600 block">
               <Sparkles className="w-4 h-4" />
             </div>
@@ -316,7 +346,7 @@ export default function Dashboard({
                 </div>
 
                 <div className="border-t border-brass-100 pt-4 flex gap-4 items-start">
-                  <div className="bg-white p-3 rounded-xl border border-brass-100 shadow-2xs shrink-0 text-center min-w-[100px]">
+                  <div className="bg-surface-raised p-3 rounded-xl border border-brass-100 shadow-e1 shrink-0 text-center min-w-[100px]">
                     <span className="block text-[9px] text-stone-400 font-bold uppercase">Target tier</span>
                     <span className="block text-xs font-extrabold text-brass-800 mt-0.5">{recommendation.suggestedLevel}</span>
                   </div>
@@ -331,7 +361,7 @@ export default function Dashboard({
                     onClick={() => onNavigateToTab('learn', { topic: recommendation.recommendedTopic, level: recommendation.suggestedLevel })}
                     whileTap={{ scale: 0.96 }}
                     transition={spring.press}
-                    className="w-full sm:w-auto bg-ink-950 hover:bg-black text-white font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-md cursor-pointer flex items-center justify-center gap-1.5 group"
+                    className="w-full sm:w-auto bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer flex items-center justify-center gap-1.5 group"
                   >
                     Reinforce {TOPIC_META[recommendation.recommendedTopic].label}
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-160 ease-standard" />
@@ -353,7 +383,7 @@ export default function Dashboard({
             </AnimatePresence>
           </div>
 
-          <div className="bg-white border border-stone-200 p-5 rounded-2xl shadow-xs space-y-4">
+          <div className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 space-y-4">
             <h3 className="font-bold text-sm text-stone-800">Practice Pace</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
               <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
@@ -397,7 +427,7 @@ export default function Dashboard({
                 key={cont.id}
                 index={index}
                 inView
-                className="bg-white border border-stone-200 rounded-2xl p-4.5 hover:border-stone-300 transition-[border-color] duration-160 ease-standard shadow-2xs flex flex-col justify-between"
+                className="bg-surface-raised border border-stone-200 rounded-2xl p-4.5 hover:border-stone-300 transition-[border-color] duration-160 ease-standard shadow-e1 flex flex-col justify-between"
               >
                 <div className="flex justify-between items-start gap-2">
                   <div className="space-y-0.5">
@@ -417,7 +447,7 @@ export default function Dashboard({
                     whileTap={{ scale: 0.95 }}
                     transition={spring.press}
                     className={`text-xs font-bold px-4 py-2 rounded-lg transition-[background-color,box-shadow,color] duration-160 ease-standard cursor-pointer ${
-                      cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100' : 'bg-ink-950 hover:bg-black text-white hover:shadow-xs'
+                      cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100' : 'bg-content hover:bg-content-muted text-surface-raised hover:shadow-e1'
                     }`}
                   >
                     {/*
@@ -443,7 +473,7 @@ export default function Dashboard({
             ))}
           </div>
 
-          <div className="bg-ink-950 border border-ink-800 text-white rounded-2xl p-5 relative overflow-hidden shadow-md">
+          <div className="bg-ink-950 border border-ink-800 text-white rounded-2xl p-5 relative overflow-hidden shadow-e2">
             <div className="absolute right-0 bottom-0 w-24 h-24 bg-brass-500/10 rounded-full blur-xl pointer-events-none" />
             <span className="bg-brass-500/20 text-brass-300 border border-brass-400/30 text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wider uppercase inline-block mb-2">
               Weekly challenge

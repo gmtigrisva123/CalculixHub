@@ -26,13 +26,19 @@ interface MobileTabBarProps {
  * The rail sits above the iOS home indicator via safe-area-inset-bottom. On
  * viewports without a safe area the max() floor keeps a resting 12px of padding
  * so the rail never crowds the screen edge.
+ *
+ * The rail is frosted rather than opaque. Content scrolling underneath stays
+ * faintly visible through it, which is what tells the eye the page continues
+ * past the rail instead of ending at it — the same reason iOS frosts its own tab
+ * bars. It also means the rail no longer has to be a fixed dark slab that fights
+ * whichever theme is active; it takes the colour of whatever it is sitting on.
  */
 export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps) {
   return (
     <nav
       id="mobile-tab-bar"
       aria-label="Workspace navigation"
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-0.5 bg-ink-950 border-t border-ink-850 px-2 pt-2.5 select-none"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-0.5 material-glass border-t border-line px-2 pt-2.5 select-none"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
       {TAB_BAR_ITEMS.map((item) => {
@@ -60,7 +66,7 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
             aria-label={item.label}
             style={{ flex: isActive ? 1.6 : 1 }}
             className={`relative min-w-0 h-11.5 rounded-2xl flex flex-col items-center justify-center gap-0.5 px-1.5 cursor-pointer transition-colors duration-160 ease-standard ${
-              isActive ? 'text-ink-950' : 'text-stone-500 active:bg-ink-850'
+              isActive ? 'text-ink-950' : 'text-content-subtle active:bg-surface-sunken'
             }`}
           >
             {/*

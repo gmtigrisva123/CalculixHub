@@ -108,7 +108,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                 whileTap={{ scale: 0.95 }}
                 transition={spring.press}
                 className={`text-xs font-bold px-4 py-2 rounded-xl border whitespace-nowrap transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer ${
-                  selectedProblemId === 'All' ? 'bg-ink-950 border-ink-950 text-white' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                  selectedProblemId === 'All' ? 'bg-ink-950 border-ink-950 text-white' : 'bg-surface-raised border-stone-200 text-stone-600 hover:bg-stone-50'
                 }`}
               >
                 All threads
@@ -120,7 +120,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                   whileTap={{ scale: 0.95 }}
                   transition={spring.press}
                   className={`text-xs font-bold px-4 py-2 rounded-xl border whitespace-nowrap transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer ${
-                    selectedProblemId === prob.id ? 'bg-ink-950 border-ink-950 text-white' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                    selectedProblemId === prob.id ? 'bg-ink-950 border-ink-950 text-white' : 'bg-surface-raised border-stone-200 text-stone-600 hover:bg-stone-50'
                   }`}
                 >
                   {prob.title}
@@ -129,7 +129,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
             </div>
           </div>
 
-          <form onSubmit={handlePostComment} className="bg-white border border-stone-100 rounded-3xl p-5 shadow-xs space-y-4">
+          <form onSubmit={handlePostComment} className="bg-surface-raised border border-stone-100 rounded-3xl p-5 shadow-e1 space-y-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-violet-500" />
               <h3 className="font-extrabold text-xs uppercase tracking-wider text-stone-700">Post a solution or question</h3>
@@ -157,7 +157,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                   disabled={!newCommentText.trim()}
                   whileTap={{ scale: 0.95 }}
                   transition={spring.press}
-                  className="bg-ink-950 hover:bg-black text-white font-bold text-xs px-4.5 py-2 rounded-xl transition-[background-color,opacity] duration-160 ease-standard shadow-md disabled:opacity-40 cursor-pointer flex items-center gap-1.5 shrink-0"
+                  className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-4.5 py-2 rounded-xl transition-[background-color,opacity] duration-160 ease-standard shadow-e2 disabled:opacity-40 cursor-pointer flex items-center gap-1.5 shrink-0"
                 >
                   <Send className="w-3.5 h-3.5" /> Post
                 </m.button>
@@ -167,7 +167,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
 
           <div className="space-y-4 pt-1">
             {filteredDiscussions.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-stone-200 text-stone-400 text-sm">
+              <div className="text-center py-12 bg-surface-raised rounded-2xl border border-dashed border-stone-200 text-stone-400 text-sm">
                 No discussion here yet &mdash; be the first to post.
               </div>
             )}
@@ -190,7 +190,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.97, transition: { duration: duration.fast, ease: ease.exit } }}
                   transition={{ ...spring.smooth, delay: Math.min(index * 0.03, 0.18) }}
-                  className="bg-white border border-stone-100 rounded-3xl p-5 md:p-6 shadow-xs space-y-4 transition-[border-color] duration-160 ease-standard hover:border-stone-200"
+                  className="bg-surface-raised border border-stone-100 rounded-3xl p-5 md:p-6 shadow-e1 space-y-4 transition-[border-color] duration-160 ease-standard hover:border-stone-200"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
@@ -278,7 +278,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
         </div>
 
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-5 shadow-md relative overflow-hidden">
+          <div className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-5 shadow-e2 relative overflow-hidden">
             <div className="absolute right-0 top-0 w-24 h-24 bg-gradient-to-br from-violet-500/10 to-brass-500/10 rounded-full blur-xl pointer-events-none" />
 
             <div className="flex items-center gap-2 mb-3.5 text-violet-300">
@@ -300,7 +300,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
             )}
           </div>
 
-          <div className="bg-white border border-stone-100 rounded-3xl p-5 shadow-xs space-y-4">
+          <div className="bg-surface-raised border border-stone-100 rounded-3xl p-5 shadow-e1 space-y-4">
             <div className="space-y-1">
               <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5 font-serif">
                 <UserCheck className="w-4.5 h-4.5 text-proof-600" /> Top Contributors

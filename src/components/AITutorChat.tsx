@@ -117,7 +117,7 @@ export default function AITutorChat() {
         onClick={() => setIsOpen(!isOpen)}
         whileTap={{ scale: 0.95 }}
         transition={spring.press}
-        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-xl hover:shadow-2xl transition-[box-shadow,background-color] duration-300 ease-standard group cursor-pointer"
+        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-e3 hover:shadow-e4 transition-[box-shadow,background-color] duration-300 ease-standard group cursor-pointer"
       >
         <Sparkles
           ref={sparkleRef}
@@ -170,10 +170,10 @@ export default function AITutorChat() {
             animate={isDesktop ? { x: 0 } : { y: 0 }}
             exit={isDesktop ? { x: '100%' } : { y: '100%' }}
             transition={spring.gentle}
-            className="w-full md:max-w-md h-[76%] md:h-full bg-white shadow-2xl flex flex-col relative border-l border-stone-100 rounded-t-3xl md:rounded-none overflow-hidden"
+            className="w-full md:max-w-md h-[76%] md:h-full bg-surface-raised shadow-e4 flex flex-col relative border-l border-stone-100 rounded-t-3xl md:rounded-none overflow-hidden"
           >
             {/* Grab handle: the affordance that says this panel is dismissable. */}
-            <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1 rounded-full bg-white/25 z-10" />
+            <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1 rounded-full bg-surface-raised/25 z-10" />
             <div className="bg-ink-950 text-white p-4 flex items-center justify-between border-b border-ink-800">
               <div className="flex items-center gap-2.5">
                 <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2 rounded-lg"><Bot className="w-5 h-5 text-ink-950" /></div>
@@ -218,7 +218,7 @@ export default function AITutorChat() {
                     {msg.sender === 'tutor' && (
                       <div className="bg-stone-100 p-1.5 rounded-lg shrink-0 border border-stone-200"><Bot className="w-4 h-4 text-stone-700" /></div>
                     )}
-                    <div className={`rounded-2xl p-3.5 shadow-xs text-sm leading-relaxed ${msg.sender === 'user' ? 'bg-ink-950 text-white rounded-tr-none font-medium' : 'bg-white text-stone-800 rounded-tl-none border border-stone-100'}`}>
+                    <div className={`rounded-2xl p-3.5 shadow-e1 text-sm leading-relaxed ${msg.sender === 'user' ? 'bg-ink-950 text-white rounded-tr-none font-medium' : 'bg-surface-raised text-stone-800 rounded-tl-none border border-stone-100'}`}>
                       <MathText text={msg.text} as="div" />
                       <span className="text-[9px] block text-right mt-1.5 text-stone-400">
                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -245,7 +245,7 @@ export default function AITutorChat() {
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="bg-stone-100 p-1.5 rounded-lg border border-stone-200"><Bot className="w-4 h-4 text-stone-500 animate-bounce" /></div>
-                      <div className="bg-white text-stone-500 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none border border-stone-100 shadow-xs flex items-center gap-1.5 italic">
+                      <div className="bg-surface-raised text-stone-500 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none border border-stone-100 shadow-e1 flex items-center gap-1.5 italic">
                         <span className="animate-bounce">&bull;</span>
                         <span className="animate-bounce delay-75">&bull;</span>
                         <span className="animate-bounce delay-150">&bull;</span>
@@ -258,7 +258,7 @@ export default function AITutorChat() {
               <div ref={chatBottomRef} />
             </div>
 
-            <div className="px-4 py-2 bg-white border-t border-stone-100 flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar scroll-smooth">
+            <div className="px-4 py-2 bg-surface-raised border-t border-stone-100 flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar scroll-smooth">
               <m.button onClick={() => sendQuickOption('Walk me through the handshake lemma')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 transition-colors duration-160 ease-standard shrink-0 cursor-pointer">
                 Handshake lemma
               </m.button>
@@ -270,7 +270,7 @@ export default function AITutorChat() {
               </m.button>
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-stone-100 flex gap-2">
+            <form onSubmit={handleSendMessage} className="p-3 bg-surface-raised border-t border-stone-100 flex gap-2">
               <input
                 id="field-chat-input"
                 type="text"
@@ -286,7 +286,7 @@ export default function AITutorChat() {
                 disabled={!inputVal.trim() || loading}
                 whileTap={{ scale: 0.92 }}
                 transition={spring.press}
-                className="bg-ink-950 hover:bg-black text-white p-3 rounded-xl shadow-md transition-[background-color,opacity] duration-160 ease-standard disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
+                className="bg-content hover:bg-content-muted text-surface-raised p-3 rounded-xl shadow-e2 transition-[background-color,opacity] duration-160 ease-standard disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
               >
                 <Send className="w-4 h-4 text-white" />
               </m.button>
