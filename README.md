@@ -6,6 +6,8 @@
 
 Adaptive assessment built on real psychometrics, competition training, and learning analytics — for students training toward AMC, AIME, USAMO and IMO.
 
+<a href="https://trendshift.io/repositories/36187?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-36187" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/36187/monthly?language=C%23" alt="itsfatduck%2FoptimizerDuck | Trendshift" width="250" height="55"/></a>
+
 [![Build](https://github.com/gmtigrisva123/CalculixHub/actions/workflows/quality.yml/badge.svg)](https://github.com/gmtigrisva123/CalculixHub/actions/workflows/quality.yml)
 [![Lint](https://github.com/gmtigrisva123/CalculixHub/actions/workflows/check.yml/badge.svg)](https://github.com/gmtigrisva123/CalculixHub/actions/workflows/check.yml)
 [![Deploy to GitHub Pages](https://github.com/gmtigrisva123/CalculixHub/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/gmtigrisva123/CalculixHub/actions/workflows/deploy-pages.yml)
