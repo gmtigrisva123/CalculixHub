@@ -96,8 +96,23 @@ export default function AnimatedNumber({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, prefersReducedMotion, progress]);
 
+  /*
+   * Tabular figures are not optional for this component.
+   *
+   * In a proportional face a `1` is materially narrower than an `8`, so a
+   * counter animating 0 → 1,284 changes width on almost every frame. The digits
+   * jitter horizontally as they climb, and anything laid out beside them — a
+   * "pts" suffix, a flex row, a right-aligned column — twitches along with it.
+   * It is the kind of fault that reads as cheapness without the viewer being
+   * able to say why.
+   *
+   * Fixing the advance width here rather than at each call site means no future
+   * counter can be added without it. `tnum` still composes with whatever the
+   * caller passes, and a caller wanting proportional figures can override with
+   * an explicit `font-variant-numeric` utility.
+   */
   return (
-    <span ref={nodeRef} className={className}>
+    <span ref={nodeRef} className={className ? `tnum ${className}` : 'tnum'}>
       {format(value)}
     </span>
   );

@@ -34,7 +34,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   return (
     <div className="space-y-8">
       <div className="border-b border-stone-100 pb-4">
-        <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2 font-serif">
+        <h1 className="type-title text-content flex items-center gap-2">
           <User className="w-7 h-7 text-stone-800" /> Student Profile
         </h1>
         <p className="text-xs text-stone-500 mt-1">Your academic progress, evidence of skill, and earned honors.</p>
@@ -65,14 +65,14 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
                 onClick={onLogout}
                 whileTap={{ scale: 0.95 }}
                 transition={spring.press}
-                className="bg-ink-800 hover:bg-ink-700 border border-ink-700 p-2.5 rounded-xl text-stone-300 hover:text-white transition-[background-color,color] duration-160 ease-standard text-xs font-bold cursor-pointer flex gap-1.5"
+                className="bg-ink-800 hover:bg-ink-700 border border-ink-700 p-2.5 rounded-control text-stone-300 hover:text-white transition-[background-color,color] duration-160 ease-standard text-xs font-bold cursor-pointer flex gap-1.5"
               >
                 <LogOut className="w-4 h-4 shrink-0" /> Log out
               </m.button>
             </div>
           </div>
 
-          <div className="bg-surface-raised border border-stone-200 rounded-3xl p-5 md:p-6 shadow-e1 space-y-4">
+          <div className="bg-surface-raised material-card border border-line rounded-panel p-5 md:p-6 shadow-e1 space-y-4">
             <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5">
               <Star className="w-4.5 h-4.5 text-brass-500" /> Achievement Badges
             </h3>
@@ -88,7 +88,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
                   key={b.id}
                   index={index}
                   inView
-                  className={`border rounded-2xl p-4 flex gap-3 transition-[opacity,background-color,border-color] duration-340 ease-standard ${b.unlocked ? 'bg-stone-50/50 border-stone-200' : 'border-stone-100 bg-stone-50/20 opacity-40'}`}
+                  className={`border rounded-card p-4 flex gap-3 transition-[opacity,background-color,border-color] duration-340 ease-standard ${b.unlocked ? 'bg-stone-50/50 border-stone-200' : 'border-stone-100 bg-stone-50/20 opacity-40'}`}
                 >
                   <div className="text-2xl pt-0.5 self-center">{b.icon}</div>
                   <div className="space-y-0.5">
@@ -102,7 +102,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-surface-raised border border-stone-200 rounded-3xl p-5 shadow-e1 space-y-5 h-fit">
+        <div className="lg:col-span-4 bg-surface-raised material-card border border-line rounded-panel p-5 shadow-e1 space-y-5 h-fit">
           <div className="space-y-1">
             <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5">
               <CheckCircle className="w-4.5 h-4.5 text-proof-500" /> Solved Problems Notebook
@@ -115,7 +115,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           ) : (
             <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
               {solvedQuestions.map((q, index) => (
-                <StaggerItem key={q.id} index={index} className="p-3 bg-stone-50 rounded-xl border border-stone-150 flex items-center justify-between gap-3">
+                <StaggerItem key={q.id} index={index} className="p-3 bg-stone-50 rounded-control border border-stone-150 flex items-center justify-between gap-3">
                   <div className="space-y-0.5 min-w-0">
                     <span className="block text-[10px] font-black text-stone-900 tracking-tight truncate">{q.title}</span>
                     <span className="block text-[9px] text-stone-400 font-bold uppercase">{TOPIC_META[q.topic].label}</span>
@@ -126,7 +126,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             </div>
           )}
 
-          <div className="bg-stone-50 rounded-xl p-3 text-[10px] text-stone-500 leading-relaxed max-w-full">
+          <div className="bg-stone-50 rounded-control p-3 text-[10px] text-stone-500 leading-relaxed max-w-full">
             <strong>Tip:</strong> The more you engage in Community critique, the faster you'll spot your own mistakes.
           </div>
         </div>

@@ -507,7 +507,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         <header className="sticky top-0 z-50 backdrop-blur-md bg-ink-950/85 border-b border-ink-800 select-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif shrink-0">
+              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-control text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif shrink-0">
                 &#8721;
               </div>
               {/*
@@ -545,7 +545,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 onClick={() => setAuthMode('register')}
                 whileTap={{ scale: 0.95 }}
                 transition={spring.press}
-                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-3 sm:px-4.5 py-2.5 rounded-xl transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard shadow-e2 hover:shadow-brass-500/20 hover:shadow-e3 cursor-pointer whitespace-nowrap"
+                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-3 sm:px-4.5 py-2.5 rounded-control transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard shadow-e2 hover:shadow-brass-500/20 hover:shadow-e3 cursor-pointer whitespace-nowrap"
               >
                 {/*
                   Shortened below sm so the header fits a 375px viewport now that
@@ -600,14 +600,14 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   onClick={() => setAuthMode('register')}
                   whileTap={{ scale: 0.98 }}
                   transition={spring.press}
-                  className="bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 font-extrabold text-xs px-7 py-4.5 rounded-2xl shadow-e3 hover:shadow-brass-500/10 hover:shadow-e4 transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-2 cursor-pointer group"
+                  className="bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 font-extrabold text-xs px-7 py-4.5 rounded-card shadow-e3 hover:shadow-brass-500/10 hover:shadow-e4 transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-2 cursor-pointer group"
                 >
                   Start free &mdash; take the placement test
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-240 ease-standard" />
                 </m.button>
                 <a
                   href="#impact"
-                  className="bg-ink-900/60 hover:bg-ink-900 border border-ink-800 text-stone-350 hover:text-white font-bold text-xs px-6 py-4.5 rounded-2xl transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-1.5"
+                  className="bg-ink-900/60 hover:bg-ink-900 border border-ink-800 text-stone-350 hover:text-white font-bold text-xs px-6 py-4.5 rounded-card transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-1.5"
                 >
                   View the research report
                 </a>
@@ -689,7 +689,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   </g>
                 </svg>
 
-                <div className="mt-6 bg-ink-900/80 border border-ink-800 rounded-2xl p-4.5 text-xs space-y-1.5 backdrop-blur-md">
+                <div className="mt-6 bg-ink-900/80 border border-ink-800 rounded-card p-4.5 text-xs space-y-1.5 backdrop-blur-md">
                   <div className="flex justify-between items-center text-[10px] text-stone-500 font-bold uppercase tracking-wider">
                     <span>EduReach live feed</span>
                     <span className="text-brass-400 font-mono">LIVE</span>
@@ -719,9 +719,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              <div className="border border-rose-900/40 bg-gradient-to-b from-rose-950/10 to-transparent p-6 sm:p-8 rounded-3xl space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-rose-800/60 hover:shadow-e3 hover:shadow-rose-950/10 group">
+              <div className="border border-rose-900/40 bg-gradient-to-b from-rose-950/10 to-transparent p-6 sm:p-8 rounded-panel space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-rose-800/60 hover:shadow-e3 hover:shadow-rose-950/10 group">
                 <div className="flex items-center gap-3">
-                  <div className="bg-rose-500/10 p-2.5 rounded-2xl border border-rose-500/20 text-rose-500"><X className="w-5 h-5" /></div>
+                  <div className="bg-rose-500/10 p-2.5 rounded-card border border-rose-500/20 text-rose-500"><X className="w-5 h-5" /></div>
                   <div>
                     <span className="text-[9px] uppercase font-black text-rose-500 tracking-wider">Passive by default</span>
                     <h4 className="text-lg font-extrabold text-stone-200 font-serif">What we are not</h4>
@@ -752,9 +752,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 </ul>
               </div>
 
-              <div className="border border-proof-800/40 bg-gradient-to-b from-proof-950/10 to-transparent p-6 sm:p-8 rounded-3xl space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-proof-600/60 hover:shadow-e3 hover:shadow-proof-950/10 group">
+              <div className="border border-proof-800/40 bg-gradient-to-b from-proof-950/10 to-transparent p-6 sm:p-8 rounded-panel space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-proof-600/60 hover:shadow-e3 hover:shadow-proof-950/10 group">
                 <div className="flex items-center gap-3">
-                  <div className="bg-proof-500/10 p-2.5 rounded-2xl border border-proof-500/20 text-proof-400"><Check className="w-5 h-5" /></div>
+                  <div className="bg-proof-500/10 p-2.5 rounded-card border border-proof-500/20 text-proof-400"><Check className="w-5 h-5" /></div>
                   <div>
                     <span className="text-[9px] uppercase font-black text-proof-400 tracking-wider">One connected ecosystem</span>
                     <h4 className="text-lg font-extrabold text-stone-200 font-serif">What we are</h4>
@@ -799,18 +799,18 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-16 max-w-5xl mx-auto">
-                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
-                  <div className="mx-auto bg-brass-500/10 p-3 rounded-2xl border border-brass-500/20 text-brass-400 w-fit group-hover:bg-brass-600 group-hover:text-ink-950 transition-colors duration-240 ease-standard"><Globe className="w-6 h-6" /></div>
+                <div className="bg-ink-950/50 p-6 rounded-card border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
+                  <div className="mx-auto bg-brass-500/10 p-3 rounded-card border border-brass-500/20 text-brass-400 w-fit group-hover:bg-brass-600 group-hover:text-ink-950 transition-colors duration-240 ease-standard"><Globe className="w-6 h-6" /></div>
                   <h5 className="font-extrabold text-stone-100 text-sm">Reach, without degradation</h5>
                   <p className="text-[11px] text-stone-450 leading-relaxed">Advanced curricula and AI infrastructure, delivered on demand to every region, regardless of geography.</p>
                 </div>
-                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
-                  <div className="mx-auto bg-proof-500/10 p-3 rounded-2xl border border-proof-500/20 text-proof-400 w-fit group-hover:bg-proof-600 group-hover:text-white transition-colors duration-240 ease-standard"><Shield className="w-6 h-6" /></div>
+                <div className="bg-ink-950/50 p-6 rounded-card border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
+                  <div className="mx-auto bg-proof-500/10 p-3 rounded-card border border-proof-500/20 text-proof-400 w-fit group-hover:bg-proof-600 group-hover:text-white transition-colors duration-240 ease-standard"><Shield className="w-6 h-6" /></div>
                   <h5 className="font-extrabold text-stone-100 text-sm">Personalization by default</h5>
                   <p className="text-[11px] text-stone-450 leading-relaxed">EduReach Core diagnoses gaps automatically and builds an individual path for every learner.</p>
                 </div>
-                <div className="bg-ink-950/50 p-6 rounded-2xl border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
-                  <div className="mx-auto bg-violet-500/10 p-3 rounded-2xl border border-violet-500/20 text-violet-400 w-fit group-hover:bg-violet-600 group-hover:text-white transition-colors duration-240 ease-standard"><TrendingUp className="w-6 h-6" /></div>
+                <div className="bg-ink-950/50 p-6 rounded-card border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
+                  <div className="mx-auto bg-violet-500/10 p-3 rounded-card border border-violet-500/20 text-violet-400 w-fit group-hover:bg-violet-600 group-hover:text-white transition-colors duration-240 ease-standard"><TrendingUp className="w-6 h-6" /></div>
                   <h5 className="font-extrabold text-stone-100 text-sm">Governed by real data</h5>
                   <p className="text-[11px] text-stone-450 leading-relaxed">Every system decision is measured against empirical telemetry, not assumptions.</p>
                 </div>
@@ -842,7 +842,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       onClick={() => { setActiveArchTab(tab.key); setIsArchExpanded(false); }}
                       whileTap={{ scale: 0.98 }}
                       transition={spring.press}
-                      className={`relative w-full text-left p-4.5 rounded-2xl border text-xs font-extrabold transition-[border-color,color,box-shadow] duration-240 ease-standard shrink-0 cursor-pointer flex items-center justify-between ${
+                      className={`relative w-full text-left p-4.5 rounded-card border text-xs font-extrabold transition-[border-color,color,box-shadow] duration-240 ease-standard shrink-0 cursor-pointer flex items-center justify-between ${
                         activeArchTab === tab.key
                           ? 'border-brass-500 text-brass-400 shadow-e2'
                           : 'bg-ink-900/40 border-ink-800 text-stone-400 hover:border-ink-750 hover:text-white'
@@ -857,7 +857,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       {activeArchTab === tab.key && (
                         <m.span
                           layoutId="arch-tab-highlight"
-                          className="absolute inset-0 bg-brass-600/10 rounded-2xl"
+                          className="absolute inset-0 bg-brass-600/10 rounded-card"
                           transition={spring.snappy}
                         />
                       )}
@@ -868,7 +868,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 })}
               </div>
 
-              <div className="lg:col-span-8 bg-ink-900/40 border border-ink-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between backdrop-blur-md shadow-e4 relative bp-corners">
+              <div className="lg:col-span-8 bg-ink-900/40 border border-ink-800 rounded-panel p-6 sm:p-8 flex flex-col justify-between backdrop-blur-md shadow-e4 relative bp-corners">
                 <div className="absolute top-4 right-4 text-ink-700 font-mono text-[9px]">Calculix Engine Core v2.6</div>
 
                 {/*
@@ -890,7 +890,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   {activeArchTab === 'engine' && (
                     <>
                       <div className="flex items-center gap-3">
-                        <div className="bg-brass-500/10 p-2.5 rounded-xl border border-brass-500/20 text-brass-400"><BookOpen className="w-5 h-5" /></div>
+                        <div className="bg-brass-500/10 p-2.5 rounded-control border border-brass-500/20 text-brass-400"><BookOpen className="w-5 h-5" /></div>
                         <div><span className="text-[9px] uppercase font-black text-brass-400 tracking-wider">Adaptive core</span><h4 className="text-base font-extrabold text-white font-serif">Learning Engine</h4></div>
                       </div>
                       <p className="text-xs text-stone-400 leading-relaxed">
@@ -906,7 +906,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   {activeArchTab === 'ai' && (
                     <>
                       <div className="flex items-center gap-3">
-                        <div className="bg-proof-500/10 p-2.5 rounded-xl border border-proof-500/20 text-proof-400"><Brain className="w-5 h-5" /></div>
+                        <div className="bg-proof-500/10 p-2.5 rounded-control border border-proof-500/20 text-proof-400"><Brain className="w-5 h-5" /></div>
                         <div><span className="text-[9px] uppercase font-black text-proof-400 tracking-wider">Personalization layer</span><h4 className="text-base font-extrabold text-white font-serif">AI Personalization (EduReach Core)</h4></div>
                       </div>
                       <p className="text-xs text-stone-400 leading-relaxed">
@@ -922,7 +922,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   {activeArchTab === 'compete' && (
                     <>
                       <div className="flex items-center gap-3">
-                        <div className="bg-violet-500/10 p-2.5 rounded-xl border border-violet-500/20 text-violet-400"><Trophy className="w-5 h-5" /></div>
+                        <div className="bg-violet-500/10 p-2.5 rounded-control border border-violet-500/20 text-violet-400"><Trophy className="w-5 h-5" /></div>
                         <div><span className="text-[9px] uppercase font-black text-violet-400 tracking-wider">Competitive environment</span><h4 className="text-base font-extrabold text-white font-serif">Competition Arena</h4></div>
                       </div>
                       <p className="text-xs text-stone-400 leading-relaxed">
@@ -938,7 +938,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   {activeArchTab === 'analytics' && (
                     <>
                       <div className="flex items-center gap-3">
-                        <div className="bg-sky-500/10 p-2.5 rounded-xl border border-sky-500/20 text-sky-400"><BarChart3 className="w-5 h-5" /></div>
+                        <div className="bg-sky-500/10 p-2.5 rounded-control border border-sky-500/20 text-sky-400"><BarChart3 className="w-5 h-5" /></div>
                         <div><span className="text-[9px] uppercase font-black text-sky-400 tracking-wider">Analytics system</span><h4 className="text-base font-extrabold text-white font-serif">Analytics &amp; Research Dashboard</h4></div>
                       </div>
                       <p className="text-xs text-stone-400 leading-relaxed">
@@ -955,7 +955,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
                 <div className="pt-6 border-t border-ink-800 mt-6 space-y-4">
                   {isArchExpanded ? (
-                    <div className="bg-ink-950/80 border border-ink-800 rounded-2xl p-4.5 text-[11px] text-stone-450 leading-relaxed space-y-3 font-mono">
+                    <div className="bg-ink-950/80 border border-ink-800 rounded-card p-4.5 text-[11px] text-stone-450 leading-relaxed space-y-3 font-mono">
                       <div className="flex justify-between items-center text-[10px] text-proof-400 font-bold uppercase tracking-wider">
                         <span>Technical detail</span><span>IRT MATHEMATICAL MODEL</span>
                       </div>
@@ -967,7 +967,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       {activeArchTab === 'ai' && (
                         <div className="space-y-2">
                           <p>Uses a 1-Parameter Logistic (Rasch) model to estimate <MathText text="\\(\\theta\\)" as="span" />, the student's latent ability:</p>
-                          <div className="bg-ink-900 p-3 rounded-xl text-center text-proof-300 font-bold">
+                          <div className="bg-ink-900 p-3 rounded-control text-center text-proof-300 font-bold">
                             <MathText text={IRT_FORMULA} />
                           </div>
                           <p className="text-[10px]">
@@ -987,7 +987,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       <button type="button" onClick={() => setIsArchExpanded(false)} className="text-[10px] font-bold text-brass-400 hover:underline block pt-1 cursor-pointer">Collapse detail [-]</button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setIsArchExpanded(true)} className="bg-ink-900 border border-ink-800 hover:border-ink-750 text-stone-350 hover:text-white font-bold text-[11px] px-4 py-2.5 rounded-xl transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer inline-flex items-center gap-1.5">
+                    <button type="button" onClick={() => setIsArchExpanded(true)} className="bg-ink-900 border border-ink-800 hover:border-ink-750 text-stone-350 hover:text-white font-bold text-[11px] px-4 py-2.5 rounded-control transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer inline-flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-brass-400" /> View technical detail
                     </button>
                   )}
@@ -1006,18 +1006,18 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               </div>
 
               <div className="max-w-4xl mx-auto space-y-4">
-                <div className="flex justify-between items-center bg-ink-900 border border-ink-800 px-6 py-3.5 rounded-2xl select-none">
+                <div className="flex justify-between items-center bg-ink-900 border border-ink-800 px-6 py-3.5 rounded-card select-none">
                   <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider flex items-center gap-2"><Users className="w-4 h-4 text-brass-400" /> Community forum preview</span>
                   <button
                     type="button"
                     onClick={() => setCommunityDarkMode(!communityDarkMode)}
-                    className="bg-ink-800 hover:bg-ink-750 border border-ink-700 text-stone-300 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-xl transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer flex items-center gap-1.5"
+                    className="bg-ink-800 hover:bg-ink-750 border border-ink-700 text-stone-300 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-control transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer flex items-center gap-1.5"
                   >
                     {communityDarkMode ? (<><Sun className="w-3.5 h-3.5 text-amber-400" /> Switch to light mode</>) : (<><Moon className="w-3.5 h-3.5 text-violet-400" /> Switch to dark mode</>)}
                   </button>
                 </div>
 
-                <div className={`border rounded-3xl p-6 transition-[background-color,border-color,color,box-shadow] duration-300 ease-standard shadow-e3 space-y-6 ${communityDarkMode ? 'bg-ink-900/90 border-ink-800 text-stone-200 shadow-ink-950/20' : 'bg-paper-50 border-stone-200 text-stone-800 shadow-stone-200/50'}`}>
+                <div className={`border rounded-panel p-6 transition-[background-color,border-color,color,box-shadow] duration-300 ease-standard shadow-e3 space-y-6 ${communityDarkMode ? 'bg-ink-900/90 border-ink-800 text-stone-200 shadow-ink-950/20' : 'bg-paper-50 border-stone-200 text-stone-800 shadow-stone-200/50'}`}>
                   <div className="border-b pb-4 flex justify-between items-start gap-4" style={{ borderColor: communityDarkMode ? '#342d27' : '#f3ede1' }}>
                     <div className="space-y-1">
                       <h4 className={`text-base font-black tracking-tight leading-tight font-serif ${communityDarkMode ? 'text-white' : 'text-stone-900'}`}>
@@ -1151,7 +1151,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     key={step.n}
                     onMouseEnter={() => setHoveredStep(step.n)}
                     onMouseLeave={() => setHoveredStep(null)}
-                    className={`bg-ink-900/40 border p-5 rounded-2xl space-y-3 transition-[border-color,box-shadow] duration-300 ease-standard relative select-none ${
+                    className={`bg-ink-900/40 border p-5 rounded-card space-y-3 transition-[border-color,box-shadow] duration-300 ease-standard relative select-none ${
                       isHovered ? `${colorMap[step.color]} scale-[1.03] bg-ink-900 shadow-e3` : 'border-ink-800 hover:border-ink-750'
                     }`}
                   >
@@ -1186,9 +1186,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   ].map((chan) => {
                     const ChanIcon = chan.icon;
                     return (
-                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-2xl p-4 flex items-center justify-between transition-[border-color] duration-240 ease-standard hover:border-ink-700">
+                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-card p-4 flex items-center justify-between transition-[border-color] duration-240 ease-standard hover:border-ink-700">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-xl ${chan.color === 'brass' ? 'bg-brass-600/10 text-brass-500' : chan.color === 'violet' ? 'bg-violet-600/10 text-violet-400' : 'bg-rose-600/10 text-rose-500'}`}><ChanIcon className="w-5 h-5" /></div>
+                          <div className={`p-2.5 rounded-control ${chan.color === 'brass' ? 'bg-brass-600/10 text-brass-500' : chan.color === 'violet' ? 'bg-violet-600/10 text-violet-400' : 'bg-rose-600/10 text-rose-500'}`}><ChanIcon className="w-5 h-5" /></div>
                           <div><h5 className="font-extrabold text-xs text-stone-200">{chan.name}</h5><p className="text-[9px] text-stone-500 font-medium">{chan.desc}</p></div>
                         </div>
                         <div className="text-right shrink-0">
@@ -1242,13 +1242,13 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   </div>
                 </div>
                 <div className="md:col-span-4 text-center">
-                  <div className="bg-ink-950 border border-ink-850 p-6 rounded-2xl space-y-4">
+                  <div className="bg-ink-950 border border-ink-850 p-6 rounded-card space-y-4">
                     <FileText className="w-10 h-10 text-brass-400 mx-auto" />
                     <div>
                       <h5 className="font-extrabold text-xs text-stone-200">Export impact report</h5>
                       <p className="text-[9px] text-stone-500 mt-1 leading-normal">A live report compiled directly from the database.</p>
                     </div>
-                    <m.button type="button" onClick={handleExportImpactReport} whileTap={{ scale: 0.97 }} transition={spring.press} className="w-full bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs py-3 rounded-xl transition-colors duration-240 ease-standard cursor-pointer shadow-e2 flex items-center justify-center gap-1.5">
+                    <m.button type="button" onClick={handleExportImpactReport} whileTap={{ scale: 0.97 }} transition={spring.press} className="w-full bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs py-3 rounded-control transition-colors duration-240 ease-standard cursor-pointer shadow-e2 flex items-center justify-center gap-1.5">
                       <Download className="w-3.5 h-3.5" /> Download PDF report
                     </m.button>
                   </div>
@@ -1262,7 +1262,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         <footer className="border-t border-ink-800 py-12 bg-ink-950 text-stone-500 select-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="bg-ink-900 border border-ink-800 p-2 rounded-xl text-stone-400 font-bold w-9 h-9 flex items-center justify-center text-sm font-serif">&#8721;</div>
+              <div className="bg-ink-900 border border-ink-800 p-2 rounded-control text-stone-400 font-bold w-9 h-9 flex items-center justify-center text-sm font-serif">&#8721;</div>
               <div><h5 className="font-extrabold text-xs tracking-wider text-stone-350 uppercase">CalculixHub</h5><span className="text-[9px] block text-stone-600 font-medium">Adaptive math, driven by real data</span></div>
             </div>
             <div className="text-[10px] text-center md:text-right space-y-1 leading-relaxed">
@@ -1293,7 +1293,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif">&#8721;</div>
+              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-control text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif">&#8721;</div>
               <div><h1 className="font-extrabold text-sm tracking-widest text-stone-100 uppercase">CalculixHub</h1><span className="text-[10px] font-bold text-stone-500 block -mt-1 uppercase tracking-wider">Math OS Platform</span></div>
             </div>
 
@@ -1364,7 +1364,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               <div className="space-y-1"><h3 className="text-xl font-black text-stone-900 tracking-tight font-serif">Welcome back</h3><p className="text-[11px] text-stone-500">Enter your account details to sign back in to CalculixHub.</p></div>
 
               {errorMessage && (
-                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-medium space-y-2">
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-control text-xs font-medium space-y-2">
                   <div className="flex items-center gap-1.5 font-bold"><AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" /><span>Sign-in error</span></div>
                   <p className="text-[11px] leading-relaxed">{errorMessage}</p>
                 </div>
@@ -1374,19 +1374,19 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-stone-500 block">Email address</label>
                   <div className="relative"><Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-xl pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
+                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-stone-500 block">Password</label>
                   <div className="relative"><Key className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-xl pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
+                    <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
                   </div>
                 </div>
               </div>
 
               <div className="pt-4 flex flex-col gap-2.5">
-                <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-e2 cursor-pointer flex justify-center items-center gap-1.5">Sign in</button>
+                <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control shadow-e2 cursor-pointer flex justify-center items-center gap-1.5">Sign in</button>
                 <button type="button" onClick={() => setAuthMode('register')} className="text-center text-[11px] font-bold text-brass-700 hover:underline pt-2 cursor-pointer">Don't have an account? Create one for free &rarr;</button>
               </div>
             </m.form>
@@ -1406,35 +1406,35 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               <div className="space-y-1"><h3 className="text-xl font-black text-stone-900 tracking-tight font-serif">Create a new account</h3><p className="text-[11px] text-stone-500">Set up your profile, then take the adaptive IRT placement test to find your tier.</p></div>
 
               {errorMessage && (
-                <div className="p-3 bg-rose-50 border border-rose-150 text-rose-850 rounded-xl text-xs font-medium flex items-start gap-2"><AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span>{errorMessage}</span></div>
+                <div className="p-3 bg-rose-50 border border-rose-150 text-rose-850 rounded-control text-xs font-medium flex items-start gap-2"><AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span>{errorMessage}</span></div>
               )}
               {successMessage && (
-                <div className="p-3 bg-proof-50 border border-proof-150 text-proof-800 rounded-xl text-xs font-semibold">{successMessage}</div>
+                <div className="p-3 bg-proof-50 border border-proof-150 text-proof-800 rounded-control text-xs font-semibold">{successMessage}</div>
               )}
 
               <div className="space-y-3 pt-1">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-stone-500 block">Full name</label>
                   <div className="relative"><User className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="text" required placeholder="e.g. Jane Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-xl pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
+                    <input type="text" required placeholder="e.g. Jane Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-stone-500 block">Email address</label>
                   <div className="relative"><Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-xl pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
+                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-stone-500 block">Choose a password</label>
                   <div className="relative"><Key className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-xl pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
+                    <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
                   </div>
                 </div>
               </div>
 
               <div className="pt-2 flex flex-col gap-2">
-                <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-e2 cursor-pointer justify-center items-center flex gap-1.5">Create profile &amp; take the IRT test <ArrowRight className="w-4 h-4" /></button>
+                <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control shadow-e2 cursor-pointer justify-center items-center flex gap-1.5">Create profile &amp; take the IRT test <ArrowRight className="w-4 h-4" /></button>
                 <button type="button" onClick={() => setAuthMode('login')} className="text-center text-[11px] font-bold text-brass-700 hover:underline pt-1.5 cursor-pointer">Already a member? Back to sign in &rarr;</button>
               </div>
             </m.form>
@@ -1500,7 +1500,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                         transition={spring.smooth}
                         className="space-y-4"
                       >
-                        <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100 shadow-e1">
+                        <div className="p-4 bg-stone-50 rounded-card border border-stone-100 shadow-e1">
                           <MathText as="p" className="text-stone-800 text-xs font-bold leading-relaxed" text={currentItem.question} />
                         </div>
 
@@ -1516,7 +1516,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ ...spring.snappy, delay: 0.05 + oIdx * 0.04 }}
                                 whileTap={{ scale: 0.99 }}
-                                className={`w-full p-3.5 text-left text-xs rounded-xl border transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer flex items-center justify-between gap-3 ${
+                                className={`w-full p-3.5 text-left text-xs rounded-control border transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer flex items-center justify-between gap-3 ${
                                   isSelected ? 'border-violet-600 bg-violet-50/40 text-violet-900 font-bold shadow-e1 scale-[1.01]' : 'border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-650'
                                 }`}
                               >
@@ -1551,7 +1551,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                           previous item's question for the length of the
                           transition — a small thing that read as a glitch.
                         */}
-                        <div className="bg-amber-50/30 border border-amber-200/40 rounded-xl p-3 flex gap-2">
+                        <div className="bg-amber-50/30 border border-amber-200/40 rounded-control p-3 flex gap-2">
                           <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           <div>
                             <span className="text-[10px] font-bold text-stone-600 block">Hint:</span>
@@ -1570,12 +1570,12 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                           transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard } }}
                           className="overflow-hidden"
                         >
-                          <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-[10px] font-semibold">{errorMessage}</div>
+                          <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-control text-[10px] font-semibold">{errorMessage}</div>
                         </m.div>
                       )}
                     </AnimatePresence>
 
-                    <m.button type="button" onClick={handleNextIrtQuestion} whileTap={{ scale: 0.98 }} transition={spring.press} className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl transition-colors duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1">
+                    <m.button type="button" onClick={handleNextIrtQuestion} whileTap={{ scale: 0.98 }} transition={spring.press} className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control transition-colors duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1">
                       Score &amp; continue <ChevronRight className="w-4 h-4" />
                     </m.button>
                     <p className="text-[9px] text-stone-400 text-center leading-relaxed">
@@ -1584,7 +1584,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   </div>
 
                   {/* Live IRT telemetry */}
-                  <div className="lg:col-span-5 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 space-y-4">
+                  <div className="lg:col-span-5 bg-stone-50/50 p-4 rounded-card border border-stone-100 space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-stone-150">
                       <Activity ref={telemetryPulseRef} className="w-3.5 h-3.5 text-violet-600 animate-pulse" />
                       <h4 className="text-[10px] font-black uppercase text-stone-800 tracking-wider">Live 3PL IRT Analysis</h4>
@@ -1622,7 +1622,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       </div>
                     </div>
 
-                    <div className="p-2.5 bg-surface-raised border border-stone-150 rounded-xl grid grid-cols-2 gap-2 text-center">
+                    <div className="p-2.5 bg-surface-raised border border-stone-150 rounded-control grid grid-cols-2 gap-2 text-center">
                       <div>
                         <span className="text-[8px] uppercase text-stone-400 font-bold block">Std. error (SEM)</span>
                         <span className="text-xs font-black text-stone-800 font-mono block mt-0.5">&plusmn; {sem.toFixed(2)}</span>
@@ -1633,7 +1633,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       </div>
                     </div>
 
-                    <div className="p-2.5 bg-violet-50/50 border border-violet-100 rounded-xl space-y-2">
+                    <div className="p-2.5 bg-violet-50/50 border border-violet-100 rounded-control space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] text-violet-900 font-bold flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" /> Projected tier</span>
                         <span className="bg-violet-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase">{tierForTheta(theta)}</span>
@@ -1682,7 +1682,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     </p>
                   </div>
 
-                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-100 max-w-lg mx-auto grid grid-cols-4 gap-3 text-center">
+                  <div className="p-4 bg-stone-50 rounded-card border border-stone-100 max-w-lg mx-auto grid grid-cols-4 gap-3 text-center">
                     <div className="border-r border-stone-200">
                       <span className="text-[9px] uppercase font-bold text-stone-400 block">Ability</span>
                       <p className="text-sm font-extrabold text-violet-700 mt-0.5 font-mono">{theta.toFixed(2)}</p>
@@ -1702,7 +1702,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   </div>
 
                   {/* Per-domain ability profile */}
-                  <div className="max-w-lg mx-auto bg-surface-raised border border-stone-200 rounded-2xl p-4 space-y-3">
+                  <div className="max-w-lg mx-auto bg-surface-raised material-card border border-line rounded-card p-4 space-y-3">
                     <h4 className="text-[10px] font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
                       <BarChart3 className="w-3.5 h-3.5 text-violet-600" /> Measured domain profile
                     </h4>
@@ -1726,7 +1726,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     })}
                   </div>
 
-                  <div className="text-left text-[11px] text-stone-600 space-y-1.5 max-w-lg mx-auto bg-stone-50 p-4 rounded-xl border border-stone-100">
+                  <div className="text-left text-[11px] text-stone-600 space-y-1.5 max-w-lg mx-auto bg-stone-50 p-4 rounded-control border border-stone-100">
                     <p className="font-bold text-stone-705 flex gap-1.5 items-center"><BookOpen className="w-3.5 h-3.5 text-violet-600" /> What happens next:</p>
                     <ul className="list-disc pl-4 space-y-1.5 text-stone-500 text-[10px]">
                       <li>Problems from the <strong className="text-violet-600">{calculatedLevel}</strong> tier ({recommendedSource(theta)}-calibre) are prioritized first.</li>
@@ -1736,7 +1736,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     </ul>
                   </div>
 
-                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-xl shadow-e3 hover:shadow-e3 transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1.5">
+                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control shadow-e3 hover:shadow-e3 transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1.5">
                     Enter CalculixHub <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
