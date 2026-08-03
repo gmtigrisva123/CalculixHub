@@ -34,3 +34,11 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Supabase CLI local state
+#
+# Written by `supabase link`. It holds the linked project ref and the pooler
+# connection string, which describe the live database and belong to whoever ran
+# the link -- not to the repository. `supabase/migrations/` is the part that is
+# meant to be committed, and it stays tracked.
+supabase/.temp/
