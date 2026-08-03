@@ -65,7 +65,7 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
             // rendered -- so the accessible name has to come from the button.
             aria-label={item.label}
             style={{ flex: isActive ? 1.6 : 1 }}
-            className={`relative min-w-0 h-11.5 rounded-2xl flex flex-col items-center justify-center gap-0.5 px-1.5 cursor-pointer transition-colors duration-160 ease-standard ${
+            className={`relative min-w-0 h-11.5 rounded-card flex flex-col items-center justify-center gap-0.5 px-1.5 cursor-pointer transition-colors duration-160 ease-standard ${
               isActive ? 'text-ink-950' : 'text-content-subtle active:bg-surface-sunken'
             }`}
           >
@@ -78,7 +78,7 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
             {isActive && (
               <m.span
                 layoutId="tabbar-active-pill"
-                className="absolute inset-0 bg-brass-600 rounded-2xl"
+                className="absolute inset-0 bg-brass-600 rounded-card"
                 transition={spring.snappy}
               />
             )}

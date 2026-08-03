@@ -107,7 +107,7 @@ export default function Compete({
   return (
     <div className="space-y-8">
       <div className="border-b border-stone-100 pb-4">
-        <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2 font-serif">
+        <h1 className="type-title text-content flex items-center gap-2">
           <Trophy className="w-7 h-7 text-brass-600" /> Competition System
         </h1>
         <p className="text-xs text-stone-500 mt-1">
@@ -116,7 +116,7 @@ export default function Compete({
       </div>
 
       {/* Skill ladder progress */}
-      <div className="bg-surface-raised border border-stone-200 rounded-2xl p-5 space-y-3">
+      <div className="bg-surface-raised material-card border border-line rounded-card p-5 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border ${rank.bg} ${rank.text} ${rank.border}`}>{rank.name}</span>
@@ -162,13 +162,13 @@ export default function Compete({
 
             <div className="space-y-3">
               {contests.length === 0 && (
-                <div className="text-center py-8 bg-surface-raised rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No contests scheduled right now.</div>
+                <div className="text-center py-8 bg-surface-raised rounded-card border border-dashed border-stone-200 text-stone-400 text-xs">No contests scheduled right now.</div>
               )}
               {contests.map((cont, index) => (
                 <StaggerItem
                   key={cont.id}
                   index={index}
-                  className={`bg-surface-raised border rounded-2xl p-5 hover:border-stone-300 transition-[border-color,opacity] duration-160 ease-standard ${cont.status === 'past' ? 'opacity-70' : ''}`}
+                  className={`bg-surface-raised border rounded-card p-5 hover:border-stone-300 transition-[border-color,opacity] duration-160 ease-standard ${cont.status === 'past' ? 'opacity-70' : ''}`}
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1">
@@ -194,7 +194,7 @@ export default function Compete({
                       disabled={cont.status === 'past'}
                       whileTap={cont.status === 'past' ? undefined : { scale: 0.95 }}
                       transition={spring.press}
-                      className={`text-xs font-bold px-4 py-2 rounded-xl transition-[background-color,box-shadow,color,border-color] duration-160 ease-standard cursor-pointer ${
+                      className={`text-xs font-bold px-4 py-2 rounded-control transition-[background-color,box-shadow,color,border-color] duration-160 ease-standard cursor-pointer ${
                         cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100'
                         : cont.status === 'past' ? 'bg-stone-50 text-stone-300 border border-stone-100 pointer-events-none'
                         : 'bg-content hover:bg-content-muted text-surface-raised hover:shadow-e1'
@@ -227,10 +227,10 @@ export default function Compete({
 
             <div className="space-y-3.5">
               {weeklyChallenges.length === 0 && (
-                <div className="text-center py-8 bg-surface-raised rounded-2xl border border-dashed border-stone-200 text-stone-400 text-xs">No active weekly challenge right now.</div>
+                <div className="text-center py-8 bg-surface-raised rounded-card border border-dashed border-stone-200 text-stone-400 text-xs">No active weekly challenge right now.</div>
               )}
               {weeklyChallenges.map((wc) => (
-                <div key={wc.id} className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-6 relative overflow-hidden shadow-e3">
+                <div key={wc.id} className="bg-ink-950 border border-ink-850 text-white rounded-panel p-6 relative overflow-hidden shadow-e3">
                   <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-brass-500/10 to-proof-500/10 rounded-full blur-2xl pointer-events-none" />
 
                   <div className="flex justify-between items-start gap-4 mb-3">
@@ -255,7 +255,7 @@ export default function Compete({
                       onClick={() => handleRegisterChallenge(wc.id)}
                       whileTap={{ scale: 0.95 }}
                       transition={spring.press}
-                      className={`font-semibold px-4.5 py-2.5 rounded-xl transition-colors duration-160 ease-standard h-9 flex items-center justify-center cursor-pointer ${
+                      className={`font-semibold px-4.5 py-2.5 rounded-control transition-colors duration-160 ease-standard h-9 flex items-center justify-center cursor-pointer ${
                         wc.completed ? 'bg-ink-800 text-stone-400 border border-ink-700' : 'bg-surface-raised hover:bg-stone-100 text-ink-950 font-bold'
                       }`}
                     >
@@ -302,11 +302,11 @@ export default function Compete({
               <Swords className="w-5 h-5 text-violet-600" /> Seasonal Tournament
               <span className="text-[9px] font-bold uppercase bg-stone-100 text-stone-500 px-2 py-0.5 rounded-md tracking-wider">Preview</span>
             </h2>
-            <div className="bg-surface-raised border border-stone-200 rounded-2xl p-5">
+            <div className="bg-surface-raised material-card border border-line rounded-card p-5">
               <p className="text-xs text-stone-500 mb-4">A multi-stage championship league &mdash; qualifiers, brackets, and live finals. Full scheduling is coming soon.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {['Qualifiers', 'Round of 16', 'Semifinal', 'Final'].map((stage, idx) => (
-                  <div key={stage} className={`rounded-xl border p-3 text-center ${idx === 0 ? 'bg-violet-50 border-violet-200' : 'bg-stone-50 border-stone-150'}`}>
+                  <div key={stage} className={`rounded-control border p-3 text-center ${idx === 0 ? 'bg-violet-50 border-violet-200' : 'bg-stone-50 border-stone-150'}`}>
                     <span className={`text-[9px] font-black uppercase tracking-wider block ${idx === 0 ? 'text-violet-700' : 'text-stone-400'}`}>Stage {idx + 1}</span>
                     <span className={`text-xs font-bold block mt-1 ${idx === 0 ? 'text-violet-900' : 'text-stone-600'}`}>{stage}</span>
                   </div>
@@ -318,7 +318,7 @@ export default function Compete({
         </div>
 
         {/* Leaderboard */}
-        <div className="lg:col-span-5 bg-surface-raised border border-stone-100 rounded-3xl p-5 shadow-e1 h-fit space-y-5">
+        <div className="lg:col-span-5 bg-surface-raised border border-stone-100 rounded-panel p-5 shadow-e1 h-fit space-y-5">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-900 flex items-center gap-2 font-serif">
               <Medal className="w-5 h-5 text-brass-600" /> Leaderboard
@@ -327,7 +327,7 @@ export default function Compete({
           </div>
 
           {/* Cohort axis */}
-          <div className="bg-stone-50 p-1 rounded-xl flex border border-stone-100">
+          <div className="bg-stone-50 p-1 rounded-control flex border border-stone-100">
             {axisTabs.map((tab) => {
               const TabIcon = tab.icon;
               return (
@@ -385,7 +385,7 @@ export default function Compete({
           </div>
 
           {/* The learner's own four-axis profile */}
-          <div className="bg-stone-50 border border-stone-150 rounded-xl p-3 space-y-2">
+          <div className="bg-stone-50 border border-stone-150 rounded-control p-3 space-y-2">
             <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Your performance profile</span>
             <div className="grid grid-cols-4 gap-2 text-center">
               {[
@@ -439,7 +439,7 @@ export default function Compete({
                   transition={spring.smooth}
                   initial={{ opacity: 0, y: travel.sm }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-[background-color,border-color] duration-160 ease-standard ${
+                  className={`flex items-center justify-between p-3 rounded-control border transition-[background-color,border-color] duration-160 ease-standard ${
                     isCurrentUser ? 'bg-brass-50/60 border-brass-200' : 'bg-surface-raised hover:bg-stone-50 border-stone-100'
                   }`}
                 >
@@ -475,7 +475,7 @@ export default function Compete({
             })}
           </div>
 
-          <div className="bg-stone-50 rounded-xl p-3 text-[10px] text-stone-500 flex items-start gap-1.5 leading-relaxed">
+          <div className="bg-stone-50 rounded-control p-3 text-[10px] text-stone-500 flex items-start gap-1.5 leading-relaxed">
             <HelpCircle className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
             <span>Rankings update instantly as students finish challenges and problems.</span>
           </div>

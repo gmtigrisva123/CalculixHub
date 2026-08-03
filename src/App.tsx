@@ -534,7 +534,7 @@ export default function App() {
         <div className="space-y-8 select-none">
           {/* Logo Brand area */}
           <div className="hidden md:flex items-center gap-3">
-            <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-xl text-ink-950 font-black w-10 h-10 flex items-center justify-center text-base shadow-e3 font-serif">
+            <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-control text-ink-950 font-black w-10 h-10 flex items-center justify-center text-base shadow-e3 font-serif">
               &#8721;
             </div>
             <div>
@@ -544,7 +544,7 @@ export default function App() {
           </div>
 
           {/* Quick Point badge in sidebar */}
-          <div className="bg-ink-850 rounded-2xl p-4.5 border border-ink-800/80 space-y-1">
+          <div className="bg-ink-850 rounded-card p-4.5 border border-ink-800/80 space-y-1">
             <span className="text-[9px] uppercase font-bold text-stone-500 tracking-wider">Learning status</span>
             <div className="flex justify-between items-center">
               <span className="font-bold text-xs text-stone-200">You</span>
@@ -569,7 +569,7 @@ export default function App() {
                 <button
                   key={item.key}
                   onClick={() => selectTab(item.key)}
-                  className={`relative w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-xl transition-colors duration-160 ease-standard cursor-pointer ${
+                  className={`relative w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-control transition-colors duration-160 ease-standard cursor-pointer ${
                     isActive ? 'text-ink-950 font-extrabold' : 'hover:bg-ink-850 hover:text-white'
                   }`}
                 >
@@ -584,7 +584,7 @@ export default function App() {
                   {isActive && (
                     <m.span
                       layoutId="sidebar-active-tab"
-                      className="absolute inset-0 bg-brass-600 rounded-xl"
+                      className="absolute inset-0 bg-brass-600 rounded-control"
                       transition={spring.snappy}
                     />
                   )}
@@ -610,7 +610,7 @@ export default function App() {
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs rounded-xl bg-rose-950/40 hover:bg-rose-900/40 active:bg-rose-900/60 text-rose-300 hover:text-white border border-rose-900/30 hover:border-rose-800/60 font-bold transition-[background-color,color,border-color] duration-160 ease-standard cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs rounded-control bg-rose-950/40 hover:bg-rose-900/40 active:bg-rose-900/60 text-rose-300 hover:text-white border border-rose-900/30 hover:border-rose-800/60 font-bold transition-[background-color,color,border-color] duration-160 ease-standard cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Log out</span>
@@ -706,7 +706,7 @@ export default function App() {
           {activeTab === 'research' && <ResearchAnalytics />}
 
           {activeTab === 'settings' && (
-            <div className="max-w-2xl bg-surface-raised border border-stone-200 rounded-3xl p-6 md:p-8 shadow-e1 space-y-6">
+            <div className="max-w-2xl bg-surface-raised material-card border border-line rounded-panel p-6 md:p-8 shadow-e1 space-y-6">
               <div className="border-b border-stone-100 pb-3">
                 <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-1.5 font-serif">
                   <Settings className="w-5 h-5 text-stone-700" /> Personal Learning Settings
@@ -723,7 +723,7 @@ export default function App() {
                 the action that produced it.
               */}
               <Collapse open={saveSuccessNotify}>
-                <div className="p-3 bg-proof-50 text-proof-800 border border-proof-150 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <div className="p-3 bg-proof-50 text-proof-800 border border-proof-150 rounded-control text-xs font-semibold flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-proof-500" /> Your settings have been applied to the OS.
                 </div>
               </Collapse>
@@ -753,7 +753,7 @@ export default function App() {
                     <select
                       value={customGoal}
                       onChange={(e) => setCustomGoal(e.target.value)}
-                      className="w-full border border-stone-200 focus:border-stone-900 rounded-xl px-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 bg-stone-50"
+                      className="w-full border border-stone-200 focus:border-stone-900 rounded-control px-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 bg-stone-50"
                     >
                       <option value="Qualify for a regional/national math olympiad">Qualify for a regional or national olympiad</option>
                       <option value="Score maximum on SAT Math and AMC 8/10/12">Score maximum on SAT Math and AMC 8/10/12</option>
@@ -767,7 +767,7 @@ export default function App() {
                     <select
                       value={studyPace}
                       onChange={(e) => setStudyPace(e.target.value)}
-                      className="w-full border border-stone-200 focus:border-stone-900 rounded-xl px-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 bg-stone-50"
+                      className="w-full border border-stone-200 focus:border-stone-900 rounded-control px-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 bg-stone-50"
                     >
                       <option value="15 minutes / day">15 minutes / day (light, keeps momentum)</option>
                       <option value="30 minutes / day">30 minutes / day (serious reflex training)</option>
@@ -776,7 +776,7 @@ export default function App() {
                   </div>
 
                   {/* Toggle Reminders */}
-                  <div className="p-3.5 bg-stone-50/60 rounded-xl border border-stone-100 space-y-2">
+                  <div className="p-3.5 bg-stone-50/60 rounded-control border border-stone-100 space-y-2">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <span className="text-xs font-bold text-stone-800 block">Daily streak reminder</span>
@@ -825,7 +825,7 @@ export default function App() {
                     type="submit"
                     whileTap={{ scale: 0.97 }}
                     transition={spring.press}
-                    className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer"
+                    className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-control transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer"
                   >
                     Apply settings
                   </m.button>
@@ -837,14 +837,14 @@ export default function App() {
                     }}
                     whileTap={{ scale: 0.97 }}
                     transition={spring.press}
-                    className="bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs px-4 py-3 rounded-xl transition-colors duration-160 ease-standard border border-rose-100 cursor-pointer"
+                    className="bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs px-4 py-3 rounded-control transition-colors duration-160 ease-standard border border-rose-100 cursor-pointer"
                   >
                     Reset training data
                   </m.button>
                 </div>
               </form>
 
-              <div className="bg-stone-50 border border-stone-150 p-4.5 rounded-2xl space-y-2 text-xs text-stone-600 leading-normal">
+              <div className="bg-stone-50 border border-stone-150 p-4.5 rounded-card space-y-2 text-xs text-stone-600 leading-normal">
                 <span className="bg-violet-50 border border-violet-100 text-violet-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase block w-fit">
                   CalculixHub math OS
                 </span>

@@ -59,7 +59,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
   return (
     <div className="space-y-8">
       <div className="border-b border-stone-100 pb-4">
-        <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2 font-serif">
+        <h1 className="type-title text-content flex items-center gap-2">
           <TrendingUp className="w-7 h-7 text-violet-600" /> Analytics &amp; Research
         </h1>
         <p className="text-xs text-stone-500 mt-1">
@@ -69,7 +69,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Skill radar */}
-        <div className="lg:col-span-7 bg-surface-raised border border-stone-200 rounded-3xl p-5 md:p-6 shadow-e1 space-y-6">
+        <div className="lg:col-span-7 bg-surface-raised material-card border border-line rounded-panel p-5 md:p-6 shadow-e1 space-y-6">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
               <RadarIcon className="w-5 h-5 text-stone-700" /> Skill Mastery Radar
@@ -106,12 +106,12 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
 
         {/* Weakness + focus time */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-surface-raised border border-stone-200 rounded-3xl p-5 md:p-6 shadow-e1 space-y-4">
+          <div className="bg-surface-raised material-card border border-line rounded-panel p-5 md:p-6 shadow-e1 space-y-4">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" /> Weakness Detection
             </h2>
 
-            <div className="p-4 bg-amber-50/70 border border-amber-100 rounded-2xl flex gap-3">
+            <div className="p-4 bg-amber-50/70 border border-amber-100 rounded-card flex gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h4 className="font-bold text-xs text-amber-900">Focus area: {TOPIC_META[weakestSkill[0]].label}</h4>
@@ -133,13 +133,13 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
             </div>
           </div>
 
-          <div className="bg-ink-950 border border-ink-850 text-white rounded-3xl p-5 shadow-e1 space-y-4 relative overflow-hidden">
+          <div className="bg-ink-950 border border-ink-850 text-white rounded-panel p-5 shadow-e1 space-y-4 relative overflow-hidden">
             <div className="absolute right-0 bottom-0 w-24 h-24 bg-violet-500/10 rounded-full blur-xl pointer-events-none" />
 
             <h3 className="font-bold text-xs uppercase text-stone-400 tracking-wider">Focus time</h3>
 
             <div className="flex items-center gap-3">
-              <div className="bg-ink-800 p-2.5 rounded-xl border border-ink-700"><Clock className="w-5 h-5 text-violet-400" /></div>
+              <div className="bg-ink-800 p-2.5 rounded-control border border-ink-700"><Clock className="w-5 h-5 text-violet-400" /></div>
               <div>
                 <span className="block text-lg font-black text-white">{formatMinutes(userStats.timeSpent)} practiced</span>
                 <span className="block text-[10px] text-stone-400 font-semibold mt-0.5">
@@ -167,7 +167,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Learning timeline */}
-      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5 pb-8">
+      <div className="bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5 pb-8">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <AreaChart className="w-5 h-5 text-stone-700" /> Learning Timeline
@@ -179,7 +179,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Progress prediction */}
-      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
+      <div className="bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-1">
             <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
@@ -195,7 +195,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         </div>
 
         {forecast.confidence === 'none' ? (
-          <div className="text-center py-8 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
+          <div className="text-center py-8 bg-stone-50 rounded-card border border-dashed border-stone-200">
             <p className="text-xs text-stone-400 max-w-sm mx-auto leading-relaxed">
               Practice across at least two separate days and the engine will start projecting your trajectory. It won't guess from a single session.
             </p>
@@ -203,22 +203,22 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-4 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">Velocity</span>
                 <span className="text-lg font-extrabold text-stone-900 font-mono"><AnimatedNumber value={forecast.velocity} /></span>
                 <span className="text-[9px] text-stone-400 block">pts / active day</span>
               </div>
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-4 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">In 7 days</span>
                 <span className="text-lg font-extrabold text-brass-700 font-mono"><AnimatedNumber value={forecast.projected7d} /></span>
                 <span className="text-[9px] text-stone-400 block">projected points</span>
               </div>
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-4 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">In 30 days</span>
                 <span className="text-lg font-extrabold text-brass-700 font-mono"><AnimatedNumber value={forecast.projected30d} /></span>
                 <span className="text-[9px] text-stone-400 block">projected points</span>
               </div>
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-4 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block uppercase">Mastery @30d</span>
                 <span className="text-lg font-extrabold text-proof-600 font-mono"><AnimatedNumber value={forecast.projectedMastery30d} />%</span>
                 <span className="text-[9px] text-stone-400 block">projected average</span>
@@ -235,7 +235,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Error pattern analysis */}
-      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
+      <div className="bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <Bug className="w-5 h-5 text-rose-600" /> Error Analysis
@@ -246,7 +246,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         </div>
 
         {errorPatterns.length === 0 ? (
-          <div className="flex items-center gap-3 p-4 bg-proof-50 border border-proof-150 rounded-2xl">
+          <div className="flex items-center gap-3 p-4 bg-proof-50 border border-proof-150 rounded-card">
             <CheckCircle2 className="w-5 h-5 text-proof-600 shrink-0" />
             <p className="text-xs text-proof-800 leading-relaxed">
               No weak domains detected &mdash; every topic is above the 70% mastery threshold. Keep pushing into higher tiers.
@@ -255,7 +255,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         ) : (
           <div className="space-y-3">
             {errorPatterns.map((pattern, index) => (
-              <StaggerItem key={pattern.topic} index={index} inView className="border border-stone-200 rounded-2xl p-4 space-y-2.5">
+              <StaggerItem key={pattern.topic} index={index} inView className="border border-stone-200 rounded-card p-4 space-y-2.5">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-sm text-stone-900">{TOPIC_META[pattern.topic].label}</span>
@@ -271,7 +271,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
                   <span className="text-xs font-mono font-bold text-stone-500">{pattern.mastery}% mastery</span>
                 </div>
                 <p className="text-[11px] text-stone-600 leading-relaxed">{pattern.diagnosis}</p>
-                <div className="flex items-start gap-2 bg-stone-50 border border-stone-100 rounded-xl p-3">
+                <div className="flex items-start gap-2 bg-stone-50 border border-stone-100 rounded-control p-3">
                   <Lightbulb className="w-3.5 h-3.5 text-brass-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] text-stone-700 leading-relaxed font-medium">{pattern.remediation}</p>
                 </div>
@@ -282,7 +282,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
       </div>
 
       {/* Personalized learning path */}
-      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-6 shadow-e1 space-y-5">
+      <div className="bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
         <div className="space-y-1">
           <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
             <Route className="w-5 h-5 text-violet-600" /> Your Learning Path
@@ -298,12 +298,12 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
               key={step.topic}
               index={index}
               inView
-              className={`rounded-2xl border p-4 flex gap-4 items-start transition-[background-color,border-color] duration-240 ease-standard ${
+              className={`rounded-card border p-4 flex gap-4 items-start transition-[background-color,border-color] duration-240 ease-standard ${
                 step.status === 'current' ? 'bg-violet-50/50 border-violet-200' : 'bg-surface-raised border-stone-200'
               }`}
             >
               <div
-                className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center font-black text-xs font-mono ${
+                className={`w-8 h-8 shrink-0 rounded-control flex items-center justify-center font-black text-xs font-mono ${
                   step.status === 'current' ? 'bg-violet-600 text-white' : 'bg-stone-100 text-stone-500'
                 }`}
               >
@@ -330,7 +330,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
         </div>
       </div>
 
-      <div className="bg-surface-raised border border-stone-200 rounded-3xl p-5 shadow-e1 flex items-start gap-3">
+      <div className="bg-surface-raised material-card border border-line rounded-panel p-5 shadow-e1 flex items-start gap-3">
         <BookOpen className="w-5 h-5 text-stone-500 shrink-0 mt-0.5" />
         <p className="text-xs text-stone-500 leading-relaxed">
           All charts on this page are computed live from your actual session data (stored locally in your browser) &mdash; nothing here is a placeholder.

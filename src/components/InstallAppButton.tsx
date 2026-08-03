@@ -111,7 +111,7 @@ export default function InstallAppButton({ variant = 'nav' }: InstallAppButtonPr
           onClick={handleClick}
           whileTap={{ scale: 0.95 }}
           transition={spring.press}
-          className="flex items-center gap-1.5 border border-brass-500/40 text-brass-300 hover:text-ink-950 hover:bg-brass-500 hover:border-brass-500 font-extrabold text-xs px-3 sm:px-4 py-2.5 rounded-xl transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer"
+          className="flex items-center gap-1.5 border border-brass-500/40 text-brass-300 hover:text-ink-950 hover:bg-brass-500 hover:border-brass-500 font-extrabold text-xs px-3 sm:px-4 py-2.5 rounded-control transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer"
         >
           <Smartphone className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden sm:inline whitespace-nowrap">Get the app</span>
@@ -122,10 +122,10 @@ export default function InstallAppButton({ variant = 'nav' }: InstallAppButtonPr
           onClick={handleClick}
           whileTap={{ scale: 0.99 }}
           transition={spring.press}
-          className="w-full flex items-center justify-between gap-3 p-3.5 bg-stone-50/60 hover:bg-stone-100/70 rounded-xl border border-stone-100 transition-colors duration-160 ease-standard cursor-pointer text-left"
+          className="w-full flex items-center justify-between gap-3 p-3.5 bg-stone-50/60 hover:bg-stone-100/70 rounded-control border border-stone-100 transition-colors duration-160 ease-standard cursor-pointer text-left"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-ink-950 text-brass-400 shrink-0">
+            <div className="p-2 rounded-control bg-ink-950 text-brass-400 shrink-0">
               <Smartphone className="w-4 h-4" />
             </div>
             <div>
@@ -193,12 +193,12 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
         animate={isSheet ? { y: 0 } : 'visible'}
         exit={isSheet ? { y: '100%' } : 'exit'}
         transition={spring.gentle}
-        className="w-full sm:max-w-md bg-surface-raised rounded-t-3xl sm:rounded-3xl border border-stone-200 shadow-e4 overflow-hidden"
+        className="w-full sm:max-w-md bg-surface-raised rounded-t-3xl sm:rounded-panel border border-stone-200 shadow-e4 overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="bg-ink-950 px-5 py-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brass-500 to-brass-700 text-ink-950 font-black flex items-center justify-center text-base font-serif shrink-0">
+            <div className="w-10 h-10 rounded-control bg-gradient-to-tr from-brass-500 to-brass-700 text-ink-950 font-black flex items-center justify-center text-base font-serif shrink-0">
               &#8721;
             </div>
             <div>
@@ -232,7 +232,7 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
             </p>
           )}
 
-          <div className="bg-stone-50 border border-stone-150 rounded-2xl p-3.5 space-y-1.5">
+          <div className="bg-stone-50 border border-stone-150 rounded-card p-3.5 space-y-1.5">
             <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 block">
               What you get
             </span>

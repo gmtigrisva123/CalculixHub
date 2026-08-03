@@ -146,13 +146,13 @@ export default function Dashboard({
         apparently always there.
       */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StaggerItem index={0} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
+        <StaggerItem index={0} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Rank tier</p>
               <h3 className="font-extrabold text-stone-900 text-lg mt-0.5">{rank.name}</h3>
             </div>
-            <div className={`p-2.5 rounded-xl border ${rank.bg} ${rank.border}`}>
+            <div className={`p-2.5 rounded-control border ${rank.bg} ${rank.border}`}>
               <Trophy className={`w-5 h-5 ${rank.text}`} />
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function Dashboard({
           </div>
         </StaggerItem>
 
-        <StaggerItem index={1} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
+        <StaggerItem index={1} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Daily streak</p>
@@ -178,7 +178,7 @@ export default function Dashboard({
                 <AnimatedNumber value={userStats.streak} /> days
               </h3>
             </div>
-            <div className={`p-2.5 rounded-xl border ${userStats.streak > 0 ? 'bg-orange-50 border-orange-100' : 'bg-stone-50 border-stone-100'}`}>
+            <div className={`p-2.5 rounded-control border ${userStats.streak > 0 ? 'bg-orange-50 border-orange-100' : 'bg-stone-50 border-stone-100'}`}>
               <Flame
                 ref={flameRef}
                 className={`w-5 h-5 ${userStats.streak > 0 ? 'text-orange-500 animate-pulse' : 'text-stone-400'}`}
@@ -192,7 +192,7 @@ export default function Dashboard({
           </p>
         </StaggerItem>
 
-        <StaggerItem index={2} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
+        <StaggerItem index={2} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Accuracy</p>
@@ -200,7 +200,7 @@ export default function Dashboard({
                 <AnimatedNumber value={userStats.accuracy} />%
               </h3>
             </div>
-            <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+            <div className="bg-stone-50 p-2.5 rounded-control border border-stone-100">
               <Percent className="w-5 h-5 text-sky-500" />
             </div>
           </div>
@@ -218,13 +218,13 @@ export default function Dashboard({
           </div>
         </StaggerItem>
 
-        <StaggerItem index={3} className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 flex flex-col justify-between">
+        <StaggerItem index={3} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-stone-400 font-medium">Time invested</p>
               <h3 className="font-extrabold text-stone-900 text-lg mt-0.5">{formatMinutes(userStats.timeSpent)}</h3>
             </div>
-            <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+            <div className="bg-stone-50 p-2.5 rounded-control border border-stone-100">
               <Clock className="w-5 h-5 text-proof-500" />
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function Dashboard({
       </div>
 
       {/* Streak calendar: which of the last 7 real calendar days had activity */}
-      <div className="bg-surface-raised border border-stone-200 p-5 md:p-6 rounded-2xl shadow-e1">
+      <div className="bg-surface-raised material-card border border-line p-5 md:p-6 rounded-card shadow-e1">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="font-bold text-sm text-stone-800 flex items-center gap-2">
@@ -267,7 +267,7 @@ export default function Dashboard({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ ...spring.snappy, delay: staggerDelay(index, 0.04) }}
-                  className={`w-full aspect-square rounded-xl border flex items-center justify-center transition-[background-color,border-color] duration-240 ease-standard ${
+                  className={`w-full aspect-square rounded-control border flex items-center justify-center transition-[background-color,border-color] duration-240 ease-standard ${
                     isActive ? 'bg-orange-50 border-orange-200' : 'bg-stone-50 border-stone-100'
                   } ${isToday ? 'ring-2 ring-brass-400 ring-offset-1' : ''}`}
                 >
@@ -296,7 +296,7 @@ export default function Dashboard({
             <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider">EduReach Core Engine</span>
           </div>
 
-          <div className="bg-gradient-to-br from-brass-50 to-proof-50/40 border border-brass-100 p-6 rounded-2xl shadow-e1 space-y-5 relative">
+          <div className="bg-gradient-to-br from-brass-50 to-proof-50/40 border border-brass-100 p-6 rounded-card shadow-e1 space-y-5 relative">
             <div className="absolute right-4 top-4.5 bg-brass-500/10 p-1.5 rounded-lg border border-brass-500/20 text-brass-600 block">
               <Sparkles className="w-4 h-4" />
             </div>
@@ -346,7 +346,7 @@ export default function Dashboard({
                 </div>
 
                 <div className="border-t border-brass-100 pt-4 flex gap-4 items-start">
-                  <div className="bg-surface-raised p-3 rounded-xl border border-brass-100 shadow-e1 shrink-0 text-center min-w-[100px]">
+                  <div className="bg-surface-raised p-3 rounded-control border border-brass-100 shadow-e1 shrink-0 text-center min-w-[100px]">
                     <span className="block text-[9px] text-stone-400 font-bold uppercase">Target tier</span>
                     <span className="block text-xs font-extrabold text-brass-800 mt-0.5">{recommendation.suggestedLevel}</span>
                   </div>
@@ -361,7 +361,7 @@ export default function Dashboard({
                     onClick={() => onNavigateToTab('learn', { topic: recommendation.recommendedTopic, level: recommendation.suggestedLevel })}
                     whileTap={{ scale: 0.96 }}
                     transition={spring.press}
-                    className="w-full sm:w-auto bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-xl transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer flex items-center justify-center gap-1.5 group"
+                    className="w-full sm:w-auto bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-control transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer flex items-center justify-center gap-1.5 group"
                   >
                     Reinforce {TOPIC_META[recommendation.recommendedTopic].label}
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-160 ease-standard" />
@@ -383,24 +383,24 @@ export default function Dashboard({
             </AnimatePresence>
           </div>
 
-          <div className="bg-surface-raised border border-stone-200 p-5 rounded-2xl shadow-e1 space-y-4">
+          <div className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1 space-y-4">
             <h3 className="font-bold text-sm text-stone-800">Practice Pace</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
-              <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-3 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block">Total points</span>
                 <span className="text-lg font-extrabold text-stone-900">{userStats.points} pts</span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-3 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block">Problems solved</span>
                 <span className="text-lg font-extrabold text-stone-900">{userStats.completedCount}</span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-3 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block">Avg. per problem</span>
                 <span className="text-lg font-extrabold text-stone-900">
                   ~{userStats.completedCount > 0 ? (userStats.timeSpent / userStats.completedCount).toFixed(1) : '0'} min
                 </span>
               </div>
-              <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
+              <div className="p-3 bg-stone-50 rounded-control border border-stone-100">
                 <span className="text-[10px] text-stone-400 font-bold block">Weekly target</span>
                 <span className="text-lg font-extrabold text-proof-600">
                   {weeklyChallenges.length > 0 ? Math.round((weeklyChallenges.filter((wc) => wc.completed).length / weeklyChallenges.length) * 100) : 0}% done
@@ -427,7 +427,7 @@ export default function Dashboard({
                 key={cont.id}
                 index={index}
                 inView
-                className="bg-surface-raised border border-stone-200 rounded-2xl p-4.5 hover:border-stone-300 transition-[border-color] duration-160 ease-standard shadow-e1 flex flex-col justify-between"
+                className="bg-surface-raised material-card border border-line rounded-card p-4.5 hover:border-stone-300 transition-[border-color] duration-160 ease-standard shadow-e1 flex flex-col justify-between"
               >
                 <div className="flex justify-between items-start gap-2">
                   <div className="space-y-0.5">
@@ -473,7 +473,7 @@ export default function Dashboard({
             ))}
           </div>
 
-          <div className="bg-ink-950 border border-ink-800 text-white rounded-2xl p-5 relative overflow-hidden shadow-e2">
+          <div className="bg-ink-950 border border-ink-800 text-white rounded-card p-5 relative overflow-hidden shadow-e2">
             <div className="absolute right-0 bottom-0 w-24 h-24 bg-brass-500/10 rounded-full blur-xl pointer-events-none" />
             <span className="bg-brass-500/20 text-brass-300 border border-brass-400/30 text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wider uppercase inline-block mb-2">
               Weekly challenge

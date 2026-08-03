@@ -218,7 +218,7 @@ export default function AITutorChat() {
                     {msg.sender === 'tutor' && (
                       <div className="bg-stone-100 p-1.5 rounded-lg shrink-0 border border-stone-200"><Bot className="w-4 h-4 text-stone-700" /></div>
                     )}
-                    <div className={`rounded-2xl p-3.5 shadow-e1 text-sm leading-relaxed ${msg.sender === 'user' ? 'bg-ink-950 text-white rounded-tr-none font-medium' : 'bg-surface-raised text-stone-800 rounded-tl-none border border-stone-100'}`}>
+                    <div className={`rounded-card p-3.5 shadow-e1 text-sm leading-relaxed ${msg.sender === 'user' ? 'bg-ink-950 text-white rounded-tr-none font-medium' : 'bg-surface-raised text-stone-800 rounded-tl-none border border-stone-100'}`}>
                       <MathText text={msg.text} as="div" />
                       <span className="text-[9px] block text-right mt-1.5 text-stone-400">
                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -245,7 +245,7 @@ export default function AITutorChat() {
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="bg-stone-100 p-1.5 rounded-lg border border-stone-200"><Bot className="w-4 h-4 text-stone-500 animate-bounce" /></div>
-                      <div className="bg-surface-raised text-stone-500 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none border border-stone-100 shadow-e1 flex items-center gap-1.5 italic">
+                      <div className="bg-surface-raised text-stone-500 text-xs px-4 py-2.5 rounded-card rounded-tl-none border border-stone-100 shadow-e1 flex items-center gap-1.5 italic">
                         <span className="animate-bounce">&bull;</span>
                         <span className="animate-bounce delay-75">&bull;</span>
                         <span className="animate-bounce delay-150">&bull;</span>
@@ -278,7 +278,7 @@ export default function AITutorChat() {
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 disabled={loading}
-                className="flex-1 bg-stone-50 border border-stone-200 focus:border-brass-500 rounded-xl px-4 py-3 text-sm outline-hidden transition-[border-color,opacity] duration-160 ease-standard text-stone-800 disabled:opacity-55 placeholder:text-stone-400"
+                className="flex-1 bg-stone-50 border border-stone-200 focus:border-brass-500 rounded-control px-4 py-3 text-sm outline-hidden transition-[border-color,opacity] duration-160 ease-standard text-stone-800 disabled:opacity-55 placeholder:text-stone-400"
               />
               <m.button
                 id="btn-send-chat"
@@ -286,7 +286,7 @@ export default function AITutorChat() {
                 disabled={!inputVal.trim() || loading}
                 whileTap={{ scale: 0.92 }}
                 transition={spring.press}
-                className="bg-content hover:bg-content-muted text-surface-raised p-3 rounded-xl shadow-e2 transition-[background-color,opacity] duration-160 ease-standard disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
+                className="bg-content hover:bg-content-muted text-surface-raised p-3 rounded-control shadow-e2 transition-[background-color,opacity] duration-160 ease-standard disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
               >
                 <Send className="w-4 h-4 text-white" />
               </m.button>
