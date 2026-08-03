@@ -27,6 +27,10 @@ import { problem } from './http';
  */
 const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
+/** Google Fonts serves the stylesheet and the font binaries from separate hosts. */
+const FONT_CSS_ORIGIN = 'https://fonts.googleapis.com';
+const FONT_FILE_ORIGIN = 'https://fonts.gstatic.com';
+
 /**
  * Content-Security-Policy for the application document.
  *
@@ -38,20 +42,41 @@ const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; fo
  *   otherwise emit an inline bootstrap script into `index.html`.
  * - `style-src` does permit `'unsafe-inline'`, unavoidably: KaTeX emits inline
  *   `style` attributes in the markup it generates, and that markup is inserted
- *   as HTML by `MathText`. The residual risk is CSS-based exfiltration, which
- *   `img-src` and `connect-src` bound to `'self'` already contain.
- * - `connect-src 'self'` keeps a compromised bundle from beaconing learner data
- *   to an arbitrary host.
+ *   as HTML by `MathText`.
  * - `frame-ancestors 'none'` prevents clickjacking, superseding the legacy
  *   `X-Frame-Options` header for browsers that support it.
+ *
+ * `connect-src` is why this changed. It was a flat `'self'`, written when the
+ * only host the bundle talked to was its own origin. Supabase changed that: the
+ * browser now opens XHR and WebSocket connections straight to the project's API
+ * host, and under `'self'` every one of them was refused before it left the
+ * page. A build could carry a perfectly correct URL and anon key and still fail
+ * to sign anyone in, with no server-side error to find, because the request
+ * never happened.
+ *
+ * The allowance is a wildcard over `*.supabase.co` rather than the one project's
+ * hostname. That is a deliberate trade. `vercel.json` has to carry an identical
+ * policy — Vercel's CDN serves the static document without ever invoking the
+ * function, so that file is what actually hardens production — and it is plain
+ * JSON with no access to environment variables. Naming the project in the policy
+ * would mean the same value hand-copied into two files with nothing to keep them
+ * in step, which the guarantee test can only catch when it knows which project
+ * to expect. A wildcard is identical in both places by construction.
+ *
+ * What it costs: a compromised bundle could reach some other Supabase project
+ * rather than none at all. What it keeps: it still cannot beacon learner data to
+ * an arbitrary host, which is the property this directive was protecting.
  */
 const DOCUMENT_CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
+  `style-src 'self' 'unsafe-inline' ${FONT_CSS_ORIGIN}`,
   "img-src 'self' data:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
+  `font-src 'self' data: ${FONT_FILE_ORIGIN}`,
+  // REST, auth and storage travel over https; realtime is a WebSocket, and
+  // `connect-src` matches on scheme, so wss:// is listed separately even though
+  // it is the same host.
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "manifest-src 'self'",
   "worker-src 'self'",
   "object-src 'none'",
