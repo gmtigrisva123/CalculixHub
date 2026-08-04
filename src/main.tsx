@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/react";
 import MotionProvider from './components/motion/MotionProvider';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -37,6 +38,7 @@ createRoot(document.getElementById('root')!).render(
       </ThemeProvider>
     </AuthProvider>
     <Analytics />
+    <SpeedInsights />
   </StrictMode>,
 );
 
