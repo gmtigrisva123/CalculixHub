@@ -14,7 +14,9 @@
  * that is not belongs in `src/server/`.
  */
 
-import { buildApp } from '../src/server/app';
+// Deliberately no static import of `../src/server/app`. See `load()` below:
+// the whole point of this revision is that the import must sit inside a
+// try/catch, and a top-level one cannot.
 
 /**
  * Node runtime, not Edge.
@@ -51,41 +53,65 @@ export const config = { runtime: 'nodejs' };
  */
 const DIAG_TOKEN = 'c8b41f6e-init-probe';
 
-let app: ReturnType<typeof buildApp> | null = null;
+type ServerApp = (request: Request) => Promise<Response>;
+
+let app: ServerApp | null = null;
 let initError: unknown = null;
 
-try {
-  app = buildApp();
-} catch (error) {
-  initError = error;
-  // Still emitted for the runtime log, which remains the proper channel.
-  console.error('[CalculixHub] Function init failed', error);
+/**
+ * Loaded on first request, not at module scope.
+ *
+ * The previous revision of this diagnostic wrapped `buildApp()` in a try/catch
+ * and production did not change: `/api/*` still answered
+ * FUNCTION_INVOCATION_FAILED rather than the 503 that catch produces. Verified
+ * against the deployment that contained it — the commit was live, the response
+ * was unchanged.
+ *
+ * That result is the finding. If the catch never ran, the throw happened before
+ * any statement in this file did, which means it came from evaluating the module
+ * graph rather than from calling anything. A static `import` cannot be guarded;
+ * moving it inside the function is what puts the whole chain — resolution,
+ * evaluation and construction — inside the try.
+ */
+async function load(): Promise<void> {
+  if (app || initError) return;
+
+  try {
+    const mod = await import('../src/server/app');
+    app = mod.buildApp();
+  } catch (error) {
+    initError = error;
+    console.error('[CalculixHub] Function init failed', error);
+  }
 }
 
-export default function handler(request: Request): Promise<Response> {
-  if (!app) {
-    const wanted = new URL(request.url).searchParams.get('diag') === DIAG_TOKEN;
+export default async function handler(request: Request): Promise<Response> {
+  await load();
 
-    if (wanted) {
-      const error = initError as Error | undefined;
+  if (!app) {
+    const error = initError as Error | undefined;
+
+    if (new URL(request.url).searchParams.get('diag') === DIAG_TOKEN) {
       const body = [
         `name:    ${error?.name ?? typeof initError}`,
         `message: ${error?.message ?? String(initError)}`,
+        // A module-resolution failure names the specifier it could not find
+        // here and nowhere else, so the cause is usually one line in.
+        `code:    ${(initError as { code?: string } | undefined)?.code ?? '(none)'}`,
         '',
-        (error?.stack ?? '').split('\n').slice(0, 12).join('\n'),
+        (error?.stack ?? '(no stack)').split('\n').slice(0, 14).join('\n'),
       ].join('\n');
 
-      return Promise.resolve(
-        new Response(body, { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' } }),
-      );
+      return new Response(body, {
+        status: 500,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
     }
 
-    return Promise.resolve(
-      new Response('Service unavailable', {
-        status: 503,
-        headers: { 'content-type': 'text/plain; charset=utf-8' },
-      }),
-    );
+    return new Response('Service unavailable', {
+      status: 503,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
   }
 
   // Vercel's edge terminates the connection and rewrites `x-forwarded-for`, so
