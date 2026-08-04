@@ -12,6 +12,7 @@ import { computeMetrics } from '../lib/analytics';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../lib/useAmbient';
 import { AnimatedNumber, StaggerItem } from './motion';
+import { useAuth } from '../context/AuthContext';
 
 interface CompeteProps {
   weeklyChallenges: WeeklyChallenge[];
@@ -39,7 +40,11 @@ export default function Compete({
   const [dimension, setDimension] = useState<RankDimension>('points');
   const [registeredChallengeId, setRegisteredChallengeId] = useState<string | null>(null);
 
-  const userName = sessionStorage.getItem('calculix_user_name') || localStorage.getItem('calculix_user_name') || 'You';
+  // Same fix as Profile: `calculix_user_name` has had no writer since accounts
+  // moved into Postgres, so this always fell through to "You" and the learner
+  // never saw their own name on the leaderboard they appear in.
+  const { profile } = useAuth();
+  const userName = profile?.display_name || profile?.username || 'You';
   const userAge = 16;
   const userCountry = 'Vietnam';
 
