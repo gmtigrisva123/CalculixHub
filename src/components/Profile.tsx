@@ -10,6 +10,7 @@ import { UserStats, Problem } from '../types';
 import { TOPIC_META, getRankForPoints } from '../lib/topics';
 import { spring } from '../lib/motion';
 import { AnimatedNumber, StaggerItem } from './motion';
+import { useAuth } from '../context/AuthContext';
 
 interface ProfileProps {
   userStats: UserStats;
@@ -21,7 +22,18 @@ interface ProfileProps {
 export default function Profile({ userStats, completedProblems, problems, onLogout }: ProfileProps) {
   const solvedQuestions = problems.filter((p) => completedProblems.includes(p.id));
   const rank = getRankForPoints(userStats.points);
-  const displayName = sessionStorage.getItem('calculix_user_name') || localStorage.getItem('calculix_user_name') || 'Calculix Student';
+  /*
+   * The learner's name comes from their profile row.
+   *
+   * It used to be read from `calculix_user_name` in session or local storage.
+   * Nothing has written that key since accounts moved into Postgres -- it is
+   * only read, here and in Compete, and deleted on sign-out -- so the lookup
+   * always missed and every signed-in learner saw the placeholder instead of
+   * their own name. The profile has carried the real value the whole time;
+   * App.tsx was already reading it correctly for the sidebar.
+   */
+  const { profile } = useAuth();
+  const displayName = profile?.display_name || profile?.username || 'Calculix Student';
 
   const badges = [
     { id: 'b1', title: 'Getting Started', desc: 'Joined CalculixHub', unlocked: true, icon: '🌱' },
