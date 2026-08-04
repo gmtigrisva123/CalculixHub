@@ -50,12 +50,24 @@ export function useRealtimeSubscription<T extends Record<string, unknown>>(
   const { table, event = '*', filter, enabled = true } = options;
 
   useEffect(() => {
-    if (!supabase || !enabled) return;
+    /*
+     * Captured locally rather than used through the import.
+     *
+     * The null check below narrows the imported binding for the body of the
+     * effect, but not for the cleanup closure: TypeScript cannot prove an
+     * imported binding still holds the same value by the time a deferred
+     * callback runs, so `supabase.removeChannel` in the teardown was an
+     * unchecked dereference. It happened to be safe — the export is a `const`
+     * — but the compiler was right to object, and one local makes the
+     * guarantee explicit instead of incidental.
+     */
+    const client = supabase;
+    if (!client || !enabled) return;
 
     // Distinct channel name per subscription shape. Reusing one name across
     // different filters makes the second subscriber silently inherit the
     // first's stream.
-    const channel = supabase
+    const channel = client
       .channel(`realtime:${table}:${event}:${filter ?? 'all'}`)
       .on<T>(
         'postgres_changes',
@@ -69,7 +81,7 @@ export function useRealtimeSubscription<T extends Record<string, unknown>>(
       });
 
     return () => {
-      void supabase.removeChannel(channel);
+      void client.removeChannel(channel);
     };
   }, [table, event, filter, enabled]);
 }

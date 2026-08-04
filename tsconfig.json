@@ -10,6 +10,22 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
+    /*
+     * `strictNullChecks` is on here, separately from the full `strict` that
+     * tsconfig.server.json enables.
+     *
+     * It is not only a client-code improvement. Vercel type-checks the API
+     * entry point with *this* file — the `exclude` below governs `tsc` runs,
+     * not Vercel's builder — and without `strictNullChecks` TypeScript cannot
+     * narrow a discriminated union on a boolean discriminant, nor infer Zod
+     * fields as required. The deploy log therefore filled with errors about
+     * `BodyResult.response` and optional `content` fields: correct strict code,
+     * reported against a configuration that could not describe it.
+     *
+     * Turning it on cost exactly one fix (src/lib/data/realtime.ts), which was
+     * a real unchecked dereference rather than a false positive.
+     */
+    "strictNullChecks": true,
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
@@ -29,14 +45,14 @@
     ]
   },
   // Everything server-side is checked by `tsconfig.server.json` instead, which
-  // enables `strict`. It is excluded here rather than checked twice: this
-  // configuration has `strictNullChecks` off, under which TypeScript cannot
-  // narrow a discriminated union on a boolean discriminant and Zod infers every
-  // field as optional. Checking correct strict code with it produces errors
-  // that describe the configuration rather than the code.
+  // enables the full `strict`. It is excluded here rather than checked twice,
+  // so each file has exactly one owning configuration and `npm run lint` runs
+  // both.
   //
-  // Each file therefore has exactly one owning configuration, and `npm run
-  // lint` runs both. Client directories move to the strict config over time.
+  // The exclusion is a `tsc` convenience, not a guarantee: Vercel's builder
+  // compiles `api/**` against this file regardless of what is listed here,
+  // which is why `strictNullChecks` above is not optional. Removing it would
+  // not quieten the deploy — it would only move the errors back into it.
   "exclude": [
     "node_modules",
     "dist",
