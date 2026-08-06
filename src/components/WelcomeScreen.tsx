@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { AnimatePresence, m } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
   ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
@@ -37,6 +37,12 @@ import {
   MAX_ITEMS,
 } from '../lib/irt';
 import { ITEM_BANK } from '../lib/itemBank';
+import {
+  DomainBankProfile,
+  bankSummary,
+  domainBankProfiles,
+  formatDifficulty,
+} from '../lib/skillGraph';
 import { useAuth } from '../context/AuthContext';
 
 interface WelcomeScreenProps {
@@ -44,6 +50,93 @@ interface WelcomeScreenProps {
 }
 
 const DOMAINS: Domain[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
+
+/**
+ * Geometry of the hero skill graph.
+ *
+ * Every node is drawn by one code path from these constants, because the
+ * hand-placed version drifted in three ways that were visible on hover:
+ *
+ *   1. **The pulse rings scaled from the wrong point.** `animate-ping` is a
+ *      CSS transform, and an SVG element's `transform-box` defaults to
+ *      `view-box` — so all four rings expanded away from the viewBox's
+ *      top-left corner, each in a different direction and by a distance
+ *      proportional to how far from that corner it sat. `Number Theory`'s ring
+ *      flew off-screen entirely. Every transformed node part now declares
+ *      `transform-box: fill-box`, which puts the origin at the element's own
+ *      centre.
+ *   2. **The hover targets were different sizes.** The label lived inside the
+ *      hit region, so `NUMBER THEORY` (79px) and `COMBINATORICS` (77px) had a
+ *      target a third wider than `ALGEBRA` (42px) — and both overflowed the
+ *      60px circle they were drawn inside. Labels now sit below the circle and
+ *      a single invisible rect of identical size takes every pointer event.
+ *   3. **The links ran centre to centre**, relying on the node and core fills
+ *      painted on top to hide the overlap, which left the visible gap at each
+ *      end depending on paint order rather than on a stated distance.
+ */
+const GRAPH = {
+  cx: 225,
+  cy: 200,
+  coreRadius: 45,
+  coreRingRadius: 55,
+  nodeRadius: 34,
+  /** Link endpoints, as distances from the core centre and from the node centre. */
+  linkStart: 63,
+  linkEnd: 42,
+  /** One hover/focus target for all four nodes, whatever the label's width. */
+  hitWidth: 122,
+  hitHeight: 118,
+  hitTopOffset: -44,
+} as const;
+
+interface GraphNode {
+  domain: Domain;
+  x: number;
+  y: number;
+  /** Stroke for the node ring, its link and its travelling pulse. */
+  stroke: string;
+  /** Lighter tint of the same hue, for text on the dark panel. */
+  text: string;
+}
+
+/**
+ * The four positions are mirror images of each other about the core at
+ * (225, 200) — offset by exactly ±133 and ±102 — so all four links come out
+ * the same length. Nudging one node's coordinate to "look right" is what
+ * breaks that, and it is not visible in the markup unless the symmetry is
+ * stated somewhere. It is stated here.
+ */
+const GRAPH_NODES: readonly GraphNode[] = [
+  { domain: 'Algebra', x: 92, y: 98, stroke: '#c8842a', text: '#e0a339' },
+  { domain: 'Geometry', x: 358, y: 98, stroke: '#2f9c8c', text: '#4fb8a8' },
+  { domain: 'Combinatorics', x: 92, y: 302, stroke: '#8b5cf6', text: '#a78bfa' },
+  { domain: 'Number Theory', x: 358, y: 302, stroke: '#0ea5e9', text: '#38bdf8' },
+];
+
+/**
+ * Where a node's link starts and stops.
+ *
+ * Trimmed along the centre-to-centre direction, so the gap at the core end and
+ * the gap at the node end are the same stated distance for all four — no part
+ * of the line is hidden under a fill.
+ */
+function linkGeometry(node: GraphNode) {
+  const dx = node.x - GRAPH.cx;
+  const dy = node.y - GRAPH.cy;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+
+  return {
+    x1: GRAPH.cx + ux * GRAPH.linkStart,
+    y1: GRAPH.cy + uy * GRAPH.linkStart,
+    x2: node.x - ux * GRAPH.linkEnd,
+    y2: node.y - uy * GRAPH.linkEnd,
+  };
+}
+
+/** Scale/rotate an SVG part about its own centre instead of the viewBox corner. */
+const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOrigin: 'center' };
 
 
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
@@ -61,14 +154,23 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const [successMessage, setSuccessMessage] = useState('');
 
   // --- REAL-TIME STATISTICS STATE & POLLING ---
+  /*
+   * Seeded at zero, which is the truth before the first response arrives.
+   *
+   * These used to open at 1,428 learners and 12,482 assessments — numbers with
+   * no source, shown to every visitor for the ~200ms before the fetch resolved
+   * and permanently to anyone whose fetch failed. A counter that starts at a
+   * flattering guess is not a counter.
+   *
+   * Only the three fields the server can actually source are held here. It also
+   * returns `activeContestsCount`, `improvementRate` and the three acquisition
+   * totals, all hard-coded to 0 with no measurement behind them; dropping them
+   * from this state is the client-side half of deleting them outright.
+   */
   const [liveStats, setLiveStats] = useState({
-    activeUsers: 1428,
-    testsCompleted: 12482,
-    activeContestsCount: 382,
-    facebookAcquisitions: 5420,
-    tiktokAcquisitions: 3892,
-    youtubeAcquisitions: 2150,
-    improvementRate: 84.5,
+    activeUsers: 0,
+    testsCompleted: 0,
+    problemsSolved: 0,
   });
 
   useEffect(() => {
@@ -76,14 +178,21 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       try {
         const res = await fetch(apiUrl('/api/live-stats'));
         if (res.ok) {
-          const data = await res.json();
-          // Merge rather than replace. These values are rendered with
-          // `.toLocaleString()` and used in arithmetic, so a response missing a
-          // field would not degrade a number -- it would throw and take the
-          // whole landing page down. Merging keeps every key defined no matter
-          // what the server sends, which also lets the API drop a field without
-          // a lockstep client release.
-          setLiveStats((previous) => ({ ...previous, ...(data as object) }));
+          const data = (await res.json()) as Record<string, unknown>;
+          // Read the three fields by name and keep the previous value for
+          // anything the server omits or sends as a non-number. These are
+          // rendered with `.toLocaleString()`, so a missing field would not
+          // degrade a number -- it would throw and take the landing page down.
+          // Naming them also stops unsourced fields the endpoint still returns
+          // from re-entering state through a blanket spread.
+          const numeric = (key: string, fallback: number) =>
+            typeof data[key] === 'number' && Number.isFinite(data[key]) ? (data[key] as number) : fallback;
+
+          setLiveStats((previous) => ({
+            activeUsers: numeric('activeUsers', previous.activeUsers),
+            testsCompleted: numeric('testsCompleted', previous.testsCompleted),
+            problemsSolved: numeric('problemsSolved', previous.problemsSolved),
+          }));
         }
       } catch (err) {
         console.error('Error fetching live stats from server:', err);
@@ -109,7 +218,28 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const coreRingRef = useAmbient<SVGCircleElement>();
   const telemetryPulseRef = useAmbient<SVGSVGElement>();
 
-  const [hoveredNode, setHoveredNode] = useState<number | null>(null);
+  /*
+   * The skill graph, and the bank it reads from.
+   *
+   * `activeDomain` is keyed by domain rather than by a 1-4 index, so a node and
+   * its link, pulse, label and feed line cannot end up describing different
+   * domains. It is set by hover *and* by keyboard focus: the panel below is the
+   * only place this content exists, and hover alone would hide it from anyone
+   * not using a mouse.
+   *
+   * `bankProfiles` / `bank` are derived from `ITEM_BANK`, which is a module
+   * constant, so this is a pure re-derivation on render rather than state that
+   * could fall out of date.
+   */
+  const [activeDomain, setActiveDomain] = useState<Domain | null>(null);
+  const bankProfiles = domainBankProfiles();
+  const bank = bankSummary();
+  const activeProfile: DomainBankProfile | null =
+    bankProfiles.find((profile) => profile.domain === activeDomain) ?? null;
+  // SMIL keeps running regardless of the CSS reduced-motion rules, so the
+  // travelling pulse has to be withheld rather than styled away.
+  const prefersReducedMotion = useReducedMotion();
+
   const [activeArchTab, setActiveArchTab] = useState<'engine' | 'ai' | 'compete' | 'analytics'>('engine');
   const [isArchExpanded, setIsArchExpanded] = useState<boolean>(false);
   const [communityDarkMode, setCommunityDarkMode] = useState<boolean>(true);
@@ -420,49 +550,43 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             <h2>2. Live Operating Metrics</h2>
             <div class="metric-grid">
               <div class="metric-card">
-                <div class="metric-label">Active learners online</div>
+                <div class="metric-label">Learners active</div>
                 <div class="metric-val">${liveStats.activeUsers}</div>
-                <div class="metric-label">Real-time connections</div>
+                <div class="metric-label">Arrivals in the last 15 minutes</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">IRT assessments completed</div>
                 <div class="metric-val">${liveStats.testsCompleted}</div>
-                <div class="metric-label">Cumulative total</div>
+                <div class="metric-label">Since this instance started</div>
               </div>
               <div class="metric-card">
-                <div class="metric-label">Score improvement rate</div>
-                <div class="metric-val">${liveStats.improvementRate}%</div>
-                <div class="metric-label">Measured after 3 months</div>
+                <div class="metric-label">Problems graded</div>
+                <div class="metric-val">${liveStats.problemsSolved}</div>
+                <div class="metric-label">Since this instance started</div>
               </div>
             </div>
+            <p style="font-size:12px;color:#64748b;margin-top:18px;">These counters are held in the serving instance's memory and reset when it restarts; on a multi-instance deployment each instance counts only its own traffic. They are reported as operational signal, not as audited telemetry. A report with figures suitable for citation requires the database-backed aggregation that is not yet in place.</p>
           </div>
 
           <div class="section">
-            <h2>3. Acquisition Channels</h2>
-            <p>CalculixHub treats external social channels strictly as acquisition and awareness funnels, directing all learning activity back to the single hub:</p>
+            <h2>3. Assessment Bank</h2>
+            <p>The adaptive placement test administers ${bank.itemCount} calibrated items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
             <table>
               <thead>
-                <tr><th>Channel</th><th>Approach</th><th>Users acquired</th><th>Share</th></tr>
+                <tr><th>Domain</th><th>Items</th><th>Concepts</th><th>Difficulty range (b)</th><th>Mean discrimination (a)</th></tr>
               </thead>
               <tbody>
-                <tr>
-                  <td><strong>Facebook (CalculixHub Page/Group)</strong></td>
-                  <td>Deep-dive analysis posts, monographs, exam-prep material.</td>
-                  <td>${liveStats.facebookAcquisitions}</td>
-                  <td>${((liveStats.facebookAcquisitions / (liveStats.facebookAcquisitions + liveStats.tiktokAcquisitions + liveStats.youtubeAcquisitions)) * 100).toFixed(1)}%</td>
-                </tr>
-                <tr>
-                  <td><strong>TikTok (Calculix Short Clips)</strong></td>
-                  <td>Fast, sparky math intuition and quick-thinking hooks.</td>
-                  <td>${liveStats.tiktokAcquisitions}</td>
-                  <td>${((liveStats.tiktokAcquisitions / (liveStats.facebookAcquisitions + liveStats.tiktokAcquisitions + liveStats.youtubeAcquisitions)) * 100).toFixed(1)}%</td>
-                </tr>
-                <tr>
-                  <td><strong>YouTube (Calculix Lectures)</strong></td>
-                  <td>Long-form lectures and full Olympiad solution walkthroughs.</td>
-                  <td>${liveStats.youtubeAcquisitions}</td>
-                  <td>${((liveStats.youtubeAcquisitions / (liveStats.facebookAcquisitions + liveStats.tiktokAcquisitions + liveStats.youtubeAcquisitions)) * 100).toFixed(1)}%</td>
-                </tr>
+                ${bankProfiles
+                  .map(
+                    (profile) => `<tr>
+                  <td><strong>${profile.domain}</strong></td>
+                  <td>${profile.itemCount}</td>
+                  <td>${profile.conceptCount}</td>
+                  <td>${formatDifficulty(profile.easiestB)} to ${formatDifficulty(profile.hardestB)}</td>
+                  <td>${profile.meanDiscrimination.toFixed(2)}</td>
+                </tr>`,
+                  )
+                  .join('')}
               </tbody>
             </table>
           </div>
@@ -479,7 +603,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           </div>
 
           <div class="footer">
-            <p>Report generated directly from the CalculixHub server.</p>
+            <p>Compiled in the browser from the shipped item bank and the counters returned by /api/live-stats at the time shown above.</p>
             <p>CalculixHub Science &amp; Technology Board - Tech for Social Impact (c) 2026</p>
           </div>
 
@@ -613,27 +737,38 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 </a>
               </div>
 
+              {/*
+                Three counters the server can actually source, each with the
+                window it is measured over written underneath. The third tile
+                used to read "Live in the arena / Ranked matches" against
+                `activeContestsCount`, which nothing has ever incremented, and
+                the first carried a fixed "+3.4/min" arrival rate that was not
+                computed from anything.
+              */}
               <div className="pt-8 border-t border-ink-800/70 max-w-xl mx-auto lg:mx-0">
                 <p className="text-[10px] uppercase font-black tracking-widest text-stone-500 mb-3 flex items-center justify-center lg:justify-start gap-1.5">
-                  <span ref={livePingRef} className="w-2 h-2 rounded-full bg-proof-500 animate-ping" /> Live system status (real-time)
+                  <span ref={livePingRef} className="w-2 h-2 rounded-full bg-proof-500 animate-ping" /> Live system status
                 </p>
                 <div className="grid grid-cols-3 gap-6 text-center lg:text-left">
                   <div className="space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-500 block">Learners online</span>
+                    <span className="text-[9px] uppercase font-bold text-stone-500 block min-h-[3em] sm:min-h-0">Learners active</span>
                     <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.activeUsers} format={(n) => Math.round(n).toLocaleString()} /></span>
-                    <span className="text-[8px] text-proof-400 font-bold block">+3.4/min</span>
+                    <span className="text-[8px] text-proof-400 font-bold block">Last 15 min</span>
                   </div>
                   <div className="space-y-1 border-x border-ink-800/60 px-4">
-                    <span className="text-[9px] uppercase font-bold text-stone-500 block">Assessments run</span>
+                    <span className="text-[9px] uppercase font-bold text-stone-500 block min-h-[3em] sm:min-h-0">Assessments run</span>
                     <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.testsCompleted} format={(n) => Math.round(n).toLocaleString()} /></span>
-                    <span className="text-[8px] text-brass-400 font-bold block">Auto-adaptive</span>
+                    <span className="text-[8px] text-brass-400 font-bold block">Since restart</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-500 block">Live in the arena</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.activeContestsCount} /></span>
-                    <span className="text-[8px] text-violet-400 font-bold block">Ranked matches</span>
+                    <span className="text-[9px] uppercase font-bold text-stone-500 block min-h-[3em] sm:min-h-0">Problems graded</span>
+                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.problemsSolved} format={(n) => Math.round(n).toLocaleString()} /></span>
+                    <span className="text-[8px] text-violet-400 font-bold block">Since restart</span>
                   </div>
                 </div>
+                <p className="text-[9px] text-stone-600 mt-3 leading-relaxed">
+                  Counted in the serving instance's memory, so these reset on deploy and are reported as operational signal rather than audited totals.
+                </p>
               </div>
             </div>
 
@@ -643,63 +778,203 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               <div className="bg-ink-950/40 border border-ink-800 p-6 sm:p-8 rounded-[32px] backdrop-blur-md shadow-e4 relative bp-corners text-brass-500">
 
                 <svg viewBox="0 0 450 400" className="w-full h-auto max-w-[380px] sm:max-w-[450px] mx-auto overflow-visible select-none">
-                  <line x1="225" y1="200" x2="90" y2="90" stroke={hoveredNode === 1 ? '#c8842a' : '#342d27'} strokeWidth={hoveredNode === 1 ? '3' : '2'} strokeDasharray={hoveredNode === 1 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
-                  <line x1="225" y1="200" x2="360" y2="90" stroke={hoveredNode === 2 ? '#2f9c8c' : '#342d27'} strokeWidth={hoveredNode === 2 ? '3' : '2'} strokeDasharray={hoveredNode === 2 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
-                  <line x1="225" y1="200" x2="90" y2="310" stroke={hoveredNode === 3 ? '#8b5cf6' : '#342d27'} strokeWidth={hoveredNode === 3 ? '3' : '2'} strokeDasharray={hoveredNode === 3 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
-                  <line x1="225" y1="200" x2="360" y2="310" stroke={hoveredNode === 4 ? '#0ea5e9' : '#342d27'} strokeWidth={hoveredNode === 4 ? '3' : '2'} strokeDasharray={hoveredNode === 4 ? 'none' : '4 4'} className="transition-[stroke,stroke-width,stroke-dasharray] duration-300 ease-standard" />
+                  {/*
+                    Links first, so the core and the node circles paint over
+                    nothing — each line already stops short of both.
+                  */}
+                  {GRAPH_NODES.map((node) => {
+                    const link = linkGeometry(node);
+                    const active = activeDomain === node.domain;
+                    return (
+                      <line
+                        key={`link-${node.domain}`}
+                        x1={link.x1}
+                        y1={link.y1}
+                        x2={link.x2}
+                        y2={link.y2}
+                        stroke={active ? node.stroke : '#342d27'}
+                        strokeWidth={active ? 3 : 2}
+                        strokeDasharray={active ? 'none' : '4 4'}
+                        strokeLinecap="round"
+                        className="transition-[stroke,stroke-width] duration-300 ease-standard"
+                      />
+                    );
+                  })}
 
-                  {hoveredNode === 1 && <circle r="4.5" fill="#c8842a"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 90 90" /></circle>}
-                  {hoveredNode === 2 && <circle r="4.5" fill="#2f9c8c"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 360 90" /></circle>}
-                  {hoveredNode === 3 && <circle r="4.5" fill="#8b5cf6"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 90 310" /></circle>}
-                  {hoveredNode === 4 && <circle r="4.5" fill="#0ea5e9"><animateMotion dur="0.9s" repeatCount="indefinite" path="M 225 200 L 360 310" /></circle>}
+                  {GRAPH_NODES.map((node) => {
+                    if (activeDomain !== node.domain || prefersReducedMotion) return null;
+                    const link = linkGeometry(node);
+                    return (
+                      <circle key={`pulse-${node.domain}`} r="4.5" fill={node.stroke}>
+                        <animateMotion
+                          dur="0.9s"
+                          repeatCount="indefinite"
+                          path={`M ${link.x1} ${link.y1} L ${link.x2} ${link.y2}`}
+                        />
+                      </circle>
+                    );
+                  })}
 
-                  <g className="group cursor-pointer">
-                    <circle cx="225" cy="200" r="45" fill="#201b16" stroke="#c8842a" strokeWidth="2.5" className="transition-[stroke,transform] duration-300 ease-standard group-hover:stroke-brass-400 group-hover:scale-105" />
-                    <circle ref={coreRingRef} cx="225" cy="200" r="55" fill="none" stroke="#c8842a" strokeWidth="1" strokeDasharray="5 5" className="animate-spin" style={{ transformOrigin: '225px 200px', animationDuration: '20s' }} />
-                    <foreignObject x="207" y="182" width="36" height="36">
+                  <g className="group">
+                    <circle
+                      cx={GRAPH.cx}
+                      cy={GRAPH.cy}
+                      r={GRAPH.coreRadius}
+                      fill="#201b16"
+                      stroke="#c8842a"
+                      strokeWidth="2.5"
+                      style={SELF_ORIGIN}
+                      className="transition-[stroke,transform] duration-300 ease-standard group-hover:stroke-brass-400 group-hover:scale-105"
+                    />
+                    <circle
+                      ref={coreRingRef}
+                      cx={GRAPH.cx}
+                      cy={GRAPH.cy}
+                      r={GRAPH.coreRingRadius}
+                      fill="none"
+                      stroke="#c8842a"
+                      strokeWidth="1"
+                      strokeDasharray="5 5"
+                      className="animate-spin"
+                      style={{ ...SELF_ORIGIN, animationDuration: '20s' }}
+                    />
+                    <foreignObject x={GRAPH.cx - 18} y={GRAPH.cy - 18} width="36" height="36">
                       <div className="w-full h-full flex items-center justify-center text-brass-400">
                         <Brain className="w-7 h-7" />
                       </div>
                     </foreignObject>
-                    <text x="225" y="260" fill="#e0a339" fontSize="9" fontWeight="bold" textAnchor="middle" letterSpacing="1">EDUREACH CORE</text>
+                    <text x={GRAPH.cx} y={GRAPH.cy + 79} fill="#e0a339" fontSize="11" fontWeight="bold" textAnchor="middle" letterSpacing="1">
+                      EDUREACH CORE
+                    </text>
+                    <text x={GRAPH.cx} y={GRAPH.cy + 93} fill="#78716c" fontSize="9.5" textAnchor="middle" className="font-mono">
+                      {bank.itemCount} calibrated items
+                    </text>
                   </g>
 
-                  <g onMouseEnter={() => setHoveredNode(1)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="90" cy="90" r="30" fill="#161310" stroke={hoveredNode === 1 ? '#c8842a' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
-                    <text x="90" y="93" fill="#e0a339" fontSize="9" fontWeight="bold" textAnchor="middle">ALGEBRA</text>
-                    <circle cx="90" cy="90" r="35" fill="none" stroke="#c8842a" strokeWidth={hoveredNode === 1 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
-                  </g>
+                  {/*
+                    One node renderer, four nodes. Anything that differs between
+                    them is data on GRAPH_NODES or a measurement from the bank —
+                    never a hand-tuned coordinate, which is how the four drifted
+                    apart before.
+                  */}
+                  {GRAPH_NODES.map((node) => {
+                    const profile = bankProfiles.find((entry) => entry.domain === node.domain);
+                    if (!profile) return null;
 
-                  <g onMouseEnter={() => setHoveredNode(2)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="360" cy="90" r="30" fill="#161310" stroke={hoveredNode === 2 ? '#2f9c8c' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
-                    <text x="360" y="93" fill="#4fb8a8" fontSize="9" fontWeight="bold" textAnchor="middle">GEOMETRY</text>
-                    <circle cx="360" cy="90" r="35" fill="none" stroke="#2f9c8c" strokeWidth={hoveredNode === 2 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
-                  </g>
+                    const active = activeDomain === node.domain;
+                    return (
+                      <g
+                        key={`node-${node.domain}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={active}
+                        aria-label={`${node.domain}: ${profile.itemCount} calibrated items, difficulty ${formatDifficulty(profile.easiestB)} to ${formatDifficulty(profile.hardestB)}`}
+                        onMouseEnter={() => setActiveDomain(node.domain)}
+                        onMouseLeave={() => setActiveDomain(null)}
+                        onFocus={() => setActiveDomain(node.domain)}
+                        onBlur={() => setActiveDomain(null)}
+                        /* Focus ring comes from the design system's
+                           `[tabindex]:focus-visible` rule in materials.css. */
+                        className="cursor-pointer"
+                      >
+                        {/*
+                          The only element that takes pointer events: an
+                          invisible rect of the same size at every node, so the
+                          hover target no longer grows with the label's width.
+                        */}
+                        <rect
+                          x={node.x - GRAPH.hitWidth / 2}
+                          y={node.y + GRAPH.hitTopOffset}
+                          width={GRAPH.hitWidth}
+                          height={GRAPH.hitHeight}
+                          fill="transparent"
+                        />
 
-                  <g onMouseEnter={() => setHoveredNode(3)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="90" cy="310" r="30" fill="#161310" stroke={hoveredNode === 3 ? '#8b5cf6' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
-                    <text x="90" y="313" fill="#a78bfa" fontSize="9" fontWeight="bold" textAnchor="middle">COMBINATORICS</text>
-                    <circle cx="90" cy="310" r="35" fill="none" stroke="#8b5cf6" strokeWidth={hoveredNode === 3 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
-                  </g>
+                        <g className="pointer-events-none">
+                          {active && (
+                            <circle
+                              cx={node.x}
+                              cy={node.y}
+                              r={GRAPH.nodeRadius + 5}
+                              fill="none"
+                              stroke={node.stroke}
+                              strokeWidth="1.5"
+                              style={SELF_ORIGIN}
+                              className="animate-ping"
+                            />
+                          )}
+                          <circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={GRAPH.nodeRadius}
+                            fill="#161310"
+                            stroke={active ? node.stroke : '#342d27'}
+                            strokeWidth="2"
+                            className="transition-[stroke] duration-300 ease-standard"
+                          />
 
-                  <g onMouseEnter={() => setHoveredNode(4)} onMouseLeave={() => setHoveredNode(null)} className="cursor-pointer">
-                    <circle cx="360" cy="310" r="30" fill="#161310" stroke={hoveredNode === 4 ? '#0ea5e9' : '#342d27'} strokeWidth="2" className="transition-[stroke] duration-300 ease-standard" />
-                    <text x="360" y="313" fill="#38bdf8" fontSize="9" fontWeight="bold" textAnchor="middle">NUMBER THEORY</text>
-                    <circle cx="360" cy="310" r="35" fill="none" stroke="#0ea5e9" strokeWidth={hoveredNode === 4 ? '1.5' : '0'} className="transition-[stroke-width] duration-300 ease-standard animate-ping" />
-                  </g>
+                          {/* Real count from the bank — one or two digits, so it fits at every node. */}
+                          <text
+                            x={node.x}
+                            y={node.y + 1}
+                            fill={active ? node.text : '#d6d3d1'}
+                            fontSize="17"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                            className="font-mono transition-[fill] duration-300 ease-standard"
+                          >
+                            {profile.itemCount}
+                          </text>
+                          <text x={node.x} y={node.y + 14} fill="#78716c" fontSize="8" textAnchor="middle" letterSpacing="0.5">
+                            ITEMS
+                          </text>
+
+                          {/* Labels sit outside the circle, so length never affects the hit area. */}
+                          <text
+                            x={node.x}
+                            y={node.y + GRAPH.nodeRadius + 18}
+                            fill={active ? node.text : '#a8a29e'}
+                            fontSize="12"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                            className="uppercase transition-[fill] duration-300 ease-standard"
+                          >
+                            {node.domain}
+                          </text>
+                          <text
+                            x={node.x}
+                            y={node.y + GRAPH.nodeRadius + 30}
+                            fill="#78716c"
+                            fontSize="10"
+                            textAnchor="middle"
+                            className="font-mono"
+                          >
+                            {`b ${formatDifficulty(profile.easiestB)} … ${formatDifficulty(profile.hardestB)}`}
+                          </text>
+                        </g>
+                      </g>
+                    );
+                  })}
                 </svg>
 
                 <div className="mt-6 bg-ink-900/80 border border-ink-800 rounded-card p-4.5 text-xs space-y-1.5 backdrop-blur-md">
-                  <div className="flex justify-between items-center text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                    <span>EduReach live feed</span>
-                    <span className="text-brass-400 font-mono">LIVE</span>
+                  {/* Wraps to two lines on a phone rather than letting the
+                      source list run into the heading. */}
+                  <div className="flex flex-wrap justify-between items-baseline gap-x-3 gap-y-0.5 text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                    <span>Adaptive item bank</span>
+                    <span className="text-brass-400 font-mono">{bank.sources.join(' / ')}</span>
                   </div>
-                  <p className="font-mono text-stone-300 leading-normal text-[11px]">
-                    {hoveredNode === 1 && 'AI: Algebra slip detected. Prioritizing quadratic-roots remediation (theta = +0.45).'}
-                    {hoveredNode === 2 && 'AI: Spatial reasoning gap found. Suggesting extended Ptolemy theory (b = 1.80).'}
-                    {hoveredNode === 3 && 'AI: Combinatorics weak point found. Launching a stars-and-bars / AM-GM drill.'}
-                    {hoveredNode === 4 && 'AI: Reinforcing modular arithmetic. Recommending small Fermat cycles.'}
-                    {!hoveredNode && 'Hover a node to see EduReach analyze the adaptive skill graph.'}
+                  {/*
+                    Every figure below is measured from the bank this visitor
+                    will actually be tested on. The previous copy quoted an
+                    ability estimate and a difficulty for a visitor who had not
+                    answered a question, and neither number existed anywhere in
+                    the product.
+                  */}
+                  <p aria-live="polite" className="font-mono text-stone-300 leading-normal text-[11px] min-h-[3.4em]">
+                    {activeProfile
+                      ? `${activeProfile.domain}: ${activeProfile.itemCount} calibrated items, ${activeProfile.conceptCount} concepts. Difficulty b ${formatDifficulty(activeProfile.easiestB)} … ${formatDifficulty(activeProfile.hardestB)}, mean discrimination a ${activeProfile.meanDiscrimination.toFixed(2)}. Hardest item: ${activeProfile.hardestConcept}.`
+                      : `${bank.itemCount} calibrated items across ${bank.domainCount} domains and ${bank.conceptCount} concepts. Hover or tab to a domain for its measured difficulty range.`}
                   </p>
                 </div>
 
@@ -1178,23 +1453,28 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     Facebook, TikTok, and YouTube exist purely to distribute content and pull in new learners. Every real learning experience, all adaptive data, and every ounce of academic value lives inside <strong>CalculixHub</strong> itself.
                   </p>
                 </div>
+                {/*
+                  Each channel's role, with no attendance figure beside it.
+                  These rows used to show 5,420 / 3,892 / 2,150 "users
+                  acquired"; there is no attribution tracking anywhere in the
+                  product, so the counts were invented and the endpoint behind
+                  them returns zero. What the section actually argues -- that
+                  social distributes and the hub teaches -- needs no numbers.
+                */}
                 <div className="lg:col-span-6 space-y-4">
                   {[
-                    { icon: Facebook, name: 'Facebook - Math Deep Dives', desc: 'In-depth olympiad & exam analysis posts', value: liveStats.facebookAcquisitions, color: 'brass' },
-                    { icon: Users, name: 'TikTok Short Education', desc: '60-second logic-puzzle breakdowns', value: liveStats.tiktokAcquisitions, color: 'violet' },
-                    { icon: Youtube, name: 'YouTube Deep-Dive Lectures', desc: 'Full contest solution walkthroughs', value: liveStats.youtubeAcquisitions, color: 'rose' },
+                    { icon: Facebook, name: 'Facebook - Math Deep Dives', desc: 'In-depth olympiad & exam analysis posts', role: 'Distribution', color: 'brass' },
+                    { icon: Users, name: 'TikTok Short Education', desc: '60-second logic-puzzle breakdowns', role: 'Discovery', color: 'violet' },
+                    { icon: Youtube, name: 'YouTube Deep-Dive Lectures', desc: 'Full contest solution walkthroughs', role: 'Teaching preview', color: 'rose' },
                   ].map((chan) => {
                     const ChanIcon = chan.icon;
                     return (
-                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-card p-4 flex items-center justify-between transition-[border-color] duration-240 ease-standard hover:border-ink-700">
+                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-card p-4 flex items-center justify-between gap-3 transition-[border-color] duration-240 ease-standard hover:border-ink-700">
                         <div className="flex items-center gap-3">
                           <div className={`p-2.5 rounded-control ${chan.color === 'brass' ? 'bg-brass-600/10 text-brass-500' : chan.color === 'violet' ? 'bg-violet-600/10 text-violet-400' : 'bg-rose-600/10 text-rose-500'}`}><ChanIcon className="w-5 h-5" /></div>
                           <div><h5 className="font-extrabold text-xs text-stone-200">{chan.name}</h5><p className="text-[9px] text-stone-500 font-medium">{chan.desc}</p></div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-white font-mono">{chan.value.toLocaleString()}</span>
-                          <span className="text-[8px] text-stone-550 block font-bold">Users acquired</span>
-                        </div>
+                        <span className="text-[8px] uppercase font-black tracking-wider text-stone-500 border border-ink-800 rounded-full px-2.5 py-1 shrink-0">{chan.role}</span>
                       </div>
                     );
                   })}
@@ -1212,31 +1492,42 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   <span className="bg-proof-500/10 border border-proof-500/25 text-proof-400 text-[10px] font-black uppercase px-3 py-1.5 rounded-full tracking-wider block w-fit">Research &amp; social impact</span>
                   <h4 className="text-2xl font-black text-white tracking-tight font-serif">CalculixHub Impact Report</h4>
                   <p className="text-xs text-stone-405 leading-relaxed">
-                    We hold ourselves to full transparency: every progress metric and connection count reflects real, live system activity, exportable for academic research.
+                    Transparency means publishing what we can actually measure, and saying which window it was measured over. The two figures below describe the assessment bank the platform ships; the progress bar tracks live traffic against a stated goal.
                   </p>
                   <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[10px] font-bold text-stone-400">
-                        <span>Monthly active learners (currently {liveStats.activeUsers})</span>
-                        <span className="text-brass-400 font-mono">Target: 10,000</span>
+                        {/*
+                          The counter behind this bar is arrivals within a
+                          trailing 15-minute window, so it was never a monthly
+                          figure -- the label just said so.
+                        */}
+                        <span>Learners active in the last 15 minutes ({liveStats.activeUsers})</span>
+                        <span className="text-brass-400 font-mono">Goal: 10,000</span>
                       </div>
                       <SpringBar
                         value={(liveStats.activeUsers / 10000) * 100}
                         track="w-full bg-ink-950 rounded-full h-2 border border-ink-850"
                         fill="bg-gradient-to-r from-brass-500 to-proof-500 h-1.5 rounded-full"
-                        label="Learners online against the 10,000 target"
+                        label="Learners active in the last 15 minutes, against the 10,000 goal"
                       />
                     </div>
+                    {/*
+                      Two counts read straight off the item bank, replacing an
+                      "84.5% improvement after 3 months" that no study produced
+                      and a hard-coded "4,500+ monthly matches" for an arena
+                      that records no match history.
+                    */}
                     <div className="flex items-center gap-8 text-center pt-2">
                       <div>
-                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Real improvement rate</span>
-                        <span className="text-2xl font-black text-proof-400 font-mono block mt-0.5">{liveStats.improvementRate}%</span>
-                        <span className="text-[8px] text-stone-500 block">Score gain after 3 months</span>
+                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Calibrated items</span>
+                        <span className="text-2xl font-black text-proof-400 font-mono block mt-0.5">{bank.itemCount}</span>
+                        <span className="text-[8px] text-stone-500 block">3PL parameters on every item</span>
                       </div>
                       <div className="border-l border-ink-800 pl-8">
-                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Monthly matches played</span>
-                        <span className="text-2xl font-black text-white font-mono block mt-0.5">4,500+</span>
-                        <span className="text-[8px] text-stone-555 block">Arena entries</span>
+                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Concepts tagged</span>
+                        <span className="text-2xl font-black text-white font-mono block mt-0.5">{bank.conceptCount}</span>
+                        <span className="text-[8px] text-stone-555 block">What remediation dispatches on</span>
                       </div>
                     </div>
                   </div>
@@ -1246,7 +1537,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     <FileText className="w-10 h-10 text-brass-400 mx-auto" />
                     <div>
                       <h5 className="font-extrabold text-xs text-stone-200">Export impact report</h5>
-                      <p className="text-[9px] text-stone-500 mt-1 leading-normal">A live report compiled directly from the database.</p>
+                      <p className="text-[9px] text-stone-500 mt-1 leading-normal">Per-domain bank coverage plus the current live counters.</p>
                     </div>
                     <m.button type="button" onClick={handleExportImpactReport} whileTap={{ scale: 0.97 }} transition={spring.press} className="w-full bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs py-3 rounded-control transition-colors duration-240 ease-standard cursor-pointer shadow-e2 flex items-center justify-center gap-1.5">
                       <Download className="w-3.5 h-3.5" /> Download PDF report
