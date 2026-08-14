@@ -34,8 +34,8 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 /** Browser chrome colour per theme, mirroring `--sf` in styles/tokens.css. */
 const THEME_COLOR: Record<ResolvedTheme, string> = {
-  light: '#faf7f1',
-  dark: '#17130f',
+  light: '#f3f2f2',
+  dark: '#161310',
 };
 
 const isPreference = (value: unknown): value is ThemePreference =>

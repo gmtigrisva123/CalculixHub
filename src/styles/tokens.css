@@ -1,17 +1,17 @@
 /**
  * CalculixHub design tokens — the two-layer colour system.
  *
- * Layer 1 is the palette: `ink`, `paper`, `brass`, `proof`. Those are the brand,
- * they are absolute, and they never change meaning. A component asking for
- * `brass-500` gets #c8842a in every theme, on every platform, forever.
+ * Layer 1 is the palette: `ink`, `paper`, `brass`, `verdigris`. Those are the
+ * brand, they are absolute, and they never change meaning. A component asking
+ * for `brass-600` gets #a06f24 in every theme, on every platform, forever.
  *
  * Layer 2 is the semantic layer defined here: `surface`, `content`, `line`,
  * `accent`. These say what a colour is *for* rather than what it *is*, and they
  * are the only ones a screen should reach for. `bg-surface-raised` means "this
- * is a card"; it resolves to white on paper in the day theme and to warm ink at
- * night, and the component never learns which.
+ * is a card"; it resolves to warm off-white in daylight and to lamplit brown
+ * after dark, and the component never learns which.
  *
- * That indirection is the whole reason dark mode is possible here. The previous
+ * That indirection is the whole reason dark mode is possible here. The original
  * build wrote `bg-white border-stone-200` directly into 6,500 lines of JSX,
  * which hard-codes not just a colour but a *lighting condition* — and no theme
  * switch can reach inside a literal.
@@ -21,6 +21,30 @@
  * With it, `bg-surface-raised` compiles to `background-color: var(--sf-raised)`,
  * so re-pointing `--sf-raised` under `[data-theme='dark']` re-colours every
  * surface in the product from one declaration.
+ *
+ * ---------------------------------------------------------------------------
+ * On the hue.
+ *
+ * This is the Classical system: an editorial, book-like palette on a soft
+ * near-white ground, with a single brass accent applied as *stroke rather than
+ * fill*. Cards are bordered and unfilled, buttons are outlined, and the
+ * structure of a page is carried by hairline rules rather than by blocks of
+ * colour. Elevation is a whisper — see the shadow ladder below, which is
+ * deliberately far shallower than a typical material stack.
+ *
+ * The neutrals are warm. Not sepia-toned photography warm, but the warmth of
+ * uncoated paper: enough that a divider and the card it divides read as the
+ * same material, not enough to tip into cream.
+ *
+ * The rule that keeps it clean: brass is the accent and it is reserved for
+ * emphasis and action. Verdigris means verified. Everything else on screen is a
+ * neutral, or one of the four categorical topic hues, which are deliberately
+ * *not* the accent — with the one exception noted at the hue block below, where
+ * Algebra's gold and the brass accent are the same family by design.
+ *
+ * The accent-to-ground pair is tuned to about 3:1 — enough for icons, large
+ * text and interface chrome, but NOT for body copy. For paragraph-size text in
+ * the accent, use `--ac-text` (a deep ramp step), never `--ac` itself.
  */
 
 @theme inline {
@@ -34,12 +58,13 @@
    * The desktop navigation rail, which needs its own token because it is the
    * one surface whose relationship to the page reverses between themes.
    *
-   * In daylight it is the ink spine the brand is built around — the darkest
-   * thing on screen. At night that same treatment would make it invisible
-   * against an already-dark page, and inverting it to paper would put a
-   * floodlit column beside content someone is reading in a dim room. So after
-   * dark it becomes the *recessed* surface instead: a channel milled into the
-   * desk, below the page rather than above it. Different geometry, same job.
+   * In daylight it is the deep warm near-black the brand is built around — the
+   * darkest thing on screen, the spine of the book. At night that same
+   * treatment would make it invisible against an already-dark page, and
+   * inverting it to white would put a floodlit column beside content someone is
+   * reading in a dim room. So after dark it becomes the *recessed* surface
+   * instead: a channel milled into the desk, below the page rather than above
+   * it. Different geometry, same job.
    */
   --color-surface-rail: var(--sf-rail);
   --color-content-rail: var(--ct-rail);
@@ -50,7 +75,7 @@
   --color-content-subtle: var(--ct-subtle);
   --color-content-inverse: var(--ct-inverse);
 
-  /* Lines — hairlines, dividers, card edges. */
+  /* Lines — hairlines, dividers, card edges. The system's main structural tool. */
   --color-line-faint: var(--ln-faint);
   --color-line: var(--ln);
   --color-line-strong: var(--ln-strong);
@@ -58,15 +83,20 @@
   /*
    * Accents.
    *
-   * Brass is the primary action; proof-teal marks anything verified or correct.
-   * Both shift a step brighter at night: a mid-tone that reads as rich on paper
-   * reads as muddy on ink, because perceived contrast is against the ground, not
-   * an absolute.
+   * Brass is the accent and the only colour on the page that means "this is
+   * emphasis". Verdigris marks anything verified or correct. Both shift a step
+   * brighter at night: a mid-tone that reads as rich on paper reads as muddy on
+   * near-black, because perceived contrast is against the ground, not an
+   * absolute.
+   *
+   * `--ac-text` is the deep step to use when the accent has to carry
+   * paragraph-size text; `--ac` alone does not clear 4.5:1 on either ground.
    */
   --color-accent: var(--ac);
   --color-accent-hover: var(--ac-hover);
   --color-accent-muted: var(--ac-muted);
   --color-accent-contrast: var(--ac-contrast);
+  --color-accent-text: var(--ac-text);
 
   --color-proof: var(--pf);
   --color-proof-muted: var(--pf-muted);
@@ -89,7 +119,7 @@
   --shadow-e3: var(--ev-3);
   --shadow-e4: var(--ev-4);
   --shadow-e5: var(--ev-5);
-  --shadow-brass: var(--ev-brass);
+  --shadow-accent: var(--ev-accent);
   --shadow-inset-well: var(--ev-well);
 
   /*
@@ -99,154 +129,160 @@
    * for which went where, so a button and the panel containing it could land on
    * the same curve and flatten the hierarchy. Naming the role makes the rule
    * automatic: controls are tighter than cards, cards are tighter than panels.
+   *
+   * Classical is a low-radius system — 4px is the base, and the ladder barely
+   * opens past it. A book plate has square corners; these are the smallest
+   * curves that still stop a border from looking like a table cell.
    */
-  --radius-field: 0.625rem;
-  --radius-control: 0.75rem;
-  --radius-card: 1rem;
-  --radius-panel: 1.375rem;
+  --radius-field: 0.25rem;
+  --radius-control: 0.25rem;
+  --radius-card: 0.25rem;
+  --radius-panel: 0.4375rem;
   --radius-pill: 999px;
 }
 
 /* --------------------------------------------------------------------------
- * Day — paper on a drafting table
+ * Daylight — ink on uncoated paper
  * ------------------------------------------------------------------------ */
 
 :root {
   color-scheme: light;
 
-  --sf-sunken: #f2ebdf;
-  --sf: #faf7f1;
-  --sf-raised: #fffdf9;
-  --sf-overlay: #fffefb;
+  --sf-sunken: #eae9e9;
+  --sf: #f3f2f2;
+  --sf-raised: #f8f4f4;
+  --sf-overlay: #f8f4f4;
   --sf-inverse: #161310;
   --sf-rail: #161310;
-  --ct-rail: #bcae9c;
+  --ct-rail: #9b9797;
 
-  --ct: #1d1915;
-  --ct-muted: #55473b;
-  --ct-subtle: #8a7a6a;
+  --ct: #201f1d;
+  --ct-muted: #605d5d;
+  --ct-subtle: #7d7979;
   --ct-inverse: #faf7f1;
 
-  --ln-faint: #efe8dc;
-  --ln: #e4dbcc;
-  --ln-strong: #d3c7b4;
+  /*
+   * The three hairlines are the ink at 10%, 16% and 22% over the ground —
+   * resolved to flat hex rather than left as `color-mix()` so they composite
+   * correctly over a card that is itself tinted.
+   */
+  --ln-faint: #dedddd;
+  --ln: #d1d0d0;
+  --ln-strong: #c5c4c4;
 
-  --ac: #b8761f;
-  --ac-hover: #a8681e;
-  --ac-muted: #fbf1de;
-  --ac-contrast: #fffdf9;
+  --ac: #b68235;
+  --ac-hover: #a06f24;
+  --ac-muted: #fff3e4;
+  --ac-contrast: #161310;
+  --ac-text: #7d5411;
 
-  --pf: #1f7d70;
-  --pf-muted: #e2f3ef;
+  --pf: #185f56;
+  --pf-muted: #e6f2f0;
 
-  --st-positive: #1f7d70;
-  --st-caution: #a8681e;
-  --st-critical: #a8342a;
+  --st-positive: #185f56;
+  --st-caution: #7d5411;
+  --st-critical: #9a2f1f;
 
   /*
-   * Shadow colour is the brand's ink, not black.
+   * Shadow colour is warm ink, not black.
    *
-   * This is the single highest-leverage line in the file. A neutral shadow on a
-   * warm ground desaturates everything it touches and is the main reason the
-   * previous cards read as generic — the palette said "field notebook" while
-   * every shadow underneath said "default framework". Real paper under warm
-   * light throws a warm shadow.
+   * A pure-black shadow on a warm ground greys out everything it touches and is
+   * the main reason default-framework cards look flat. Tinting the shadow with
+   * the same hue family as the surface is what makes a card read as an object
+   * sitting on the page rather than a rectangle with a smudge under it.
    */
-  --shadow-hue: 30 22% 12%;
+  --shadow-hue: 0 3% 17%;
 
   /*
-   * Each level is built from up to three lights: a tight *contact* shadow that
-   * anchors the element to the surface, a broader *key* shadow for the sense of
-   * height, and a wide low-opacity *ambient* wash. One-layer shadows are what
-   * make an interface look cheap; the eye reads a single blur as a sticker and
-   * a layered falloff as an object.
+   * Elevation here is a whisper — that is a rule of the system, not a taste
+   * call. Structure is drawn with hairlines; shadow only separates a genuinely
+   * floating surface (a dialog, a popover) from the page under it. Each level
+   * still layers a tight *contact* shadow under a broader *key* one, because
+   * the eye reads a single blur as a sticker, but the opacities are a third of
+   * what a material stack would use.
    */
-  --ev-1:
-    0 1px 1px hsl(var(--shadow-hue) / 0.04),
-    0 2px 4px -2px hsl(var(--shadow-hue) / 0.06);
+  --ev-1: 0 1px 2px hsl(var(--shadow-hue) / 0.055);
   --ev-2:
-    0 1px 1px hsl(var(--shadow-hue) / 0.05),
-    0 3px 6px -2px hsl(var(--shadow-hue) / 0.07),
-    0 8px 16px -6px hsl(var(--shadow-hue) / 0.06);
+    0 1px 2px hsl(var(--shadow-hue) / 0.06),
+    0 3px 10px -4px hsl(var(--shadow-hue) / 0.07);
   --ev-3:
     0 1px 2px hsl(var(--shadow-hue) / 0.06),
-    0 6px 12px -4px hsl(var(--shadow-hue) / 0.09),
-    0 16px 28px -10px hsl(var(--shadow-hue) / 0.08);
+    0 6px 16px -6px hsl(var(--shadow-hue) / 0.09);
   --ev-4:
-    0 2px 4px hsl(var(--shadow-hue) / 0.06),
-    0 12px 24px -8px hsl(var(--shadow-hue) / 0.11),
-    0 28px 48px -16px hsl(var(--shadow-hue) / 0.10);
+    0 2px 4px hsl(var(--shadow-hue) / 0.07),
+    0 12px 32px -12px hsl(var(--shadow-hue) / 0.13);
   --ev-5:
-    0 4px 8px hsl(var(--shadow-hue) / 0.07),
-    0 20px 40px -12px hsl(var(--shadow-hue) / 0.14),
-    0 48px 80px -24px hsl(var(--shadow-hue) / 0.12);
+    0 4px 8px hsl(var(--shadow-hue) / 0.08),
+    0 24px 56px -20px hsl(var(--shadow-hue) / 0.18);
 
   /*
-   * The brass glow, for the primary action only. It is tinted with the accent
-   * rather than the shadow hue, so the button looks like it is *emitting* a
-   * little light instead of merely floating above the page.
+   * The accent glow, for the one filled brass control per screen. Tinted with
+   * the accent rather than the shadow hue, so the button looks like it is
+   * *emitting* a little light instead of merely floating above the page.
    */
-  --ev-brass:
-    0 1px 2px hsl(32 71% 30% / 0.20),
-    0 6px 14px -4px hsl(32 71% 42% / 0.28),
-    0 12px 28px -12px hsl(32 71% 48% / 0.24);
+  --ev-accent:
+    0 1px 2px hsl(36 55% 24% / 0.20),
+    0 6px 16px -6px hsl(36 60% 42% / 0.28);
 
   /* Inset well, for progress tracks and anything recessed into the page. */
   --ev-well:
     inset 0 1px 2px hsl(var(--shadow-hue) / 0.10),
-    inset 0 0 0 1px hsl(var(--shadow-hue) / 0.04);
+    inset 0 0 0 1px hsl(var(--shadow-hue) / 0.05);
 }
 
 /* --------------------------------------------------------------------------
- * Night — the same table under a task lamp
+ * Lamplight — the same page under a warm lamp
  * ------------------------------------------------------------------------ */
 
 /*
- * Night is not inverted day.
+ * Lamplight is not inverted daylight.
  *
- * Inverting a paper theme gives you grey cards on a grey page and throws away
- * the identity. This theme keeps the drafting table and changes the *lighting*:
- * the ground becomes the deep warm brown-black of ink in shadow, brass warms up
- * the way real metal does under a tungsten lamp, and proof-teal reads as chalk.
- * Nothing here is neutral grey, because nothing in the day theme was either.
+ * Inverting a light theme gives you mid-grey cards on a mid-grey page and
+ * throws away the depth. This theme keeps the warmth and changes the
+ * *lighting*: the ground drops to the deep #161310 the rail and the hero bands
+ * already use in daylight, cards lift out of it by a measured amount rather
+ * than by a percentage, and the brass brightens to #e1ad66 the way a real metal
+ * would under a lamp. Nothing here is a cool grey, because nothing in the
+ * daylight theme was either.
  */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --sf-sunken: #0f0d0b;
-  --sf: #17130f;
-  --sf-raised: #201b16;
-  --sf-overlay: #2a2420;
-  --sf-inverse: #faf7f1;
-  --sf-rail: #0f0d0b;
-  --ct-rail: #b6a897;
+  --sf-sunken: #100e0b;
+  --sf: #161310;
+  --sf-raised: #1d1912;
+  --sf-overlay: #241f18;
+  --sf-inverse: #f3f2f2;
+  --sf-rail: #100e0b;
+  --ct-rail: #9b9797;
 
   /*
-   * Never pure white on a dark ground. #f2ece2 carries the paper's warmth and
-   * avoids the halation that makes #fff text on near-black vibrate and tire the
-   * eye — which matters when the content is dense mathematical notation being
-   * read for an hour at a time.
+   * Never pure white on a dark ground. #e7e2d9 keeps the neutral's warm cast
+   * and avoids the halation that makes #fff text on near-black vibrate and tire
+   * the eye — which matters when the content is dense mathematical notation
+   * being read for an hour at a time.
    */
-  --ct: #f2ece2;
-  --ct-muted: #b6a897;
-  --ct-subtle: #8a7c6d;
+  --ct: #e7e2d9;
+  --ct-muted: #bab6b6;
+  --ct-subtle: #9b9797;
   --ct-inverse: #161310;
 
-  --ln-faint: #241f1a;
-  --ln: #302823;
-  --ln-strong: #423830;
+  --ln-faint: #2f2c28;
+  --ln: #373430;
+  --ln-strong: #484440;
 
-  --ac: #e0a339;
-  --ac-hover: #e8bc63;
-  --ac-muted: #2b2113;
+  --ac: #e1ad66;
+  --ac-hover: #facb8d;
+  --ac-muted: #2a2015;
   --ac-contrast: #161310;
+  --ac-text: #e1ad66;
 
   --pf: #4fb8a8;
-  --pf-muted: #12312c;
+  --pf-muted: #12261f;
 
   --st-positive: #4fb8a8;
-  --st-caution: #e0a339;
-  --st-critical: #e0796b;
+  --st-caution: #e1ad66;
+  --st-critical: #e08a6a;
 
   /*
    * Elevation at night works the other way round.
@@ -255,39 +291,42 @@
    * light to remove — which is why dark interfaces that only darken their
    * shadows end up looking flat. Height is signalled instead by a *rim light*:
    * a one-pixel inset highlight along the top edge, exactly where a lamp above
-   * the table would catch a raised edge. The outer shadow stays, deeper and
+   * the desk would catch a raised edge. The outer shadow stays, deeper and
    * tighter, purely to keep the contact edge from dissolving into the ground.
+   *
+   * The rim is warm (a paper-white, not a blue-white) so it reads as lamplight
+   * catching an edge rather than as a screen glow.
    */
-  --shadow-hue: 24 30% 3%;
+  --shadow-hue: 30 30% 3%;
 
   --ev-1:
-    inset 0 1px 0 hsl(40 40% 90% / 0.045),
+    inset 0 1px 0 hsl(40 30% 92% / 0.045),
     0 1px 2px hsl(var(--shadow-hue) / 0.45);
   --ev-2:
-    inset 0 1px 0 hsl(40 40% 90% / 0.055),
+    inset 0 1px 0 hsl(40 30% 92% / 0.055),
     0 2px 4px hsl(var(--shadow-hue) / 0.45),
-    0 6px 14px -4px hsl(var(--shadow-hue) / 0.40);
+    0 6px 14px -6px hsl(var(--shadow-hue) / 0.40);
   --ev-3:
-    inset 0 1px 0 hsl(40 40% 90% / 0.07),
+    inset 0 1px 0 hsl(40 30% 92% / 0.07),
     0 4px 8px hsl(var(--shadow-hue) / 0.50),
-    0 14px 28px -8px hsl(var(--shadow-hue) / 0.45);
+    0 14px 28px -10px hsl(var(--shadow-hue) / 0.45);
   --ev-4:
-    inset 0 1px 0 hsl(40 40% 90% / 0.08),
+    inset 0 1px 0 hsl(40 30% 92% / 0.08),
     0 8px 16px hsl(var(--shadow-hue) / 0.55),
-    0 24px 48px -12px hsl(var(--shadow-hue) / 0.50);
+    0 24px 48px -14px hsl(var(--shadow-hue) / 0.50);
   --ev-5:
-    inset 0 1px 0 hsl(40 40% 90% / 0.09),
+    inset 0 1px 0 hsl(40 30% 92% / 0.09),
     0 12px 24px hsl(var(--shadow-hue) / 0.60),
-    0 40px 72px -16px hsl(var(--shadow-hue) / 0.55);
+    0 40px 72px -20px hsl(var(--shadow-hue) / 0.55);
 
-  --ev-brass:
-    inset 0 1px 0 hsl(40 80% 80% / 0.28),
-    0 2px 6px hsl(32 71% 8% / 0.50),
-    0 8px 24px -6px hsl(38 85% 50% / 0.30);
+  --ev-accent:
+    inset 0 1px 0 hsl(36 85% 82% / 0.30),
+    0 2px 6px hsl(30 60% 4% / 0.55),
+    0 8px 24px -8px hsl(36 68% 64% / 0.28);
 
   --ev-well:
     inset 0 1px 3px hsl(var(--shadow-hue) / 0.60),
-    inset 0 0 0 1px hsl(40 40% 90% / 0.03);
+    inset 0 0 0 1px hsl(40 30% 92% / 0.03);
 }
 
 /* --------------------------------------------------------------------------
@@ -297,7 +336,7 @@
 /*
  * `stone` is redefined rather than replaced.
  *
- * The app carries roughly 800 uses of `text-stone-500`, `border-stone-200` and
+ * The app carries roughly 600 uses of `text-stone-500`, `border-stone-200` and
  * friends across eleven screens. Rewriting each one by hand would be a very
  * large diff with a real chance of a wrong call in the middle of it, and it
  * would have to be repeated for every screen added afterwards. Tailwind resolves
@@ -305,12 +344,14 @@
  * at a themed value re-tiles every existing usage at once, correctly, with no
  * diff at the call sites at all.
  *
- * Two things change in the process.
+ * Two things are true of the ramp.
  *
- * First, the ramp warms up. Tailwind's stone is very close to neutral, and a
- * neutral grey on a #faf7f1 ground is the quiet reason the old cards read as
- * generic: the palette said "field notebook" and every label, rule and divider
- * on top of it said "default framework". These greys carry the paper's hue.
+ * First, it is warm — the nine steps are the Classical system's own neutral
+ * ramp, generated in OKLCH on one shared lightness scale, with half-steps
+ * interpolated where the codebase already used them. Tailwind's stock stone is
+ * close but not this: these are the exact greys the design draws with
+ * (#9b9797, #7d7979, #605d5d, #bab6b6), so a label in the app and the same
+ * label in the source design are the same colour rather than nearly.
  *
  * Second, the ramp *inverts* at night. That sounds alarming and is in fact what
  * makes the bridge safe, because the codebase uses the scale by role and not by
@@ -320,7 +361,7 @@
  * loudest text", in both themes.
  *
  * `white` is deliberately not bridged. It does two unrelated jobs here —
- * `bg-white` is a card, `text-white` is text on an ink ground — and a single
+ * `bg-white` is a card, `text-white` is text on a dark ground — and a single
  * variable cannot flip for one and hold for the other. Those are migrated by
  * hand to `surface`/`content-inverse` instead.
  *
@@ -359,49 +400,292 @@
 }
 
 :root {
-  --sn-50: #f6f2ea;
-  --sn-100: #eee8dc;
-  --sn-150: #e9e2d4;
-  --sn-200: #e4dbcc;
-  --sn-300: #d3c7b4;
-  --sn-350: #c6b9a4;
-  --sn-400: #a89883;
-  --sn-405: #a49480;
-  --sn-450: #988872;
-  --sn-500: #8a7a6a;
-  --sn-550: #7a6b5c;
-  --sn-555: #776859;
-  --sn-600: #55473b;
-  --sn-650: #4d4034;
-  --sn-700: #453b32;
-  --sn-705: #423830;
-  --sn-800: #342d27;
-  --sn-850: #2a2420;
-  --sn-900: #241f1a;
-  --sn-950: #1d1915;
+  --sn-50: #f8f4f4;
+  --sn-100: #f1eeee;
+  --sn-150: #eae7e7;
+  --sn-200: #e2dfdf;
+  --sn-300: #d7d3d3;
+  --sn-350: #c9c5c5;
+  --sn-400: #bab6b6;
+  --sn-405: #b5b1b1;
+  --sn-450: #aba7a7;
+  --sn-500: #9b9797;
+  --sn-550: #8c8888;
+  --sn-555: #888484;
+  --sn-600: #7d7979;
+  --sn-650: #6f6b6b;
+  --sn-700: #605d5d;
+  --sn-705: #5c5959;
+  --sn-800: #444141;
+  --sn-850: #383535;
+  --sn-900: #2d2b2b;
+  --sn-950: #201f1d;
 }
 
 :root[data-theme='dark'] {
-  --sn-50: #18140f;
-  --sn-100: #1c1712;
-  --sn-150: #201b16;
-  --sn-200: #2e2721;
-  --sn-300: #40372f;
-  --sn-350: #4a4038;
-  --sn-400: #756858;
-  --sn-405: #7a6d5d;
-  --sn-450: #817465;
-  --sn-500: #918375;
-  --sn-550: #a19384;
-  --sn-555: #a49685;
-  --sn-600: #b6a897;
-  --sn-650: #c0b3a2;
-  --sn-700: #cabdad;
-  --sn-705: #cdc0b0;
-  --sn-800: #dcd0c1;
-  --sn-850: #e5dacd;
-  --sn-900: #ebe2d7;
-  --sn-950: #f2ece2;
+  --sn-50: #1d1912;
+  --sn-100: #221d16;
+  --sn-150: #26211a;
+  --sn-200: #2f2a23;
+  --sn-300: #3c362e;
+  --sn-350: #494239;
+  --sn-400: #6b6660;
+  --sn-405: #6f6a64;
+  --sn-450: #78736d;
+  --sn-500: #8b8680;
+  --sn-550: #9a958f;
+  --sn-555: #9e9993;
+  --sn-600: #ada8a2;
+  --sn-650: #b9b4ae;
+  --sn-700: #c4bfb8;
+  --sn-705: #c7c2bb;
+  --sn-800: #d5d0c8;
+  --sn-850: #ded9d1;
+  --sn-900: #e7e2d9;
+  --sn-950: #f0ebe2;
+}
+
+/* --------------------------------------------------------------------------
+ * Regions that do not follow the theme
+ * ------------------------------------------------------------------------ */
+
+/*
+ * `.ramp-static` pins the neutral ramp to its daylight values inside a subtree.
+ *
+ * The marketing page's dark bands and the auth screen's left column are built
+ * on `ink-*`, which is a *palette primitive* and therefore absolute — those
+ * surfaces are dark at noon and dark at midnight. Their text, though, was
+ * written with the bridged `stone-*` classes, which invert. So the same
+ * `text-stone-400` that is a legible light grey on the ink hero in daylight
+ * resolves to #6b6660 after dark and all but disappears against a ground that
+ * never moved. It is the one failure mode a role-inverting ramp has: it assumes
+ * the surface under it inverts too.
+ *
+ * The honest fix is to say so at the boundary. Inside `.ramp-static` the ramp
+ * simply stops being theme-aware, which is correct in both directions — low
+ * numbers stay light for text on the ink page, and high numbers stay dark for
+ * the nested light card in the community preview, whose `bg-paper-50` is just
+ * as absolute.
+ *
+ * This is not a licence to sprinkle. It belongs on a surface that is genuinely
+ * theme-independent, and nowhere else; anything that flips with the theme
+ * should keep using the tokens and let the ramp do its job.
+ */
+.ramp-static {
+  --sn-50: #f8f4f4;
+  --sn-100: #f1eeee;
+  --sn-150: #eae7e7;
+  --sn-200: #e2dfdf;
+  --sn-300: #d7d3d3;
+  --sn-350: #c9c5c5;
+  --sn-400: #bab6b6;
+  --sn-405: #b5b1b1;
+  --sn-450: #aba7a7;
+  --sn-500: #9b9797;
+  --sn-550: #8c8888;
+  --sn-555: #888484;
+  --sn-600: #7d7979;
+  --sn-650: #6f6b6b;
+  --sn-700: #605d5d;
+  --sn-705: #5c5959;
+  --sn-800: #444141;
+  --sn-850: #383535;
+  --sn-900: #2d2b2b;
+  --sn-950: #201f1d;
+}
+
+/* --------------------------------------------------------------------------
+ * Categorical hues
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Four topic colours, plus warning and danger.
+ *
+ * Tailwind ships `violet`, `sky`, `amber` and `rose` and the app already uses
+ * them by those names, so they are bridged here rather than renamed at ~200
+ * call sites. What changes is that they are now tuned as a *set* taken straight
+ * from the source design: Algebra #c8842a, Geometry #2f9c8c, Combinatorics
+ * #8b5cf6, Number Theory #0ea5e9. Each is legible on both grounds, and the
+ * light-theme shades are pulled toward the warm neutrals so a topic chip does
+ * not look like it was pasted in from a different product.
+ *
+ * Algebra's gold is deliberately the accent's family — it is the one place the
+ * "topics are never the accent" rule is broken, and it is broken on purpose:
+ * the design leads with gold as the first domain, and separating them would
+ * have meant inventing a fifth hue that belongs to neither set.
+ *
+ * `amber` carries Algebra, `proof`/verdigris carries Geometry, `violet` carries
+ * Combinatorics and `sky` carries Number Theory — see src/lib/topics.tsx, which
+ * is the single place that mapping is written down.
+ *
+ * They invert at night for the same reason the neutral ramp does — the app uses
+ * low numbers as fills and high numbers as text everywhere.
+ */
+
+@theme inline {
+  --color-violet-50: var(--hu-violet-50);
+  --color-violet-100: var(--hu-violet-100);
+  --color-violet-200: var(--hu-violet-200);
+  --color-violet-300: var(--hu-violet-300);
+  --color-violet-400: var(--hu-violet-400);
+  --color-violet-450: var(--hu-violet-450);
+  --color-violet-500: var(--hu-violet-500);
+  --color-violet-600: var(--hu-violet-600);
+  --color-violet-700: var(--hu-violet-700);
+  --color-violet-800: var(--hu-violet-800);
+  --color-violet-900: var(--hu-violet-900);
+  --color-violet-950: var(--hu-violet-950);
+
+  --color-sky-50: var(--hu-sky-50);
+  --color-sky-100: var(--hu-sky-100);
+  --color-sky-200: var(--hu-sky-200);
+  --color-sky-300: var(--hu-sky-300);
+  --color-sky-400: var(--hu-sky-400);
+  --color-sky-450: var(--hu-sky-450);
+  --color-sky-500: var(--hu-sky-500);
+  --color-sky-600: var(--hu-sky-600);
+  --color-sky-700: var(--hu-sky-700);
+  --color-sky-800: var(--hu-sky-800);
+  --color-sky-900: var(--hu-sky-900);
+  --color-sky-950: var(--hu-sky-950);
+
+  --color-amber-50: var(--hu-amber-50);
+  --color-amber-100: var(--hu-amber-100);
+  --color-amber-200: var(--hu-amber-200);
+  --color-amber-300: var(--hu-amber-300);
+  --color-amber-400: var(--hu-amber-400);
+  --color-amber-500: var(--hu-amber-500);
+  --color-amber-600: var(--hu-amber-600);
+  --color-amber-700: var(--hu-amber-700);
+  --color-amber-800: var(--hu-amber-800);
+  --color-amber-900: var(--hu-amber-900);
+  --color-amber-950: var(--hu-amber-950);
+
+  --color-rose-50: var(--hu-rose-50);
+  --color-rose-100: var(--hu-rose-100);
+  --color-rose-150: var(--hu-rose-150);
+  --color-rose-200: var(--hu-rose-200);
+  --color-rose-300: var(--hu-rose-300);
+  --color-rose-400: var(--hu-rose-400);
+  --color-rose-500: var(--hu-rose-500);
+  --color-rose-600: var(--hu-rose-600);
+  --color-rose-700: var(--hu-rose-700);
+  --color-rose-800: var(--hu-rose-800);
+  --color-rose-850: var(--hu-rose-850);
+  --color-rose-900: var(--hu-rose-900);
+  --color-rose-950: var(--hu-rose-950);
+}
+
+:root {
+  /* Combinatorics — #8b5cf6, text step #6d3fd6 */
+  --hu-violet-50: #f5f1fe;
+  --hu-violet-100: #ebe4fd;
+  --hu-violet-200: #dccffc;
+  --hu-violet-300: #c3adfa;
+  --hu-violet-400: #a582f8;
+  --hu-violet-450: #9a72f7;
+  --hu-violet-500: #8b5cf6;
+  --hu-violet-600: #6d3fd6;
+  --hu-violet-700: #5b32b4;
+  --hu-violet-800: #4a2a90;
+  --hu-violet-900: #3b2373;
+  --hu-violet-950: #241546;
+
+  /* Number Theory — #0ea5e9, text step #0369a1 */
+  --hu-sky-50: #eef8fd;
+  --hu-sky-100: #d7eefb;
+  --hu-sky-200: #b2e0f8;
+  --hu-sky-300: #7bcbf3;
+  --hu-sky-400: #38b2ed;
+  --hu-sky-450: #1fabeb;
+  --hu-sky-500: #0ea5e9;
+  --hu-sky-600: #0484c0;
+  --hu-sky-700: #0369a1;
+  --hu-sky-800: #0a5680;
+  --hu-sky-900: #0d4767;
+  --hu-sky-950: #072d43;
+
+  /* Algebra — #c8842a, text step #a06f24 */
+  --hu-amber-50: #fdf6ec;
+  --hu-amber-100: #fbebd3;
+  --hu-amber-200: #f6d7a7;
+  --hu-amber-300: #eeba70;
+  --hu-amber-400: #dc9c43;
+  --hu-amber-500: #c8842a;
+  --hu-amber-600: #a06f24;
+  --hu-amber-700: #7d5411;
+  --hu-amber-800: #5f400e;
+  --hu-amber-900: #46300d;
+  --hu-amber-950: #2a1c06;
+
+  /* Danger — a brick that belongs to the warm family, not a fire-engine red. */
+  --hu-rose-50: #fdf2f0;
+  --hu-rose-100: #fbe2de;
+  --hu-rose-150: #f9d8d2;
+  --hu-rose-200: #f5c7bf;
+  --hu-rose-300: #eda294;
+  --hu-rose-400: #e07360;
+  --hu-rose-500: #cd4f39;
+  --hu-rose-600: #b13a26;
+  --hu-rose-700: #9a2f1f;
+  --hu-rose-800: #7f281b;
+  --hu-rose-850: #75251a;
+  --hu-rose-900: #6a2318;
+  --hu-rose-950: #3d130d;
+}
+
+:root[data-theme='dark'] {
+  --hu-violet-50: #1c1430;
+  --hu-violet-100: #241a3e;
+  --hu-violet-200: #312454;
+  --hu-violet-300: #43326f;
+  --hu-violet-400: #a98cf8;
+  --hu-violet-450: #b39afa;
+  --hu-violet-500: #bda6fa;
+  --hu-violet-600: #c8b5fb;
+  --hu-violet-700: #d5c6fc;
+  --hu-violet-800: #e2d7fd;
+  --hu-violet-900: #ede6fe;
+  --hu-violet-950: #f7f3ff;
+
+  --hu-sky-50: #06202d;
+  --hu-sky-100: #08293a;
+  --hu-sky-200: #0b394f;
+  --hu-sky-300: #0f4c69;
+  --hu-sky-400: #4dbdf0;
+  --hu-sky-450: #61c6f2;
+  --hu-sky-500: #74cdf4;
+  --hu-sky-600: #8cd7f6;
+  --hu-sky-700: #a7e1f8;
+  --hu-sky-800: #c2ebfa;
+  --hu-sky-900: #daf3fc;
+  --hu-sky-950: #eefaff;
+
+  --hu-amber-50: #2a1e0b;
+  --hu-amber-100: #35260e;
+  --hu-amber-200: #493313;
+  --hu-amber-300: #634518;
+  --hu-amber-400: #e1ad66;
+  --hu-amber-500: #e7b976;
+  --hu-amber-600: #edc689;
+  --hu-amber-700: #f2d3a1;
+  --hu-amber-800: #f7e1bd;
+  --hu-amber-900: #fbeed8;
+  --hu-amber-950: #fff8ee;
+
+  --hu-rose-50: #2b120e;
+  --hu-rose-100: #371712;
+  --hu-rose-150: #401b15;
+  --hu-rose-200: #4d201a;
+  --hu-rose-300: #6a2c23;
+  --hu-rose-400: #e08a6a;
+  --hu-rose-500: #e79c7d;
+  --hu-rose-600: #ecab8f;
+  --hu-rose-700: #f1bda6;
+  --hu-rose-800: #f6d1bf;
+  --hu-rose-850: #f8dbcb;
+  --hu-rose-900: #fae3d7;
+  --hu-rose-950: #fdf3ec;
 }
 
 /*
@@ -415,4 +699,3 @@
  * be `system`) lives in storage. src/lib/theme.ts owns that resolution and
  * subscribes to the media query, so an OS switch still repaints live.
  */
-

@@ -1,36 +1,58 @@
 /**
  * Typography.
  *
- * The faces were already chosen and they are good ones, so nothing here changes
- * them. What changes is how they are *set*: the previous build used Fraunces as
- * if it were a static font, which meant downloading a variable face with a
- * 9–144 optical-size axis and then rendering every size from the same master.
+ * Cormorant Garamond over Lora — a Garalde display face above a workhorse text
+ * serif, which is the pairing the Classical system is built on. Both are set
+ * through the tokens in src/index.css (`--font-serif` for headings,
+ * `--font-sans` for body; the second keeps its name and stops being sans, see
+ * the note there).
  *
- * Optical sizing is the difference between a display face that looks drawn for
- * the headline and one that looks scaled up from body copy. At 9pt Fraunces
- * thickens its hairlines and opens its counters so it survives small sizes; at
- * 144 it lets the contrast run high and the serifs go sharp. Browsers will do
- * this automatically from `font-optical-sizing: auto`, but only for fonts that
- * actually carry the axis — so this is one declaration in exchange for a
- * typographic quality the app was already paying the bytes for.
+ * Two rules run through everything below.
+ *
+ * Bold is avoided. Interface headings cap at semibold, and the *bigger* the
+ * text the *lighter* it sets — the hero takes the 300 cut, section displays
+ * take 400. That is backwards from most interface type and it is the whole
+ * character of the system: at 78px, weight is not what makes a headline
+ * command a page, size already did that. Emphasis inside running text is
+ * italic, never bold.
+ *
+ * Figures set tabular wherever they stand as data — the display numerals,
+ * table columns, timers, counters — and keep their text figures in running
+ * prose, where Lora's tabular feature also widens word-spaces and punctuation
+ * and would visibly loosen a paragraph.
  */
-
 :root {
   /*
-   * Type scale, a 1.25 (major third) ratio anchored at 16px.
+   * Type scale.
    *
-   * A named scale rather than ad-hoc `text-3xl md:text-4xl` pairs, because the
-   * ratio is what makes a page feel composed and it cannot survive being
-   * re-decided at each call site.
+   * The sizes are the source design's, not a ratio derived in the abstract:
+   * a 10px tracked kicker, 15px body, and display sizes that run to 78px. The
+   * gap between body and display is deliberately enormous, which is what lets
+   * the page have a loud voice and a quiet one and nothing in between.
    */
   --text-caption: 0.75rem;
-  --text-small: 0.875rem;
-  --text-body: 1rem;
-  --text-lead: 1.125rem;
-  --text-heading: 1.375rem;
-  --text-title: 1.875rem;
-  --text-display: 2.75rem;
-  --text-hero: clamp(2.5rem, 1.6rem + 4vw, 4.5rem);
+  --text-small: 0.8125rem;
+  --text-body: 0.9375rem;
+
+  /*
+   * The four largest roles are fluid, the rest are fixed.
+   *
+   * A named scale is worth having precisely because the ratio is decided once —
+   * but a ratio tuned on a 1280px desktop does not survive a 375px phone. Below
+   * `heading` the sizes stay put: body copy and labels are already at their
+   * comfortable minimum, and scaling them with the viewport only makes small
+   * screens harder to read.
+   */
+  --text-lead: clamp(1rem, 0.95rem + 0.22vw, 1.0625rem);
+  --text-heading: 1.3125rem;
+  --text-title: clamp(1.5rem, 1.25rem + 1.1vw, 2.375rem);
+  --text-display: clamp(2.0625rem, 1.7rem + 1.9vw, 3.5rem);
+  /*
+   * The hero runs to 78px because Cormorant at its 300 cut can carry it. A
+   * high-contrast Garalde needs the size — at 40px the hairlines that make the
+   * face worth loading are barely visible, and it reads as a generic serif.
+   */
+  --text-hero: clamp(2.5rem, 1.6rem + 3.9vw, 4.875rem);
 
   /*
    * Measure. Around 66 characters is the long-standing comfortable line, and
@@ -42,16 +64,16 @@
 }
 
 /*
- * Optical sizing, applied wherever the serif is used.
- *
- * `font-optical-sizing: auto` is the default in modern engines, but it is stated
- * explicitly because Safari has shipped builds where an inherited
- * `font-variation-settings` silently disables it — and Safari is the engine this
- * app runs inside on iOS.
+ * Neither face carries an optical-size axis, so there is no
+ * `font-optical-sizing` here — it would be a declaration that does nothing.
+ * What the headings do need is the figure treatment: a Cormorant heading is
+ * where the display numerals live (a rank, a count, a score), and those have to
+ * line up in a column.
  */
-.font-serif,
-h1, h2, h3 {
-  font-optical-sizing: auto;
+h1, h2, h3, h4,
+.font-serif {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* --------------------------------------------------------------------------
@@ -65,64 +87,113 @@ h1, h2, h3 {
  * glyphs.
  */
 
+/*
+ * Weight — the ladder runs *down* as size runs up.
+ *
+ * 300 at hero, 400 at display, 500 at title, 600 at heading and below. A
+ * Garalde's whole value is the contrast between thick and hair strokes, and
+ * adding weight is the fastest way to throw that away: at 700 the counters
+ * close, the hairlines thicken to match the stems, and an expensive face
+ * renders as a cheap one. Small sizes get the weight because they need it to
+ * hold up against body copy; large sizes never do.
+ */
+
 .type-hero {
   font-family: var(--font-serif);
   font-size: var(--text-hero);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -0.028em;
+  font-weight: 300;
+  line-height: 1.03;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
 .type-display {
   font-family: var(--font-serif);
   font-size: var(--text-display);
-  font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.022em;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
 .type-title {
   font-family: var(--font-serif);
   font-size: var(--text-title);
-  font-weight: 600;
-  line-height: 1.16;
-  letter-spacing: -0.016em;
-  text-wrap: balance;
-}
-
-.type-heading {
-  font-family: var(--font-sans);
-  font-size: var(--text-heading);
-  font-weight: 650;
-  line-height: 1.28;
-  letter-spacing: -0.011em;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
 /*
- * Eyebrow labels.
+ * The serif does *not* stop here.
  *
- * Set in the mono face, not the sans. On an instrument the small all-caps label
- * is engraved or printed, never typeset — using JetBrains Mono here is what ties
- * the label to the readouts it introduces, and it gives the uppercase tracking
- * somewhere to sit without looking stretched.
+ * In a two-serif system the heading face carries every heading, all the way
+ * down to the 13px label — Cormorant and Lora are different enough in colour
+ * and width that the change still reads at 21px, which is not true of a
+ * serif/sans pair at the same size. Semibold is the ceiling from here down.
+ */
+.type-heading {
+  font-family: var(--font-serif);
+  font-size: var(--text-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+.type-subheading {
+  font-family: var(--font-serif);
+  font-size: var(--text-lead);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.008em;
+  text-wrap: balance;
+}
+
+/*
+ * Eyebrow labels — tracked-out capitals, and this is a reversal.
+ *
+ * An earlier build set these as 12px sentence-case body text, on the argument
+ * that all-caps removes the ascender/descender pattern word shapes are
+ * recognised by and so has to be spelled out letter by letter. That argument is
+ * still true, and it is still the reason not to have a hundred of them.
+ *
+ * It loses here because the kicker is doing a different job in this system.
+ * Every section of the source design opens with one — `01 — THE ADAPTIVE
+ * ENGINE`, `RANK TIER`, `LEARNING STATUS` — and it is the only piece of
+ * furniture holding the editorial structure together above a flush-left display
+ * line. Tracked capitals at 10px read as a rule with words in it rather than as
+ * text, which is exactly what is wanted: it is a label on a drawer, not a
+ * sentence, and nobody reads it twice.
+ *
+ * The discipline that makes it safe is scarcity: one per section, two or three
+ * words, never a paragraph, never nested.
+ */
+/*
+ * No `color` here, deliberately.
+ *
+ * These role classes are unlayered CSS and Tailwind's utilities live in
+ * `@layer utilities`, so an unlayered declaration wins against a utility no
+ * matter what order they appear in. A `color` on this class would silently beat
+ * every `text-*` a call site put next to it, and the failure would look like the
+ * utility not existing. Callers set their own colour.
  */
 .type-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.11em;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
 }
 
 .type-body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  line-height: 1.6;
-  letter-spacing: -0.003em;
+  line-height: 1.75;
+  letter-spacing: 0;
   text-wrap: pretty;
   max-width: var(--measure);
 }
@@ -130,8 +201,8 @@ h1, h2, h3 {
 .type-lead {
   font-family: var(--font-sans);
   font-size: var(--text-lead);
-  line-height: 1.55;
-  letter-spacing: -0.006em;
+  line-height: 1.8;
+  letter-spacing: 0;
   text-wrap: pretty;
   max-width: var(--measure);
 }
@@ -139,24 +210,30 @@ h1, h2, h3 {
 .type-caption {
   font-family: var(--font-sans);
   font-size: var(--text-caption);
-  line-height: 1.45;
+  line-height: 1.6;
   color: var(--ct-subtle);
 }
 
 /*
  * Numeric readouts: scores, timers, ranks, point totals.
  *
+ * These set in the display serif rather than a mono face. The system does not
+ * load one — a monospace figure in a book-like page reads as a code listing,
+ * and Cormorant's own lining figures are drawn to sit beside its capitals. The
+ * tabular feature supplies the one thing mono was actually being used for.
+ *
  * `tabular-nums` is not decoration. Every counter in this app animates — the
  * dashboard's points, the contest clock — and proportional digits make the
- * number jitter horizontally as it counts, because a `1` is narrower than a `8`.
- * Fixing the advance width is what lets a value change without the layout
+ * number jitter horizontally as it counts, because a `1` is narrower than an
+ * `8`. Fixing the advance width is what lets a value change without the layout
  * twitching.
  */
 .type-data {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1, 'zero' 1;
-  letter-spacing: -0.02em;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  letter-spacing: 0;
 }
 
 /*
