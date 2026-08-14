@@ -96,55 +96,59 @@ export default function ResearchAnalytics() {
 
   return (
     <div className="space-y-8">
-      <div className="border-b border-stone-100 pb-4">
-        <h1 className="type-title text-content flex items-center gap-2">
-          <FlaskConical className="w-7 h-7 text-proof-600" /> Research Analytics
-        </h1>
-        <p className="text-xs text-stone-500 mt-1">
-          Aggregated, anonymized platform intelligence for educational research institutions.
-        </p>
-      </div>
+      {/*
+        The bank readout.
 
-      {/* Privacy posture */}
-      <div className="bg-proof-50 border border-proof-150 rounded-card p-4 flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-proof-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <h3 className="text-xs font-extrabold text-proof-800">Anonymized by construction</h3>
-          <p className="text-[11px] text-proof-700 leading-relaxed">
-            This view exposes only item-level psychometrics and cohort-level distributions. No individual learner
-            record, name, or identifier is included in anything shown or exported here.
-          </p>
-        </div>
-      </div>
+        Four figures on one hairline rule rather than four bordered tiles. It is
+        the same band the profile opens with, which is the point: these are the
+        same kind of thing — a set of measurements taken at one moment — and
+        they should look like a table of results, not like four buttons.
+      */}
+      <section className="cx-band-stats">
+        <StaggerItem index={0}>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Calibrated items</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block"><AnimatedNumber value={ITEM_BANK.length} /></span>
+          <span className="mt-2 block text-[13px] text-content-subtle">Each with a, b, c and a concept tag</span>
+        </StaggerItem>
+        <StaggerItem index={1}>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Contest sources</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block"><AnimatedNumber value={SOURCES.length} /></span>
+          <span className="mt-2 block text-[13px] text-content-subtle">AMC 8 through IMO</span>
+        </StaggerItem>
+        <StaggerItem index={2}>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Domains</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block"><AnimatedNumber value={DOMAINS.length} /></span>
+          <span className="mt-2 block text-[13px] text-content-subtle">Balanced by the selector</span>
+        </StaggerItem>
+        <StaggerItem index={3}>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Concepts tagged</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block"><AnimatedNumber value={concepts.length} /></span>
+          <span className="mt-2 block text-[13px] text-content-subtle">What remediation dispatches on</span>
+        </StaggerItem>
+      </section>
 
-      {/* Bank summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StaggerItem index={0} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1">
-          <span className="text-[10px] text-stone-400 font-bold uppercase block">Calibrated items</span>
-          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={ITEM_BANK.length} /></span>
-        </StaggerItem>
-        <StaggerItem index={1} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1">
-          <span className="text-[10px] text-stone-400 font-bold uppercase block">Contest sources</span>
-          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={SOURCES.length} /></span>
-        </StaggerItem>
-        <StaggerItem index={2} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1">
-          <span className="text-[10px] text-stone-400 font-bold uppercase block">Domains</span>
-          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={DOMAINS.length} /></span>
-        </StaggerItem>
-        <StaggerItem index={3} className="bg-surface-raised material-card border border-line p-5 rounded-card shadow-e1">
-          <span className="text-[10px] text-stone-400 font-bold uppercase block">Concepts tagged</span>
-          <span className="text-2xl font-black text-stone-900 font-mono"><AnimatedNumber value={concepts.length} /></span>
-        </StaggerItem>
-      </div>
+      {/*
+        The privacy posture is a stated rule, not a tinted alert. It is always
+        true and never changes, so styling it as a notification would make the
+        page cry wolf on every visit.
+      */}
+      <p className="flex items-start gap-2.5 border-l-2 border-proof/40 pl-4 text-[13.5px] leading-[1.75] text-content-muted">
+        <ShieldCheck className="mt-1 h-3.5 w-3.5 shrink-0 text-proof" />
+        <span>
+          <span className="text-content">Anonymised by construction.</span> This view exposes only item-level
+          psychometrics and cohort-level distributions. No individual learner record, name or identifier is included
+          in anything shown or exported here.
+        </span>
+      </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Difficulty calibration by source */}
-        <div className="lg:col-span-7 bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
+        <div className="lg:col-span-7 cx-card p-6.5 space-y-5">
           <div className="space-y-1">
-            <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
-              <Layers className="w-5 h-5 text-brass-600" /> Difficulty Calibration by Source
+            <h2 className="type-title text-[23px] flex items-center gap-2">
+              <Layers className="w-5 h-5 text-azure-600" /> Difficulty Calibration by Source
             </h2>
-            <p className="text-[11px] text-stone-500 leading-relaxed">
+            <p className="type-caption mt-1.5 leading-[1.7] text-content-subtle">
               Mean IRT difficulty (b) and discrimination (a) per competition tier.
             </p>
           </div>
@@ -153,39 +157,39 @@ export default function ResearchAnalytics() {
             {bySource.map((row) => (
               <div key={row.source} className="space-y-1.5">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-stone-800">{row.source}</span>
-                  <span className="font-mono text-stone-500 text-[10px]">
+                  <span className="text-[15px]">{row.source}</span>
+                  <span className="text-[13px] text-accent-text tnum">
                     n={row.count} &middot; b&#772;={row.meanB.toFixed(2)} &middot; a&#772;={row.meanA.toFixed(2)}
                   </span>
                 </div>
                 <SpringBar
                   value={((row.meanB + 3) / 6) * 100}
-                  track="w-full bg-stone-100 rounded-full h-2 relative overflow-hidden"
-                  fill="bg-brass-500 h-2 rounded-full"
+                  track="w-full bg-line-strong h-0.5 relative overflow-hidden"
+                  fill="bg-accent h-0.5"
                   label={`Mean difficulty for ${row.source}`}
                 />
               </div>
             ))}
-            <div className="flex justify-between text-[9px] text-stone-400 font-mono pt-1">
+            <div className="flex justify-between pt-1 text-[11px] text-content-subtle tnum">
               <span>&theta; = -3 (easiest)</span><span>0</span><span>+3 (hardest)</span>
             </div>
           </div>
         </div>
 
         {/* Domain coverage */}
-        <div className="lg:col-span-5 bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
+        <div className="lg:col-span-5 cx-card p-6.5 space-y-5">
           <div className="space-y-1">
-            <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
+            <h2 className="type-title text-[23px] flex items-center gap-2">
               <Users2 className="w-5 h-5 text-violet-600" /> Domain Coverage
             </h2>
-            <p className="text-[11px] text-stone-500 leading-relaxed">Item counts and mean difficulty per domain.</p>
+            <p className="type-caption mt-1.5 leading-[1.7] text-content-subtle">Item counts and mean difficulty per domain.</p>
           </div>
 
           <div className="space-y-3">
             {byDomain.map((row) => (
-              <div key={row.domain} className="flex items-center justify-between p-3 bg-stone-50 rounded-control border border-stone-100">
-                <span className="text-xs font-bold text-stone-800">{row.domain}</span>
-                <span className="text-[10px] font-mono text-stone-500">
+              <div key={row.domain} className="flex items-center justify-between gap-4 border-b border-line-faint py-3.5 last:border-b-0">
+                <span className="text-[15px]">{row.domain}</span>
+                <span className="text-[13px] text-accent-text tnum">
                   {row.count} items &middot; b&#772;={row.meanB.toFixed(2)}
                 </span>
               </div>
@@ -195,10 +199,10 @@ export default function ResearchAnalytics() {
       </div>
 
       {/* Test information curve */}
-      <div className="bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
+      <div className="cx-card p-6.5 space-y-5">
         <div className="space-y-1">
-          <h2 className="text-base font-extrabold text-stone-950">Test Information vs. Population Density</h2>
-          <p className="text-[11px] text-stone-500 leading-relaxed">
+          <h2 className="type-title text-[23px]">Test Information vs. Population Density</h2>
+          <p className="type-caption mt-1.5 leading-[1.7] text-content-subtle">
             Where the bank measures most precisely (bars) against the assumed N(0,1) learner distribution (line).
             Gaps indicate ability ranges needing more calibrated items.
           </p>
@@ -224,7 +228,7 @@ export default function ResearchAnalytics() {
               />
               {/* The density marker fades in once the bars have landed. */}
               <m.div
-                className="absolute w-1.5 h-1.5 rounded-full bg-brass-500"
+                className="absolute w-1.5 h-1.5 rounded-full bg-azure-500"
                 style={{ bottom: `${b.densityPct}%` }}
                 initial={{ opacity: 0, scale: 0 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -234,24 +238,24 @@ export default function ResearchAnalytics() {
             </div>
           ))}
         </div>
-        <div className="flex justify-between text-[9px] text-stone-400 font-mono px-2">
+        <div className="flex justify-between text-[11px] text-stone-400 font-mono px-2">
           {distribution.filter((_, i) => i % 2 === 0).map((b) => (
             <span key={b.theta}>{b.theta.toFixed(1)}</span>
           ))}
         </div>
-        <div className="flex gap-4 text-[10px] text-stone-500">
+        <div className="flex gap-4 text-[11px] text-stone-500">
           <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-proof-500/70 rounded-sm" /> Test information</span>
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-brass-500 rounded-full" /> Population density</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-azure-500 rounded-full" /> Population density</span>
         </div>
       </div>
 
       {/* Concept frequency */}
-      <div className="bg-surface-raised material-card border border-line rounded-panel p-6 shadow-e1 space-y-5">
+      <div className="cx-card p-6.5 space-y-5">
         <div className="space-y-1">
-          <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-2">
+          <h2 className="type-title text-[23px] flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" /> Concept Coverage Map
           </h2>
-          <p className="text-[11px] text-stone-500 leading-relaxed">
+          <p className="type-caption mt-1.5 leading-[1.7] text-content-subtle">
             Tagged concepts across the bank. Thinly covered concepts are candidates for curriculum expansion.
           </p>
         </div>
@@ -260,7 +264,7 @@ export default function ResearchAnalytics() {
           {concepts.map(([concept, count]) => (
             <span
               key={concept}
-              className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border ${
+              className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border ${
                 count >= 2 ? 'bg-proof-50 border-proof-150 text-proof-700' : 'bg-amber-50 border-amber-200 text-amber-700'
               }`}
             >
@@ -273,8 +277,8 @@ export default function ResearchAnalytics() {
       {/* Export */}
       <div className="bg-ink-950 border border-ink-800 rounded-panel p-6 shadow-e1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-extrabold text-white font-serif">Export research dataset</h3>
-          <p className="text-[11px] text-stone-400 leading-relaxed max-w-md">
+          <h3 className="text-sm font-semibold text-white font-serif">Export research dataset</h3>
+          <p className="text-[12px] text-stone-400 leading-relaxed max-w-md">
             Item-level psychometric parameters in CSV, suitable for replication studies and independent
             calibration analysis. Contains no learner data.
           </p>
@@ -283,7 +287,7 @@ export default function ResearchAnalytics() {
           onClick={exportDataset}
           whileTap={{ scale: 0.96 }}
           transition={spring.press}
-          className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-5 py-3 rounded-control transition-colors duration-160 ease-standard cursor-pointer shadow-e2 flex items-center gap-2 shrink-0"
+          className="cx-btn cx-btn-fill shrink-0"
         >
           <Download className="w-4 h-4" /> Download CSV
         </m.button>

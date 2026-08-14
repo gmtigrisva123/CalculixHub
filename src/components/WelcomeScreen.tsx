@@ -9,12 +9,13 @@ import {
   Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
   ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
   Globe, Shield, TrendingUp, Users, Check, X, Download,
-  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare
+  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare, Compass
 } from 'lucide-react';
 import { Level, Topic } from '../types';
 import MathText from './MathText';
 import { apiUrl } from '../lib/apiBase';
 import InstallAppButton from './InstallAppButton';
+import LandingPage from './landing/LandingPage';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../lib/useAmbient';
 import { AnimatedNumber, Reveal, SpringBar } from './motion';
@@ -50,6 +51,9 @@ interface WelcomeScreenProps {
 }
 
 const DOMAINS: Domain[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
+
+/** Counted from the real bank, so the figure on the panel cannot drift from it. */
+const BANK = bankSummary();
 
 /**
  * Geometry of the hero skill graph.
@@ -106,11 +110,18 @@ interface GraphNode {
  * breaks that, and it is not visible in the markup unless the symmetry is
  * stated somewhere. It is stated here.
  */
+/*
+ * These four have to be literals — they are SVG paint attributes, not classes —
+ * but they are not free choices: they are the `-500`/`-400` steps of the same
+ * four ramps `TOPIC_META` assigns in src/lib/topics.tsx. A learner who sees
+ * Combinatorics in amber on the dashboard should not meet it in violet here.
+ * Change one, change the other.
+ */
 const GRAPH_NODES: readonly GraphNode[] = [
-  { domain: 'Algebra', x: 92, y: 98, stroke: '#c8842a', text: '#e0a339' },
-  { domain: 'Geometry', x: 358, y: 98, stroke: '#2f9c8c', text: '#4fb8a8' },
-  { domain: 'Combinatorics', x: 92, y: 302, stroke: '#8b5cf6', text: '#a78bfa' },
-  { domain: 'Number Theory', x: 358, y: 302, stroke: '#0ea5e9', text: '#38bdf8' },
+  { domain: 'Algebra', x: 92, y: 98, stroke: '#7f5af0', text: '#9b83fb' },
+  { domain: 'Geometry', x: 358, y: 98, stroke: '#22c55e', text: '#4ade80' },
+  { domain: 'Combinatorics', x: 92, y: 302, stroke: '#f98807', text: '#ffa920' },
+  { domain: 'Number Theory', x: 358, y: 302, stroke: '#0ea2dc', text: '#3cbef2' },
 ];
 
 /**
@@ -140,7 +151,7 @@ const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOr
 
 
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
-  const { signIn, signUp, requestPasswordReset, completeOnboarding, status: authStatus } = useAuth();
+  const { signIn, signUp, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
 
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'placement'>('landing');
   const [email, setEmail] = useState('');
@@ -330,8 +341,25 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       return;
     }
 
-    // AuthProvider now owns the session; App reacts to `status` becoming
-    // 'authenticated' and restores it on every subsequent load.
+    setSuccessMessage('Welcome back! Resuming your placement test...');
+    
+    setTimeout(() => {
+      setAuthMode('placement');
+      setResponses([]);
+      setSelectedAnswerIdx(null);
+      setTheta(0.0);
+      setSem(1.0);
+      setTestCompleted(false);
+      setIrtLog([
+        '[IRT] Resuming placement assessment for authenticated user.',
+        '[IRT] 3PL engine initialized. Prior N(0,1), EAP estimation over 81 quadrature nodes.',
+        `[IRT] Bank loaded: ${ITEM_BANK.length} calibrated items across AMC 8 / AMC 10 / AIME / USAMO / IMO.`,
+      ]);
+      const first = selectNextItem(ITEM_BANK, [], 0) || ITEM_BANK[0];
+      setCurrentItem(first);
+      setItemStartedAt(Date.now());
+      setSuccessMessage('');
+    }, 1500);
   };
 
   const handleForgotPassword = async () => {
@@ -513,20 +541,20 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         <head>
           <title>CalculixHub - Impact & Research Report</title>
           <style>
-            body { font-family: 'Georgia', serif; color: #161310; padding: 45px; line-height: 1.6; background: #ffffff; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #855116; padding-bottom: 25px; margin-bottom: 35px; }
-            .logo { font-size: 26px; font-weight: 900; color: #201b16; text-transform: uppercase; letter-spacing: 1.5px; }
-            .subtitle { font-size: 11px; color: #57534e; text-transform: uppercase; font-weight: 700; margin-top: 5px; }
-            .date { font-size: 13px; color: #57534e; font-family: monospace; background: #f3ede1; padding: 5px 10px; border-radius: 6px; }
+            body { font-family: 'Georgia', serif; color: #0d1117; padding: 45px; line-height: 1.6; background: #ffffff; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1d4ed8; padding-bottom: 25px; margin-bottom: 35px; }
+            .logo { font-size: 26px; font-weight: 900; color: #161b22; text-transform: uppercase; letter-spacing: 1.5px; }
+            .subtitle { font-size: 11px; color: #4a5567; text-transform: uppercase; font-weight: 700; margin-top: 5px; }
+            .date { font-size: 13px; color: #4a5567; font-family: monospace; background: #eef1f5; padding: 5px 10px; border-radius: 6px; }
             .section { margin-bottom: 40px; page-break-inside: avoid; }
-            h2 { font-size: 18px; color: #855116; border-left: 5px solid #c8842a; padding-left: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+            h2 { font-size: 18px; color: #1d4ed8; border-left: 5px solid #3b82f6; padding-left: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
             p { font-size: 14px; color: #334155; text-align: justify; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
             th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
             th { background-color: #f8fafc; font-weight: bold; color: #0f172a; }
             .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 25px; }
-            .metric-card { border: 1px solid #e2e8f0; background: #faf7f1; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-            .metric-val { font-size: 26px; font-weight: 800; color: #855116; font-family: monospace; margin: 8px 0; }
+            .metric-card { border: 1px solid #e2e8f0; background: #f6f8fa; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+            .metric-val { font-size: 26px; font-weight: 800; color: #1d4ed8; font-family: monospace; margin: 8px 0; }
             .metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
             .footer { margin-top: 60px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 25px; font-size: 11px; color: #64748b; }
             @media print { body { padding: 25px; } .no-print { display: none; } }
@@ -619,995 +647,289 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const IRT_FORMULA = '\\[P_i(\\theta) = \\frac{e^{\\theta - b_i}}{1 + e^{\\theta - b_i}}\\]';
 
   // --- LANDING PAGE RENDERING FUNCTION ---
-  const renderLandingPage = () => {
-    return (
-      <div className="min-h-screen bg-ink-950 text-stone-200 selection:bg-brass-500 selection:text-ink-950 flex flex-col antialiased relative overflow-hidden font-sans">
-
-        <div className="absolute inset-0 pointer-events-none bp-grid bp-grid-inverse opacity-60" />
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brass-500/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[20%] right-[-10%] w-[45%] h-[45%] bg-proof-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-        {/* STICKY NAVBAR */}
-        <header className="sticky top-0 z-50 backdrop-blur-md bg-ink-950/85 border-b border-ink-800 select-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-control text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif shrink-0">
-                &#8721;
-              </div>
-              {/*
-                The wordmark costs ~120px of a 320px header, which does not
-                survive alongside the action buttons on an iPhone SE. Below sm
-                the sigma mark carries the brand on its own; the hero headline
-                names the product immediately underneath.
-              */}
-              <div className="hidden sm:block">
-                <h1 className="font-extrabold text-sm tracking-widest text-stone-100 uppercase">CalculixHub</h1>
-                <span className="text-[10px] font-bold text-stone-500 block -mt-1 uppercase tracking-wider">Math OS Platform</span>
-              </div>
-            </div>
-
-            <nav className="hidden md:flex items-center gap-7 text-[11px] font-bold uppercase tracking-wider text-stone-400">
-              <a href="#mission" className="hover:text-white transition-colors">Mission</a>
-              <a href="#definition" className="hover:text-white transition-colors">Positioning</a>
-              <a href="#architecture" className="hover:text-white transition-colors">Architecture</a>
-              <a href="#community" className="hover:text-white transition-colors">Community</a>
-              <a href="#flow" className="hover:text-white transition-colors">Flow</a>
-              <a href="#impact" className="hover:text-white transition-colors">Impact</a>
-            </nav>
-
-            <div className="flex items-center gap-1.5 sm:gap-3.5">
-              <InstallAppButton />
-              <button
-                type="button"
-                onClick={() => setAuthMode('login')}
-                className="text-xs font-bold text-stone-400 hover:text-white transition-colors cursor-pointer px-2 sm:px-3 py-1.5 rounded-lg hover:bg-ink-900 whitespace-nowrap"
-              >
-                Sign in
-              </button>
-              <m.button
-                type="button"
-                onClick={() => setAuthMode('register')}
-                whileTap={{ scale: 0.95 }}
-                transition={spring.press}
-                className="bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs px-3 sm:px-4.5 py-2.5 rounded-control transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard shadow-e2 hover:shadow-brass-500/20 hover:shadow-e3 cursor-pointer whitespace-nowrap"
-              >
-                {/*
-                  Shortened below sm so the header fits a 375px viewport now that
-                  it carries a third button. Nothing is lost: the hero's
-                  full-width "Start free — take the placement test" CTA sits
-                  directly beneath it on mobile.
-                */}
-                <span className="sm:hidden">Start free</span>
-                <span className="hidden sm:inline">Take the placement test</span>
-              </m.button>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 relative z-10">
-
-          {/*
-            HERO
-
-            Animates on mount rather than on scroll: it is already in view when
-            the page loads, and a whileInView reveal above the fold either fires
-            instantly (pointless) or, worse, waits for a scroll that never
-            comes. The two columns arrive together, with the visualiser a beat
-            behind the copy so the headline is read first.
-          */}
-          <m.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...spring.smooth, opacity: { duration: duration.slower, ease: ease.standard } }}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"
-          >
-
-            <div className="lg:col-span-7 space-y-7 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 bg-brass-500/10 border border-brass-500/25 px-3 py-1.5 rounded-full text-[10px] font-black uppercase text-brass-400 tracking-wider">
-                <Sparkles ref={heroSparkleRef} className="w-3.5 h-3.5 animate-pulse" /> An AI-native operating system for mathematical thinking
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-[1.15] text-white font-serif">
-                Think in Proofs. <br />
-                <span className="bg-gradient-to-r from-brass-400 via-brass-300 to-proof-400 bg-clip-text text-transparent">
-                  Train Like a Competitor.
-                </span>
-              </h1>
-
-              <p className="text-sm sm:text-base text-stone-400 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                An integrated EdTech ecosystem &mdash; adaptive AI, live competition, and real-time analytics &mdash; built for students who want to actually get better at mathematics, not just consume worksheets.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-3">
-                <m.button
-                  type="button"
-                  onClick={() => setAuthMode('register')}
-                  whileTap={{ scale: 0.98 }}
-                  transition={spring.press}
-                  className="bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 font-extrabold text-xs px-7 py-4.5 rounded-card shadow-e3 hover:shadow-brass-500/10 hover:shadow-e4 transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-2 cursor-pointer group"
-                >
-                  Start free &mdash; take the placement test
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-240 ease-standard" />
-                </m.button>
-                <a
-                  href="#impact"
-                  className="bg-ink-900/60 hover:bg-ink-900 border border-ink-800 text-stone-350 hover:text-white font-bold text-xs px-6 py-4.5 rounded-card transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard flex items-center justify-center gap-1.5"
-                >
-                  View the research report
-                </a>
-              </div>
-
-              {/*
-                Three counters the server can actually source, each with the
-                window it is measured over written underneath. The third tile
-                used to read "Live in the arena / Ranked matches" against
-                `activeContestsCount`, which nothing has ever incremented, and
-                the first carried a fixed "+3.4/min" arrival rate that was not
-                computed from anything.
-              */}
-              <div className="pt-8 border-t border-ink-800/70 max-w-xl mx-auto lg:mx-0">
-                <p className="text-[10px] uppercase font-black tracking-widest text-stone-500 mb-3 flex items-center justify-center lg:justify-start gap-1.5">
-                  <span ref={livePingRef} className="w-2 h-2 rounded-full bg-proof-500 animate-ping" /> Live system status
-                </p>
-                <div className="grid grid-cols-3 gap-6 text-center lg:text-left">
-                  <div className="space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-500 block min-h-[3em] sm:min-h-0">Learners active</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.activeUsers} format={(n) => Math.round(n).toLocaleString()} /></span>
-                    <span className="text-[8px] text-proof-400 font-bold block">Last 15 min</span>
-                  </div>
-                  <div className="space-y-1 border-x border-ink-800/60 px-4">
-                    <span className="text-[9px] uppercase font-bold text-stone-500 block min-h-[3em] sm:min-h-0">Assessments run</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.testsCompleted} format={(n) => Math.round(n).toLocaleString()} /></span>
-                    <span className="text-[8px] text-brass-400 font-bold block">Since restart</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-stone-500 block min-h-[3em] sm:min-h-0">Problems graded</span>
-                    <span className="text-xl font-black text-white font-mono block tracking-tight"><AnimatedNumber value={liveStats.problemsSolved} format={(n) => Math.round(n).toLocaleString()} /></span>
-                    <span className="text-[8px] text-violet-400 font-bold block">Since restart</span>
-                  </div>
-                </div>
-                <p className="text-[9px] text-stone-600 mt-3 leading-relaxed">
-                  Counted in the serving instance's memory, so these reset on deploy and are reported as operational signal rather than audited totals.
-                </p>
-              </div>
-            </div>
-
-            {/* Interactive SVG Network Visualizer */}
-            <div className="lg:col-span-5 relative">
-              <div className="absolute inset-0 bg-brass-500/5 rounded-full blur-[80px] pointer-events-none" />
-              <div className="bg-ink-950/40 border border-ink-800 p-6 sm:p-8 rounded-[32px] backdrop-blur-md shadow-e4 relative bp-corners text-brass-500">
-
-                <svg viewBox="0 0 450 400" className="w-full h-auto max-w-[380px] sm:max-w-[450px] mx-auto overflow-visible select-none">
-                  {/*
-                    Links first, so the core and the node circles paint over
-                    nothing — each line already stops short of both.
-                  */}
-                  {GRAPH_NODES.map((node) => {
-                    const link = linkGeometry(node);
-                    const active = activeDomain === node.domain;
-                    return (
-                      <line
-                        key={`link-${node.domain}`}
-                        x1={link.x1}
-                        y1={link.y1}
-                        x2={link.x2}
-                        y2={link.y2}
-                        stroke={active ? node.stroke : '#342d27'}
-                        strokeWidth={active ? 3 : 2}
-                        strokeDasharray={active ? 'none' : '4 4'}
-                        strokeLinecap="round"
-                        className="transition-[stroke,stroke-width] duration-300 ease-standard"
-                      />
-                    );
-                  })}
-
-                  {GRAPH_NODES.map((node) => {
-                    if (activeDomain !== node.domain || prefersReducedMotion) return null;
-                    const link = linkGeometry(node);
-                    return (
-                      <circle key={`pulse-${node.domain}`} r="4.5" fill={node.stroke}>
-                        <animateMotion
-                          dur="0.9s"
-                          repeatCount="indefinite"
-                          path={`M ${link.x1} ${link.y1} L ${link.x2} ${link.y2}`}
-                        />
-                      </circle>
-                    );
-                  })}
-
-                  <g className="group">
-                    <circle
-                      cx={GRAPH.cx}
-                      cy={GRAPH.cy}
-                      r={GRAPH.coreRadius}
-                      fill="#201b16"
-                      stroke="#c8842a"
-                      strokeWidth="2.5"
-                      style={SELF_ORIGIN}
-                      className="transition-[stroke,transform] duration-300 ease-standard group-hover:stroke-brass-400 group-hover:scale-105"
-                    />
-                    <circle
-                      ref={coreRingRef}
-                      cx={GRAPH.cx}
-                      cy={GRAPH.cy}
-                      r={GRAPH.coreRingRadius}
-                      fill="none"
-                      stroke="#c8842a"
-                      strokeWidth="1"
-                      strokeDasharray="5 5"
-                      className="animate-spin"
-                      style={{ ...SELF_ORIGIN, animationDuration: '20s' }}
-                    />
-                    <foreignObject x={GRAPH.cx - 18} y={GRAPH.cy - 18} width="36" height="36">
-                      <div className="w-full h-full flex items-center justify-center text-brass-400">
-                        <Brain className="w-7 h-7" />
-                      </div>
-                    </foreignObject>
-                    <text x={GRAPH.cx} y={GRAPH.cy + 79} fill="#e0a339" fontSize="11" fontWeight="bold" textAnchor="middle" letterSpacing="1">
-                      EDUREACH CORE
-                    </text>
-                    <text x={GRAPH.cx} y={GRAPH.cy + 93} fill="#78716c" fontSize="9.5" textAnchor="middle" className="font-mono">
-                      {bank.itemCount} calibrated items
-                    </text>
-                  </g>
-
-                  {/*
-                    One node renderer, four nodes. Anything that differs between
-                    them is data on GRAPH_NODES or a measurement from the bank —
-                    never a hand-tuned coordinate, which is how the four drifted
-                    apart before.
-                  */}
-                  {GRAPH_NODES.map((node) => {
-                    const profile = bankProfiles.find((entry) => entry.domain === node.domain);
-                    if (!profile) return null;
-
-                    const active = activeDomain === node.domain;
-                    return (
-                      <g
-                        key={`node-${node.domain}`}
-                        role="button"
-                        tabIndex={0}
-                        aria-pressed={active}
-                        aria-label={`${node.domain}: ${profile.itemCount} calibrated items, difficulty ${formatDifficulty(profile.easiestB)} to ${formatDifficulty(profile.hardestB)}`}
-                        onMouseEnter={() => setActiveDomain(node.domain)}
-                        onMouseLeave={() => setActiveDomain(null)}
-                        onFocus={() => setActiveDomain(node.domain)}
-                        onBlur={() => setActiveDomain(null)}
-                        /* Focus ring comes from the design system's
-                           `[tabindex]:focus-visible` rule in materials.css. */
-                        className="cursor-pointer"
-                      >
-                        {/*
-                          The only element that takes pointer events: an
-                          invisible rect of the same size at every node, so the
-                          hover target no longer grows with the label's width.
-                        */}
-                        <rect
-                          x={node.x - GRAPH.hitWidth / 2}
-                          y={node.y + GRAPH.hitTopOffset}
-                          width={GRAPH.hitWidth}
-                          height={GRAPH.hitHeight}
-                          fill="transparent"
-                        />
-
-                        <g className="pointer-events-none">
-                          {active && (
-                            <circle
-                              cx={node.x}
-                              cy={node.y}
-                              r={GRAPH.nodeRadius + 5}
-                              fill="none"
-                              stroke={node.stroke}
-                              strokeWidth="1.5"
-                              style={SELF_ORIGIN}
-                              className="animate-ping"
-                            />
-                          )}
-                          <circle
-                            cx={node.x}
-                            cy={node.y}
-                            r={GRAPH.nodeRadius}
-                            fill="#161310"
-                            stroke={active ? node.stroke : '#342d27'}
-                            strokeWidth="2"
-                            className="transition-[stroke] duration-300 ease-standard"
-                          />
-
-                          {/* Real count from the bank — one or two digits, so it fits at every node. */}
-                          <text
-                            x={node.x}
-                            y={node.y + 1}
-                            fill={active ? node.text : '#d6d3d1'}
-                            fontSize="17"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                            className="font-mono transition-[fill] duration-300 ease-standard"
-                          >
-                            {profile.itemCount}
-                          </text>
-                          <text x={node.x} y={node.y + 14} fill="#78716c" fontSize="8" textAnchor="middle" letterSpacing="0.5">
-                            ITEMS
-                          </text>
-
-                          {/* Labels sit outside the circle, so length never affects the hit area. */}
-                          <text
-                            x={node.x}
-                            y={node.y + GRAPH.nodeRadius + 18}
-                            fill={active ? node.text : '#a8a29e'}
-                            fontSize="12"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                            className="uppercase transition-[fill] duration-300 ease-standard"
-                          >
-                            {node.domain}
-                          </text>
-                          <text
-                            x={node.x}
-                            y={node.y + GRAPH.nodeRadius + 30}
-                            fill="#78716c"
-                            fontSize="10"
-                            textAnchor="middle"
-                            className="font-mono"
-                          >
-                            {`b ${formatDifficulty(profile.easiestB)} … ${formatDifficulty(profile.hardestB)}`}
-                          </text>
-                        </g>
-                      </g>
-                    );
-                  })}
-                </svg>
-
-                <div className="mt-6 bg-ink-900/80 border border-ink-800 rounded-card p-4.5 text-xs space-y-1.5 backdrop-blur-md">
-                  {/* Wraps to two lines on a phone rather than letting the
-                      source list run into the heading. */}
-                  <div className="flex flex-wrap justify-between items-baseline gap-x-3 gap-y-0.5 text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                    <span>Adaptive item bank</span>
-                    <span className="text-brass-400 font-mono">{bank.sources.join(' / ')}</span>
-                  </div>
-                  {/*
-                    Every figure below is measured from the bank this visitor
-                    will actually be tested on. The previous copy quoted an
-                    ability estimate and a difficulty for a visitor who had not
-                    answered a question, and neither number existed anywhere in
-                    the product.
-                  */}
-                  <p aria-live="polite" className="font-mono text-stone-300 leading-normal text-[11px] min-h-[3.4em]">
-                    {activeProfile
-                      ? `${activeProfile.domain}: ${activeProfile.itemCount} calibrated items, ${activeProfile.conceptCount} concepts. Difficulty b ${formatDifficulty(activeProfile.easiestB)} … ${formatDifficulty(activeProfile.hardestB)}, mean discrimination a ${activeProfile.meanDiscrimination.toFixed(2)}. Hardest item: ${activeProfile.hardestConcept}.`
-                      : `${bank.itemCount} calibrated items across ${bank.domainCount} domains and ${bank.conceptCount} concepts. Hover or tab to a domain for its measured difficulty range.`}
-                  </p>
-                </div>
-
-              </div>
-            </div>
-
-          </m.section>
-
-          {/* WHAT WE ARE / ARE NOT */}
-          <Reveal as="section" distance={14} amount={0.12} id="definition" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-ink-800">
-            <div className="text-center space-y-3 pb-12">
-              <h2 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest">Core positioning</h2>
-              <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">We redefine the approach to mathematics</h3>
-              <p className="text-xs text-stone-400 max-w-lg mx-auto">
-                CalculixHub is a complete learning ecosystem, deliberately built to break with passive, one-size-fits-all study habits.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              <div className="border border-rose-900/40 bg-gradient-to-b from-rose-950/10 to-transparent p-6 sm:p-8 rounded-panel space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-rose-800/60 hover:shadow-e3 hover:shadow-rose-950/10 group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-rose-500/10 p-2.5 rounded-card border border-rose-500/20 text-rose-500"><X className="w-5 h-5" /></div>
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-rose-500 tracking-wider">Passive by default</span>
-                    <h4 className="text-lg font-extrabold text-stone-200 font-serif">What we are not</h4>
-                  </div>
-                </div>
-                <ul className="space-y-4 text-xs font-semibold text-stone-400">
-                  <li className="flex gap-3 items-start">
-                    <span className="text-rose-500 shrink-0 font-bold">&times;</span>
-                    <div>
-                      <strong className="text-stone-300 font-bold block">A generic problem-lookup website</strong>
-                      <span className="text-[10px] text-stone-500 font-medium block mt-0.5">Where students just check answers mechanically, without building real reasoning reflexes.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 items-start">
-                    <span className="text-rose-500 shrink-0 font-bold">&times;</span>
-                    <div>
-                      <strong className="text-stone-300 font-bold block">A fanpage or file-sharing group</strong>
-                      <span className="text-[10px] text-stone-500 font-medium block mt-0.5">Dumping thousands of unsorted exam PDFs with no personalization or curation.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 items-start">
-                    <span className="text-rose-500 shrink-0 font-bold">&times;</span>
-                    <div>
-                      <strong className="text-stone-300 font-bold block">A rigid, static question bank</strong>
-                      <span className="text-[10px] text-stone-500 font-medium block mt-0.5">Where every student works the same fixed set regardless of ability or pace.</span>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="border border-proof-800/40 bg-gradient-to-b from-proof-950/10 to-transparent p-6 sm:p-8 rounded-panel space-y-6 transition-[border-color,box-shadow] duration-300 ease-standard hover:border-proof-600/60 hover:shadow-e3 hover:shadow-proof-950/10 group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-proof-500/10 p-2.5 rounded-card border border-proof-500/20 text-proof-400"><Check className="w-5 h-5" /></div>
-                  <div>
-                    <span className="text-[9px] uppercase font-black text-proof-400 tracking-wider">One connected ecosystem</span>
-                    <h4 className="text-lg font-extrabold text-stone-200 font-serif">What we are</h4>
-                  </div>
-                </div>
-                <ul className="space-y-4 text-xs font-semibold text-stone-400">
-                  <li className="flex gap-3 items-start">
-                    <span className="text-proof-400 shrink-0 font-bold">&#10003;</span>
-                    <div>
-                      <strong className="text-stone-200 font-bold block">A genuinely adaptive learning ecosystem</strong>
-                      <span className="text-[10px] text-stone-450 font-medium block mt-0.5">Uses IRT to quantify and continuously optimize each student's actual ability.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 items-start">
-                    <span className="text-proof-400 shrink-0 font-bold">&#10003;</span>
-                    <div>
-                      <strong className="text-stone-200 font-bold block">A live, competitive arena</strong>
-                      <span className="text-[10px] text-stone-450 font-medium block mt-0.5">Direct head-to-head challenges with a tiered, ranked leaderboard system.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 items-start">
-                    <span className="text-proof-400 shrink-0 font-bold">&#10003;</span>
-                    <div>
-                      <strong className="text-stone-200 font-bold block">A high-signal academic community</strong>
-                      <span className="text-[10px] text-stone-450 font-medium block mt-0.5">Rigorous discussion, proof review, and contest breakdowns.</span>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* MISSION */}
-          <Reveal as="section" distance={14} amount={0.12} id="mission" className="bg-ink-900/40 border-y border-ink-800 py-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="max-w-3xl mx-auto text-center space-y-6">
-                <h3 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest">Core mission</h3>
-                <h4 className="text-xl sm:text-2xl md:text-3xl font-black text-white font-serif leading-relaxed italic">
-                  &ldquo;Democratize high-quality mathematical thinking through AI, competition systems, and data-driven learning.&rdquo;
-                </h4>
-                <div className="w-16 h-1 bg-gradient-to-r from-brass-500 to-proof-500 mx-auto rounded-full" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-16 max-w-5xl mx-auto">
-                <div className="bg-ink-950/50 p-6 rounded-card border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
-                  <div className="mx-auto bg-brass-500/10 p-3 rounded-card border border-brass-500/20 text-brass-400 w-fit group-hover:bg-brass-600 group-hover:text-ink-950 transition-colors duration-240 ease-standard"><Globe className="w-6 h-6" /></div>
-                  <h5 className="font-extrabold text-stone-100 text-sm">Reach, without degradation</h5>
-                  <p className="text-[11px] text-stone-450 leading-relaxed">Advanced curricula and AI infrastructure, delivered on demand to every region, regardless of geography.</p>
-                </div>
-                <div className="bg-ink-950/50 p-6 rounded-card border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
-                  <div className="mx-auto bg-proof-500/10 p-3 rounded-card border border-proof-500/20 text-proof-400 w-fit group-hover:bg-proof-600 group-hover:text-white transition-colors duration-240 ease-standard"><Shield className="w-6 h-6" /></div>
-                  <h5 className="font-extrabold text-stone-100 text-sm">Personalization by default</h5>
-                  <p className="text-[11px] text-stone-450 leading-relaxed">EduReach Core diagnoses gaps automatically and builds an individual path for every learner.</p>
-                </div>
-                <div className="bg-ink-950/50 p-6 rounded-card border border-ink-800 text-center space-y-3.5 transition-transform duration-300 ease-standard hover:scale-[1.02] group">
-                  <div className="mx-auto bg-violet-500/10 p-3 rounded-card border border-violet-500/20 text-violet-400 w-fit group-hover:bg-violet-600 group-hover:text-white transition-colors duration-240 ease-standard"><TrendingUp className="w-6 h-6" /></div>
-                  <h5 className="font-extrabold text-stone-100 text-sm">Governed by real data</h5>
-                  <p className="text-[11px] text-stone-450 leading-relaxed">Every system decision is measured against empirical telemetry, not assumptions.</p>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* ARCHITECTURE (4 LAYERS) */}
-          <Reveal as="section" distance={14} amount={0.12} id="architecture" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="text-center space-y-3 pb-12">
-              <h2 className="text-xs uppercase font-extrabold text-proof-400 tracking-widest font-mono">Infrastructure</h2>
-              <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">Four-Layer Core Architecture</h3>
-              <p className="text-xs text-stone-400 max-w-md mx-auto">Four tightly interlocked layers form the platform's adaptive edge.</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl mx-auto items-stretch">
-              <div className="lg:col-span-4 flex flex-row lg:flex-col gap-2.5 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 select-none">
-                {([
-                  { key: 'engine', label: '1. Learning Engine', icon: BookOpen },
-                  { key: 'ai', label: '2. AI Personalization', icon: Brain },
-                  { key: 'compete', label: '3. Competition System', icon: Trophy },
-                  { key: 'analytics', label: '4. Analytics & Research', icon: BarChart3 },
-                ] as const).map((tab) => {
-                  const TabIcon = tab.icon;
-                  return (
-                    <m.button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => { setActiveArchTab(tab.key); setIsArchExpanded(false); }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={spring.press}
-                      className={`relative w-full text-left p-4.5 rounded-card border text-xs font-extrabold transition-[border-color,color,box-shadow] duration-240 ease-standard shrink-0 cursor-pointer flex items-center justify-between ${
-                        activeArchTab === tab.key
-                          ? 'border-brass-500 text-brass-400 shadow-e2'
-                          : 'bg-ink-900/40 border-ink-800 text-stone-400 hover:border-ink-750 hover:text-white'
-                      }`}
-                    >
-                      {/*
-                        Same shared-indicator pattern as the sidebar and the
-                        leaderboard's segmented control. Four layers presented
-                        as a stack read as a stack when the highlight travels
-                        between them.
-                      */}
-                      {activeArchTab === tab.key && (
-                        <m.span
-                          layoutId="arch-tab-highlight"
-                          className="absolute inset-0 bg-brass-600/10 rounded-card"
-                          transition={spring.snappy}
-                        />
-                      )}
-                      <span className="relative z-10 flex items-center gap-2.5"><TabIcon className="w-4 h-4" /> {tab.label}</span>
-                      <ChevronRight className={`relative z-10 w-3.5 h-3.5 hidden lg:block transition-transform duration-240 ease-standard ${activeArchTab === tab.key ? 'translate-x-1' : ''}`} />
-                    </m.button>
-                  );
-                })}
-              </div>
-
-              <div className="lg:col-span-8 bg-ink-900/40 border border-ink-800 rounded-panel p-6 sm:p-8 flex flex-col justify-between backdrop-blur-md shadow-e4 relative bp-corners">
-                <div className="absolute top-4 right-4 text-ink-700 font-mono text-[9px]">Calculix Engine Core v2.6</div>
-
-                {/*
-                  The four layer descriptions occupy the same panel, and used to
-                  swap instantly — the heading, icon and body all changing in
-                  one frame with nothing tying them to the tab that was pressed.
-                  Keying on the active tab gives the panel a hand-off matching
-                  the highlight sliding in the list beside it.
-                */}
-                <AnimatePresence mode="wait" initial={false}>
-                <m.div
-                  key={activeArchTab}
-                  initial={{ opacity: 0, y: travel.sm }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
-                  transition={spring.smooth}
-                  className="space-y-5"
-                >
-                  {activeArchTab === 'engine' && (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-brass-500/10 p-2.5 rounded-control border border-brass-500/20 text-brass-400"><BookOpen className="w-5 h-5" /></div>
-                        <div><span className="text-[9px] uppercase font-black text-brass-400 tracking-wider">Adaptive core</span><h4 className="text-base font-extrabold text-white font-serif">Learning Engine</h4></div>
-                      </div>
-                      <p className="text-xs text-stone-400 leading-relaxed">
-                        Content is tiered into <strong>Foundation</strong> (solid basics), <strong>Advanced</strong> (deep specialization), and <strong>Olympiad</strong> (international-level challenge).
-                      </p>
-                      <ul className="space-y-2 text-[11px] text-stone-350">
-                        <li className="flex gap-2"><span className="text-brass-450 font-bold">&bull;</span><span><strong>Non-linear, adaptive learning:</strong> content stretches and contracts to match real ability instead of forcing a fixed lesson order.</span></li>
-                        <li className="flex gap-2"><span className="text-brass-450 font-bold">&bull;</span><span><strong>Instant error analysis:</strong> theory gaps are surfaced immediately after a submission, backed by real telemetry.</span></li>
-                      </ul>
-                    </>
-                  )}
-
-                  {activeArchTab === 'ai' && (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-proof-500/10 p-2.5 rounded-control border border-proof-500/20 text-proof-400"><Brain className="w-5 h-5" /></div>
-                        <div><span className="text-[9px] uppercase font-black text-proof-400 tracking-wider">Personalization layer</span><h4 className="text-base font-extrabold text-white font-serif">AI Personalization (EduReach Core)</h4></div>
-                      </div>
-                      <p className="text-xs text-stone-400 leading-relaxed">
-                        EduReach's core algorithm inspects solution structure to pinpoint exactly where a student is weak &mdash; e.g. permutation counting, or the equality case in an inequality.
-                      </p>
-                      <ul className="space-y-2 text-[11px] text-stone-350">
-                        <li className="flex gap-2"><span className="text-proof-405 font-bold">&bull;</span><span><strong>Growth forecasting:</strong> projects score improvement from current solving velocity.</span></li>
-                        <li className="flex gap-2"><span className="text-proof-405 font-bold">&bull;</span><span><strong>Adaptive dispatch:</strong> the next problem is chosen at the difficulty that keeps motivation and challenge in balance.</span></li>
-                      </ul>
-                    </>
-                  )}
-
-                  {activeArchTab === 'compete' && (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-violet-500/10 p-2.5 rounded-control border border-violet-500/20 text-violet-400"><Trophy className="w-5 h-5" /></div>
-                        <div><span className="text-[9px] uppercase font-black text-violet-400 tracking-wider">Competitive environment</span><h4 className="text-base font-extrabold text-white font-serif">Competition Arena</h4></div>
-                      </div>
-                      <p className="text-xs text-stone-400 leading-relaxed">
-                        Head-to-head practice through Weekly Challenges, Monthly Contests, and multi-stage Seasonal Tournaments.
-                      </p>
-                      <ul className="space-y-2 text-[11px] text-stone-350">
-                        <li className="flex gap-2"><span className="text-violet-450 font-bold">&bull;</span><span><strong>Dual-axis leaderboard:</strong> ranked globally and within cohorts by age group or country.</span></li>
-                        <li className="flex gap-2"><span className="text-violet-450 font-bold">&bull;</span><span><strong>Skill ladder:</strong> Beginner through Elite, letting students filter and self-select their bracket.</span></li>
-                      </ul>
-                    </>
-                  )}
-
-                  {activeArchTab === 'analytics' && (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div className="bg-sky-500/10 p-2.5 rounded-control border border-sky-500/20 text-sky-400"><BarChart3 className="w-5 h-5" /></div>
-                        <div><span className="text-[9px] uppercase font-black text-sky-400 tracking-wider">Analytics system</span><h4 className="text-base font-extrabold text-white font-serif">Analytics &amp; Research Dashboard</h4></div>
-                      </div>
-                      <p className="text-xs text-stone-400 leading-relaxed">
-                        A real, live skill-mastery radar and study-time dashboard for every student.
-                      </p>
-                      <ul className="space-y-2 text-[11px] text-stone-350">
-                        <li className="flex gap-2"><span className="text-sky-450 font-bold">&bull;</span><span><strong>For researchers:</strong> aggregates common misconceptions and live learning trends to support curriculum design.</span></li>
-                        <li className="flex gap-2"><span className="text-sky-450 font-bold">&bull;</span><span><strong>For research use:</strong> raw data export to support impact studies and methodology papers.</span></li>
-                      </ul>
-                    </>
-                  )}
-                </m.div>
-                </AnimatePresence>
-
-                <div className="pt-6 border-t border-ink-800 mt-6 space-y-4">
-                  {isArchExpanded ? (
-                    <div className="bg-ink-950/80 border border-ink-800 rounded-card p-4.5 text-[11px] text-stone-450 leading-relaxed space-y-3 font-mono">
-                      <div className="flex justify-between items-center text-[10px] text-proof-400 font-bold uppercase tracking-wider">
-                        <span>Technical detail</span><span>IRT MATHEMATICAL MODEL</span>
-                      </div>
-
-                      {activeArchTab === 'engine' && (
-                        <p>The engine follows Vygotsky's Zone of Proximal Development: problems are dispatched so a student's predicted success probability sits near 0.65, maximizing progress without inducing frustration.</p>
-                      )}
-
-                      {activeArchTab === 'ai' && (
-                        <div className="space-y-2">
-                          <p>Uses a 1-Parameter Logistic (Rasch) model to estimate <MathText text="\\(\\theta\\)" as="span" />, the student's latent ability:</p>
-                          <div className="bg-ink-900 p-3 rounded-control text-center text-proof-300 font-bold">
-                            <MathText text={IRT_FORMULA} />
-                          </div>
-                          <p className="text-[10px]">
-                            <MathText text="Here \\(b_i\\) is the item's difficulty parameter. The system maximizes Fisher information to shrink the standard error of measurement (SEM) as fast as possible." />
-                          </p>
-                        </div>
-                      )}
-
-                      {activeArchTab === 'compete' && (
-                        <p>The ranking formula applies a dynamic k-factor correction: you gain more points for solving problems well above your current theta.</p>
-                      )}
-
-                      {activeArchTab === 'analytics' && (
-                        <p>A large telemetry pipeline clusters thousands of interaction records to surface common cognitive errors automatically, helping researchers forecast the difficulty of new problem types.</p>
-                      )}
-
-                      <button type="button" onClick={() => setIsArchExpanded(false)} className="text-[10px] font-bold text-brass-400 hover:underline block pt-1 cursor-pointer">Collapse detail [-]</button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={() => setIsArchExpanded(true)} className="bg-ink-900 border border-ink-800 hover:border-ink-750 text-stone-350 hover:text-white font-bold text-[11px] px-4 py-2.5 rounded-control transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer inline-flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-brass-400" /> View technical detail
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* COMMUNITY (MOCK FORUM) */}
-          <Reveal as="section" distance={14} amount={0.12} id="community" className="bg-ink-900/40 border-y border-ink-800 py-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center space-y-3 pb-12">
-                <h2 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest font-mono">Academic community</h2>
-                <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">Problem-Centric Discussion</h3>
-                <p className="text-xs text-stone-400 max-w-md mx-auto">A preview of the discussion layer &mdash; every problem gets its own thread for solutions and critique.</p>
-              </div>
-
-              <div className="max-w-4xl mx-auto space-y-4">
-                <div className="flex justify-between items-center bg-ink-900 border border-ink-800 px-6 py-3.5 rounded-card select-none">
-                  <span className="text-[10px] font-black uppercase text-stone-400 tracking-wider flex items-center gap-2"><Users className="w-4 h-4 text-brass-400" /> Community forum preview</span>
-                  <button
-                    type="button"
-                    onClick={() => setCommunityDarkMode(!communityDarkMode)}
-                    className="bg-ink-800 hover:bg-ink-750 border border-ink-700 text-stone-300 hover:text-white font-bold text-[10px] px-3.5 py-2 rounded-control transition-[background-color,border-color,color] duration-240 ease-standard cursor-pointer flex items-center gap-1.5"
-                  >
-                    {communityDarkMode ? (<><Sun className="w-3.5 h-3.5 text-amber-400" /> Switch to light mode</>) : (<><Moon className="w-3.5 h-3.5 text-violet-400" /> Switch to dark mode</>)}
-                  </button>
-                </div>
-
-                <div className={`border rounded-panel p-6 transition-[background-color,border-color,color,box-shadow] duration-300 ease-standard shadow-e3 space-y-6 ${communityDarkMode ? 'bg-ink-900/90 border-ink-800 text-stone-200 shadow-ink-950/20' : 'bg-paper-50 border-stone-200 text-stone-800 shadow-stone-200/50'}`}>
-                  <div className="border-b pb-4 flex justify-between items-start gap-4" style={{ borderColor: communityDarkMode ? '#342d27' : '#f3ede1' }}>
-                    <div className="space-y-1">
-                      <h4 className={`text-base font-black tracking-tight leading-tight font-serif ${communityDarkMode ? 'text-white' : 'text-stone-900'}`}>
-                        How do you prove the Cauchy-Schwarz "Engel form" (Titu's Lemma) using vectors?
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-3 text-[10px] text-stone-500 font-medium">
-                        <span>Posted by <strong className="text-brass-500">Nam L.</strong> (Rank 5)</span>
-                        <span>Active 2 hours ago</span>
-                        <span>1,280 views</span>
-                      </div>
-                    </div>
-                    <span className="bg-violet-600/10 border border-violet-500/20 text-violet-400 text-[8px] font-black uppercase px-2 py-0.5 rounded shrink-0">Inequalities</span>
-                  </div>
-
-                  <div className="flex gap-4 items-start">
-                    <div className="flex flex-col items-center gap-2 select-none shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => castPreviewVote('disc-1', 1)}
-                        className={`hover:scale-115 transition-transform cursor-pointer ${myPreviewVote['disc-1'] === 1 ? 'text-brass-500' : 'text-stone-500 hover:text-brass-500'}`}
-                        title="Upvote"
-                      >
-                        <ThumbsUp className={`w-4 h-4 ${myPreviewVote['disc-1'] === 1 ? 'fill-brass-500' : ''}`} />
-                      </button>
-                      <span className="font-mono font-black text-sm tracking-tight">{previewVoteCount('disc-1')}</span>
-                      <button
-                        type="button"
-                        onClick={() => castPreviewVote('disc-1', -1)}
-                        className={`hover:scale-115 transition-transform cursor-pointer ${myPreviewVote['disc-1'] === -1 ? 'text-rose-500' : 'text-stone-500 hover:text-rose-500'}`}
-                        title="Downvote"
-                      >
-                        <ThumbsDown className={`w-4 h-4 ${myPreviewVote['disc-1'] === -1 ? 'fill-rose-500' : ''}`} />
-                      </button>
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <MathText
-                        as="p"
-                        className="text-xs leading-relaxed"
-                        text="I'm preparing for an olympiad and ran into the Engel-form Cauchy-Schwarz inequality $\sum \frac{x_i^2}{a_i} \ge \frac{(\sum x_i)^2}{\sum a_i}$. I know the induction and AM-GM proofs, but I heard there's a beautiful proof using the dot product of two vectors. Could someone walk through it?"
-                      />
-                      <div className="flex gap-1.5 pt-1">
-                        {['algebra', 'cauchy-schwarz', 'vectors'].map((tag) => (
-                          <span key={tag} className={`text-[8px] font-bold px-2 py-0.5 rounded ${communityDarkMode ? 'bg-ink-800 text-stone-400' : 'bg-stone-100 text-stone-600'}`}>{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-5 pl-8 space-y-4" style={{ borderColor: communityDarkMode ? '#342d27' : '#f3ede1' }}>
-                    <div className="flex justify-between items-center text-[10px] text-stone-500">
-                      <span className="font-bold text-proof-500 uppercase tracking-wider flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Accepted answer</span>
-                      <span className="font-mono">1 day ago</span>
-                    </div>
-                    <div className="flex gap-4 items-start">
-                      <div className="flex flex-col items-center gap-2 select-none shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => castPreviewVote('disc-2', 1)}
-                          className={`hover:scale-115 transition-transform cursor-pointer ${myPreviewVote['disc-2'] === 1 ? 'text-brass-500' : 'text-stone-500 hover:text-brass-500'}`}
-                          title="Upvote"
-                        >
-                          <ThumbsUp className={`w-4 h-4 ${myPreviewVote['disc-2'] === 1 ? 'fill-brass-500' : ''}`} />
-                        </button>
-                        <span className="font-mono font-black text-sm tracking-tight">{previewVoteCount('disc-2')}</span>
-                        <button
-                          type="button"
-                          onClick={() => castPreviewVote('disc-2', -1)}
-                          className={`hover:scale-115 transition-transform cursor-pointer ${myPreviewVote['disc-2'] === -1 ? 'text-rose-500' : 'text-stone-500 hover:text-rose-500'}`}
-                          title="Downvote"
-                        >
-                          <ThumbsDown className={`w-4 h-4 ${myPreviewVote['disc-2'] === -1 ? 'fill-rose-500' : ''}`} />
-                        </button>
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-proof-500" />
-                          <span className={`text-[11px] font-bold ${communityDarkMode ? 'text-stone-350' : 'text-stone-700'}`}>Mentor Hoang</span>
-                          <span className="bg-brass-600/10 text-brass-450 border border-brass-500/10 text-[8px] font-black px-1.5 py-0.25 rounded uppercase">Faculty</span>
-                        </div>
-                        <MathText
-                          as="p"
-                          className="text-xs leading-relaxed"
-                          text={
-                            "Nice question. The vector proof is short and visual. Define two vectors in $n$-dimensional space:\n\n" +
-                            "\\(\\vec{u} = \\left( \\frac{x_1}{\\sqrt{a_1}}, \\frac{x_2}{\\sqrt{a_2}}, \\dots, \\frac{x_n}{\\sqrt{a_n}} \\right)\\) and \\(\\vec{v} = (\\sqrt{a_1}, \\sqrt{a_2}, \\dots, \\sqrt{a_n})\\)\n\n" +
-                            "By the geometric Cauchy-Schwarz inequality: \\((\\vec{u} \\cdot \\vec{v})^2 \\le \\|\\vec{u}\\|^2 \\cdot \\|\\vec{v}\\|^2\\)\n\n" +
-                            "The dot product: \\(\\vec{u} \\cdot \\vec{v} = \\sum \\frac{x_i}{\\sqrt{a_i}} \\cdot \\sqrt{a_i} = \\sum x_i\\)\n" +
-                            "The squared norms: \\(\\|\\vec{u}\\|^2 = \\sum \\frac{x_i^2}{a_i}\\) and \\(\\|\\vec{v}\\|^2 = \\sum a_i\\)\n\n" +
-                            'Substituting gives \\((\\sum x_i)^2 \\le (\\sum \\frac{x_i^2}{a_i}) \\cdot (\\sum a_i)\\). Divide both sides by \\(\\sum a_i\\) (positive) to get exactly the Engel form. Equality holds iff the vectors are parallel, i.e. \\(\\frac{x_i}{a_i}\\) is constant across i.'
-                          }
-                        />
-                        <div className="flex justify-between items-center pt-3 text-[10px] text-stone-500">
-                          <button type="button" className="hover:text-brass-500 flex items-center gap-1 font-bold cursor-pointer"><MessageSquare className="w-3.5 h-3.5" /> 5 nested replies</button>
-                          <button type="button" className="hover:text-rose-500 flex items-center gap-1 font-bold cursor-pointer">Report</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* USER FLOW TIMELINE */}
-          <Reveal as="section" distance={14} amount={0.12} id="flow" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="text-center space-y-3 pb-16">
-              <h2 className="text-xs uppercase font-extrabold text-brass-500 tracking-widest font-mono">Learning flow</h2>
-              <h3 className="text-2xl sm:text-3xl font-black text-white font-serif">The Full Learning Cycle</h3>
-              <p className="text-xs text-stone-400 max-w-sm mx-auto">A closed loop that compounds a student's ability step by step.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 max-w-6xl mx-auto relative">
-              {([
-                { n: 1, title: 'Take the placement test', body: 'Four short diagnostics across four domains locate an initial theta.', icon: BookOpen, color: 'brass' },
-                { n: 2, title: 'AI analyzes errors', body: 'EduReach Core scans reasoning steps to detect systematic logic gaps.', icon: Brain, color: 'proof' },
-                { n: 3, title: 'Get a personal path', body: 'Lessons and problem sets sync continuously with real progress.', icon: Shield, color: 'violet' },
-                { n: 4, title: 'Practice & compete', body: 'Build reflexes in the Learning Engine, then enter ranked weekly arenas.', icon: Trophy, color: 'sky' },
-                { n: 5, title: 'Track progress', body: 'Check the skill radar, study time, and trend lines on your dashboard.', icon: BarChart3, color: 'proof' },
-                { n: 6, title: 'Join peer review', body: 'Discuss deeply, upvote strong solutions, and get mentor feedback.', icon: Users, color: 'brass' },
-              ] as const).map((step) => {
-                const StepIcon = step.icon;
-                const isHovered = hoveredStep === step.n;
-                const colorMap: Record<string, string> = {
-                  brass: 'border-brass-500 text-brass-400 shadow-brass-950/10',
-                  proof: 'border-proof-500 text-proof-400 shadow-proof-950/10',
-                  violet: 'border-violet-500 text-violet-400 shadow-violet-950/10',
-                  sky: 'border-sky-500 text-sky-400 shadow-sky-950/10',
-                };
-                return (
-                  <div
-                    key={step.n}
-                    onMouseEnter={() => setHoveredStep(step.n)}
-                    onMouseLeave={() => setHoveredStep(null)}
-                    className={`bg-ink-900/40 border p-5 rounded-card space-y-3 transition-[border-color,box-shadow] duration-300 ease-standard relative select-none ${
-                      isHovered ? `${colorMap[step.color]} scale-[1.03] bg-ink-900 shadow-e3` : 'border-ink-800 hover:border-ink-750'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className={`text-[10px] font-mono font-black ${isHovered ? colorMap[step.color].split(' ')[1] : 'text-stone-500'}`}>STEP 0{step.n}</span>
-                      <StepIcon className={`w-4.5 h-4.5 ${isHovered ? colorMap[step.color].split(' ')[1] : 'text-stone-500'}`} />
-                    </div>
-                    <h4 className="font-extrabold text-xs text-white">{step.title}</h4>
-                    <p className="text-[10px] text-stone-400 leading-relaxed">{step.body}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </Reveal>
-
-          {/* SOCIAL ACQUISITION FUNNEL */}
-          <Reveal as="section" distance={14} amount={0.12} className="bg-ink-900/40 border-y border-ink-800 py-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center max-w-5xl mx-auto">
-                <div className="lg:col-span-6 space-y-5 text-center lg:text-left">
-                  <h3 className="text-xs uppercase font-extrabold text-proof-400 tracking-widest font-mono">Acquisition channels</h3>
-                  <h4 className="text-2xl sm:text-3xl font-black text-white leading-tight font-serif">Social media is a funnel, not the hub</h4>
-                  <p className="text-xs text-stone-400 leading-relaxed">
-                    Facebook, TikTok, and YouTube exist purely to distribute content and pull in new learners. Every real learning experience, all adaptive data, and every ounce of academic value lives inside <strong>CalculixHub</strong> itself.
-                  </p>
-                </div>
-                {/*
-                  Each channel's role, with no attendance figure beside it.
-                  These rows used to show 5,420 / 3,892 / 2,150 "users
-                  acquired"; there is no attribution tracking anywhere in the
-                  product, so the counts were invented and the endpoint behind
-                  them returns zero. What the section actually argues -- that
-                  social distributes and the hub teaches -- needs no numbers.
-                */}
-                <div className="lg:col-span-6 space-y-4">
-                  {[
-                    { icon: Facebook, name: 'Facebook - Math Deep Dives', desc: 'In-depth olympiad & exam analysis posts', role: 'Distribution', color: 'brass' },
-                    { icon: Users, name: 'TikTok Short Education', desc: '60-second logic-puzzle breakdowns', role: 'Discovery', color: 'violet' },
-                    { icon: Youtube, name: 'YouTube Deep-Dive Lectures', desc: 'Full contest solution walkthroughs', role: 'Teaching preview', color: 'rose' },
-                  ].map((chan) => {
-                    const ChanIcon = chan.icon;
-                    return (
-                      <div key={chan.name} className="bg-ink-950 border border-ink-800 rounded-card p-4 flex items-center justify-between gap-3 transition-[border-color] duration-240 ease-standard hover:border-ink-700">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-control ${chan.color === 'brass' ? 'bg-brass-600/10 text-brass-500' : chan.color === 'violet' ? 'bg-violet-600/10 text-violet-400' : 'bg-rose-600/10 text-rose-500'}`}><ChanIcon className="w-5 h-5" /></div>
-                          <div><h5 className="font-extrabold text-xs text-stone-200">{chan.name}</h5><p className="text-[9px] text-stone-500 font-medium">{chan.desc}</p></div>
-                        </div>
-                        <span className="text-[8px] uppercase font-black tracking-wider text-stone-500 border border-ink-800 rounded-full px-2.5 py-1 shrink-0">{chan.role}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* IMPACT */}
-          <Reveal as="section" distance={14} amount={0.12} id="impact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="max-w-4xl mx-auto bg-ink-900 border border-ink-800 rounded-[32px] p-6 sm:p-10 relative overflow-hidden shadow-e4 bp-corners">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-brass-500/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-                <div className="md:col-span-8 space-y-5">
-                  <span className="bg-proof-500/10 border border-proof-500/25 text-proof-400 text-[10px] font-black uppercase px-3 py-1.5 rounded-full tracking-wider block w-fit">Research &amp; social impact</span>
-                  <h4 className="text-2xl font-black text-white tracking-tight font-serif">CalculixHub Impact Report</h4>
-                  <p className="text-xs text-stone-405 leading-relaxed">
-                    Transparency means publishing what we can actually measure, and saying which window it was measured over. The two figures below describe the assessment bank the platform ships; the progress bar tracks live traffic against a stated goal.
-                  </p>
-                  <div className="space-y-4 pt-2">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-bold text-stone-400">
-                        {/*
-                          The counter behind this bar is arrivals within a
-                          trailing 15-minute window, so it was never a monthly
-                          figure -- the label just said so.
-                        */}
-                        <span>Learners active in the last 15 minutes ({liveStats.activeUsers})</span>
-                        <span className="text-brass-400 font-mono">Goal: 10,000</span>
-                      </div>
-                      <SpringBar
-                        value={(liveStats.activeUsers / 10000) * 100}
-                        track="w-full bg-ink-950 rounded-full h-2 border border-ink-850"
-                        fill="bg-gradient-to-r from-brass-500 to-proof-500 h-1.5 rounded-full"
-                        label="Learners active in the last 15 minutes, against the 10,000 goal"
-                      />
-                    </div>
-                    {/*
-                      Two counts read straight off the item bank, replacing an
-                      "84.5% improvement after 3 months" that no study produced
-                      and a hard-coded "4,500+ monthly matches" for an arena
-                      that records no match history.
-                    */}
-                    <div className="flex items-center gap-8 text-center pt-2">
-                      <div>
-                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Calibrated items</span>
-                        <span className="text-2xl font-black text-proof-400 font-mono block mt-0.5">{bank.itemCount}</span>
-                        <span className="text-[8px] text-stone-500 block">3PL parameters on every item</span>
-                      </div>
-                      <div className="border-l border-ink-800 pl-8">
-                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Concepts tagged</span>
-                        <span className="text-2xl font-black text-white font-mono block mt-0.5">{bank.conceptCount}</span>
-                        <span className="text-[8px] text-stone-555 block">What remediation dispatches on</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="md:col-span-4 text-center">
-                  <div className="bg-ink-950 border border-ink-850 p-6 rounded-card space-y-4">
-                    <FileText className="w-10 h-10 text-brass-400 mx-auto" />
-                    <div>
-                      <h5 className="font-extrabold text-xs text-stone-200">Export impact report</h5>
-                      <p className="text-[9px] text-stone-500 mt-1 leading-normal">Per-domain bank coverage plus the current live counters.</p>
-                    </div>
-                    <m.button type="button" onClick={handleExportImpactReport} whileTap={{ scale: 0.97 }} transition={spring.press} className="w-full bg-brass-600 hover:bg-brass-500 text-ink-950 font-extrabold text-xs py-3 rounded-control transition-colors duration-240 ease-standard cursor-pointer shadow-e2 flex items-center justify-center gap-1.5">
-                      <Download className="w-3.5 h-3.5" /> Download PDF report
-                    </m.button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-        </main>
-
-        <footer className="border-t border-ink-800 py-12 bg-ink-950 text-stone-500 select-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-ink-900 border border-ink-800 p-2 rounded-control text-stone-400 font-bold w-9 h-9 flex items-center justify-center text-sm font-serif">&#8721;</div>
-              <div><h5 className="font-extrabold text-xs tracking-wider text-stone-350 uppercase">CalculixHub</h5><span className="text-[9px] block text-stone-600 font-medium">Adaptive math, driven by real data</span></div>
-            </div>
-            <div className="text-[10px] text-center md:text-right space-y-1 leading-relaxed">
-              <p>&copy; 2026 Calculix Platform. Endorsed by the Math Olympiad Faculty Board.</p>
-              <p>Non-profit, open build. High-quality math education for everyone.</p>
-            </div>
-          </div>
-        </footer>
-
-      </div>
-    );
-  };
+  /*
+   * The landing page lives in its own component.
+   *
+   * It used to be ~970 lines of JSX inside this function, sharing a scope with
+   * the auth state machine and the placement test for no reason other than
+   * history — the landing reads none of that state. Moving it out means the
+   * marketing surface can be redesigned without a diff that also touches the
+   * sign-in form, which is the part that must not break.
+   */
+  const renderLandingPage = () => (
+    <LandingPage
+      liveStats={liveStats}
+      onSignIn={() => { setAuthMode('login'); setErrorMessage(''); }}
+      onRegister={() => { setAuthMode('register'); setErrorMessage(''); }}
+    />
+  );
 
   if (authMode === 'landing') {
     return renderLandingPage();
   }
 
+  /*
+   * Sign in and sign up.
+   *
+   * These return before the shell below, which now only carries the placement
+   * test.
+   *
+   * The split is the design's: a standing dark panel that states what an
+   * account is *for*, beside a form on paper. It is the same pairing the
+   * landing page closes on, so pressing "Sign in" there lands somewhere that
+   * looks like where it came from — and it puts the form itself on the light
+   * ground, which is where a form belongs. The placement test that follows
+   * keeps the same treatment on purpose: it runs for ten minutes, and reading
+   * dense mathematical notation on near-black for that long is worse.
+   */
+  if (authMode === 'login' || authMode === 'register') {
+    const isLogin = authMode === 'login';
+    const canSubmit = email.trim().length > 0 && password.length > 0 && (isLogin || fullName.trim().length > 0);
+
+    return (
+      /*
+       * A two-column split that collapses on its own.
+       *
+       * `auto-fit` with a 26rem minimum rather than a `md:` breakpoint: the
+       * left column is a standing panel of prose and the right is a form, and
+       * the point at which they stop fitting side by side is a function of how
+       * much room *they* need, not of which device class the viewport falls
+       * into. Below ~52rem the track count drops to one and the panel stacks
+       * above the form, which is the correct order to read them in.
+       */
+      <div className="min-h-screen grid [grid-template-columns:repeat(auto-fit,minmax(26rem,1fr))] bg-surface text-content font-sans antialiased">
+
+        {/* The standing panel. Absolute dark, hence `ramp-static`. */}
+        <div className="ramp-static cx-band flex flex-col justify-between gap-16 px-8 py-12 sm:px-13 sm:py-14">
+          <div className="cx-band__wash" aria-hidden="true" />
+
+          <div className="relative flex items-center gap-3">
+            <span className="cx-mark">&#8721;</span>
+            <span className="flex flex-col leading-[1.15]">
+              <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
+              <span className="type-eyebrow text-stone-500">Math OS Platform</span>
+            </span>
+          </div>
+
+          <div className="relative max-w-[40ch]">
+            <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">
+              Pick up where the estimate left off.
+            </h2>
+            <p className="type-lead mt-4.5 text-stone-400">
+              Your skill map, streak and every graded answer are tied to the account, not the browser.
+            </p>
+          </div>
+
+          <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">
+            {BANK.itemCount} calibrated items · {BANK.domainCount} domains · MIT licensed
+          </p>
+        </div>
+
+        {/* The form. */}
+        <div className="flex items-center justify-center px-6 py-14 sm:px-11 sm:py-14">
+          <AnimatePresence mode="wait" initial={false}>
+            <m.form
+              key={isLogin ? 'auth-login' : 'auth-register'}
+              onSubmit={isLogin ? handleLoginSubmit : handleRegisterSubmit}
+              initial={{ opacity: 0, y: travel.sm }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
+              transition={spring.smooth}
+              className="w-full max-w-100"
+            >
+              <p className="type-eyebrow text-accent-text">{isLogin ? 'Sign in' : 'Create account'}</p>
+              <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
+                {isLogin ? 'Welcome back' : 'Start measuring'}
+              </h1>
+              <p className="type-body mt-2.5 text-content-subtle">
+                {isLogin
+                  ? 'Sign in to keep your streak, skill map and contest history.'
+                  : 'One account, and the placement test result stays with you.'}
+              </p>
+
+              <div className="mt-7.5 space-y-4.5">
+                {!isLogin && (
+                  <div>
+                    <label className="cx-label" htmlFor="auth-name">Display name</label>
+                    <input
+                      id="auth-name"
+                      type="text"
+                      required
+                      autoComplete="name"
+                      placeholder="Mai Nguyen"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="cx-input"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="cx-label" htmlFor="auth-email">Email</label>
+                  <input
+                    id="auth-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder="you@school.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="cx-input"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <label className="cx-label mb-0" htmlFor="auth-password">Password</label>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-[12px] text-accent-text hover:underline underline-offset-3 cursor-pointer"
+                      >
+                        Forgot?
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="auth-password"
+                    type="password"
+                    required
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    placeholder="At least 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="cx-input mt-2.25"
+                  />
+                </div>
+              </div>
+
+              {/*
+                Status lines are a rule and a sentence, not a filled alert box.
+                Colour is carried by the icon and the text; a tinted panel here
+                would be the loudest thing on a page whose whole argument is
+                that structure comes from hairlines.
+              */}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {errorMessage && (
+                  <m.div
+                    key="error"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard } }}
+                    className="overflow-hidden"
+                  >
+                    <p role="alert" className="mt-4.5 flex items-start gap-2 text-[13.5px] leading-[1.6] text-accent-text">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-1" /> {errorMessage}
+                    </p>
+                  </m.div>
+                )}
+                {successMessage && (
+                  <m.div
+                    key="success"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard } }}
+                    className="overflow-hidden"
+                  >
+                    <p role="status" className="mt-4.5 flex items-start gap-2 text-[13.5px] leading-[1.6] text-proof">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-1" /> {successMessage}
+                    </p>
+                  </m.div>
+                )}
+              </AnimatePresence>
+
+              {/*
+                The submit button is the only filled control on the page, and it
+                only fills once the form could actually be sent. Before that it
+                is an outline: the shape is there, the invitation is not.
+              */}
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`cx-btn cx-btn-block mt-6 py-3.5 text-[17px] ${canSubmit ? 'cx-btn-fill' : 'cx-btn-inert'}`}
+              >
+                {submitting ? 'Working…' : isLogin ? 'Sign in' : 'Create account'}
+              </button>
+
+              <div className="flex items-center gap-3.5 my-6.5">
+                <span className="h-px flex-1 bg-line" />
+                <span className="type-eyebrow text-content-subtle tracking-[0.18em]">or</span>
+                <span className="h-px flex-1 bg-line" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAuthMode('placement')}
+                className="cx-btn cx-btn-secondary cx-btn-block py-3.25"
+              >
+                <Compass className="w-3.75 h-3.75" /> Continue as guest
+              </button>
+
+              <p className="type-body mt-6.5 text-content-subtle">
+                {isLogin ? 'No account yet?' : 'Already registered?'}
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode(isLogin ? 'register' : 'login'); setErrorMessage(''); setSuccessMessage(''); }}
+                  className="font-serif text-[16px] text-accent pl-1 hover:underline underline-offset-3 cursor-pointer"
+                >
+                  {isLogin ? 'Create one' : 'Sign in'}
+                </button>
+              </p>
+
+              <button
+                type="button"
+                onClick={() => { setAuthMode('landing'); setErrorMessage(''); setSuccessMessage(''); }}
+                className="mt-3.5 inline-flex items-center gap-1.5 text-[13px] text-content-subtle hover:text-content transition-colors duration-160 ease-standard cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to the landing page
+              </button>
+            </m.form>
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-paper-50 flex flex-col selection:bg-ink-950 selection:text-white">
-      <div className="fixed -top-40 -left-40 w-96 h-96 bg-brass-400/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed -top-40 -left-40 w-96 h-96 bg-azure-400/10 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed top-2/3 -right-20 w-96 h-96 bg-proof-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full min-h-screen bg-surface-raised grid grid-cols-1 md:grid-cols-12 relative z-10">
 
         {/* Left column: value proposition */}
-        <div className="md:col-span-4 bg-ink-950 text-stone-300 p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 w-48 h-48 bg-gradient-to-tr from-brass-500/10 to-proof-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="ramp-static md:col-span-4 bg-ink-950 text-stone-300 p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute right-0 bottom-0 w-48 h-48 bg-azure-500/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-control text-ink-950 font-black w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif">&#8721;</div>
-              <div><h1 className="font-extrabold text-sm tracking-widest text-stone-100 uppercase">CalculixHub</h1><span className="text-[10px] font-bold text-stone-500 block -mt-1 uppercase tracking-wider">Math OS Platform</span></div>
+              <div className="bg-gradient-to-tr from-azure-500 to-azure-700 p-2.5 rounded-control text-white font-bold w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif">&#8721;</div>
+              <div><h1 className="font-semibold text-[15px] tracking-tight text-white leading-tight">CalculixHub</h1><span className="text-[12px] text-stone-450 block leading-tight">Math OS platform</span></div>
             </div>
 
             <div className="space-y-3 pt-6">
-              <h2 className="text-xl font-black text-white leading-tight font-serif">Adaptive testing, powered by IRT</h2>
-              <p className="text-[11px] text-stone-400 leading-relaxed">
+              <h2 className="type-heading text-white">Adaptive testing, powered by IRT</h2>
+              <p className="text-[12px] text-stone-400 leading-relaxed">
                 CalculixHub applies Item Response Theory (IRT), the same statistical model behind AMC and Olympiad-grade adaptive testing, to calibrate a path that matches your real ability.
               </p>
             </div>
 
             <div className="space-y-4 pt-4">
               <div className="flex gap-2.5 items-start">
-                <div className="bg-brass-500/10 p-1.5 rounded-lg border border-brass-500/20 text-brass-400 shrink-0"><BookOpen className="w-4 h-4" /></div>
-                <div><h4 className="text-xs font-bold text-stone-100">Computer-adaptive assessment</h4><p className="text-[10px] text-stone-400 mt-0.5">Each question's difficulty is chosen live from your real performance.</p></div>
+                <div className="bg-azure-500/10 p-1.5 rounded-lg border border-azure-500/20 text-azure-400 shrink-0"><BookOpen className="w-4 h-4" /></div>
+                <div><h4 className="text-xs font-bold text-stone-100">Computer-adaptive assessment</h4><p className="text-[11px] text-stone-400 mt-0.5">Each question's difficulty is chosen live from your real performance.</p></div>
               </div>
               <div className="flex gap-2.5 items-start">
                 <div className="bg-proof-500/10 p-1.5 rounded-lg border border-proof-500/20 text-proof-400 shrink-0"><Activity className="w-4 h-4" /></div>
-                <div><h4 className="text-xs font-bold text-stone-100">Precise ability mapping</h4><p className="text-[10px] text-stone-400 mt-0.5">Converges on theta and narrows the standard error of measurement (SEM).</p></div>
+                <div><h4 className="text-xs font-bold text-stone-100">Precise ability mapping</h4><p className="text-[11px] text-stone-400 mt-0.5">Converges on theta and narrows the standard error of measurement (SEM).</p></div>
               </div>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-ink-800 mt-8 space-y-3.5 text-[10px] text-stone-500">
+          <div className="pt-8 border-t border-ink-800 mt-8 space-y-3.5 text-[11px] text-stone-500">
             <div><span className="block font-semibold text-stone-350">Version 2.6 - Academic Core</span><span className="block mt-0.5">Adaptive IRT model - non-commercial ecosystem.</span></div>
             <p className="border-t border-ink-800/60 pt-3 leading-relaxed text-stone-400">Built on the <b>EduReach Analytics Core</b> standard.</p>
           </div>
@@ -1641,96 +963,6 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             dead since the early return was introduced; the real entry points
             are the landing page's own header and hero.
           */}
-          {authMode === 'login' && (
-            <m.form
-              key="auth-login"
-              onSubmit={handleLoginSubmit}
-              initial={{ opacity: 0, y: travel.sm }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
-              transition={spring.smooth}
-              className="space-y-4"
-            >
-              <button type="button" onClick={() => { setAuthMode('landing'); setErrorMessage(''); }} className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-bold mb-2 transition-colors cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
-              <div className="space-y-1"><h3 className="text-xl font-black text-stone-900 tracking-tight font-serif">Welcome back</h3><p className="text-[11px] text-stone-500">Enter your account details to sign back in to CalculixHub.</p></div>
-
-              {errorMessage && (
-                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-control text-xs font-medium space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold"><AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" /><span>Sign-in error</span></div>
-                  <p className="text-[11px] leading-relaxed">{errorMessage}</p>
-                </div>
-              )}
-
-              <div className="space-y-3.5 pt-2">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-stone-500 block">Email address</label>
-                  <div className="relative"><Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-stone-500 block">Password</label>
-                  <div className="relative"><Key className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 flex flex-col gap-2.5">
-                <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control shadow-e2 cursor-pointer flex justify-center items-center gap-1.5">Sign in</button>
-                <button type="button" onClick={() => setAuthMode('register')} className="text-center text-[11px] font-bold text-brass-700 hover:underline pt-2 cursor-pointer">Don't have an account? Create one for free &rarr;</button>
-              </div>
-            </m.form>
-          )}
-
-          {authMode === 'register' && (
-            <m.form
-              key="auth-register"
-              onSubmit={handleRegisterSubmit}
-              initial={{ opacity: 0, y: travel.sm }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
-              transition={spring.smooth}
-              className="space-y-4"
-            >
-              <button type="button" onClick={() => { setAuthMode('landing'); setErrorMessage(''); }} className="inline-flex items-center gap-1.5 text-stone-400 hover:text-stone-800 text-xs font-bold mb-1 transition-colors cursor-pointer"><ArrowLeft className="w-3.5 h-3.5" /> Back</button>
-              <div className="space-y-1"><h3 className="text-xl font-black text-stone-900 tracking-tight font-serif">Create a new account</h3><p className="text-[11px] text-stone-500">Set up your profile, then take the adaptive IRT placement test to find your tier.</p></div>
-
-              {errorMessage && (
-                <div className="p-3 bg-rose-50 border border-rose-150 text-rose-850 rounded-control text-xs font-medium flex items-start gap-2"><AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span>{errorMessage}</span></div>
-              )}
-              {successMessage && (
-                <div className="p-3 bg-proof-50 border border-proof-150 text-proof-800 rounded-control text-xs font-semibold">{successMessage}</div>
-              )}
-
-              <div className="space-y-3 pt-1">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-stone-500 block">Full name</label>
-                  <div className="relative"><User className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="text" required placeholder="e.g. Jane Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-stone-500 block">Email address</label>
-                  <div className="relative"><Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-stone-500 block">Choose a password</label>
-                  <div className="relative"><Key className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
-                    <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-stone-200 focus:border-stone-900 rounded-control pl-10 pr-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 placeholder:text-stone-400 bg-stone-50/50" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                <button type="submit" className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control shadow-e2 cursor-pointer justify-center items-center flex gap-1.5">Create profile &amp; take the IRT test <ArrowRight className="w-4 h-4" /></button>
-                <button type="button" onClick={() => setAuthMode('login')} className="text-center text-[11px] font-bold text-brass-700 hover:underline pt-1.5 cursor-pointer">Already a member? Back to sign in &rarr;</button>
-              </div>
-            </m.form>
-          )}
-
           {authMode === 'placement' && (
             <m.div
               key="auth-placement"
@@ -1747,22 +979,22 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     <div className="flex justify-between items-center pb-3 border-b border-stone-100">
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[9px] bg-violet-50 border border-violet-100 text-violet-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                          <span className="text-[11px] bg-violet-50 border border-violet-100 text-violet-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                             {currentItem.domain}
                           </span>
-                          <span className="text-[9px] bg-brass-50 border border-brass-100 text-brass-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                          <span className="text-[11px] bg-azure-50 border border-azure-100 text-azure-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                             {currentItem.source}
                           </span>
                         </div>
-                        <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                        <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider">
                           Adaptive Placement Test
                         </h4>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-[9px] uppercase text-stone-400 font-bold block">Item</span>
-                        <span className="text-sm font-black text-stone-800 font-mono">
+                        <span className="text-[11px] uppercase text-stone-400 font-bold block">Item</span>
+                        <span className="text-sm font-bold text-stone-800 font-mono">
                           {responses.length + 1}
-                          <span className="text-stone-400 text-[10px]">/{MIN_ITEMS}&ndash;{MAX_ITEMS}</span>
+                          <span className="text-stone-400 text-[11px]">/{MIN_ITEMS}&ndash;{MAX_ITEMS}</span>
                         </span>
                       </div>
                     </div>
@@ -1845,8 +1077,8 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                         <div className="bg-amber-50/30 border border-amber-200/40 rounded-control p-3 flex gap-2">
                           <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           <div>
-                            <span className="text-[10px] font-bold text-stone-600 block">Hint:</span>
-                            <MathText as="p" className="text-[9px] text-stone-500 mt-0.5 leading-relaxed" text={currentItem.hint} />
+                            <span className="text-[11px] font-bold text-stone-600 block">Hint:</span>
+                            <MathText as="p" className="text-[11px] text-stone-500 mt-0.5 leading-relaxed" text={currentItem.hint} />
                           </div>
                         </div>
                       </m.div>
@@ -1855,21 +1087,24 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     <AnimatePresence initial={false}>
                       {errorMessage && (
                         <m.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard } }}
+                          initial={{ opacity: 0, height: 0, scale: 0.95, filter: 'blur(4px)' }}
+                          animate={{ opacity: 1, height: 'auto', scale: 1, filter: 'blur(0px)' }}
+                          exit={{ opacity: 0, height: 0, scale: 0.95, filter: 'blur(4px)' }}
+                          transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard }, scale: { duration: duration.fast, ease: ease.standard }, filter: { duration: duration.fast, ease: ease.standard } }}
                           className="overflow-hidden"
                         >
-                          <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-control text-[10px] font-semibold">{errorMessage}</div>
+                          <div className="mb-4 flex items-start gap-2 rounded-control border border-rose-200 bg-rose-100 p-3 shadow-sm">
+                            <AlertTriangle className="w-[16px] h-[16px] text-rose-600 shrink-0 mt-[1px]" strokeWidth={2.5} />
+                            <div className="text-[12.5px] font-medium leading-[1.4] text-rose-900">{errorMessage}</div>
+                          </div>
                         </m.div>
                       )}
                     </AnimatePresence>
 
-                    <m.button type="button" onClick={handleNextIrtQuestion} whileTap={{ scale: 0.98 }} transition={spring.press} className="w-full bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control transition-colors duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1">
+                    <m.button type="button" onClick={handleNextIrtQuestion} whileTap={{ scale: 0.98 }} transition={spring.press} className="w-full material-accent text-sm py-3.5 rounded-control cursor-pointer flex justify-center items-center gap-1 font-serif">
                       Score &amp; continue <ChevronRight className="w-4 h-4" />
                     </m.button>
-                    <p className="text-[9px] text-stone-400 text-center leading-relaxed">
+                    <p className="text-[11px] text-stone-400 text-center leading-relaxed">
                       The test ends automatically once your ability estimate is precise enough &mdash; typically {MIN_ITEMS}&ndash;{MAX_ITEMS} items.
                     </p>
                   </div>
@@ -1878,11 +1113,11 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   <div className="lg:col-span-5 bg-stone-50/50 p-4 rounded-card border border-stone-100 space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-stone-150">
                       <Activity ref={telemetryPulseRef} className="w-3.5 h-3.5 text-violet-600 animate-pulse" />
-                      <h4 className="text-[10px] font-black uppercase text-stone-800 tracking-wider">Live 3PL IRT Analysis</h4>
+                      <h4 className="text-[11px] font-bold uppercase text-stone-800 tracking-wider">Live 3PL IRT Analysis</h4>
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center text-[9px] font-bold text-stone-500">
+                      <div className="flex justify-between items-center text-[11px] font-bold text-stone-500">
                         <span>Ability estimate &theta; (EAP)</span>
                         <span className="text-violet-700 font-mono">{theta > 0 ? '+' : ''}{theta.toFixed(2)}</span>
                       </div>
@@ -1908,45 +1143,45 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                           }}
                         />
                       </div>
-                      <div className="flex justify-between text-[8px] text-stone-400 font-mono">
+                      <div className="flex justify-between text-[10px] text-stone-400 font-mono">
                         <span>-3.0 Foundation</span><span>0.0 Advanced</span><span>+3.0 Olympiad</span>
                       </div>
                     </div>
 
                     <div className="p-2.5 bg-surface-raised border border-stone-150 rounded-control grid grid-cols-2 gap-2 text-center">
                       <div>
-                        <span className="text-[8px] uppercase text-stone-400 font-bold block">Std. error (SEM)</span>
-                        <span className="text-xs font-black text-stone-800 font-mono block mt-0.5">&plusmn; {sem.toFixed(2)}</span>
+                        <span className="text-[10px] uppercase text-stone-400 font-bold block">Std. error (SEM)</span>
+                        <span className="text-xs font-bold text-stone-800 font-mono block mt-0.5">&plusmn; {sem.toFixed(2)}</span>
                       </div>
                       <div>
-                        <span className="text-[8px] uppercase text-stone-400 font-bold block">Reliability</span>
-                        <span className="text-xs font-black text-proof-600 block mt-0.5">{(reliability(sem) * 100).toFixed(0)}%</span>
+                        <span className="text-[10px] uppercase text-stone-400 font-bold block">Reliability</span>
+                        <span className="text-xs font-bold text-proof-600 block mt-0.5">{(reliability(sem) * 100).toFixed(0)}%</span>
                       </div>
                     </div>
 
                     <div className="p-2.5 bg-violet-50/50 border border-violet-100 rounded-control space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-violet-900 font-bold flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" /> Projected tier</span>
-                        <span className="bg-violet-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase">{tierForTheta(theta)}</span>
+                        <span className="text-[11px] text-violet-900 font-bold flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" /> Projected tier</span>
+                        <span className="bg-violet-600 text-white text-[11px] font-bold px-2 py-0.5 rounded uppercase">{tierForTheta(theta)}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-violet-900 font-bold">Percentile</span>
-                        <span className="text-[10px] font-black text-violet-700 font-mono">{thetaToPercentile(theta)}th</span>
+                        <span className="text-[11px] text-violet-900 font-bold">Percentile</span>
+                        <span className="text-[11px] font-bold text-violet-700 font-mono">{thetaToPercentile(theta)}th</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-violet-900 font-bold">Matched contest</span>
-                        <span className="text-[9px] font-black text-violet-700">{recommendedSource(theta)}</span>
+                        <span className="text-[11px] text-violet-900 font-bold">Matched contest</span>
+                        <span className="text-[11px] font-bold text-violet-700">{recommendedSource(theta)}</span>
                       </div>
                     </div>
 
                     {/* Domain coverage so far */}
                     <div className="space-y-1.5">
-                      <span className="text-[8px] uppercase text-stone-400 font-extrabold block">Domain coverage</span>
+                      <span className="text-[10px] uppercase text-stone-400 font-semibold block">Domain coverage</span>
                       <div className="grid grid-cols-2 gap-1.5">
                         {DOMAINS.map((d) => {
                           const count = responses.filter((r) => r.item.domain === d).length;
                           return (
-                            <div key={d} className={`text-[8px] font-bold px-2 py-1 rounded border flex justify-between ${count > 0 ? 'bg-proof-50 border-proof-150 text-proof-700' : 'bg-stone-100 border-stone-150 text-stone-400'}`}>
+                            <div key={d} className={`text-[10px] font-bold px-2 py-1 rounded border flex justify-between ${count > 0 ? 'bg-proof-50 border-proof-150 text-proof-700' : 'bg-stone-100 border-stone-150 text-stone-400'}`}>
                               <span className="truncate">{d}</span><span className="font-mono shrink-0 ml-1">{count}</span>
                             </div>
                           );
@@ -1955,8 +1190,8 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-[8px] uppercase text-stone-400 font-extrabold block">IRT engine log:</span>
-                      <div className="h-28 overflow-y-auto border border-stone-200 bg-ink-950 text-[8px] p-2 rounded-lg font-mono text-proof-400 space-y-1 select-none">
+                      <span className="text-[10px] uppercase text-stone-400 font-semibold block">IRT engine log:</span>
+                      <div className="h-28 overflow-y-auto border border-stone-200 bg-ink-950 text-[10px] p-2 rounded-lg font-mono text-proof-400 space-y-1 select-none">
                         {irtLog.map((logLine, lIdx) => (<div key={lIdx} className="leading-normal">{logLine}</div>))}
                       </div>
                     </div>
@@ -1967,7 +1202,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 <div className="space-y-5 py-4">
                   <div className="text-center space-y-2">
                     <div className="mx-auto w-12 h-12 bg-proof-50 border border-proof-200 text-proof-600 rounded-full flex items-center justify-center shadow-e2"><CheckCircle2 className="w-6 h-6" /></div>
-                    <h3 className="text-lg font-black text-stone-900 font-serif">Placement complete</h3>
+                    <h3 className="type-heading text-stone-900">Placement complete</h3>
                     <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
                       Measured across {responses.length} adaptively selected items. Your problem sets are now calibrated to this profile.
                     </p>
@@ -1975,26 +1210,26 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
                   <div className="p-4 bg-stone-50 rounded-card border border-stone-100 max-w-lg mx-auto grid grid-cols-4 gap-3 text-center">
                     <div className="border-r border-stone-200">
-                      <span className="text-[9px] uppercase font-bold text-stone-400 block">Ability</span>
-                      <p className="text-sm font-extrabold text-violet-700 mt-0.5 font-mono">{theta.toFixed(2)}</p>
+                      <span className="text-[11px] uppercase font-bold text-stone-400 block">Ability</span>
+                      <p className="text-sm font-semibold text-violet-700 mt-0.5 font-mono">{theta.toFixed(2)}</p>
                     </div>
                     <div className="border-r border-stone-200">
-                      <span className="text-[9px] uppercase font-bold text-stone-400 block">SEM</span>
-                      <p className="text-sm font-extrabold text-stone-800 mt-0.5 font-mono">{sem.toFixed(2)}</p>
+                      <span className="text-[11px] uppercase font-bold text-stone-400 block">SEM</span>
+                      <p className="text-sm font-semibold text-stone-800 mt-0.5 font-mono">{sem.toFixed(2)}</p>
                     </div>
                     <div className="border-r border-stone-200">
-                      <span className="text-[9px] uppercase font-bold text-stone-400 block">Percentile</span>
-                      <p className="text-sm font-extrabold text-stone-800 mt-0.5 font-mono">{thetaToPercentile(theta)}</p>
+                      <span className="text-[11px] uppercase font-bold text-stone-400 block">Percentile</span>
+                      <p className="text-sm font-semibold text-stone-800 mt-0.5 font-mono">{thetaToPercentile(theta)}</p>
                     </div>
                     <div>
-                      <span className="text-[9px] uppercase font-bold text-stone-400 block">Tier</span>
-                      <span className="block text-[10px] font-black text-proof-700 bg-proof-50 px-2 py-0.5 rounded-md w-fit mx-auto mt-1 border border-proof-150">{calculatedLevel}</span>
+                      <span className="text-[11px] uppercase font-bold text-stone-400 block">Tier</span>
+                      <span className="block text-[11px] font-bold text-proof-700 bg-proof-50 px-2 py-0.5 rounded-md w-fit mx-auto mt-1 border border-proof-150">{calculatedLevel}</span>
                     </div>
                   </div>
 
                   {/* Per-domain ability profile */}
                   <div className="max-w-lg mx-auto bg-surface-raised material-card border border-line rounded-card p-4 space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
                       <BarChart3 className="w-3.5 h-3.5 text-violet-600" /> Measured domain profile
                     </h4>
                     {DOMAINS.map((d) => {
@@ -2002,7 +1237,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                       const asked = responses.filter((r) => r.item.domain === d).length;
                       return (
                         <div key={d} className="space-y-1">
-                          <div className="flex justify-between text-[10px]">
+                          <div className="flex justify-between text-[11px]">
                             <span className="font-bold text-stone-700">{d}</span>
                             <span className="font-mono text-stone-500">{pct}% <span className="text-stone-400">({asked} {asked === 1 ? 'item' : 'items'})</span></span>
                           </div>
@@ -2017,9 +1252,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     })}
                   </div>
 
-                  <div className="text-left text-[11px] text-stone-600 space-y-1.5 max-w-lg mx-auto bg-stone-50 p-4 rounded-control border border-stone-100">
+                  <div className="text-left text-[12px] text-stone-600 space-y-1.5 max-w-lg mx-auto bg-stone-50 p-4 rounded-control border border-stone-100">
                     <p className="font-bold text-stone-705 flex gap-1.5 items-center"><BookOpen className="w-3.5 h-3.5 text-violet-600" /> What happens next:</p>
-                    <ul className="list-disc pl-4 space-y-1.5 text-stone-500 text-[10px]">
+                    <ul className="list-disc pl-4 space-y-1.5 text-stone-500 text-[11px]">
                       <li>Problems from the <strong className="text-violet-600">{calculatedLevel}</strong> tier ({recommendedSource(theta)}-calibre) are prioritized first.</li>
                       <li>Your skill radar is seeded directly from this measured domain profile.</li>
                       <li>EduReach targets your weakest domain first when building your learning path.</li>
@@ -2027,7 +1262,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     </ul>
                   </div>
 
-                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto bg-ink-950 hover:bg-black text-white text-xs font-extrabold py-3.5 rounded-control shadow-e3 hover:shadow-e3 transition-[background-color,border-color,color,box-shadow] duration-240 ease-standard cursor-pointer flex justify-center items-center gap-1.5">
+                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto material-accent text-sm py-3.5 rounded-control cursor-pointer flex justify-center items-center gap-1.5 font-serif">
                     Enter CalculixHub <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -2039,5 +1274,33 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+/*
+ * A labelled input with a leading glyph.
+ *
+ * The three fields on the auth screens differ only in label, icon and the
+ * control itself, and they had been three copies of the same twelve-line block.
+ * Copies drift: the sign-up email field and the sign-in email field had already
+ * picked up different focus borders before this was pulled out.
+ */
+function Field({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[13px] font-medium text-white/55">{label}</span>
+      <span className="relative mt-1.5 block">
+        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35 pointer-events-none" />
+        {children}
+      </span>
+    </label>
   );
 }

@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Award, Sparkles, BookOpenCheck } from 'lucide-react';
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
-import { TOPIC_META, TOPIC_LIST, LEVEL_LIST } from '../lib/topics';
+import { TOPIC_META, TOPIC_LIST, LEVEL_LIST, LEVEL_META } from '../lib/topics';
 import MathText from './MathText';
 import { apiUrl, apiFetch } from '../lib/apiBase';
 import { gradeLocally, queueGrade } from '../lib/offline';
@@ -163,35 +163,42 @@ export default function Learn({
           transition={spring.smooth}
           className="space-y-6"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+          {/*
+            The screen header. Learn ships its own rather than using the
+            workspace one in App.tsx, because the completed count belongs beside
+            the title and nowhere else.
+          */}
+          <header className="flex flex-col gap-4 border-b border-line pb-4.5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="type-title text-content flex items-center gap-2">
-                <GraduationCap className="w-7 h-7 text-brass-600" /> Learning Engine
-              </h1>
-              <p className="text-xs text-stone-500 mt-1">
-                Deep practice across each domain, adapting from Foundation basics to full Olympiad difficulty.
-              </p>
+              <p className="type-eyebrow text-accent-text">CalculixHub Workspace</p>
+              <h1 className="type-title mt-1.5 font-normal text-[clamp(1.75rem,2.6vw,2.375rem)]">Learn</h1>
             </div>
+            <span className="text-[12px] tracking-[0.08em] text-content-subtle tnum self-start sm:self-auto">
+              {completedProblems.length} of {problems.length} solved
+            </span>
+          </header>
 
-            <div className="bg-stone-50 border border-stone-150 px-3.5 py-1.5 rounded-control flex items-center gap-3 self-start">
-              <span className="text-[10px] text-stone-400 font-bold block uppercase">Completed:</span>
-              <span className="text-sm font-extrabold text-stone-900">{completedProblems.length} / {problems.length}</span>
-            </div>
-          </div>
+          {/*
+            Filters.
 
-          <div className="flex flex-col sm:flex-row gap-3.5 items-stretch sm:items-center">
-            <div className="space-y-1.5 flex-1 select-none">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">Topic</span>
-              <div className="flex flex-wrap gap-2 pt-0.5">
+            Topic on the left, tier on the right, each under its own tracked
+            label. `.cx-chip` carries both states off `aria-pressed`, so the
+            selected chip is an accent outline rather than a filled black pill —
+            the system has no filled controls except the one primary action, and
+            a row of five filled chips would out-shout it.
+          */}
+          <section className="flex flex-wrap items-end justify-between gap-6.5">
+            <div className="flex flex-col gap-3.5">
+              <span className="type-eyebrow text-content-subtle">Topic</span>
+              <div className="flex flex-wrap gap-2">
                 <m.button
                   onClick={() => setSelectedTopic('All')}
                   whileTap={{ scale: 0.95 }}
                   transition={spring.press}
-                  className={`text-xs font-bold px-4 py-2.5 rounded-control transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                    selectedTopic === 'All' ? 'bg-ink-950 border border-ink-950 text-white shadow-e1' : 'bg-surface-raised material-card border border-line text-stone-600 hover:bg-stone-50'
-                  }`}
+                  aria-pressed={selectedTopic === 'All'}
+                  className="cx-chip"
                 >
-                  All topics
+                  All
                 </m.button>
                 {TOPIC_LIST.map((topic) => (
                   <m.button
@@ -199,9 +206,8 @@ export default function Learn({
                     onClick={() => setSelectedTopic(topic)}
                     whileTap={{ scale: 0.95 }}
                     transition={spring.press}
-                    className={`text-xs font-bold px-4 py-2.5 rounded-control transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                      selectedTopic === topic ? 'bg-ink-950 border border-ink-950 text-white shadow-e1' : 'bg-surface-raised material-card border border-line text-stone-600 hover:bg-stone-50'
-                    }`}
+                    aria-pressed={selectedTopic === topic}
+                    className="cx-chip"
                   >
                     {TOPIC_META[topic].label}
                   </m.button>
@@ -209,16 +215,15 @@ export default function Learn({
               </div>
             </div>
 
-            <div className="space-y-1.5 select-none shrink-0">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">Difficulty</span>
-              <div className="flex gap-2 pt-0.5">
+            <div className="flex flex-col gap-3.5">
+              <span className="type-eyebrow text-content-subtle">Tier</span>
+              <div className="flex flex-wrap gap-2">
                 <m.button
                   onClick={() => setSelectedLevel('All')}
                   whileTap={{ scale: 0.95 }}
                   transition={spring.press}
-                  className={`text-xs font-bold px-4 py-2.5 rounded-control transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                    selectedLevel === 'All' ? 'bg-ink-950 border border-ink-800 text-white shadow-e1' : 'bg-surface-raised material-card border border-line text-stone-600 hover:bg-stone-50'
-                  }`}
+                  aria-pressed={selectedLevel === 'All'}
+                  className="cx-chip"
                 >
                   All
                 </m.button>
@@ -228,82 +233,85 @@ export default function Learn({
                     onClick={() => setSelectedLevel(lvl)}
                     whileTap={{ scale: 0.95 }}
                     transition={spring.press}
-                    className={`text-xs font-bold px-4 py-2.5 rounded-control transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer ${
-                      selectedLevel === lvl ? 'bg-ink-950 border border-ink-800 text-white shadow-e1' : 'bg-surface-raised material-card border border-line text-stone-600 hover:bg-stone-50'
-                    }`}
+                    aria-pressed={selectedLevel === lvl}
+                    className="cx-chip"
                   >
                     {lvl}
                   </m.button>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
+
+          <p className="text-[12.5px] tracking-[0.04em] text-content-subtle">
+            {filteredProblems.length} {filteredProblems.length === 1 ? 'problem' : 'problems'}
+            {' · '}
+            {completedProblems.length === 0 ? 'none solved yet' : `${completedProblems.length} solved`}
+          </p>
 
           {filteredProblems.length === 0 ? (
-            <div className="text-center py-12 bg-surface-raised rounded-card border border-dashed border-stone-200 text-stone-400 text-sm">
-              <AlertCircle className="w-8 h-8 text-stone-300 mx-auto mb-2" />
-              No problems match your current filters.
+            <div className="cx-card-pending px-8 py-13 text-center">
+              <AlertCircle className="mx-auto h-5.5 w-5.5 text-content-subtle" />
+              <p className="mt-4 font-serif text-[24px]">Nothing matches those filters</p>
+              <p className="type-caption mx-auto mt-2 max-w-[38ch] leading-[1.75] text-content-subtle">
+                Widen the topic or the tier and the list fills again.
+              </p>
             </div>
           ) : (
             /*
+              A ruled list, not a card grid.
+
+              Each problem is a row on a hairline, numbered in the display face
+              down the left margin — a contents page. The grid used to be three
+              cards across, which made a catalogue of thirty-seven items into
+              thirteen rows of boxes that could only be compared by reading each
+              one; ruled rows put the number, the title, the domain and the
+              value on four fixed columns you can run an eye down.
+
               Keyed on the active filters, so changing a filter replays the
-              stagger. That is deliberate: the grid re-populating is the only
+              stagger. That is deliberate: the list re-populating is the only
               confirmation the filter did anything, and without it a filter that
               happens to match a similar number of problems looks like nothing
               happened at all.
             */
-            <div
-              key={`${selectedTopic}-${selectedLevel}`}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-            >
+            <section key={`${selectedTopic}-${selectedLevel}`} className="border-t border-line">
               {filteredProblems.map((prob, index) => {
                 const isCompleted = completedProblems.includes(prob.id);
+                const topic = TOPIC_META[prob.topic];
                 return (
-                  <StaggerItem
-                    key={prob.id}
-                    index={index}
-                    className={`bg-surface-raised border rounded-card p-5 hover:border-stone-300 hover:shadow-e1 transition-[border-color,box-shadow] duration-160 ease-standard relative flex flex-col justify-between group ${
-                      isCompleted ? 'border-proof-100 bg-proof-50/10' : 'border-stone-100'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex justify-between items-center mb-3">
-                        <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
-                          prob.level === 'Olympiad' ? 'bg-violet-50 text-violet-700 border border-violet-100'
-                          : prob.level === 'Advanced' ? 'bg-brass-100 text-brass-700 border border-brass-200'
-                          : 'bg-stone-100 text-stone-700 border border-stone-200'
-                        }`}>
-                          {prob.level}
+                  <StaggerItem key={prob.id} index={index}>
+                    <button
+                      onClick={() => handleSelectProblem(prob)}
+                      className="group grid w-full grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-5.5 border-b border-line-faint px-1.5 py-5 text-left transition-colors duration-160 ease-standard hover:bg-content/3 cursor-pointer"
+                    >
+                      <span className="font-serif text-[26px] text-content-subtle tnum">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+
+                      <span className="min-w-0">
+                        <span className="block truncate font-serif text-[22px] text-content">{prob.title}</span>
+                        <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className="cx-tag" style={topic.vars}>{topic.label}</span>
+                          <span className="cx-tag cx-tag-neutral">{prob.level}</span>
+                          <span className="text-[12.5px] text-content-subtle">{LEVEL_META[prob.level].scope}</span>
                         </span>
-                        <span className="text-[10px] text-stone-400 font-bold whitespace-nowrap">{TOPIC_META[prob.topic].label}</span>
-                      </div>
+                      </span>
 
-                      <h3 className="font-extrabold text-stone-800 text-sm leading-snug group-hover:text-brass-700 transition-colors duration-160 ease-standard">{prob.title}</h3>
-
-                      <MathText text={prob.question} as="p" className="text-xs text-stone-500 mt-2 line-clamp-3 leading-relaxed" />
-                    </div>
-
-                    <div className="mt-5 pt-3.5 border-t border-stone-100 flex justify-between items-center text-xs">
-                      <span className="text-stone-400 font-semibold">+{prob.points} pts</span>
-                      {isCompleted ? (
-                        <span className="text-proof-600 font-extrabold flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4 text-proof-500 shrink-0" /> Solved
-                        </span>
-                      ) : (
-                        <m.button
-                          onClick={() => handleSelectProblem(prob)}
-                          whileTap={{ scale: 0.94 }}
-                          transition={spring.press}
-                          className="bg-ink-950 text-white font-bold text-[11px] px-3.5 py-2 rounded-control hover:bg-black transition-[background-color,transform] duration-160 ease-standard cursor-pointer flex items-center gap-1 group-hover:translate-x-0.5"
-                        >
-                          Practice <ChevronRight className="w-3.5 h-3.5" />
-                        </m.button>
-                      )}
-                    </div>
+                      <span className="flex items-center gap-4">
+                        {isCompleted ? (
+                          <span className="flex items-center gap-1.5 text-[12.5px] text-proof">
+                            <CheckCircle className="h-3.5 w-3.5 shrink-0" /> Solved
+                          </span>
+                        ) : (
+                          <span className="text-[12.5px] text-content-subtle tnum">{prob.points} pts</span>
+                        )}
+                        <ChevronRight className="h-4 w-4 shrink-0 text-accent transition-transform duration-160 ease-standard group-hover:translate-x-0.5" />
+                      </span>
+                    </button>
                   </StaggerItem>
                 );
               })}
-            </div>
+            </section>
           )}
         </m.div>
       ) : (
@@ -329,28 +337,28 @@ export default function Learn({
           </m.button>
 
           <div className="bg-surface-raised border border-stone-100 rounded-panel shadow-e3 overflow-hidden">
-            <div className="bg-ink-950 text-white p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ink-800">
+            <div className="ramp-static bg-ink-950 text-white p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ink-800">
               <div className="space-y-1">
                 <div className="flex gap-2 items-center">
-                  <span className="bg-brass-600 text-ink-950 text-[9px] font-black uppercase px-2 py-0.5 rounded-md">{activeProblem.level}</span>
-                  <span className="text-[10px] text-stone-300 font-bold uppercase tracking-wider">{TOPIC_META[activeProblem.topic].label}</span>
+                  <span className="cx-tag cx-tag-accent">{activeProblem.level}</span>
+                  <span className="text-[11px] text-stone-300 font-bold uppercase tracking-wider">{TOPIC_META[activeProblem.topic].label}</span>
                 </div>
-                <h2 className="text-base md:text-lg font-black tracking-tight mt-1.5 font-serif">{activeProblem.title}</h2>
+                <h2 className="text-base md:text-lg font-bold tracking-tight mt-1.5 font-serif">{activeProblem.title}</h2>
               </div>
               <div className="text-right shrink-0">
                 <span className="text-xs text-stone-400 block font-medium">Reward</span>
-                <span className="text-sm font-extrabold text-brass-400 tracking-wide block">+{activeProblem.points} pts</span>
+                <span className="text-sm font-semibold text-azure-400 tracking-wide block">+{activeProblem.points} pts</span>
               </div>
             </div>
 
             <div className="p-6 md:p-8 space-y-6">
-              <div className="p-5 bg-stone-50 rounded-card border border-stone-150">
+              <div className="p-5 cx-card border border-stone-150">
                 <MathText text={activeProblem.question} as="div" className="text-sm md:text-base text-stone-800 leading-relaxed font-semibold" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-7 space-y-4">
-                  <h4 className="font-bold text-xs text-stone-500 uppercase tracking-widest">Submit your answer</h4>
+                  <h4 className="font-bold text-xs text-stone-500 uppercase tracking-wider">Submit your answer</h4>
 
                   <form onSubmit={handleSubmitAnswer} className="space-y-3.5">
                     <div className="flex items-center gap-2">
@@ -421,9 +429,9 @@ export default function Learn({
                         onClick={() => setShowFullSolution(!showFullSolution)}
                         whileTap={{ scale: 0.95 }}
                         transition={spring.press}
-                        className="text-xs bg-brass-50 hover:bg-brass-100 text-brass-700 px-4 py-2 rounded-lg border border-brass-100 transition-colors duration-160 ease-standard cursor-pointer flex items-center gap-1.5 font-semibold"
+                        className="text-xs bg-azure-50 hover:bg-azure-100 text-azure-700 px-4 py-2 rounded-lg border border-azure-100 transition-colors duration-160 ease-standard cursor-pointer flex items-center gap-1.5 font-semibold"
                       >
-                        <BookOpenCheck className="w-4 h-4 text-brass-600" />
+                        <BookOpenCheck className="w-4 h-4 text-azure-600" />
                         View full solution
                       </m.button>
                     </div>
@@ -436,10 +444,10 @@ export default function Learn({
                   </form>
                 </div>
 
-                <div className="lg:col-span-5 bg-stone-50 border border-stone-150 rounded-card p-5 space-y-4">
+                <div className="lg:col-span-5 cx-card p-5 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] uppercase font-extrabold text-brass-700 bg-brass-50 border border-brass-100 px-2 py-0.5 rounded-md">EduReach AI Feed</span>
-                    <span className="text-[10px] text-stone-400 font-bold">Automatic feedback</span>
+                    <span className="text-[11px] uppercase font-semibold text-azure-700 bg-azure-50 border border-azure-100 px-2 py-0.5 rounded-md">EduReach AI Feed</span>
+                    <span className="text-[11px] text-stone-400 font-bold">Automatic feedback</span>
                   </div>
 
                   {/*
@@ -478,7 +486,7 @@ export default function Learn({
                           initial={{ opacity: 0, x: -travel.xs }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ ...spring.snappy, delay: 0.06 }}
-                          className={`text-xs font-black uppercase tracking-wider ${smartFeedback.correct ? 'text-proof-700' : 'text-rose-700'}`}
+                          className={`text-xs font-bold uppercase tracking-wider ${smartFeedback.correct ? 'text-proof-700' : 'text-rose-700'}`}
                         >
                           {smartFeedback.correct ? 'Correct' : 'Not quite'}
                         </m.span>
@@ -491,7 +499,7 @@ export default function Learn({
                         className="space-y-2"
                       >
                         <p className="text-stone-850 text-xs leading-relaxed font-semibold italic">&ldquo;{smartFeedback.explanation}&rdquo;</p>
-                        <p className="text-stone-600 text-[11px] leading-relaxed border-t border-stone-200 pt-2 font-medium">
+                        <p className="text-stone-600 text-[12px] leading-relaxed border-t border-stone-200 pt-2 font-medium">
                           <strong>Next step:</strong> {smartFeedback.guidance}
                         </p>
                       </m.div>
@@ -507,7 +515,7 @@ export default function Learn({
                     >
                       <Sparkles ref={idleSparkleRef} className="w-5 h-5 text-stone-300 mx-auto animate-pulse" />
                       <p className="font-semibold">Waiting for your answer</p>
-                      <p className="text-[9px]">Submit an answer to get AI-guided feedback.</p>
+                      <p className="text-[11px]">Submit an answer to get AI-guided feedback.</p>
                     </m.div>
                   )}
                   </AnimatePresence>
@@ -524,10 +532,10 @@ export default function Learn({
                 <div className="border-t border-stone-100 pt-6 space-y-4">
                   <div className="flex items-center gap-2 text-violet-800">
                     <Award className="w-5 h-5 text-violet-600" />
-                    <h3 className="font-extrabold text-sm uppercase tracking-wider">Full Solution</h3>
+                    <h3 className="font-semibold text-sm uppercase tracking-wider">Full Solution</h3>
                   </div>
 
-                  <div className="p-5 md:p-6 bg-ink-950 text-stone-100 rounded-card border border-ink-850 shadow-inset-well leading-relaxed text-sm space-y-3.5">
+                  <div className="ramp-static p-5 md:p-6 bg-ink-950 text-stone-100 rounded-card border border-ink-850 shadow-inset-well leading-relaxed text-sm space-y-3.5">
                     <MathText text={activeProblem.solution} as="div" className="font-medium text-stone-300" />
                     <div className="pt-2 bg-ink-850 p-3 rounded-control border border-ink-800 text-xs text-violet-300 font-medium">
                       What did this solution teach you? Save the key idea to your personal notebook to build the habit of dissecting structure.

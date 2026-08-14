@@ -5,9 +5,9 @@
 
 import React from 'react';
 import { m } from 'motion/react';
-import { User, CheckCircle, Star, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { UserStats, Problem } from '../types';
-import { TOPIC_META, getRankForPoints } from '../lib/topics';
+import { TOPIC_META, getRankForPoints, nextRankFor } from '../lib/topics';
 import { spring } from '../lib/motion';
 import { AnimatedNumber, StaggerItem } from './motion';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,21 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const { profile } = useAuth();
   const displayName = profile?.display_name || profile?.username || 'Calculix Student';
 
+  /*
+   * The account rows are read-only.
+   *
+   * The design puts a Change / Edit / Update control on each of these. They are
+   * omitted rather than rendered inert: a button that looks live and does
+   * nothing is worse than no button, and none of these flows exists yet —
+   * email and password changes go through Supabase and have not been built.
+   */
+  const accountRows = [
+    { label: 'Display name', value: displayName },
+    { label: 'Username', value: profile?.username ? `@${profile.username}` : 'Not set' },
+    { label: 'Member since', value: profile?.created_at ? profile.created_at.slice(0, 10) : 'Unknown' },
+    { label: 'Country', value: profile?.country ?? 'Not set' },
+  ];
+
   const badges = [
     { id: 'b1', title: 'Getting Started', desc: 'Joined CalculixHub', unlocked: true, icon: '🌱' },
     { id: 'b2', title: 'Algebra Reflex', desc: 'Reach 50 total points', unlocked: userStats.points >= 50, icon: '📐' },
@@ -43,106 +58,161 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
     { id: 'b5', title: 'Unbreakable Streak', desc: 'Hit a 3-day activity streak', unlocked: userStats.streak >= 3, icon: '🔥' },
   ];
 
+  const nextTier = nextRankFor(userStats.points);
+
   return (
-    <div className="space-y-8">
-      <div className="border-b border-stone-100 pb-4">
-        <h1 className="type-title text-content flex items-center gap-2">
-          <User className="w-7 h-7 text-stone-800" /> Student Profile
-        </h1>
-        <p className="text-xs text-stone-500 mt-1">Your academic progress, evidence of skill, and earned honors.</p>
+    <div className="space-y-8.5">
+      {/*
+        The summary band.
+
+        Four figures on one hairline rule, closed top and bottom — the design's
+        answer to a row of stat cards, with the cards removed. It replaces a
+        dark hero panel carrying an avatar disc, a name and two figures: that
+        block spent a third of the screen restating the sidebar, and the numbers
+        a learner comes to this page for were below it.
+      */}
+      <section className="cx-band-stats">
+        <div>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Rank tier</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block">{rank.name}</span>
+          <span className="mt-2 block text-[13px] text-content-subtle">
+            {nextTier
+              ? `${nextTier.minPoints - userStats.points} points to ${nextTier.name}`
+              : 'Top of the ladder'}
+          </span>
+        </div>
+        <div>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Points</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block">
+            <AnimatedNumber value={userStats.points} />
+          </span>
+          <span className="mt-2 block text-[13px] text-content-subtle">Earned from solves and contests</span>
+        </div>
+        <div>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Tier</span>
+          <span className={`cx-figure cx-figure-lg mt-2.5 block ${userStats.level ? '' : 'text-content-subtle'}`}>
+            {userStats.level || 'Unknown'}
+          </span>
+          <span className="mt-2 block text-[13px] text-content-subtle">
+            {userStats.level ? 'Set by the placement test' : 'Needs the placement test'}
+          </span>
+        </div>
+        <div>
+          <span className="type-eyebrow block text-content-subtle tracking-[0.18em]">Problems solved</span>
+          <span className="cx-figure cx-figure-lg mt-2.5 block">
+            <AnimatedNumber value={solvedQuestions.length} />
+          </span>
+          <span className="mt-2 block text-[13px] text-content-subtle">Across four domains</span>
+        </div>
+      </section>
+
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <p className="type-body text-content-subtle">
+          Signed in as <span className="font-serif text-[19px] text-content">{displayName}</span>
+        </p>
+        <m.button
+          onClick={onLogout}
+          whileTap={{ scale: 0.95 }}
+          transition={spring.press}
+          className="cx-btn cx-btn-secondary px-4.5 py-2.25 text-[15px]"
+        >
+          <LogOut className="w-3.5 h-3.5 shrink-0" /> Log out
+        </m.button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-surface-inverse rounded-panel p-6 md:p-8 text-content-inverse relative overflow-hidden shadow-e4 bp-corners">
-            <div className="absolute right-0 top-0 w-80 h-80 bg-gradient-to-br from-violet-500/15 to-brass-500/15 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+      {/*
+        Achievements.
 
-            <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
-              <div className="w-20 h-20 bg-gradient-to-tr from-violet-500 to-brass-600 rounded-full border-4 border-ink-800 flex items-center justify-center font-black text-2xl text-white shadow-e3 font-serif">
-                {displayName.substring(0, 1).toUpperCase()}
-              </div>
+        All of them are visible from the start with the unlock condition written
+        underneath, which is the design's rule and the more useful one: a wall
+        of six greyed mysteries tells a learner nothing, while six stated
+        conditions is a list of things to go and do. Locked is a dashed outline;
+        unlocked fills in the border and lights the mark.
+      */}
+      <section>
+        <h3 className="type-title text-[26px]">Achievements</h3>
+        <p className="type-caption mt-1.5 text-content-subtle">
+          All {badges.length} are visible from the start, with what unlocks them written underneath.
+        </p>
 
-              <div className="space-y-1.5 text-center sm:text-left flex-1">
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <h2 className="text-xl font-extrabold tracking-tight font-serif">{displayName}</h2>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wider uppercase border ${rank.bg} ${rank.text} ${rank.border}`}>{rank.name}</span>
-                </div>
-                <div className="flex flex-wrap justify-center sm:justify-start gap-4 text-xs pt-1">
-                  <span>Level: <strong className="text-brass-400">{userStats.level}</strong></span>
-                  <span>Points: <strong className="text-violet-400"><AnimatedNumber value={userStats.points} /></strong></span>
-                </div>
-              </div>
-
-              <m.button
-                onClick={onLogout}
-                whileTap={{ scale: 0.95 }}
-                transition={spring.press}
-                className="bg-ink-800 hover:bg-ink-700 border border-ink-700 p-2.5 rounded-control text-stone-300 hover:text-white transition-[background-color,color] duration-160 ease-standard text-xs font-bold cursor-pointer flex gap-1.5"
-              >
-                <LogOut className="w-4 h-4 shrink-0" /> Log out
-              </m.button>
-            </div>
-          </div>
-
-          <div className="bg-surface-raised material-card border border-line rounded-panel p-5 md:p-6 shadow-e1 space-y-4">
-            <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5">
-              <Star className="w-4.5 h-4.5 text-brass-500" /> Achievement Badges
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {badges.map((b, index) => (
-                /*
-                  Locked badges sit at 40% opacity, so unlocking one is a change
-                  the learner should catch. The stagger gives the wall a reading
-                  order, and the opacity change now eases rather than snapping.
-                */
-                <StaggerItem
-                  key={b.id}
-                  index={index}
-                  inView
-                  className={`border rounded-card p-4 flex gap-3 transition-[opacity,background-color,border-color] duration-340 ease-standard ${b.unlocked ? 'bg-stone-50/50 border-stone-200' : 'border-stone-100 bg-stone-50/20 opacity-40'}`}
-                >
-                  <div className="text-2xl pt-0.5 self-center">{b.icon}</div>
-                  <div className="space-y-0.5">
-                    <h4 className="font-black text-stone-800 text-xs">{b.title}</h4>
-                    <p className="text-[10px] text-stone-500 leading-normal">{b.desc}</p>
-                    <span className="inline-block mt-1 text-[8px] uppercase font-bold text-stone-400">{b.unlocked ? 'Unlocked' : 'Locked'}</span>
-                  </div>
-                </StaggerItem>
-              ))}
-            </div>
-          </div>
+        <div className="mt-5.5 grid [grid-template-columns:repeat(auto-fit,minmax(15.625rem,1fr))] gap-4">
+          {badges.map((b, index) => (
+            <StaggerItem
+              key={b.id}
+              index={index}
+              inView
+              className={`p-5.5 transition-[border-color,opacity] duration-340 ease-standard ${
+                b.unlocked ? 'cx-card cx-tint-accent' : 'cx-card-pending'
+              }`}
+            >
+              <span className={`block text-[20px] leading-none ${b.unlocked ? '' : 'opacity-45 grayscale'}`}>{b.icon}</span>
+              <h4 className={`type-title mt-3.5 text-[21px] ${b.unlocked ? '' : 'text-content-muted'}`}>{b.title}</h4>
+              <p className="type-caption mt-1.5 leading-[1.7] text-content-subtle">{b.desc}</p>
+              <span className={`cx-tag mt-3.5 inline-flex text-[10px] tracking-[0.16em] ${b.unlocked ? 'cx-tag-accent' : 'cx-tag-neutral'}`}>
+                {b.unlocked ? 'Unlocked' : 'Locked'}
+              </span>
+            </StaggerItem>
+          ))}
         </div>
+      </section>
 
-        <div className="lg:col-span-4 bg-surface-raised material-card border border-line rounded-panel p-5 shadow-e1 space-y-5 h-fit">
-          <div className="space-y-1">
-            <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5">
-              <CheckCircle className="w-4.5 h-4.5 text-proof-500" /> Solved Problems Notebook
-            </h3>
-            <p className="text-[10px] text-stone-400">Every problem you've answered correctly.</p>
-          </div>
+      <section className="grid [grid-template-columns:repeat(auto-fit,minmax(21.25rem,1fr))] items-start gap-8.5">
+        <div>
+          <h3 className="type-title text-[26px]">Solve history</h3>
+          <p className="type-caption mt-1.5 mb-5.5 text-content-subtle">Every problem you have answered correctly.</p>
 
           {solvedQuestions.length === 0 ? (
-            <div className="text-center py-8 text-stone-400 text-xs italic">Empty for now &mdash; solve a problem to add it here.</div>
+            <div className="cx-card-pending px-7.5 py-11 text-center">
+              <p className="font-serif text-[22px] text-content-muted">Nothing solved yet</p>
+              <p className="type-caption mx-auto mt-2 max-w-[42ch] leading-[1.7] text-content-subtle">
+                Every problem you finish is listed here with the domain it belonged to and what it was worth.
+              </p>
+            </div>
           ) : (
-            <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
-              {solvedQuestions.map((q, index) => (
-                <StaggerItem key={q.id} index={index} className="p-3 bg-stone-50 rounded-control border border-stone-150 flex items-center justify-between gap-3">
-                  <div className="space-y-0.5 min-w-0">
-                    <span className="block text-[10px] font-black text-stone-900 tracking-tight truncate">{q.title}</span>
-                    <span className="block text-[9px] text-stone-400 font-bold uppercase">{TOPIC_META[q.topic].label}</span>
-                  </div>
-                  <span className="text-[10px] font-extrabold text-proof-600 whitespace-nowrap bg-proof-50 px-2 py-0.5 rounded border border-proof-100">+{q.points}</span>
-                </StaggerItem>
-              ))}
+            <div className="max-h-100 overflow-y-auto border-t border-line">
+              {solvedQuestions.map((q, index) => {
+                const topic = TOPIC_META[q.topic];
+                return (
+                  <StaggerItem
+                    key={q.id}
+                    index={index}
+                    className="flex items-center justify-between gap-4 border-b border-line-faint py-3.5"
+                  >
+                    <div className="min-w-0">
+                      <span className="block truncate font-serif text-[17px]">{q.title}</span>
+                      <span className="cx-tag mt-1.5 inline-flex" style={topic.vars}>{topic.label}</span>
+                    </div>
+                    <span className="shrink-0 whitespace-nowrap text-[12.5px] text-proof tnum">+{q.points}</span>
+                  </StaggerItem>
+                );
+              })}
             </div>
           )}
-
-          <div className="bg-stone-50 rounded-control p-3 text-[10px] text-stone-500 leading-relaxed max-w-full">
-            <strong>Tip:</strong> The more you engage in Community critique, the faster you'll spot your own mistakes.
-          </div>
         </div>
-      </div>
+
+        <div>
+          <h3 className="type-title text-[26px]">Account</h3>
+          <p className="type-caption mt-1.5 mb-5.5 text-content-subtle">What this profile is tied to.</p>
+
+          <div className="cx-card">
+            {accountRows.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between gap-4.5 border-b border-line-faint px-5.5 py-4.5 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <span className="block text-[15px]">{row.label}</span>
+                  <span className="block truncate text-[13px] text-content-subtle">{row.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="type-caption mt-4.5 leading-[1.75] text-content-subtle">
+            <span className="italic">Tip:</span> the more you engage in Community critique, the faster you spot your own mistakes.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

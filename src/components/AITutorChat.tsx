@@ -117,7 +117,7 @@ export default function AITutorChat() {
         onClick={() => setIsOpen(!isOpen)}
         whileTap={{ scale: 0.95 }}
         transition={spring.press}
-        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-brass-600 to-brass-500 hover:from-brass-500 hover:to-brass-400 text-ink-950 px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-e3 hover:shadow-e4 transition-[box-shadow,background-color] duration-300 ease-standard group cursor-pointer"
+        className="tutor-fab fixed right-3.5 md:right-6 z-50 flex items-center gap-2 material-accent text-accent-contrast px-4 md:px-5 py-3 md:py-3.5 rounded-full shadow-e3 hover:shadow-e4 transition-[box-shadow,background-color] duration-300 ease-standard group cursor-pointer"
       >
         <Sparkles
           ref={sparkleRef}
@@ -174,12 +174,12 @@ export default function AITutorChat() {
           >
             {/* Grab handle: the affordance that says this panel is dismissable. */}
             <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1 rounded-full bg-surface-raised/25 z-10" />
-            <div className="bg-ink-950 text-white p-4 flex items-center justify-between border-b border-ink-800">
+            <div className="ramp-static bg-ink-950 text-white p-4 flex items-center justify-between border-b border-ink-800">
               <div className="flex items-center gap-2.5">
-                <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2 rounded-lg"><Bot className="w-5 h-5 text-ink-950" /></div>
+                <div className="material-accent p-2 rounded-control"><Bot className="w-5 h-5" /></div>
                 <div>
                   <h3 className="font-bold text-sm tracking-wide">Calculix AI Tutor</h3>
-                  <p className="text-[11px] text-proof-400 font-medium flex items-center gap-1">
+                  <p className="text-[12px] text-proof-400 font-medium flex items-center gap-1">
                     <span
                       ref={statusDotRef}
                       className="inline-block w-1.5 h-1.5 rounded-full bg-proof-400 animate-pulse"
@@ -193,8 +193,8 @@ export default function AITutorChat() {
               </button>
             </div>
 
-            <div className="bg-brass-50/70 border-b border-brass-100 p-3 text-xs text-brass-800 flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-brass-600 shrink-0 mt-0.5" />
+            <div className="bg-azure-50/70 border-b border-azure-100 p-3 text-xs text-azure-800 flex items-start gap-2">
+              <HelpCircle className="w-4 h-4 text-azure-600 shrink-0 mt-0.5" />
               <span><strong>Tip:</strong> Ask about a theorem, an inequality, or paste your own approach for feedback.</span>
             </div>
 
@@ -218,9 +218,9 @@ export default function AITutorChat() {
                     {msg.sender === 'tutor' && (
                       <div className="bg-stone-100 p-1.5 rounded-lg shrink-0 border border-stone-200"><Bot className="w-4 h-4 text-stone-700" /></div>
                     )}
-                    <div className={`rounded-card p-3.5 shadow-e1 text-sm leading-relaxed ${msg.sender === 'user' ? 'bg-ink-950 text-white rounded-tr-none font-medium' : 'bg-surface-raised text-stone-800 rounded-tl-none border border-stone-100'}`}>
+                    <div className={`rounded-card p-3.5 shadow-e1 text-sm leading-relaxed ${msg.sender === 'user' ? 'bg-surface-inverse text-content-inverse rounded-tr-none' : 'bg-surface-raised text-stone-800 rounded-tl-none border border-stone-100'}`}>
                       <MathText text={msg.text} as="div" />
-                      <span className="text-[9px] block text-right mt-1.5 text-stone-400">
+                      <span className="text-[11px] block text-right mt-1.5 text-stone-400">
                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -278,7 +278,7 @@ export default function AITutorChat() {
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 disabled={loading}
-                className="flex-1 bg-stone-50 border border-stone-200 focus:border-brass-500 rounded-control px-4 py-3 text-sm outline-hidden transition-[border-color,opacity] duration-160 ease-standard text-stone-800 disabled:opacity-55 placeholder:text-stone-400"
+                className="flex-1 bg-stone-50 border border-stone-200 focus:border-azure-500 rounded-control px-4 py-3 text-sm outline-hidden transition-[border-color,opacity] duration-160 ease-standard text-stone-800 disabled:opacity-55 placeholder:text-stone-400"
               />
               <m.button
                 id="btn-send-chat"
@@ -288,7 +288,7 @@ export default function AITutorChat() {
                 transition={spring.press}
                 className="bg-content hover:bg-content-muted text-surface-raised p-3 rounded-control shadow-e2 transition-[background-color,opacity] duration-160 ease-standard disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
               >
-                <Send className="w-4 h-4 text-white" />
+                <Send className="w-4 h-4" />
               </m.button>
             </form>
           </m.div>
