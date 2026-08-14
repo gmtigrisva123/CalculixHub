@@ -101,7 +101,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-stone-50 border border-stone-150 p-4 rounded-card space-y-2 select-none">
-            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">Filter by problem</span>
+            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Filter by problem</span>
             <div className="flex gap-2 overflow-x-auto pb-1 scroll-smooth">
               <m.button
                 onClick={() => setSelectedProblemId('All')}
@@ -132,7 +132,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
           <form onSubmit={handlePostComment} className="bg-surface-raised border border-stone-100 rounded-panel p-5 shadow-e1 space-y-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-violet-500" />
-              <h3 className="font-extrabold text-xs uppercase tracking-wider text-stone-700">Post a solution or question</h3>
+              <h3 className="font-semibold text-xs uppercase tracking-wider text-stone-700">Post a solution or question</h3>
             </div>
 
             <div className="space-y-3">
@@ -150,7 +150,7 @@ export default function Community({ discussions, problems, onAddComment }: Commu
               />
 
               <div className="flex justify-between items-center bg-stone-50/50 p-2 rounded-control">
-                <span className="text-[10px] text-stone-400 font-semibold italic">* Keep it constructive &mdash; explain your reasoning, don't just paste an answer.</span>
+                <span className="text-[11px] text-stone-400 font-semibold italic">* Keep it constructive &mdash; explain your reasoning, don't just paste an answer.</span>
                 <m.button
                   id="btn-submit-comment"
                   type="submit"
@@ -200,24 +200,24 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-stone-900">{disc.user}</span>
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                            disc.role === 'Mentor' ? 'bg-brass-50 text-brass-700 border border-brass-100'
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                            disc.role === 'Mentor' ? 'bg-azure-50 text-azure-700 border border-azure-100'
                             : disc.role === 'Admin' ? 'bg-rose-50 text-rose-700 border border-rose-100'
                             : 'bg-stone-50 text-stone-600 border border-stone-150'
                           }`}>
                             {disc.role}
                           </span>
                           {verified && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-proof-50 text-proof-700 border border-proof-100">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-proof-50 text-proof-700 border border-proof-100">
                               <BadgeCheck className="w-3 h-3" /> Verified
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-stone-400 font-medium block mt-0.5">{disc.timestamp}</span>
+                        <span className="text-[11px] text-stone-400 font-medium block mt-0.5">{disc.timestamp}</span>
                       </div>
                     </div>
 
-                    <span className="text-[9px] font-bold text-stone-450 bg-stone-50 border border-stone-100 px-2.5 py-1 rounded-md block">{disc.problemTitle}</span>
+                    <span className="text-[11px] font-bold text-stone-450 bg-stone-50 border border-stone-100 px-2.5 py-1 rounded-md block">{disc.problemTitle}</span>
                   </div>
 
                   <MathText text={disc.content} as="p" className="text-xs text-stone-700 leading-relaxed" />
@@ -234,10 +234,10 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                         whileTap={{ scale: 0.8 }}
                         animate={{ scale: myVote === 1 ? 1.12 : 1 }}
                         transition={spring.press}
-                        className={`hover:text-brass-600 transition-colors duration-160 ease-standard cursor-pointer ${myVote === 1 ? 'text-brass-600' : 'text-stone-400'}`}
+                        className={`hover:text-azure-600 transition-colors duration-160 ease-standard cursor-pointer ${myVote === 1 ? 'text-azure-600' : 'text-stone-400'}`}
                         title="Upvote"
                       >
-                        <ThumbsUp className={`w-4 h-4 ${myVote === 1 ? 'fill-brass-500 text-brass-500' : ''}`} />
+                        <ThumbsUp className={`w-4 h-4 ${myVote === 1 ? 'fill-azure-500 text-azure-500' : ''}`} />
                       </m.button>
                       <span className="font-mono font-bold text-stone-600 w-6 text-center overflow-hidden">
                         <AnimatePresence mode="wait" initial={false}>
@@ -278,45 +278,45 @@ export default function Community({ discussions, problems, onAddComment }: Commu
         </div>
 
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-ink-950 border border-ink-850 text-white rounded-panel p-5 shadow-e2 relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-24 h-24 bg-gradient-to-br from-violet-500/10 to-brass-500/10 rounded-full blur-xl pointer-events-none" />
+          <div className="ramp-static bg-ink-950 border border-ink-850 text-white rounded-panel p-5 shadow-e2 relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-24 h-24 bg-violet-500/10 rounded-full blur-xl pointer-events-none" />
 
             <div className="flex items-center gap-2 mb-3.5 text-violet-300">
               <Award className="w-4.5 h-4.5" />
-              <h3 className="font-extrabold text-xs uppercase tracking-wider">Featured Solution</h3>
+              <h3 className="font-semibold text-xs uppercase tracking-wider">Featured Solution</h3>
             </div>
 
             {featuredSolution ? (
               <div className="space-y-3">
-                <h4 className="font-extrabold text-xs text-stone-200">{featuredSolution.problemTitle}</h4>
-                <MathText text={featuredSolution.content} as="p" className="text-[11px] text-stone-400 leading-relaxed line-clamp-4" />
-                <div className="flex items-center justify-between border-t border-ink-800 pt-3 mt-4 text-[10px]">
+                <h4 className="font-semibold text-xs text-stone-200">{featuredSolution.problemTitle}</h4>
+                <MathText text={featuredSolution.content} as="p" className="text-[12px] text-stone-400 leading-relaxed line-clamp-4" />
+                <div className="flex items-center justify-between border-t border-ink-800 pt-3 mt-4 text-[11px]">
                   <span className="text-stone-500 font-semibold">By {featuredSolution.user}</span>
                   <span className="text-violet-400 font-bold">{featuredSolution.likes + (votes[featuredSolution.id] || 0)} votes</span>
                 </div>
               </div>
             ) : (
-              <p className="text-[11px] text-stone-500 leading-relaxed">No mentor-verified solution yet &mdash; once a Mentor or Admin posts one, the highest-voted answer appears here.</p>
+              <p className="text-[12px] text-stone-500 leading-relaxed">No mentor-verified solution yet &mdash; once a Mentor or Admin posts one, the highest-voted answer appears here.</p>
             )}
           </div>
 
           <div className="bg-surface-raised border border-stone-100 rounded-panel p-5 shadow-e1 space-y-4">
             <div className="space-y-1">
-              <h3 className="font-extrabold text-sm text-stone-900 flex items-center gap-1.5 font-serif">
+              <h3 className="font-semibold text-sm text-stone-900 flex items-center gap-1.5 font-serif">
                 <UserCheck className="w-4.5 h-4.5 text-proof-600" /> Top Contributors
               </h3>
-              <p className="text-[10px] text-stone-400">Ranked by number of posts in this discussion feed.</p>
+              <p className="text-[11px] text-stone-400">Ranked by number of posts in this discussion feed.</p>
             </div>
 
             <div className="space-y-3.5 pt-1 text-xs">
-              {topContributors.length === 0 && <p className="text-stone-400 text-[11px]">No contributions yet.</p>}
+              {topContributors.length === 0 && <p className="text-stone-400 text-[12px]">No contributions yet.</p>}
               {topContributors.map(([user, count], idx) => (
                 <StaggerItem key={user} index={idx} inView className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-stone-400 w-4">{medal(idx)}</span>
+                    <span className="font-semibold text-stone-400 w-4">{medal(idx)}</span>
                     <span className="font-bold text-stone-800">{user}</span>
                   </div>
-                  <span className="text-[10px] bg-stone-100 font-semibold px-2 py-0.5 rounded-md text-stone-600 shrink-0">{count} posts</span>
+                  <span className="text-[11px] bg-stone-100 font-semibold px-2 py-0.5 rounded-md text-stone-600 shrink-0">{count} posts</span>
                 </StaggerItem>
               ))}
             </div>

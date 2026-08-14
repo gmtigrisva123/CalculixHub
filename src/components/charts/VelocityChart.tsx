@@ -59,12 +59,22 @@ export default function VelocityChart({ data, color = '#c8842a', unit = 'pts' }:
   return (
     <div className="w-full h-64 border border-stone-100 rounded-card bg-stone-50/50 p-4 relative">
       <svg className="w-full h-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        {/*
+          Grid and axes read from the line tokens rather than from literals.
+
+          They used to be `#f1f5f9` and `#e2e8f0` — two light slates, chosen when
+          this chart only ever sat on a white card. At night the card goes to
+          #1d1912 and both of them become brighter than the data they are meant
+          to sit behind, so the chart reads as a grid with a line lost in it.
+          `var(--ln-*)` flips with the theme and keeps the ranking right: the
+          series is the loudest thing, the axis next, the grid last.
+        */}
         {gridLines.map((g) => {
           const y = padTop + plotH * g;
-          return <line key={g} x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="#f1f5f9" strokeWidth={1} />;
+          return <line key={g} x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="var(--ln-faint)" strokeWidth={1} />;
         })}
-        <line x1={padLeft} y1={padTop + plotH} x2={width - padRight} y2={padTop + plotH} stroke="#e2e8f0" strokeWidth={1.5} />
-        <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + plotH} stroke="#e2e8f0" strokeWidth={1.5} />
+        <line x1={padLeft} y1={padTop + plotH} x2={width - padRight} y2={padTop + plotH} stroke="var(--ln)" strokeWidth={1.5} />
+        <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + plotH} stroke="var(--ln)" strokeWidth={1.5} />
 
         {/*
           The area fills in under the line rather than with it, so the line

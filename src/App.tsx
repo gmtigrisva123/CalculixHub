@@ -88,7 +88,7 @@ export default function App() {
    * which is what stops a refresh flashing the landing page at a signed-in
    * learner before the session is rehydrated.
    */
-  const { status: authStatus, profile, signOut } = useAuth();
+  const { status: authStatus, profile, signOut, hasOnboarded } = useAuth();
   const isLoggedIn = authStatus === 'authenticated';
 
   const handleLoginSuccess = (name: string, level: Level, initialSkills?: Record<Topic, number>) => {
@@ -509,12 +509,12 @@ export default function App() {
     setTimeout(() => setSaveSuccessNotify(false), 3000);
   };
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn || (isLoggedIn && !hasOnboarded)) {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col md:flex-row relative text-content antialiased font-sans">
+    <div className="cx-ground min-h-screen flex flex-col md:flex-row relative text-content antialiased font-sans">
 
       {/* MOBILE APP BAR — identity, points and reminders; navigation lives in the bottom rail */}
       <MobileHeader
@@ -527,125 +527,143 @@ export default function App() {
       />
 
       {/* SIDEBAR NAVIGATION BAR (Desktop only — mobile navigates via MobileTabBar) */}
+      {/*
+        `ramp-static` because this column is dark in both themes — in daylight
+        it is the ink spine the brand is built on, and after dark it stays put
+        while the page around it drops to meet it. Its text is written with the
+        bridged `stone-*` classes, which invert; pinning the ramp is what stops
+        `text-stone-500` becoming a dark grey on a ground that never moved.
+      */}
       <aside
         id="side-nav-rail"
-        className="hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-surface-rail border-r border-line text-content-rail w-64 p-6 shrink-0 flex-col justify-between overflow-y-auto"
+        className="ramp-static hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-surface-rail border-r border-[rgba(231,226,217,0.14)] w-66 px-5 py-6.5 shrink-0 flex-col justify-between overflow-y-auto"
       >
-        <div className="space-y-8 select-none">
-          {/* Logo Brand area */}
-          <div className="hidden md:flex items-center gap-3">
-            <div className="bg-gradient-to-tr from-brass-500 to-brass-700 p-2.5 rounded-control text-ink-950 font-black w-10 h-10 flex items-center justify-center text-base shadow-e3 font-serif">
-              &#8721;
-            </div>
-            <div>
-              <h1 className="font-extrabold text-sm tracking-widest text-stone-100 uppercase">CalculixHub</h1>
-              <span className="text-[9px] font-bold text-stone-500 block -mt-0.5 uppercase tracking-wider">Math OS Platform</span>
-            </div>
+        <div className="select-none">
+          {/* Brand */}
+          <div className="flex items-center gap-3">
+            <span className="cx-mark">&#8721;</span>
+            <span className="flex flex-col leading-[1.15]">
+              <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
+              <span className="type-eyebrow text-stone-600">Math OS Platform</span>
+            </span>
           </div>
 
-          {/* Quick Point badge in sidebar */}
-          <div className="bg-ink-850 rounded-card p-4.5 border border-ink-800/80 space-y-1">
-            <span className="text-[9px] uppercase font-bold text-stone-500 tracking-wider">Learning status</span>
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-xs text-stone-200">You</span>
-              <span className="text-xs font-black text-brass-400">
+          {/* Learning status — a hairline meter, not a filled card. */}
+          <div className="mt-6.5 rounded-card border border-[rgba(231,226,217,0.16)] px-3.75 py-3.5">
+            <span className="type-eyebrow block text-stone-600">Learning status</span>
+            <div className="mt-2.25 flex items-baseline justify-between">
+              <span className="text-[13px] text-stone-300">You</span>
+              <span className="font-serif text-[19px] text-azure-400 tnum">
                 <AnimatedNumber value={userStats.points} /> pts
               </span>
             </div>
             <SpringBar
               value={(userStats.points / 500) * 100}
-              track="w-full bg-ink-800 rounded-full h-1 mt-2.5"
-              fill="bg-brass-500 h-1 rounded-full"
+              track="w-full h-0.5 bg-[rgba(231,226,217,0.14)] mt-2.5"
+              fill="h-0.5 bg-azure-400"
               label="Progress toward 500 points"
             />
+            <span className="mt-2 block text-[10px] tracking-[0.04em] text-stone-600">Toward 500 points</span>
           </div>
 
-          {/* Nav groups links */}
-          <nav className="space-y-1.5 font-medium" id="side-nav-links">
+          {/* Nav */}
+          <nav className="mt-6.5 flex flex-col gap-0.5" id="side-nav-links">
             {NAV_ITEMS.map((item) => {
               const ItemIcon = item.icon;
               const isActive = activeTab === item.key;
               return (
+                /*
+                  The active mark is a 2px left edge and a 14% wash, both drawn
+                  by `.cx-rail-item` off `aria-current`. The previous build slid
+                  a shared `layoutId` rectangle between links; that reads well
+                  with a filled pill and not at all with an edge, where the
+                  travelling element would be a 2px line skating up and down the
+                  column. State here is carried by the attribute a screen reader
+                  reads anyway, which is one fewer thing to keep in sync.
+                */
                 <button
                   key={item.key}
                   onClick={() => selectTab(item.key)}
-                  className={`relative w-full flex items-center gap-3 px-4.5 py-3 text-xs rounded-control transition-colors duration-160 ease-standard cursor-pointer ${
-                    isActive ? 'text-ink-950 font-extrabold' : 'hover:bg-ink-850 hover:text-white'
-                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                  className="cx-rail-item"
                 >
-                  {/*
-                    The brass highlight is one element shared across all eight
-                    links rather than a background toggled per button, so
-                    selecting a tab slides the indicator to it instead of having
-                    one rectangle blink out and another blink in. This is the
-                    clearest signal in the sidebar that the workspaces are a set
-                    you move within, not eight unrelated destinations.
-                  */}
-                  {isActive && (
-                    <m.span
-                      layoutId="sidebar-active-tab"
-                      className="absolute inset-0 bg-brass-600 rounded-control"
-                      transition={spring.snappy}
-                    />
-                  )}
-                  <ItemIcon className="w-4 h-4 shrink-0 relative z-10" />
-                  <span className="relative z-10">{item.label}</span>
+                  <ItemIcon className="w-3.75 h-3.75 shrink-0" />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
           </nav>
         </div>
 
-        {/* Footer info & Logout */}
-        <div className="space-y-3.5 border-t border-ink-800/60 pt-4 mt-8">
-          {/* User Name Info */}
-          <div className="flex items-center justify-between text-xs text-stone-400 px-1 select-none">
-            <span className="truncate max-w-[125px] font-semibold text-stone-200">
+        {/* Identity and session */}
+        <div className="mt-6 border-t border-[rgba(231,226,217,0.12)] pt-4">
+          <button
+            type="button"
+            onClick={() => selectTab('profile')}
+            className="mb-3.5 flex w-full items-center justify-between gap-2.5 text-left cursor-pointer"
+          >
+            <span className="truncate text-[13px] text-stone-300">
               {profile?.display_name ?? profile?.username ?? 'Student'}
             </span>
-            <span className="bg-violet-900 border border-violet-700/50 text-violet-200 text-[8px] font-black uppercase px-2 py-0.5 rounded shrink-0 scale-90 tracking-wide">
-              {userStats.level || 'Foundation'}
+            <span className="cx-tag cx-tag-neutral shrink-0 border-[rgba(231,226,217,0.24)] text-stone-400 text-[9px] tracking-[0.14em]">
+              {userStats.level || 'Unplaced'}
             </span>
-          </div>
+          </button>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs rounded-control bg-rose-950/40 hover:bg-rose-900/40 active:bg-rose-900/60 text-rose-300 hover:text-white border border-rose-900/30 hover:border-rose-800/60 font-bold transition-[background-color,color,border-color] duration-160 ease-standard cursor-pointer"
+            className="cx-btn cx-btn-on-dark cx-btn-block py-2.5 text-[14px]"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Log out</span>
           </button>
 
-          <div className="text-[10px] text-stone-500 select-none hidden md:block leading-snug pt-1">
+          <div className="pt-4 text-[10px] leading-[1.6] text-stone-600 select-none">
             <p>© 2026 Calculix Platform.</p>
-            <p className="mt-0.5">Democratizing math with AI.</p>
+            <p>Democratizing math with AI.</p>
           </div>
         </div>
       </aside>
 
       {/* MAIN CONTAINER CONTENT VIEWPORT */}
       {/* pb-26 on mobile clears the fixed bottom rail (~85px incl. safe area). */}
-      <main className="flex-1 overflow-x-hidden p-4 pb-26 md:p-8 relative">
+      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-26 md:px-10 md:pt-8.5 md:pb-16 relative">
         <PullToRefresh onRefresh={handleRefresh}>
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-7">
           
-          {/* HEADER WELCOME SEARCH ADVISOR ON DESKTOP */}
-          <header className={`hidden md:flex items-center justify-between border-b border-stone-200 pb-3 mt-1 select-none ${
-              activeTab === 'learn' || activeTab === 'compete' || activeTab === 'community' ? 'hidden' : ''
-          }`}>
-            <div>
-              <p className="text-xs text-stone-400 font-bold uppercase tracking-widest">CalculixHub Workspace</p>
-              <h2 className="text-lg font-extrabold tracking-tight text-stone-900 mt-0.5 font-serif">
-                {screenTitle(activeTab)}
-              </h2>
-            </div>
+          {/*
+            The workspace header: a tracked kicker over a flush-left display
+            line, closed by a hairline. Every screen in the design opens this
+            way, which is what makes eight unrelated workspaces read as chapters
+            of one document.
 
-            <div className="flex gap-4">
-              <span className="text-xs font-semibold text-stone-500 self-center">
-                UTC: <strong className="text-stone-800 font-mono">{new Date().toISOString().slice(0, 10)}</strong>
+            Learn, Compete and Community ship their own headers, so this one
+            stands down for them rather than stacking a second title above.
+          */}
+          {/*
+            Learn, Compete and Community ship their own headers, so this one
+            stands down for them rather than stacking a second title above.
+
+            It is a render guard, not a `hidden` class. The previous version
+            appended `hidden` to a className that already began `hidden md:flex`
+            — and `md:flex` wins at every width this header is visible at, so
+            the "suppressed" header rendered anyway on exactly the screens it
+            was meant to skip.
+          */}
+          {activeTab !== 'learn' && activeTab !== 'compete' && activeTab !== 'community' && (
+            <header className="hidden md:flex items-end justify-between gap-6 border-b border-line pb-4.5 select-none">
+              <div>
+                <p className="type-eyebrow text-accent-text">CalculixHub Workspace</p>
+                <h2 className="type-title mt-1.5 font-normal text-[clamp(1.75rem,2.6vw,2.375rem)]">
+                  {screenTitle(activeTab)}
+                </h2>
+              </div>
+
+              <span className="text-[12px] tracking-[0.08em] text-content-subtle tnum">
+                UTC {new Date().toISOString().slice(0, 10)}
               </span>
-            </div>
-          </header>
+            </header>
+          )}
 
           {/* RENDER DYNAMIC TAB CONTENT VIEW */}
           <TabTransition tabKey={activeTab}>
@@ -706,85 +724,60 @@ export default function App() {
           {activeTab === 'research' && <ResearchAnalytics />}
 
           {activeTab === 'settings' && (
-            <div className="max-w-2xl bg-surface-raised material-card border border-line rounded-panel p-6 md:p-8 shadow-e1 space-y-6">
-              <div className="border-b border-stone-100 pb-3">
-                <h2 className="text-base font-extrabold text-stone-950 flex items-center gap-1.5 font-serif">
-                  <Settings className="w-5 h-5 text-stone-700" /> Personal Learning Settings
-                </h2>
-                <p className="text-[11px] text-stone-500 leading-normal mt-0.5">
-                  Manage your adaptive study pace, reminders, and account configuration.
-                </p>
-              </div>
+            /*
+              Two columns, the design's split: training and preferences on the
+              left, account and the destructive action on the right. The whole
+              screen used to be one bordered card 42rem wide with nine stacked
+              sections inside it, which put "Reset training data" — the only
+              irreversible control in the product — three scrolls below the fold
+              and inside the same box as a dropdown.
+            */
+            <div className="grid [grid-template-columns:repeat(auto-fit,minmax(22.5rem,1fr))] items-start gap-8.5">
+              <div className="space-y-6.5">
+                <form onSubmit={handleSaveSettings}>
+                  <h3 className="type-title text-[26px]">Training</h3>
+                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">
+                    What you are aiming at, and how much time you have for it.
+                  </p>
 
-              {/*
-                The confirmation is the only feedback that the form did
-                anything, and it used to appear and vanish instantly, shifting
-                everything beneath it. Growing it out of the heading ties it to
-                the action that produced it.
-              */}
-              <Collapse open={saveSuccessNotify}>
-                <div className="p-3 bg-proof-50 text-proof-800 border border-proof-150 rounded-control text-xs font-semibold flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-proof-500" /> Your settings have been applied to the OS.
-                </div>
-              </Collapse>
+                  <label className="cx-label" htmlFor="set-goal">Personal goal</label>
+                  <select
+                    id="set-goal"
+                    value={customGoal}
+                    onChange={(e) => setCustomGoal(e.target.value)}
+                    className="cx-input mb-5"
+                  >
+                    <option value="Qualify for a regional/national math olympiad">Qualify for a regional or national olympiad</option>
+                    <option value="Score maximum on SAT Math and AMC 8/10/12">Score maximum on SAT Math and AMC 8/10/12</option>
+                    <option value="Build strong Algebra and Combinatorics reflexes">Build strong Algebra and Combinatorics reflexes</option>
+                  </select>
 
-              {/*
-                Appearance sits outside the form on purpose. Everything below is
-                a draft until "Save" is pressed, whereas the theme applies the
-                moment it is chosen — putting a live control inside a deferred
-                form teaches two different rules for what a click does.
-              */}
-              <div className="p-3.5 bg-surface-sunken rounded-control border border-line-faint flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <span className="text-xs font-bold text-content block">Appearance</span>
-                  <span className="text-[10px] text-content-subtle block font-medium mt-0.5">
-                    Daylight for a lit room, lamplight for a dark one.
-                  </span>
-                </div>
-                <ThemeToggle />
-              </div>
+                  <label className="cx-label" htmlFor="set-pace">Daily practice target</label>
+                  <select
+                    id="set-pace"
+                    value={studyPace}
+                    onChange={(e) => setStudyPace(e.target.value)}
+                    className="cx-input"
+                  >
+                    <option value="15 minutes / day">15 minutes a day — light, keeps momentum</option>
+                    <option value="30 minutes / day">30 minutes a day — serious reflex training</option>
+                    <option value="60 minutes / day">60 minutes a day — push toward a breakthrough</option>
+                  </select>
 
-              <form onSubmit={handleSaveSettings} className="space-y-5">
-                <div className="space-y-4">
+                  <h3 className="type-title mt-8 text-[26px]">Preferences</h3>
+                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">
+                    Applied the moment you choose them.
+                  </p>
 
-                  {/* Goal set input */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-stone-700 block mb-1">Personal training goal</label>
-                    <select
-                      value={customGoal}
-                      onChange={(e) => setCustomGoal(e.target.value)}
-                      className="w-full border border-stone-200 focus:border-stone-900 rounded-control px-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 bg-stone-50"
-                    >
-                      <option value="Qualify for a regional/national math olympiad">Qualify for a regional or national olympiad</option>
-                      <option value="Score maximum on SAT Math and AMC 8/10/12">Score maximum on SAT Math and AMC 8/10/12</option>
-                      <option value="Build strong Algebra and Combinatorics reflexes">Build strong Algebra and Combinatorics reflexes</option>
-                    </select>
-                  </div>
-
-                  {/* Pace goal select */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-stone-700 block mb-1">Daily practice target</label>
-                    <select
-                      value={studyPace}
-                      onChange={(e) => setStudyPace(e.target.value)}
-                      className="w-full border border-stone-200 focus:border-stone-900 rounded-control px-3.5 py-3 text-xs outline-hidden font-medium text-stone-800 bg-stone-50"
-                    >
-                      <option value="15 minutes / day">15 minutes / day (light, keeps momentum)</option>
-                      <option value="30 minutes / day">30 minutes / day (serious reflex training)</option>
-                      <option value="60 minutes / day">60 minutes / day (push toward a breakthrough)</option>
-                    </select>
-                  </div>
-
-                  {/* Toggle Reminders */}
-                  <div className="p-3.5 bg-stone-50/60 rounded-control border border-stone-100 space-y-2">
-                    <div className="flex items-center justify-between gap-3">
+                  <div className="cx-card">
+                    <div className="flex items-center justify-between gap-4.5 border-b border-line-faint px-5.5 py-4.5">
                       <div>
-                        <span className="text-xs font-bold text-stone-800 block">Daily streak reminder</span>
-                        <span className="text-[10px] text-stone-400 block font-medium mt-0.5">
-                          A nudge at 6pm on the days you haven&rsquo;t practised yet.
+                        <span className="block text-[15px]">Daily streak reminder</span>
+                        <span className="block text-[13px] text-content-subtle">
+                          A nudge at 6pm on days you have not practised.
                         </span>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                      <label className="relative inline-flex shrink-0 cursor-pointer select-none items-center">
                         <input
                           type="checkbox"
                           checked={studyReminders}
@@ -793,42 +786,97 @@ export default function App() {
                         />
                         {/*
                           The knob rides --ease-emphasized so it settles into
-                          each end rather than stopping dead, which is what
-                          makes an iOS switch feel like a physical throw. The
-                          track's colour change is a plain crossfade underneath
-                          it — previously it snapped, so the switch appeared to
-                          change colour before the knob had finished moving.
+                          each end rather than stopping dead, which is what makes
+                          a switch feel like a physical throw. The track is an
+                          outline that tints rather than a filled pill that
+                          changes colour — the same restraint every other control
+                          here follows.
                         */}
-                        <div className="w-9 h-5 bg-stone-200 peer-focus:outline-hidden rounded-full peer transition-colors duration-240 ease-standard peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-raised after:border-stone-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-transform after:duration-240 after:ease-emphasized peer-checked:bg-brass-600"></div>
+                        <div className="peer h-6 w-11 rounded-pill border border-content/22 transition-colors duration-240 ease-standard after:absolute after:top-[3px] after:left-[3px] after:h-4.5 after:w-4.5 after:rounded-full after:bg-stone-400 after:transition-[transform,background-color] after:duration-240 after:ease-emphasized after:content-[''] peer-checked:border-accent peer-checked:bg-accent/20 peer-checked:after:translate-x-5 peer-checked:after:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2" />
                       </label>
                     </div>
 
-                    {/*
-                      States the actual outcome. A toggle that reports "on" while
-                      the OS is blocking notifications is worse than no toggle.
-                    */}
-                    <Collapse open={Boolean(reminderNotice)}>
-                      <p className="text-[10px] font-semibold leading-relaxed text-brass-700 bg-brass-50 border border-brass-100 rounded-lg px-2.5 py-2">
-                        {reminderNotice}
-                      </p>
-                    </Collapse>
+                    <div className="flex flex-wrap items-center justify-between gap-4.5 px-5.5 py-4.5">
+                      <div>
+                        <span className="block text-[15px]">Appearance</span>
+                        <span className="block text-[13px] text-content-subtle">
+                          Daylight for a lit room, lamplight for a dark one.
+                        </span>
+                      </div>
+                      {/*
+                        Appearance sits inside the card but outside the form's
+                        deferred contract on purpose: it applies on choice, and
+                        the label under it says so.
+                      */}
+                      <ThemeToggle />
+                    </div>
                   </div>
 
-                  {/* Install entry point — hides itself when already installed */}
-                  <InstallAppButton variant="row" />
+                  {/*
+                    States the actual outcome. A toggle that reports "on" while
+                    the OS is blocking notifications is worse than no toggle.
+                  */}
+                  <Collapse open={Boolean(reminderNotice)}>
+                    <p className="mt-3.5 border-l-2 border-accent/40 pl-3.5 text-[13px] leading-[1.7] text-accent-text">
+                      {reminderNotice}
+                    </p>
+                  </Collapse>
 
+                  <div className="mt-6.5 flex flex-wrap items-center gap-3">
+                    <m.button
+                      id="btn-save-settings"
+                      type="submit"
+                      whileTap={{ scale: 0.97 }}
+                      transition={spring.press}
+                      className="cx-btn cx-btn-fill"
+                    >
+                      Apply settings
+                    </m.button>
+                    {/*
+                      The confirmation is the only feedback that the form did
+                      anything. It grows in beside the button that produced it
+                      rather than above the whole panel, so nothing below shifts.
+                    */}
+                    <Collapse open={saveSuccessNotify}>
+                      <span className="inline-flex items-center gap-2 text-[13.5px] text-proof">
+                        <CheckCircle className="h-3.75 w-3.75" /> Applied
+                      </span>
+                    </Collapse>
+                  </div>
+                </form>
+              </div>
+
+              <div className="space-y-6.5">
+                <div>
+                  <h3 className="type-title text-[26px]">Account</h3>
+                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">This device and this install.</p>
+                  <div className="cx-card">
+                    <InstallAppButton variant="row" />
+                  </div>
                 </div>
 
-                <div className="pt-2 border-t border-stone-100 flex gap-2">
-                  <m.button
-                    id="btn-save-settings"
-                    type="submit"
-                    whileTap={{ scale: 0.97 }}
-                    transition={spring.press}
-                    className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-5 py-3 rounded-control transition-[background-color,box-shadow] duration-160 ease-standard shadow-e2 cursor-pointer"
-                  >
-                    Apply settings
-                  </m.button>
+                <div>
+                  <h3 className="type-title text-[26px]">The platform</h3>
+                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">What is running underneath.</p>
+                  <p className="type-body text-content-muted">
+                    Four core layers: <span className="italic">Learning Engine</span>,{' '}
+                    <span className="italic">AI Personalisation (EduReach)</span>,{' '}
+                    <span className="italic">Competition Arena</span> and{' '}
+                    <span className="italic">Analytics Radar</span>.
+                  </p>
+                </div>
+
+                {/*
+                  The one destructive control, in its own tinted panel at the
+                  end of the column — the only place on this screen where a
+                  fill is used to mean "stop and read this".
+                */}
+                <div className="cx-card cx-tint-accent p-6">
+                  <h4 className="type-title text-[21px]">Reset training data</h4>
+                  <p className="type-caption mt-2 mb-4.5 leading-[1.75] text-content-muted">
+                    Clears your answers, streak and skill estimates from this browser. The account itself stays.
+                    This cannot be undone.
+                  </p>
                   <m.button
                     type="button"
                     onClick={() => {
@@ -837,20 +885,11 @@ export default function App() {
                     }}
                     whileTap={{ scale: 0.97 }}
                     transition={spring.press}
-                    className="bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs px-4 py-3 rounded-control transition-colors duration-160 ease-standard border border-rose-100 cursor-pointer"
+                    className="cx-btn cx-btn-primary py-2.75 text-[15px]"
                   >
-                    Reset training data
+                    Reset everything
                   </m.button>
                 </div>
-              </form>
-
-              <div className="bg-stone-50 border border-stone-150 p-4.5 rounded-card space-y-2 text-xs text-stone-600 leading-normal">
-                <span className="bg-violet-50 border border-violet-100 text-violet-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase block w-fit">
-                  CalculixHub math OS
-                </span>
-                <p className="font-medium">
-                  Built on four core layers: <strong>Learning Engine</strong>, <strong>AI Personalization (EduReach)</strong>, <strong>Competition Arena</strong>, and <strong>Analytics Radar</strong>. Your training data is stored entirely in your browser for full privacy.
-                </p>
               </div>
             </div>
           )}

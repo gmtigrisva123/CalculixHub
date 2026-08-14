@@ -4,8 +4,9 @@
  * The layers, in the order they load:
  *
  *   tokens      — semantic colour, elevation and radius; owns the theme flip
- *   materials   — paper grain, brass, glass, graph paper, focus
+ *   materials   — grain, the action face, glass, graph paper, focus
  *   typography  — the type scale and mathematical notation
+ *   classical   — the design system's component layer (.cx-*)
  *
  * Everything below this block is what belongs to the app shell itself and has no
  * home in a layer: platform quirks, the reduced-motion contract, and the one
@@ -24,72 +25,97 @@
 @import "./styles/tokens.css";
 @import "./styles/materials.css";
 @import "./styles/typography.css";
+@import "./styles/classical.css";
+@import "./styles/landing.css";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-serif: "Fraunces", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /*
+   * Cormorant Garamond for headings over Lora for body text.
+   *
+   * `--font-sans` keeps its name and stops being sans: the app sets body copy
+   * through it at ~450 call sites, and renaming the token would have been a
+   * mechanical diff across every screen for no gain. What it points at is what
+   * matters, and it now points at the Classical system's body face.
+   *
+   * Both faces are loaded with their italic cuts, because this system uses
+   * italics — not bold — for emphasis. Cormorant is requested no heavier than
+   * 600: semibold is the ceiling for interface headings, and display sizes take
+   * the normal cut. See styles/typography.css.
+   */
+  --font-sans: "Lora", Georgia, ui-serif, Cambria, "Times New Roman", Times, serif;
+  --font-serif: "Cormorant Garamond", Georgia, ui-serif, Cambria, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /*
-   * Brand: ink & brass. A math field-notebook, not a generic SaaS gradient.
+   * Brand: ink & brass. A book, not a generic SaaS gradient.
    *
-   * These are the palette primitives and they are theme-independent — `brass-500`
-   * is #c8842a in daylight and at midnight. Screens should almost never reach for
+   * These are the palette primitives and they are theme-independent — `brass-600`
+   * is #a06f24 in daylight and at midnight. Screens should almost never reach for
    * them directly; the semantic tokens in styles/tokens.css (`surface`, `content`,
    * `line`, `accent`) are the ones that know about lighting. Use a primitive only
-   * when a colour is genuinely absolute, such as a brand mark or a fixed
-   * data-series colour that must stay identifiable across themes.
+   * when a colour is genuinely absolute, such as a brand mark, a permanently dark
+   * surface like the marketing hero bands, or a fixed data-series colour that must
+   * stay identifiable across themes.
+   *
+   * The four families keep the names the codebase already uses (`ink`, `paper`,
+   * `azure`, `proof`) and change what they resolve to, for the same reason the
+   * `stone` ramp in styles/tokens.css is bridged rather than replaced: ~300 call
+   * sites, no diff, no chance of a wrong call in the middle of a mechanical
+   * rename. `azure` is the action colour and is now brass; `proof` is the
+   * verified colour and is now verdigris.
    */
-  --color-ink-50: #f7f5f2;
-  --color-ink-100: #ece7e1;
-  --color-ink-200: #d8cfc4;
-  --color-ink-300: #bcae9c;
-  --color-ink-400: #96806c;
-  --color-ink-500: #6e5c4c;
-  --color-ink-600: #55473b;
-  --color-ink-700: #453b32;
-  --color-ink-750: #3d332b;
-  --color-ink-800: #342d27;
-  --color-ink-850: #2a2420;
-  --color-ink-900: #201b16;
+  --color-ink-50: #f8f4f4;
+  --color-ink-100: #f1eeee;
+  --color-ink-200: #e2dfdf;
+  --color-ink-300: #c9c5c5;
+  --color-ink-400: #9b9797;
+  --color-ink-500: #7d7979;
+  --color-ink-600: #605d5d;
+  --color-ink-700: #444141;
+  --color-ink-750: #3a3736;
+  --color-ink-800: #2d2b2b;
+  --color-ink-850: #232120;
+  --color-ink-900: #1d1912;
   --color-ink-950: #161310;
 
-  --color-paper-50: #faf7f1;
-  --color-paper-100: #f3ede1;
-  --color-paper-150: #ece3d3;
-  --color-paper-200: #e4d8c2;
+  --color-paper-50: #f8f4f4;
+  --color-paper-100: #f3f2f2;
+  --color-paper-150: #eeecec;
+  --color-paper-200: #eae9e9;
 
-  --color-brass-50: #fdf6e9;
-  --color-brass-100: #faedd0;
-  --color-brass-150: #f6e2b3;
-  --color-brass-200: #f2d699;
-  --color-brass-300: #e8bc63;
-  --color-brass-400: #e0a339;
-  --color-brass-450: #d2952f;
-  --color-brass-500: #c8842a;
-  --color-brass-600: #a8681e;
-  --color-brass-700: #855116;
-  --color-brass-750: #7a4a14;
-  --color-brass-800: #6b3f12;
-  --color-brass-850: #5c360f;
-  --color-brass-900: #4d2c0c;
-  --color-brass-950: #3a2109;
+  /* Brass — the accent, applied as stroke rather than fill. */
+  --color-azure-50: #fffaf2;
+  --color-azure-100: #fff3e4;
+  --color-azure-150: #ffebd4;
+  --color-azure-200: #ffe3bf;
+  --color-azure-300: #facb8d;
+  --color-azure-400: #e1ad66;
+  --color-azure-450: #d49f55;
+  --color-azure-500: #c28d41;
+  --color-azure-600: #b68235;
+  --color-azure-700: #a06f24;
+  --color-azure-750: #8e6119;
+  --color-azure-800: #7d5411;
+  --color-azure-850: #6b480e;
+  --color-azure-900: #5a3b0a;
+  --color-azure-950: #3a270d;
 
-  --color-proof-50: #eefaf7;
-  --color-proof-100: #d7f2ec;
-  --color-proof-150: #bfe9e0;
-  --color-proof-200: #a6e0d4;
-  --color-proof-300: #74cebb;
-  --color-proof-400: #4fb8a8;
-  --color-proof-405: #4bb2a2;
+  /* Verdigris — verified, correct, complete. */
+  --color-proof-50: #eef7f5;
+  --color-proof-100: #d8ede9;
+  --color-proof-150: #cbe7e2;
+  --color-proof-200: #b4dcd5;
+  --color-proof-300: #86c7bc;
+  --color-proof-400: #56b0a2;
+  --color-proof-405: #4fb8a8;
   --color-proof-500: #2f9c8c;
-  --color-proof-600: #1f7d70;
-  --color-proof-700: #185f56;
-  --color-proof-750: #145349;
-  --color-proof-800: #12483f;
-  --color-proof-850: #0f3d36;
-  --color-proof-900: #0c322c;
-  --color-proof-950: #082019;
+  --color-proof-600: #248375;
+  --color-proof-700: #1e6d61;
+  --color-proof-750: #1c645a;
+  --color-proof-800: #185f56;
+  --color-proof-850: #154f48;
+  --color-proof-900: #12423c;
+  --color-proof-950: #0b2b27;
 
   /*
    * The "half-step" stone shades that used to be declared here now live in
@@ -156,10 +182,17 @@ body,
   color: var(--ct);
 }
 
-/* The page ground is paper, with tooth. */
+/*
+ * The page ground is flat.
+ *
+ * It used to carry the noise texture directly, which put a grain layer behind
+ * every character of body copy on every screen. On a warm paper palette that
+ * read as tooth; on cool graphite it reads as a dirty screen, and it costs
+ * legibility at small sizes for a texture almost nobody consciously sees.
+ * `--grain` still exists and is still applied by `.material-card`, at a much
+ * lower strength, where it does its job on a bounded surface.
+ */
 body {
-  background-image: var(--grain);
-  background-size: 140px 140px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

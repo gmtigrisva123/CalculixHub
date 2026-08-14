@@ -21,9 +21,9 @@ const config: CapacitorConfig = {
   webDir: 'dist',
 
   ios: {
-    // Matches --color-paper-50, so the gap behind a rubber-band scroll is the
-    // app's own background rather than white.
-    backgroundColor: '#faf7f1',
+    // Matches --sf in styles/tokens.css, so the gap behind a rubber-band
+    // scroll is the app's own ground rather than white.
+    backgroundColor: '#f3f2f2',
 
     // The app owns the area behind the status bar; MobileHeader already pads
     // itself with env(safe-area-inset-top) to sit clear of the notch.
@@ -54,7 +54,7 @@ const config: CapacitorConfig = {
      */
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
-      iconColor: '#c8842a',
+      iconColor: '#b68235',
     },
   },
 };

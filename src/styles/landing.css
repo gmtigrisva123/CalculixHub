@@ -1,0 +1,433 @@
+/**
+ * The landing page's material: a plotter, not a porthole.
+ *
+ * The previous build put a machined aircraft window in the middle of the page
+ * and scaled the reader through it. It was well made and it was about the wrong
+ * subject — nothing in an adaptive mathematics test is a cabin, a cloud bank or
+ * a horizon, so the one object the whole page was built around said nothing
+ * about the product underneath it.
+ *
+ * What replaces it is an instrument. The centrepiece is a plotting panel
+ * carrying one real curve from the item bank, and the scroll gesture is a
+ * *magnification* rather than a fly-through: the page zooms into a single point
+ * on that curve until the curve and its tangent line are the same line. That is
+ * local linearity — the first real idea in calculus — and it is also exactly
+ * what the product claims to do to a weakness: narrow the window until what
+ * beat you is one straight step.
+ *
+ * The rules the material follows:
+ *
+ *   1. Nothing decorative pretends to be data. The grid is a grid, the curve is
+ *      P(correct | theta) for an item that is actually in the bank, and the
+ *      readouts under it report the magnification the transform is really at.
+ *
+ *   2. Every line stays one pixel. The stage magnifies 125x, and a stroke that
+ *      scaled with it would be 125px thick at the bottom of the scroll — so the
+ *      geometry is SVG with `vector-effect: non-scaling-stroke` rather than
+ *      CSS gradients, which cannot survive that transform.
+ *
+ *   3. The grid is self-similar at ratio 5. Five nested rules, each a fifth of
+ *      the one above it, so 5^3 = 125x lands on a view that is dimensionally
+ *      identical to the opening frame. The paper looks the same at the bottom
+ *      of the scroll as at the top; only the curve has changed. That invariant
+ *      is the entire argument the hero is making, and it is why the zoom
+ *      maximum is 125 and not a round 100.
+ */
+
+/* --------------------------------------------------------------------------
+ * Ground
+ * ------------------------------------------------------------------------ */
+
+/*
+ * The landing keeps its own dark ground regardless of the app's theme — it is a
+ * fixed marketing surface, and the auth screens inherit it so that pressing the
+ * hero's call to action does not throw the reader onto a white page mid-decision.
+ */
+.landing-ground {
+  background:
+    radial-gradient(90% 60% at 50% -10%, #171b22 0%, #0c0f14 55%, #080a0e 100%);
+}
+
+/*
+ * Page-wide graph paper, at the same 5:1 major-to-minor ratio as the hero.
+ *
+ * Kept at 2–3% so it reads as tooth in the paper rather than as a grid. The
+ * point is continuity: the hero zooms into a coordinate plane, and every
+ * section below it is printed on the same plane rather than on a different
+ * dark rectangle. Masked out at the top so the hero panel meets clean ground.
+ */
+.paper-field {
+  background-image:
+    linear-gradient(rgb(148 197 253 / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 197 253 / 0.055) 1px, transparent 1px),
+    linear-gradient(rgb(148 197 253 / 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 197 253 / 0.022) 1px, transparent 1px);
+  background-size:
+    12rem 12rem,
+    12rem 12rem,
+    2.4rem 2.4rem,
+    2.4rem 2.4rem;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 100%);
+}
+
+/*
+ * The azure low-glow. One wide radial sitting under the content rather than a
+ * gradient laid over it — the page is lit from below the fold, which is what
+ * keeps a near-black page from reading as a switched-off screen.
+ */
+.field-glow {
+  background:
+    radial-gradient(120% 62% at 50% 108%, rgb(96 165 250 / 0.34) 0%, rgb(37 99 235 / 0.13) 38%, transparent 72%),
+    radial-gradient(70% 44% at 22% 92%, rgb(147 197 253 / 0.16) 0%, transparent 70%);
+}
+
+/* --------------------------------------------------------------------------
+ * The plotting panel
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Landscape, and deliberately so.
+ *
+ * A plot is wider than it is tall because the independent variable runs left to
+ * right and it needs the longer axis. The old portal was portrait because a
+ * cabin window is portrait; inheriting that ratio here would have kept the
+ * previous object's shape while changing its skin, which is the failure mode
+ * this rewrite exists to avoid.
+ */
+.plot-stage {
+  --plot-w: min(64rem, 88vw);
+  --plot-h: min(34rem, 58vh);
+}
+
+/*
+ * On a phone the panel has to get *shorter*, not narrower.
+ *
+ * The SVG covers its box, so a tall panel on a narrow screen resolves the
+ * viewBox by height and shows only a couple of theta either side of the anchor.
+ * Holding the panel near a 5:4 landscape keeps the width in charge, which is
+ * what keeps the whole S-curve on screen at 1x.
+ */
+@media (max-width: 48rem) {
+  .plot-stage {
+    --plot-w: min(30rem, 94vw);
+    --plot-h: min(20rem, 38vh);
+  }
+}
+
+.plot-panel {
+  width: var(--plot-w);
+  height: var(--plot-h);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  isolation: isolate;
+  /*
+   * Near enough to the page ground that when the panel scales past the viewport
+   * edges its fill and the page's fill are indistinguishable. The whole exit of
+   * the hero depends on that: the frame leaves, and there is no seam where the
+   * screen used to end.
+   */
+  background:
+    radial-gradient(120% 90% at 50% 20%, #10141b 0%, #0a0d12 62%, #07090d 100%);
+}
+
+/*
+ * The bezel is a separate layer from the panel because it has to be able to
+ * leave on its own. It fades out over the first fifth of the scroll — by then
+ * the frame edge has already passed the viewport, and a 1px hairline magnified
+ * to 30px sweeping across the screen is the one artefact that would give the
+ * trick away.
+ */
+.plot-bezel {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.10);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    inset 0 0 3rem 0.5rem rgb(2 4 10 / 0.55),
+    0 40px 90px -30px rgb(0 0 0 / 0.9);
+}
+
+/* Registration marks. Four corners, drawn as two rules each, never a full box. */
+.plot-corner {
+  position: absolute;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-color: rgb(148 197 253 / 0.38);
+}
+
+/*
+ * The label strip along the top of the bezel, reading like the header of a
+ * plotter trace: what is drawn, from which item, at which parameters.
+ */
+/*
+ * Opaque enough to sit the label over the plot rather than in it. The strip is
+ * part of the bezel, so it leaves with the bezel — a solid bar here does not
+ * survive into the magnified view to become a band across the plane.
+ */
+.plot-strip {
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.05) 0%, rgb(255 255 255 / 0.01) 100%),
+    linear-gradient(180deg, rgb(9 12 17 / 0.94) 0%, rgb(9 12 17 / 0.86) 100%);
+}
+
+/* --------------------------------------------------------------------------
+ * Geometry inside the panel
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Every stroke in the stage is declared here rather than on the elements,
+ * because all of them depend on the same two mechanisms, and getting either
+ * one wrong turns the whole plot into coloured blocks at the bottom of the
+ * scroll.
+ *
+ * `vector-effect: non-scaling-stroke` handles the viewBox. The plot is drawn in
+ * a 100-unit square stretched across a ~1000px panel, so without it a
+ * `stroke-width: 1` would render ten pixels wide. With it, stroke widths are
+ * read in the SVG viewport's own pixels, which is what makes 1 mean 1 here.
+ *
+ * `--zk` handles the magnification, and it has to exist because the first
+ * mechanism does not cover it. `non-scaling-stroke` neutralises transforms
+ * *inside* the SVG's coordinate system; the zoom is a CSS transform on an HTML
+ * ancestor, which is outside it and which the browser applies to the finished
+ * raster — strokes included. At 125x that put a 280px azure band across the
+ * screen where the curve should have been. So the stage publishes the
+ * reciprocal of its own magnification as `--zk` on the SVG, and every width and
+ * dash length below is expressed as a multiple of it. One value written per
+ * frame, and every stroke on the plane holds its pixel width for the whole
+ * descent.
+ */
+.plot-ink {
+  --zk: 1;
+}
+
+.plot-ink path {
+  vector-effect: non-scaling-stroke;
+  fill: none;
+}
+
+.plot-grid { stroke: rgb(148 197 253 / 0.20); stroke-width: calc(var(--zk) * 1px); }
+.plot-grid-fine { stroke: rgb(148 197 253 / 0.13); stroke-width: calc(var(--zk) * 1px); }
+
+.plot-asymptote {
+  stroke: rgb(226 232 240 / 0.22);
+  stroke-width: calc(var(--zk) * 1px);
+  stroke-dasharray: calc(var(--zk) * 3px) calc(var(--zk) * 5px);
+}
+
+/*
+ * The tangent line.
+ *
+ * Warm white against the curve's azure, dashed, and thinner. It has to be
+ * legible as a *different* object at 1x — at that magnification it exits the
+ * top of the panel while the curve is still climbing — and it has to be
+ * unremarkable at 125x, where it lies underneath the curve. Same line, two
+ * jobs, and the dash is what keeps the second one from looking like a bug.
+ */
+.plot-tangent {
+  stroke: rgb(255 255 255 / 0.45);
+  stroke-width: calc(var(--zk) * 1.25px);
+  stroke-dasharray: calc(var(--zk) * 7px) calc(var(--zk) * 7px);
+}
+
+.plot-curve {
+  stroke-width: calc(var(--zk) * 2.25px);
+  stroke-linecap: round;
+}
+
+/* --------------------------------------------------------------------------
+ * The reticle and the readouts
+ * ------------------------------------------------------------------------ */
+
+/*
+ * The reticle sits at the centre of the viewport in screen space, not inside
+ * the magnified group.
+ *
+ * It marks the point being zoomed into, and that point is stationary by
+ * construction — it is the transform origin. Drawing it in the scaled group
+ * would mean counter-scaling it by 1/125 every frame to keep it the same size,
+ * for a result pixel-identical to just placing it at the centre of the screen.
+ */
+.reticle-ring {
+  border: 1px solid rgb(147 197 253 / 0.85);
+  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.12), 0 0 22px rgb(96 165 250 / 0.5);
+}
+
+/*
+ * Crosshairs that fade out at both ends rather than stopping. A hard-ended rule
+ * reads as a drawn object sitting on the plot; a fading one reads as an
+ * instrument overlay, which is what it is.
+ */
+.reticle-hair {
+  background: linear-gradient(90deg, transparent, rgb(147 197 253 / 0.5), transparent);
+}
+
+.reticle-hair-v {
+  background: linear-gradient(180deg, transparent, rgb(147 197 253 / 0.5), transparent);
+}
+
+.reticle-dot {
+  background: rgb(191 219 254 / 0.95);
+  box-shadow: 0 0 10px rgb(96 165 250 / 0.9);
+}
+
+/*
+ * The instrument readout under the plot.
+ *
+ * Tabular figures are mandatory here and not a nicety: these numbers change
+ * every frame of the scroll, and proportional digits make the whole strip
+ * shudder sideways as 1 replaces 8.
+ */
+.hud-strip {
+  background-color: rgb(10 13 18 / 0.6);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .hud-strip {
+    background-color: rgb(10 13 18 / 0.35);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+}
+
+/*
+ * A scrim behind the hero copy.
+ *
+ * The headline sits over the plot on purpose — the point being zoomed into is
+ * literally underneath the words describing it — and type over a grid is
+ * unreadable without help. A radial rather than a rectangle so there is no edge
+ * to notice, and no blur, because blurring the grid behind the text would break
+ * the illusion that the panel is one continuous surface.
+ */
+.copy-scrim {
+  background: radial-gradient(58% 62% at 50% 46%, rgb(7 9 13 / 0.92) 0%, rgb(7 9 13 / 0.72) 45%, transparent 78%);
+}
+
+/* --------------------------------------------------------------------------
+ * Chrome shared with the auth screens
+ * ------------------------------------------------------------------------ */
+
+/*
+ * A dark translucent pane with a hairline brighter along its top edge.
+ * `backdrop-filter` is guarded because without it a translucent fill leaves the
+ * text sitting on whatever is scrolling behind — and the iOS WKWebView this
+ * ships into is exactly where that shows up.
+ */
+.glass-pane {
+  background-color: rgb(16 19 24 / 0.72);
+  border: 1px solid rgb(255 255 255 / 0.09);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 18px 40px -18px rgb(0 0 0 / 0.8);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-pane {
+    background-color: rgb(16 19 24 / 0.46);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+/*
+ * Cards.
+ *
+ * A flat translucent fill reads as a rectangle of slightly different black. The
+ * top-lighter gradient is what makes it read as a panel catching the same light
+ * everything else on the page is lit by, and it costs one extra layer.
+ */
+.card-lit {
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.055) 0%,
+    rgb(255 255 255 / 0.012) 38%,
+    transparent 100%
+  );
+  transition: border-color 240ms var(--ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-lit:hover { border-color: rgb(255 255 255 / 0.16); }
+}
+
+/* --------------------------------------------------------------------------
+ * Sections
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Each section carries a weak wash whose centre shifts down the page, plus a
+ * hairline at its top edge that catches some of it. The wash is deliberately
+ * faint — 4–10% — because what should register is the *change* between two
+ * sections, never any individual one.
+ */
+.section-wash {
+  position: relative;
+  isolation: isolate;
+}
+
+.section-wash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    var(--wash-size, 70% 90%) at var(--wash-at, 50% 0%),
+    rgb(59 130 246 / var(--wash-strength, 0.07)) 0%,
+    transparent 70%
+  );
+}
+
+/* A lit hairline rather than a flat 1px border: brightest where the wash is. */
+.section-rule {
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(148 197 253 / 0.22) 30%,
+      rgb(148 197 253 / 0.10) 60%,
+      transparent 100%
+    ) 1;
+}
+
+/*
+ * The numbered argument.
+ *
+ * The four objections are steps in one argument, not four parallel features, so
+ * they are connected by a rule that runs through the numerals rather than
+ * boxed apart. The rule is drawn on the row and masked at both ends so it
+ * appears to emerge from and return to the page.
+ */
+.step-rail::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 1.05rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(148 197 253 / 0.28) 12%, rgb(148 197 253 / 0.28) 88%, transparent);
+}
+
+@media (max-width: 63.99rem) {
+  .step-rail::before { display: none; }
+}
+
+/*
+ * Plot ink for the static charts in the sections below the fold. These are not
+ * magnified, so they can use ordinary strokes — but they share the hero's
+ * palette so the page reads as one instrument rather than as a hero with
+ * illustrations bolted underneath.
+ */
+/*
+ * Chart furniture, drawn from `currentColor`.
+ *
+ * These used to be fixed blue-greys tuned for a permanently dark page. The
+ * plots now appear on both grounds — one inside the ink hero band, two on the
+ * paper sections below it — so the rules take their colour from the text
+ * around them and land correctly in both without a second set of values.
+ */
+.chart-grid { stroke: currentColor; opacity: 0.14; stroke-width: 1; }
+.chart-axis { stroke: currentColor; opacity: 0.3; stroke-width: 1; }
+.chart-guide { stroke: currentColor; opacity: 0.25; stroke-width: 1; stroke-dasharray: 3 4; }

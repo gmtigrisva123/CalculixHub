@@ -24,8 +24,8 @@
     <meta name="twitter:title" content="CalculixHub — Adaptive Math OS & AI Personalization" />
     <meta name="twitter:description" content="An integrated EdTech platform with AI personalization, live ranked competition, and real-time adaptive analytics." />
 
-    <!-- Inline SVG favicon: sigma mark on ink/brass field, matching the in-app brand -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23161310'/%3E%3Ctext x='50' y='68' font-family='Georgia, serif' font-size='58' font-weight='700' fill='%23c8842a' text-anchor='middle'%3E%26%23931%3B%3C/text%3E%3C/svg%3E" />
+    <!-- Inline SVG favicon: sigma mark in brass on the ink field, matching the in-app brand -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='8' fill='%23161310'/%3E%3Ctext x='50' y='70' font-family='Cormorant Garamond, Georgia, serif' font-size='62' font-weight='500' fill='%23e1ad66' text-anchor='middle'%3E%26%23931%3B%3C/text%3E%3C/svg%3E" />
 
     <!--
       Webfonts.
@@ -38,15 +38,16 @@
       hosts before the stylesheet URL is even known — fonts.gstatic.com is where
       the font binaries live and it is crossorigin, hence the separate hint.
 
-      Fraunces is requested across its full 9..144 optical-size axis. That is
-      what styles/typography.css spends via `font-optical-sizing: auto`, so the
-      range is paid for and used rather than downloaded and ignored.
+      Cormorant Garamond is requested at 300/400/500/600 and no heavier. This
+      system avoids bold: interface headings cap at semibold and display sizes
+      set *lighter*, at the 300 and 400 cuts. Both faces carry their italic,
+      because italic — not weight — is how emphasis is marked here.
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap"
     />
 
     <!--
@@ -78,7 +79,7 @@
               : pref;
           document.documentElement.dataset.theme = resolved;
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#17130f' : '#faf7f1');
+          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#161310' : '#f3f2f2');
         } catch (e) {
           // Private browsing can throw on localStorage access. Daylight is a
           // safe floor, and the app corrects itself once React mounts.
@@ -96,7 +97,7 @@
       resolve against the manifest, so it needs no build-time substitution.
     -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#161310" />
+    <meta name="theme-color" content="#f3f2f2" />
 
     <!--
       iOS ignores the manifest when adding to the home screen: the name comes

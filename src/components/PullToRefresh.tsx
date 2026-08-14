@@ -157,7 +157,7 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
         >
           <RefreshCw
             className={`w-4 h-4 transition-colors duration-160 ease-standard ${
-              armed ? 'text-brass-600' : 'text-ink-300'
+              armed ? 'text-azure-600' : 'text-ink-300'
             } ${refreshing ? 'animate-spin' : ''}`}
             aria-hidden="true"
           />

@@ -1,9 +1,9 @@
 /**
  * Materials — what the surfaces are made of.
  *
- * The palette says "ink and brass"; this file is what makes those words mean
- * something physical. A card here is a sheet of paper with tooth, the primary
- * button is a piece of milled metal catching light from above, and the grid
+ * The palette says "graphite and azure"; this file is what makes those words
+ * mean something physical. A card here is a matte panel with the faintest tooth,
+ * the primary button is an anodised face catching light from above, and the grid
  * behind a hero is real graph paper with major and minor rules rather than a
  * single repeating line.
  *
@@ -28,17 +28,24 @@
  */
 :root {
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
-  --grain-strength: 0.055;
+  /*
+   * Barely there, and deliberately so.
+   *
+   * A warm paper palette can carry visible tooth because the texture agrees with
+   * the hue. Cool graphite cannot: the same noise reads as compression artefacts
+   * or a smeared display. What is left is enough to stop a large flat fill from
+   * banding, and not enough to notice.
+   */
+  --grain-strength: 0.018;
 }
 
 :root[data-theme='dark'] {
   /*
-   * Grain has to be lighter at night. The noise texture is dark-on-transparent,
-   * so on an ink ground it subtracts almost nothing and the surface goes back to
-   * looking like flat vector fill. Raising the strength and letting it lift
-   * rather than deepen keeps the tooth visible.
+   * Grain has to be lifted at night. The noise texture is dark-on-transparent,
+   * so on a near-black ground it subtracts almost nothing and the surface goes
+   * back to looking like flat vector fill.
    */
-  --grain-strength: 0.09;
+  --grain-strength: 0.035;
 }
 
 /*
@@ -75,29 +82,45 @@
 }
 
 /* --------------------------------------------------------------------------
- * Brass
+ * The action face
  * ------------------------------------------------------------------------ */
 
 /*
- * The primary action, as a milled metal face.
+ * The primary action, as an anodised metal face.
  *
  * Three things separate metal from a coloured rectangle, and all three are here:
  * a vertical value gradient (light collects at the top), a hairline specular
  * highlight on the top edge, and a darker lower edge where the face turns away
- * from the light. The brass glow in `--ev-brass` finishes it by letting the
- * control cast a little of its own colour onto the page.
+ * from the light. The glow in `--ev-accent` finishes it by letting the control
+ * cast a little of its own colour onto the page.
+ *
+ * The gradient is a much shorter throw than the brass version it replaces —
+ * about 9% of lightness across the face rather than 15%. Blue at high saturation
+ * shows banding far more readily than a warm mid-tone, and a long gradient on a
+ * small control mostly succeeds in looking like a 2012 button.
  */
-.material-brass {
+/*
+ * Brass, not blue.
+ *
+ * The value ramp runs light-to-dark down the face and the rim lights are a warm
+ * highlight above and a shadow below, which is what reads as a struck metal
+ * plate rather than a gradient. `color` is set here rather than left to the call
+ * site: the face is light enough that white text on it fails contrast outright,
+ * and every one of these controls previously carried `text-white` from when the
+ * accent was a mid blue.
+ */
+.material-accent {
   background-image: linear-gradient(
     180deg,
-    hsl(38 72% 56%) 0%,
-    hsl(34 74% 47%) 45%,
-    hsl(30 76% 41%) 100%
+    hsl(36 65% 68%) 0%,
+    hsl(36 55% 55%) 55%,
+    hsl(36 58% 45%) 100%
   );
+  color: var(--ac-contrast);
   box-shadow:
-    inset 0 1px 0 hsl(44 90% 82% / 0.55),
-    inset 0 -1px 0 hsl(28 70% 22% / 0.30),
-    var(--ev-brass);
+    inset 0 1px 0 hsl(38 80% 90% / 0.45),
+    inset 0 -1px 0 hsl(30 60% 18% / 0.35),
+    var(--ev-accent);
 }
 
 /*
@@ -109,13 +132,13 @@
  * the control at the exact moment the sweep would play.
  */
 @media (hover: hover) and (pointer: fine) {
-  .material-brass {
+  .material-accent {
     position: relative;
     overflow: hidden;
     isolation: isolate;
   }
 
-  .material-brass::after {
+  .material-accent::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -124,14 +147,14 @@
     background: linear-gradient(
       105deg,
       transparent 35%,
-      hsl(46 100% 92% / 0.34) 50%,
+      hsl(40 100% 96% / 0.30) 50%,
       transparent 65%
     );
     transform: translateX(-100%);
     transition: transform 620ms var(--ease-standard);
   }
 
-  .material-brass:hover::after {
+  .material-accent:hover::after {
     transform: translateX(100%);
   }
 }
@@ -144,8 +167,10 @@
  * Translucent chrome for the mobile header and tab rail.
  *
  * `saturate` is the part people leave out. Blur alone averages the colours
- * underneath toward grey, which on a warm palette reads as a smudge; pushing
- * saturation back up keeps the brass and paper showing through recognisably.
+ * underneath toward grey; pushing saturation back up keeps the accent and the
+ * topic hues showing through recognisably. The boost is gentler than it was —
+ * a cool near-neutral ground has little chroma to recover, and overdoing it
+ * tints the chrome blue wherever a button happens to scroll underneath.
  *
  * The `@supports` guard matters on the iOS target: without backdrop-filter the
  * fallback has to be near-opaque, because translucent-without-blur leaves text
@@ -159,8 +184,8 @@
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .material-glass {
     background-color: color-mix(in srgb, var(--sf) 68%, transparent);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
   }
 }
 
@@ -178,8 +203,14 @@
  * background pattern. Four gradients: two minor, two major.
  */
 .bp-grid {
-  --grid-minor: color-mix(in srgb, var(--ct) 7%, transparent);
-  --grid-major: color-mix(in srgb, var(--ct) 13%, transparent);
+  /*
+   * Quieter than it was. The old mix put the minor rule at 7% of the text
+   * colour, which on the new near-black ground is a visible lattice competing
+   * with the content sitting on it. Graph paper should be something you notice
+   * on the second look.
+   */
+  --grid-minor: color-mix(in srgb, var(--ct) 4.5%, transparent);
+  --grid-major: color-mix(in srgb, var(--ct) 9%, transparent);
   background-image:
     linear-gradient(var(--grid-major) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
@@ -198,8 +229,8 @@
  * and here the ground is flipped.
  */
 .bp-grid-inverse {
-  --grid-minor: color-mix(in srgb, var(--ct-inverse) 7%, transparent);
-  --grid-major: color-mix(in srgb, var(--ct-inverse) 14%, transparent);
+  --grid-minor: color-mix(in srgb, var(--ct-inverse) 5%, transparent);
+  --grid-major: color-mix(in srgb, var(--ct-inverse) 10%, transparent);
 }
 
 /* --------------------------------------------------------------------------
@@ -251,9 +282,9 @@
  *
  * `:focus-visible` rather than `:focus` so a mouse press does not leave a ring
  * behind, and an offset ring rather than an outline on the border so it stays
- * legible on brass, on ink, and on paper. There was no custom focus style before
- * this, which meant the ring was the browser default — invisible against the
- * dark hero surfaces.
+ * legible on the accent, on graphite, and on white. There was no custom focus
+ * style before this, which meant the ring was the browser default — invisible
+ * against the dark hero surfaces.
  */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--ac);

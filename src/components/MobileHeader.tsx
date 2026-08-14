@@ -50,15 +50,15 @@ export default function MobileHeader({
     >
       <div className="flex items-center gap-2.5">
         {/*
-          The mark is the one piece of real metal in the header: a brass tile
+          The mark is the one piece of real metal in the header: a azure tile
           with a light top edge and its own faint glow. It is the only element
           here that should catch the eye before the content does.
         */}
-        <div className="w-8 h-8 rounded-control material-brass text-ink-950 font-extrabold flex items-center justify-center text-[15px] font-serif">
+        <div className="w-8 h-8 rounded-[2px] cx-mark h-8 w-8 text-[15px]">
           &#8721;
         </div>
         <div className="flex flex-col gap-px">
-          <span className="text-[11px] font-extrabold tracking-[0.16em] uppercase text-content leading-none">
+          <span className="text-[12px] font-semibold tracking-[0.16em] uppercase text-content leading-none">
             CalculixHub
           </span>
           {/*
@@ -68,7 +68,7 @@ export default function MobileHeader({
             the tab crossfades the old title out and lifts the new one in, so the
             header confirms the navigation the thumb just performed.
           */}
-          <span className="text-[8px] font-bold tracking-[0.12em] uppercase text-content-subtle leading-none overflow-hidden">
+          <span className="text-[10px] font-bold tracking-[0.12em] uppercase text-content-subtle leading-none overflow-hidden">
             <AnimatePresence mode="wait" initial={false}>
               <m.span
                 key={activeTab}
@@ -93,7 +93,7 @@ export default function MobileHeader({
             problem, and proportional figures make it shuffle sideways as it
             counts because a 1 is narrower than an 8.
           */}
-          <span className="text-[11px] font-bold font-mono text-accent leading-none tnum">
+          <span className="text-[12px] font-bold font-mono text-accent leading-none tnum">
             <AnimatedNumber value={points} />
           </span>
         </div>
@@ -137,7 +137,7 @@ export default function MobileHeader({
             height: spring.snappy,
             opacity: { duration: duration.fast, ease: ease.standard },
           }}
-          className="bg-brass-900 text-brass-150 overflow-hidden"
+          className="bg-azure-900 text-azure-150 overflow-hidden"
         >
           <div className="px-4 py-1.5 flex items-center gap-2">
             <WifiOff className="w-3 h-3 shrink-0" strokeWidth={2} />

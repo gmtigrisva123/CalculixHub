@@ -1,0 +1,537 @@
+/**
+ * The Classical component layer.
+ *
+ * These are the patterns the source design repeats often enough that writing
+ * them out at each call site would be both noise and drift: the outlined
+ * button, the bordered-and-unfilled card, the tracked kicker, the dark band,
+ * the hairline stat row. They are built entirely from the tokens in
+ * tokens.css, so they follow the theme without knowing about it.
+ *
+ * Everything lives in `@layer components`, which sits *below* `utilities` in
+ * Tailwind v4's cascade. That ordering is the whole reason this file is safe to
+ * import: a call site can still put `text-content-muted` or `p-6` on a `.cx-card`
+ * and have it win. An unlayered rule here would silently beat every utility
+ * placed next to it, which is the failure mode typography.css already warns
+ * about for the type roles.
+ *
+ * Naming: `cx-` prefixed, so nothing here can collide with a Tailwind utility
+ * now or after an upgrade.
+ *
+ * The two rules of the system, restated because every class below obeys them:
+ * colour is applied as *stroke* — borders, rules, underlines — not as large
+ * fills; and elevation is a whisper, so structure is carried by hairlines.
+ */
+
+@layer components {
+  /* ------------------------------------------------------------------------
+   * Grounds
+   * --------------------------------------------------------------------- */
+
+  /*
+   * The page ground: four topic-hued washes, one per domain, pinned to the
+   * viewport.
+   *
+   * `background-attachment: fixed` is what makes it read as light falling on a
+   * desk rather than as a pattern printed on the page — the content scrolls,
+   * the light does not. It is skipped on touch devices further down, where
+   * fixed attachment forces a full-page repaint on every scroll frame in
+   * WebKit.
+   */
+  .cx-ground {
+    background-color: var(--sf);
+    background-image:
+      radial-gradient(72% 46% at 10% 6%, color-mix(in srgb, var(--hu-amber-500) 16%, transparent), transparent 62%),
+      radial-gradient(62% 42% at 94% 26%, color-mix(in srgb, var(--pf) 14%, transparent), transparent 62%),
+      radial-gradient(58% 46% at 46% 62%, color-mix(in srgb, var(--hu-violet-500) 10%, transparent), transparent 62%),
+      radial-gradient(54% 42% at 96% 88%, color-mix(in srgb, var(--hu-sky-500) 12%, transparent), transparent 62%);
+    background-attachment: fixed;
+  }
+
+  /*
+   * The dark band — heroes, the closing CTA, the research section, the weekly
+   * challenge card. Absolute, not themed: it is #161310 at noon and at
+   * midnight, which is why it carries `.ramp-static` at its call sites.
+   */
+  .cx-band {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-ink-950);
+    color: #e7e2d9;
+  }
+
+  /* The warm light thrown across a dark band. Decorative, hence aria-hidden at
+     the call site and pointer-events:none here. */
+  .cx-band__wash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58% 60% at 78% 20%, rgba(200, 132, 42, 0.24), transparent 70%),
+      radial-gradient(40% 46% at 12% 90%, rgba(47, 156, 140, 0.16), transparent 70%);
+  }
+
+  /* ------------------------------------------------------------------------
+   * Brand
+   * --------------------------------------------------------------------- */
+
+  /* The sigma plate. Square-ish, stroked, never filled. */
+  .cx-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: none;
+    border: 1px solid var(--ac);
+    border-radius: 2px;
+    color: var(--ac);
+    font-family: var(--font-serif);
+    font-size: 1.4375rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  /* ------------------------------------------------------------------------
+   * Rules and cards
+   * --------------------------------------------------------------------- */
+
+  .cx-rule {
+    height: 1px;
+    border: 0;
+    background: var(--ln);
+  }
+
+  /*
+   * The card is a border and nothing else. No fill, no shadow.
+   *
+   * `--cx-tint` is unset by default, so the fill resolves to transparent; the
+   * `.cx-tint-*` modifiers below set it and the same rule produces the tinted
+   * panels without a second class.
+   */
+  .cx-card {
+    --cx-tint: transparent;
+    border: 1px solid var(--ln);
+    border-radius: var(--radius-card);
+    background: var(--cx-tint);
+  }
+
+  .cx-tint-algebra { --cx-tint: color-mix(in srgb, var(--hu-amber-500) 8%, transparent); border-color: color-mix(in srgb, var(--hu-amber-500) 34%, transparent); }
+  .cx-tint-geometry { --cx-tint: color-mix(in srgb, var(--pf) 7%, transparent); border-color: color-mix(in srgb, var(--pf) 34%, transparent); }
+  .cx-tint-combinatorics { --cx-tint: color-mix(in srgb, var(--hu-violet-500) 6%, transparent); border-color: color-mix(in srgb, var(--hu-violet-500) 32%, transparent); }
+  .cx-tint-number-theory { --cx-tint: color-mix(in srgb, var(--hu-sky-500) 7%, transparent); border-color: color-mix(in srgb, var(--hu-sky-500) 32%, transparent); }
+  .cx-tint-accent { --cx-tint: color-mix(in srgb, var(--ac) 8%, transparent); border-color: color-mix(in srgb, var(--ac) 45%, transparent); }
+
+  /* A card that is waiting to be filled in — an empty state, a locked badge. */
+  .cx-card-pending {
+    border: 1px dashed color-mix(in srgb, var(--ct) 22%, transparent);
+    border-radius: var(--radius-card);
+  }
+
+  /*
+   * The image mat: a warm archival grade inside a thin surface-coloured
+   * border, so a photograph reads as a plate tipped into a book rather than as
+   * a banner bled to the edge.
+   */
+  .cx-plate {
+    box-sizing: border-box;
+    border: 6px solid var(--sf-sunken);
+    outline: 1px solid var(--ln);
+    filter: sepia(0.22) saturate(0.82) contrast(1.05);
+  }
+
+  /* ------------------------------------------------------------------------
+   * Buttons
+   *
+   * Outlined by default. `.cx-btn-fill` is the one filled variant and there is
+   * at most one of it per screen — it is the single thing being asked for.
+   * --------------------------------------------------------------------- */
+
+  .cx-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex: none;
+    padding: 0.75rem 1.375rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--ct-muted);
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+    transition:
+      background-color var(--mo-duration-fast) var(--ease-standard),
+      border-color var(--mo-duration-fast) var(--ease-standard),
+      color var(--mo-duration-fast) var(--ease-standard);
+  }
+
+  .cx-btn:disabled,
+  .cx-btn[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Primary: an accent outline, never a fill. */
+  .cx-btn-primary {
+    color: var(--ac);
+    border-color: var(--ac);
+  }
+  .cx-btn-primary:not(:disabled):hover { background: color-mix(in srgb, var(--ac) 12%, transparent); }
+  .cx-btn-primary:not(:disabled):active { background: color-mix(in srgb, var(--ac) 22%, transparent); }
+
+  /* Secondary: a neutral outline for the second action in a pair. */
+  .cx-btn-secondary {
+    border-color: var(--ln-strong);
+    color: var(--ct-muted);
+  }
+  .cx-btn-secondary:not(:disabled):hover { background: color-mix(in srgb, var(--ct) 7%, transparent); }
+  .cx-btn-secondary:not(:disabled):active { background: color-mix(in srgb, var(--ct) 14%, transparent); }
+
+  /* The one filled control. Ink on brass. */
+  .cx-btn-fill {
+    background: var(--color-azure-400);
+    border-color: var(--color-azure-400);
+    color: var(--ac-contrast);
+  }
+  .cx-btn-fill:not(:disabled):hover { background: var(--color-azure-300); border-color: var(--color-azure-300); }
+  .cx-btn-fill:not(:disabled):active { background: var(--color-azure-500); border-color: var(--color-azure-500); }
+
+  /* Inert: the shape of a button with nothing behind it yet. */
+  .cx-btn-inert {
+    color: var(--ct-subtle);
+    border-color: var(--ln);
+  }
+
+  .cx-btn-ghost {
+    color: var(--ac);
+    padding-inline: 0.25rem;
+  }
+  .cx-btn-ghost:not(:disabled):hover { background: color-mix(in srgb, var(--ac) 10%, transparent); }
+
+  /* On a dark band the outline is paper, not ink. */
+  .cx-btn-on-dark {
+    color: #e7e2d9;
+    border-color: rgba(231, 226, 217, 0.28);
+  }
+  .cx-btn-on-dark:not(:disabled):hover { background: rgba(231, 226, 217, 0.08); color: #faf7f1; }
+
+  .cx-btn-block { width: 100%; }
+
+  /* ------------------------------------------------------------------------
+   * Figures
+   *
+   * The stat readout: a rank, a streak, a point total, an item count. It
+   * recurs in the dashboard tiles, the profile band, the research estimator
+   * band and the contest metadata, always as Cormorant at 500 over a tracked
+   * kicker.
+   *
+   * It is a role of its own rather than `.type-title` because a figure is not
+   * a heading: it must not wrap. `.type-title` carries `text-wrap: balance`,
+   * which splits a two-word value like "Not measured" across two lines the
+   * moment the column narrows — and because typography.css is unlayered, a
+   * `[text-wrap:nowrap]` utility at the call site cannot win against it.
+   * --------------------------------------------------------------------- */
+
+  .cx-figure {
+    font-family: var(--font-serif);
+    font-size: 1.625rem;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums lining-nums;
+    text-wrap: nowrap;
+  }
+
+  /* The band variant, for the four-across hairline rows. */
+  .cx-figure-lg {
+    font-size: 2.125rem;
+    line-height: 1;
+  }
+
+  /* ------------------------------------------------------------------------
+   * Small marks — tags, chips, badges
+   * --------------------------------------------------------------------- */
+
+  /*
+   * The topic tag: tracked capitals in the domain's own hue, stroked at 40%.
+   * The hue comes from `--cx-hue`, which src/lib/topics.tsx sets per topic, so
+   * this one rule covers all four domains.
+   */
+  .cx-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1875rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--cx-hue, var(--ct)) 40%, transparent);
+    border-radius: 2px;
+    color: var(--cx-hue-text, var(--ct-subtle));
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* The neutral variant — a tier, a level, a status with no hue of its own. */
+  .cx-tag-neutral {
+    --cx-hue: var(--ct);
+    --cx-hue-text: var(--ct-subtle);
+    border-color: color-mix(in srgb, var(--ct) 18%, transparent);
+  }
+
+  .cx-tag-accent {
+    --cx-hue: var(--ac);
+    --cx-hue-text: var(--ac-text);
+  }
+
+  /* A pill kicker, for the badge that sits above a hero headline. */
+  .cx-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5625rem;
+    padding: 0.375rem 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--color-azure-400) 35%, transparent);
+    border-radius: var(--radius-pill);
+    color: var(--color-azure-400);
+    font-size: 0.625rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /*
+   * The filter chip. Its resting state is a hairline outline and its selected
+   * state is the accent — no fill in either, per the system.
+   */
+  .cx-chip {
+    padding: 0.5rem 0.9375rem;
+    border: 1px solid color-mix(in srgb, var(--ct) 18%, transparent);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--ct-muted);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition:
+      background-color var(--mo-duration-fast) var(--ease-standard),
+      border-color var(--mo-duration-fast) var(--ease-standard),
+      color var(--mo-duration-fast) var(--ease-standard);
+  }
+  .cx-chip:hover { background: color-mix(in srgb, var(--ct) 6%, transparent); }
+  .cx-chip[aria-pressed='true'],
+  .cx-chip[data-selected='true'] {
+    border-color: var(--ac);
+    background: color-mix(in srgb, var(--ac) 12%, transparent);
+    color: var(--ac-text);
+  }
+
+  /* ------------------------------------------------------------------------
+   * The navigation rail
+   * --------------------------------------------------------------------- */
+
+  /*
+   * A rail item is marked by a 2px left edge, not by a filled pill. The edge is
+   * always present and transparent when inactive, so selecting a tab does not
+   * change the text's position by a pixel.
+   */
+  .cx-rail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6875rem;
+    width: 100%;
+    padding: 0.6875rem 0.8125rem;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--ct-rail);
+    font-family: var(--font-sans);
+    font-size: 0.84375rem;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color var(--mo-duration-base) var(--ease-standard),
+      color var(--mo-duration-base) var(--ease-standard);
+  }
+  .cx-rail-item:hover { background: rgba(231, 226, 217, 0.06); color: #e7e2d9; }
+  .cx-rail-item[aria-current='page'] {
+    border-left-color: var(--color-azure-400);
+    background: color-mix(in srgb, var(--color-azure-400) 14%, transparent);
+    color: var(--color-azure-400);
+  }
+
+  /* ------------------------------------------------------------------------
+   * The hairline stat band
+   *
+   * Four figures in a row, separated by vertical rules and closed top and
+   * bottom by horizontal ones. The design uses this for the profile summary,
+   * the research estimator readout and the contest metadata — it is the
+   * system's answer to a row of stat cards, with the cards removed.
+   * --------------------------------------------------------------------- */
+
+  .cx-band-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11.875rem, 1fr));
+    border-top: 1px solid var(--ln);
+    border-bottom: 1px solid var(--ln);
+  }
+
+  .cx-band-stats > * {
+    padding: 1.625rem;
+    border-right: 1px solid var(--ln-faint);
+  }
+  /* The outer edges are the band's own rules, so the first and last cells lose
+     their inner padding and the last loses its divider. */
+  .cx-band-stats > :first-child { padding-left: 0; }
+  .cx-band-stats > :last-child { padding-right: 0; border-right: 0; }
+
+  /* ------------------------------------------------------------------------
+   * Answers
+   * --------------------------------------------------------------------- */
+
+  /* A multiple-choice row: outline at rest, accent when chosen, verdigris when
+     graded correct, brass when graded wrong. Never a fill heavier than 12%. */
+  .cx-option {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.9375rem 1.125rem;
+    border: 1px solid var(--ln);
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--ct);
+    font-family: var(--font-sans);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color var(--mo-duration-fast) var(--ease-standard),
+      border-color var(--mo-duration-fast) var(--ease-standard);
+  }
+  .cx-option:not([data-state]):hover { border-color: var(--ln-strong); }
+  .cx-option[data-state='selected'] { border-color: var(--ac); background: color-mix(in srgb, var(--ac) 9%, transparent); }
+  .cx-option[data-state='correct'] { border-color: var(--pf); background: color-mix(in srgb, var(--pf) 12%, transparent); }
+  .cx-option[data-state='wrong'] { border-color: var(--ac); background: color-mix(in srgb, var(--ac) 12%, transparent); }
+  .cx-option[data-state]:not([data-state='selected']) { cursor: default; }
+
+  .cx-option__letter {
+    flex: none;
+    width: 1.375rem;
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+  }
+
+  /* The contest answer sheet: one square per question, filled when answered. */
+  .cx-sheet-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.125rem;
+    height: 2.125rem;
+    border: 1px solid var(--ln);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--ct-subtle);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .cx-sheet-cell[data-state='answered'] {
+    border-color: color-mix(in srgb, var(--ac) 40%, transparent);
+    background: color-mix(in srgb, var(--ac) 8%, transparent);
+    color: var(--ac-text);
+  }
+  .cx-sheet-cell[aria-current='true'] {
+    border-color: var(--ac);
+    background: color-mix(in srgb, var(--ac) 18%, transparent);
+    color: var(--ac-text);
+  }
+
+  /* ------------------------------------------------------------------------
+   * Tables
+   * --------------------------------------------------------------------- */
+
+  .cx-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .cx-table th {
+    padding: 0 0 0.75rem;
+    border-bottom: 1px solid var(--ln);
+    color: var(--ct-subtle);
+    font-family: var(--font-serif);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-align: left;
+  }
+  .cx-table td {
+    padding: 0.8125rem 0;
+    border-bottom: 1px solid var(--ln-faint);
+  }
+  .cx-table tbody tr:last-child td { border-bottom-color: var(--ln); }
+
+  /* ------------------------------------------------------------------------
+   * Forms
+   * --------------------------------------------------------------------- */
+
+  .cx-label {
+    display: block;
+    margin-bottom: 0.5625rem;
+    color: var(--ct-subtle);
+    font-family: var(--font-sans);
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .cx-input {
+    width: 100%;
+    padding: 0.75rem 0.8125rem;
+    border: 1px solid color-mix(in srgb, var(--ct) 20%, transparent);
+    border-radius: var(--radius-field);
+    background: transparent;
+    color: var(--ct);
+    caret-color: var(--ac);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+  }
+  .cx-input::placeholder { color: var(--ct-subtle); }
+  .cx-input:hover { border-color: color-mix(in srgb, var(--ct) 45%, transparent); }
+  .cx-input:focus-visible { border-color: var(--ac); outline-offset: 0; }
+
+  /* The day/night pair, and any other two-or-three-way exclusive choice. */
+  .cx-seg {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ct) 20%, transparent);
+    border-radius: var(--radius-control);
+  }
+  .cx-seg > button {
+    padding: 0.5625rem 0.9375rem;
+    border: 0;
+    background: transparent;
+    color: var(--ct-subtle);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: background-color var(--mo-duration-fast) var(--ease-standard);
+  }
+  .cx-seg > button + button { border-left: 1px solid color-mix(in srgb, var(--ct) 20%, transparent); }
+  .cx-seg > button[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--ac) 16%, transparent);
+    color: var(--ac-text);
+  }
+}
+
+/*
+ * Fixed attachment is a scroll-performance trap on touch.
+ *
+ * WebKit cannot composite a fixed background, so every frame of a scroll
+ * repaints the whole ground — on an iPhone that is the difference between a
+ * smooth list and a stuttering one. The wash is ambient; losing its parallax on
+ * a phone costs nothing anyone will notice.
+ */
+@media (hover: none) {
+  .cx-ground { background-attachment: scroll; }
+}
