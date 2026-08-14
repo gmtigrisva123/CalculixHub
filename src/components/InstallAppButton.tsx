@@ -18,7 +18,7 @@ type Variant = 'nav' | 'row';
 
 interface InstallAppButtonProps {
   /**
-   * 'nav' renders the compact brass button for the landing header.
+   * 'nav' renders the compact azure button for the landing header.
    * 'row' renders a full-width settings row for inside the app.
    */
   variant?: Variant;
@@ -111,7 +111,7 @@ export default function InstallAppButton({ variant = 'nav' }: InstallAppButtonPr
           onClick={handleClick}
           whileTap={{ scale: 0.95 }}
           transition={spring.press}
-          className="flex items-center gap-1.5 border border-brass-500/40 text-brass-300 hover:text-ink-950 hover:bg-brass-500 hover:border-brass-500 font-extrabold text-xs px-3 sm:px-4 py-2.5 rounded-control transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer"
+          className="flex items-center gap-1.5 border border-azure-500/40 text-azure-300 hover:text-white hover:bg-azure-500 hover:border-azure-500 font-semibold text-xs px-3 sm:px-4 py-2.5 rounded-control transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer"
         >
           <Smartphone className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden sm:inline whitespace-nowrap">Get the app</span>
@@ -125,12 +125,12 @@ export default function InstallAppButton({ variant = 'nav' }: InstallAppButtonPr
           className="w-full flex items-center justify-between gap-3 p-3.5 bg-stone-50/60 hover:bg-stone-100/70 rounded-control border border-stone-100 transition-colors duration-160 ease-standard cursor-pointer text-left"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-control bg-ink-950 text-brass-400 shrink-0">
+            <div className="p-2 rounded-control bg-ink-950 text-azure-400 shrink-0">
               <Smartphone className="w-4 h-4" />
             </div>
             <div>
               <span className="text-xs font-bold text-stone-800 block">Get the mobile app</span>
-              <span className="text-[10px] text-stone-400 block font-medium mt-0.5">
+              <span className="text-[11px] text-stone-400 block font-medium mt-0.5">
                 Install CalculixHub to your home screen for offline practice.
               </span>
             </div>
@@ -198,14 +198,14 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
       >
         <div className="bg-ink-950 px-5 py-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-control bg-gradient-to-tr from-brass-500 to-brass-700 text-ink-950 font-black flex items-center justify-center text-base font-serif shrink-0">
+            <div className="w-10 h-10 rounded-control bg-gradient-to-tr from-azure-500 to-azure-700 text-white font-bold flex items-center justify-center text-base font-serif shrink-0">
               &#8721;
             </div>
             <div>
-              <h2 id="install-sheet-title" className="text-sm font-extrabold text-stone-100 tracking-wide">
+              <h2 id="install-sheet-title" className="text-sm font-semibold text-stone-100 tracking-wide">
                 Install CalculixHub
               </h2>
-              <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">
+              <p className="text-[11px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">
                 Home screen app &middot; works offline
               </p>
             </div>
@@ -233,7 +233,7 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
           )}
 
           <div className="bg-stone-50 border border-stone-150 rounded-card p-3.5 space-y-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 block">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block">
               What you get
             </span>
             <ul className="space-y-1">
@@ -244,7 +244,7 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
               ].map((line, index) => (
                 <m.li
                   key={line}
-                  className="flex items-start gap-1.5 text-[11px] text-stone-600 font-medium"
+                  className="flex items-start gap-1.5 text-[12px] text-stone-600 font-medium"
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ ...spring.snappy, delay: 0.12 + staggerDelay(index, 0.05) }}
@@ -265,7 +265,7 @@ function InstallSheet({ path, onClose }: InstallSheetProps) {
 function Step({ index, children }: { index: number; children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="w-5 h-5 rounded-full bg-ink-950 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-px">
+      <span className="w-5 h-5 rounded-full bg-ink-950 text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-px">
         {index}
       </span>
       <span className="text-xs text-stone-600 leading-relaxed flex-1">{children}</span>
@@ -283,13 +283,13 @@ function IosSteps() {
       <ol className="space-y-2.5">
         <Step index={1}>
           Tap the <strong className="text-stone-900 font-bold">Share</strong> button
-          <Share className="w-3.5 h-3.5 inline-block mx-1 -mt-0.5 text-brass-600" />
+          <Share className="w-3.5 h-3.5 inline-block mx-1 -mt-0.5 text-azure-600" />
           in the Safari toolbar.
         </Step>
         <Step index={2}>
           Scroll down and choose{' '}
           <strong className="text-stone-900 font-bold">Add to Home Screen</strong>
-          <SquarePlus className="w-3.5 h-3.5 inline-block mx-1 -mt-0.5 text-brass-600" />.
+          <SquarePlus className="w-3.5 h-3.5 inline-block mx-1 -mt-0.5 text-azure-600" />.
         </Step>
         <Step index={3}>
           Tap <strong className="text-stone-900 font-bold">Add</strong>. CalculixHub appears on your
@@ -316,7 +316,7 @@ function ManualSteps() {
         </Step>
         <Step index={3}>Confirm, and CalculixHub installs with its own icon.</Step>
       </ol>
-      <p className="text-[11px] text-stone-400 leading-relaxed">
+      <p className="text-[12px] text-stone-400 leading-relaxed">
         On iPhone, Chrome and Firefox cannot install home screen apps &mdash; open this page in
         Safari to install it there.
       </p>

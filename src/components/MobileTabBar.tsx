@@ -66,11 +66,11 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
             aria-label={item.label}
             style={{ flex: isActive ? 1.6 : 1 }}
             className={`relative min-w-0 h-11.5 rounded-card flex flex-col items-center justify-center gap-0.5 px-1.5 cursor-pointer transition-colors duration-160 ease-standard ${
-              isActive ? 'text-ink-950' : 'text-content-subtle active:bg-surface-sunken'
+              isActive ? 'text-white' : 'text-content-subtle active:bg-surface-sunken'
             }`}
           >
             {/*
-              One brass pill shared by all eight tabs, rather than a background
+              One azure pill shared by all eight tabs, rather than a background
               switched on per button. Selecting a tab slides the indicator
               across the rail, which is the same gesture language as the
               desktop sidebar and as iOS's own tab bars.
@@ -78,7 +78,7 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
             {isActive && (
               <m.span
                 layoutId="tabbar-active-pill"
-                className="absolute inset-0 bg-brass-600 rounded-card"
+                className="absolute inset-0 bg-azure-600 rounded-card"
                 transition={spring.snappy}
               />
             )}
@@ -99,7 +99,7 @@ export default function MobileTabBar({ activeTab, onSelect }: MobileTabBarProps)
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: duration.fast, ease: ease.standard }}
-                  className="relative z-10 text-[8px] font-extrabold tracking-wide whitespace-nowrap leading-none"
+                  className="relative z-10 text-[10px] font-semibold tracking-wide whitespace-nowrap leading-none"
                 >
                   {item.shortLabel}
                 </m.span>

@@ -114,7 +114,10 @@ export default function RadarChart({ data, size = 260, color = '#c8842a' }: Rada
           cy={p.y}
           r={3.5}
           fill={color}
-          stroke="white"
+          // The halo is the card, not white: it exists to separate the vertex
+          // from the web behind it, and a literal white ring on a #1d1912 card
+          // at night turns each vertex into a bright pinprick instead.
+          stroke="var(--sf-raised)"
           strokeWidth={1.5}
           style={{ transformOrigin: `${p.x}px ${p.y}px` }}
           variants={{ hidden: { scale: 0 }, visible: { scale: 1 } }}
