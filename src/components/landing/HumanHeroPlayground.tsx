@@ -79,18 +79,18 @@ export default function HumanHeroPlayground({ onRegister }: HumanHeroPlaygroundP
     <div className="cx-card bg-surface-raised border border-line rounded-card p-6 md:p-8 shadow-e3 relative overflow-hidden">
       {/* Warm ambient corner tint */}
       <div
-        className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-15 blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(225,173,102,0.9), transparent 70%)' }}
+        className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-20 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.9), transparent 70%)' }}
         aria-hidden="true"
       />
 
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line-faint pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
             <Lightbulb className="h-4 w-4" />
           </div>
           <div>
-            <span className="type-eyebrow text-amber-700 tracking-[0.16em]">Interactive Problem Playground</span>
+            <span className="type-eyebrow text-indigo-600 dark:text-indigo-400 tracking-[0.16em]">Interactive Problem Playground</span>
             <p className="text-[13px] text-content-subtle font-medium">{item.questionText}</p>
           </div>
         </div>

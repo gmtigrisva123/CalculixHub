@@ -20,6 +20,7 @@ import { bankSummary, domainBankProfiles } from '../../lib/skillGraph';
 import { TOPIC_META } from '../../lib/topics';
 import type { Topic } from '../../types';
 import HumanHeroPlayground from './HumanHeroPlayground';
+import InteractiveFormulaLab from './InteractiveFormulaLab';
 
 interface LiveStats {
   activeUsers: number;
@@ -253,6 +254,9 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
               </tbody>
             </table>
           </div>
+
+          {/* Interactive Live Formula Lab */}
+          <InteractiveFormulaLab />
         </div>
       </section>
 
