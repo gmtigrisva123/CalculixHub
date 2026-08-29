@@ -7,12 +7,12 @@
  * This file used to be the application: 595 lines mixing fixture data, prompt
  * templates, route handlers and process bootstrap, with no validation layer and
  * no security headers. It is now an adapter and nothing else. The API lives in
- * `src/server/`, is runtime-agnostic, and is exercised by the same tests
+ * `server/`, is runtime-agnostic, and is exercised by the same tests
  * whether it runs here or on Vercel.
  *
  * Two jobs remain:
  *
- *   1. Bridge Node's `(req, res)` to the Web-standard handler in `src/server/`.
+ *   1. Bridge Node's `(req, res)` to the Web-standard handler in `server/`.
  *   2. Serve the front end -- through Vite in development, from `dist/` in
  *      production -- with the document security headers applied.
  */
@@ -21,10 +21,10 @@ import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
-import { buildApp } from './src/server/app';
-import { config } from './src/server/config';
-import { problem } from './src/server/http';
-import { securityHeaders, withHeaders } from './src/server/security';
+import { buildApp } from './app';
+import { config } from './config';
+import { problem } from './http';
+import { securityHeaders, withHeaders } from './security';
 
 dotenv.config();
 

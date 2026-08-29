@@ -214,7 +214,7 @@ describe('untrusted text stays in the data channel', () => {
 describe('the document policy has one source of truth', () => {
   it('matches between security.ts and vercel.json', () => {
     const expected = securityHeaders('document', { isProduction: true });
-    const vercel = JSON.parse(readFileSync(new URL('../../../vercel.json', import.meta.url), 'utf8')) as {
+    const vercel = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8')) as {
       headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
     };
 

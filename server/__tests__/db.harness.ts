@@ -39,7 +39,7 @@ import { fileURLToPath } from 'node:url';
  * drive form -- and is a no-op difference on Linux and macOS, which is why the
  * bug survived CI.
  */
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../../supabase/migrations', import.meta.url));
+const MIGRATIONS_DIR = fileURLToPath(new URL('../../supabase/migrations', import.meta.url));
 
 /**
  * Minimal stand-in for the schema GoTrue owns.

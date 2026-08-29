@@ -5,16 +5,16 @@
  * Vercel entry point for every `/api/*` route.
  *
  * A single catch-all rather than one file per route, for two reasons: the
- * routing table already exists in `src/server/app.ts` and should not be
+ * routing table already exists in `server/app.ts` and should not be
  * duplicated in the filesystem layout, and one function means one warm
  * instance, so the rate-limit and budget counters in process memory are shared
  * across routes instead of fragmenting per endpoint.
  *
  * The module is deliberately tiny. Everything here is Vercel-specific; anything
- * that is not belongs in `src/server/`.
+ * that is not belongs in `server/`.
  */
 
-// Deliberately no static import of `../src/server/app`. See `load()` below:
+// Deliberately no static import of `../server/app`. See `load()` below:
 // the whole point of this revision is that the import must sit inside a
 // try/catch, and a top-level one cannot.
 
@@ -77,7 +77,7 @@ async function load(): Promise<void> {
   if (app || initError) return;
 
   try {
-    const mod = await import('../src/server/app');
+    const mod = await import('../server/app');
     app = mod.buildApp();
   } catch (error) {
     initError = error;

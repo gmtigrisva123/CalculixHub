@@ -4,7 +4,7 @@
     {
       "name": "calculixhub-dev",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/tsx/dist/cli.mjs", "server.ts"],
+      "runtimeArgs": ["node_modules/tsx/dist/cli.mjs", "server/main.ts"],
       "port": 8000
     }
   ]
