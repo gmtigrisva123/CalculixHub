@@ -148,7 +148,7 @@ export default function Dashboard({
         rather than presenting a number that was apparently always there.
       */}
       <section className="grid [grid-template-columns:repeat(auto-fit,minmax(14.5rem,1fr))] gap-4.5">
-        <StaggerItem index={0} className="cx-card-bezel cx-tint-algebra flex flex-col justify-between px-5.5 pt-5.5 pb-6">
+        <StaggerItem index={0} className="cx-card-quantum cx-tint-algebra flex flex-col justify-between p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="type-eyebrow text-content-subtle tracking-[0.18em]">Rank tier</p>
@@ -170,7 +170,7 @@ export default function Dashboard({
           </div>
         </StaggerItem>
 
-        <StaggerItem index={1} className="cx-card-bezel cx-tint-algebra flex flex-col justify-between px-5.5 pt-5.5 pb-6">
+        <StaggerItem index={1} className="cx-card-quantum cx-tint-algebra flex flex-col justify-between p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="type-eyebrow text-content-subtle tracking-[0.18em]">Daily streak</p>
@@ -190,7 +190,7 @@ export default function Dashboard({
           </p>
         </StaggerItem>
 
-        <StaggerItem index={2} className="cx-card-bezel cx-tint-number-theory flex flex-col justify-between px-5.5 pt-5.5 pb-6">
+        <StaggerItem index={2} className="cx-card-quantum cx-tint-number-theory flex flex-col justify-between p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="type-eyebrow text-content-subtle tracking-[0.18em]">Accuracy</p>
@@ -218,7 +218,7 @@ export default function Dashboard({
           )}
         </StaggerItem>
 
-        <StaggerItem index={3} className="cx-card-bezel cx-tint-geometry flex flex-col justify-between px-5.5 pt-5.5 pb-6">
+        <StaggerItem index={3} className="cx-card-quantum cx-tint-geometry flex flex-col justify-between p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="type-eyebrow text-content-subtle tracking-[0.18em]">Time invested</p>
