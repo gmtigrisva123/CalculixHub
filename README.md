@@ -308,7 +308,7 @@ Each item also carries a `concept` tag used for weak-point isolation and remedia
 
 ## The AI layer
 
-Google Gemini (`gemini-3.5-flash`) is called **exclusively server-side** in [`server.ts`](server.ts). The API key never reaches the browser; the client only ever talks to this project's own endpoints.
+Google Gemini (`gemini-3.5-flash`) is called **exclusively server-side** in [`server/main.ts`](server/main.ts). The API key never reaches the browser; the client only ever talks to this project's own endpoints.
 
 Three AI-backed capabilities:
 
@@ -332,7 +332,7 @@ flowchart TB
         UI --> AN
     end
 
-    subgraph server["Express server — server.ts"]
+    subgraph server["Express server — server/main.ts"]
         API["/api/* routes"]
         FB["Deterministic<br/>fallback logic"]
         VITE["Vite middleware (dev)<br/>static serve (prod)"]
@@ -471,25 +471,47 @@ There is no test suite yet; see [Roadmap](#roadmap).
 
 ## Project structure
 
+The tree separates by *what a thing is responsible for*, not by file type. The
+client bundle, the backend and the contract between them are three top-level
+concerns, so they are three top-level directories.
+
 ```
-├── server.ts                  Express server, API routes, Gemini proxy, Vite/static wiring
 ├── index.html                 SPA entry point
 ├── vite.config.ts             Build config, path aliases, HMR toggle
-├── tsconfig.json              Type-check scope
+├── tsconfig.json              Client type-check scope
+├── tsconfig.server.json       Server + api type-check scope (strict)
 │
-├── src/
+├── shared/
+│   └── types.ts               The contract — the only module both sides import
+│
+├── src/                       Client bundle. Nothing here runs on the server.
 │   ├── main.tsx               React root
 │   ├── App.tsx                Shell, navigation, session state
-│   ├── types.ts               Domain model
 │   ├── index.css              Tailwind entry + design tokens
 │   │
-│   ├── lib/
+│   ├── domain/                Pure, deterministic, framework-free
 │   │   ├── irt.ts             ★ 3PL IRT / CAT engine
 │   │   ├── analytics.ts       ★ Forecasting, error classification, learning paths
 │   │   ├── itemBank.ts        37 calibrated items
+│   │   ├── skillGraph.ts      Prerequisite graph
 │   │   ├── streak.ts          Timezone-safe streak computation
-│   │   └── topics.tsx         Domain metadata
+│   │   └── __tests__/
 │   │
+│   ├── services/              Everything that talks to the outside world
+│   │   ├── supabase.ts        Browser client
+│   │   ├── apiBase.ts         Endpoint resolution
+│   │   ├── database.types.ts  Generated schema types
+│   │   └── data/              feed, notifications, people, realtime
+│   │
+│   ├── platform/              Browser and PWA capabilities
+│   │   ├── offline.ts         Offline grading fallback
+│   │   ├── pwa.ts             Service-worker registration
+│   │   └── reminders.ts       Notification scheduling
+│   │
+│   ├── hooks/                 Reusable React hooks
+│   ├── lib/                   Cross-cutting UI helpers (motion, theme, topics)
+│   ├── styles/                The four CSS layers — see index.css
+│   ├── context/               Auth and theme providers
 │   └── components/
 │       ├── WelcomeScreen.tsx  Landing page + sign-in
 │       ├── Dashboard.tsx      Skill radar, streaks, recommendations
@@ -501,8 +523,20 @@ There is no test suite yet; see [Roadmap](#roadmap).
 │       ├── ResearchAnalytics.tsx  Psychometrics inspector
 │       ├── AITutorChat.tsx    Socratic tutor UI
 │       ├── MathText.tsx       KaTeX rendering
-│       └── charts/            Radar + velocity charts
+│       ├── charts/            Radar + velocity charts
+│       ├── landing/           Landing-page stages
+│       ├── motion/            Animation primitives
+│       └── surface/           Panel, TiltCard
 │
+├── server/                    Backend. Nothing here reaches the browser.
+│   ├── main.ts                Express host — Vite/static wiring, dev + prod entry
+│   ├── app.ts                 Web-standard request handler (runtime-agnostic)
+│   ├── routes/                ai, content, liveStats
+│   ├── auth/                  Service-role Supabase client
+│   └── __tests__/             Pipeline, guarantees, schema (PGlite)
+│
+├── api/[...path].ts           Vercel adapter — delegates to server/app.ts
+├── supabase/migrations/       Schema, RLS policies, triggers
 └── .github/workflows/         CI
 ```
 
@@ -522,7 +556,7 @@ The app deploys to three targets, each with different capabilities:
 
 [`deploy-pages.yml`](.github/workflows/deploy-pages.yml) builds the client bundle and publishes it to <https://gmtigrisva123.github.io/CalculixHub/> on every push to `main`.
 
-**GitHub Pages is a static host, so it cannot run `server.ts`.** Consequently the AI tutor — which calls `/api/chat` — does not work there, and neither do the other `/api/*` routes. Everything that runs client-side does work: the full IRT engine, adaptive practice, analytics, charts and navigation.
+**GitHub Pages is a static host, so it cannot run `server/main.ts`.** Consequently the AI tutor — which calls `/api/chat` — does not work there, and neither do the other `/api/*` routes. Everything that runs client-side does work: the full IRT engine, adaptive practice, analytics, charts and navigation.
 
 Because Pages serves a project site from a subpath, the workflow derives Vite's asset base from `configure-pages`' `base_path` output rather than hardcoding the repository name — so a fork or rename needs no edit.
 
@@ -585,7 +619,7 @@ When touching [`irt.ts`](src/lib/irt.ts), please state the psychometric reasonin
 
 **Testing.** The highest-value gap. `irt.ts` and `analytics.ts` are pure and deterministic — a property-based suite asserting that EAP stays bounded on degenerate response patterns, and that Fisher information peaks near `θ ≈ b`, would lock in the engine's correctness cheaply.
 
-**Persistence and realtime.** The Supabase integration is wired in: the browser client lives in [`src/services/supabase.ts`](src/services/supabase.ts), the service-role admin client in [`src/server/auth/supabaseAdmin.ts`](src/server/auth/supabaseAdmin.ts), realtime subscriptions in [`src/services/data/realtime.ts`](src/services/data/realtime.ts), and the schema in [`supabase/migrations/`](supabase/migrations/). What remains is operational rather than structural: seeding a project, running the migrations against it, and setting the environment variables listed in [`.env.example`](.env.example).
+**Persistence and realtime.** The Supabase integration is wired in: the browser client lives in [`src/lib/supabase.ts`](src/lib/supabase.ts), the service-role admin client in [`src/server/auth/supabaseAdmin.ts`](src/server/auth/supabaseAdmin.ts), realtime subscriptions in [`src/lib/data/realtime.ts`](src/lib/data/realtime.ts), and the schema in [`supabase/migrations/`](supabase/migrations/). What remains is operational rather than structural: seeding a project, running the migrations against it, and setting the environment variables listed in [`.env.example`](.env.example).
 
 **Real authentication.** The current sign-in is a front-end mock and must be replaced before any deployment handling real learner data.
 
