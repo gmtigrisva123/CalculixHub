@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { apiFetch } from './apiBase';
+import { apiFetch } from '../services/apiBase';
 
 const QUEUE_KEY = 'calculix_pending_grades';
 

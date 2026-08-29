@@ -24,8 +24,8 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { isBackendConfigured, supabase } from '../lib/supabase';
-import type { Level, ProfileRow, Topic } from '../lib/database.types';
+import { isBackendConfigured, supabase } from '../services/supabase';
+import type { Level, ProfileRow, Topic } from '../services/database.types';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'unavailable';
 

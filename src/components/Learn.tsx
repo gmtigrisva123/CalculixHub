@@ -9,10 +9,10 @@ import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, Refres
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
 import { TOPIC_META, TOPIC_LIST, LEVEL_LIST, LEVEL_META } from '../lib/topics';
 import MathText from './MathText';
-import { apiUrl, apiFetch } from '../lib/apiBase';
-import { gradeLocally, queueGrade } from '../lib/offline';
+import { apiUrl, apiFetch } from '../services/apiBase';
+import { gradeLocally, queueGrade } from '../platform/offline';
 import { duration, ease, spring, travel } from '../lib/motion';
-import { useAmbient } from '../lib/useAmbient';
+import { useAmbient } from '../hooks/useAmbient';
 import { Collapse, StaggerItem } from './motion';
 
 interface LearnProps {

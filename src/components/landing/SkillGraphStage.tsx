@@ -60,7 +60,7 @@ import {
   type Material,
   type Object3D,
 } from 'three';
-import { domainBankProfiles } from '../../lib/skillGraph';
+import { domainBankProfiles } from '../../domain/skillGraph';
 import { TOPIC_META } from '../../lib/topics';
 import type { Topic } from '../../types';
 import { ItemCurvesPlot } from './plots';

@@ -8,9 +8,9 @@ import { AnimatePresence, m } from 'motion/react';
 import { Trophy, Calendar, Zap, HelpCircle, Check, Medal, Flag, Users2, Swords, Gauge, Target, Repeat, TrendingUp } from 'lucide-react';
 import { WeeklyChallenge, Contest, LeaderboardEntry, UserStats } from '../types';
 import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
-import { computeMetrics } from '../lib/analytics';
+import { computeMetrics } from '../domain/analytics';
 import { duration, ease, spring, travel } from '../lib/motion';
-import { useAmbient } from '../lib/useAmbient';
+import { useAmbient } from '../hooks/useAmbient';
 import { AnimatedNumber, StaggerItem } from './motion';
 import { useAuth } from '../context/AuthContext';
 

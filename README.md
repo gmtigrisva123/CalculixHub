@@ -585,7 +585,7 @@ When touching [`irt.ts`](src/lib/irt.ts), please state the psychometric reasonin
 
 **Testing.** The highest-value gap. `irt.ts` and `analytics.ts` are pure and deterministic — a property-based suite asserting that EAP stays bounded on degenerate response patterns, and that Fisher information peaks near `θ ≈ b`, would lock in the engine's correctness cheaply.
 
-**Persistence and realtime.** The Supabase integration is wired in: the browser client lives in [`src/lib/supabase.ts`](src/lib/supabase.ts), the service-role admin client in [`src/server/auth/supabaseAdmin.ts`](src/server/auth/supabaseAdmin.ts), realtime subscriptions in [`src/lib/data/realtime.ts`](src/lib/data/realtime.ts), and the schema in [`supabase/migrations/`](supabase/migrations/). What remains is operational rather than structural: seeding a project, running the migrations against it, and setting the environment variables listed in [`.env.example`](.env.example).
+**Persistence and realtime.** The Supabase integration is wired in: the browser client lives in [`src/services/supabase.ts`](src/services/supabase.ts), the service-role admin client in [`src/server/auth/supabaseAdmin.ts`](src/server/auth/supabaseAdmin.ts), realtime subscriptions in [`src/services/data/realtime.ts`](src/services/data/realtime.ts), and the schema in [`supabase/migrations/`](supabase/migrations/). What remains is operational rather than structural: seeding a project, running the migrations against it, and setting the environment variables listed in [`.env.example`](.env.example).
 
 **Real authentication.** The current sign-in is a front-end mock and must be replaced before any deployment handling real learner data.
 

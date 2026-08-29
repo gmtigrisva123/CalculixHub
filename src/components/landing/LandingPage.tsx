@@ -16,7 +16,7 @@ import {
   HelpCircle, MessageSquare, ChevronRight, Award, Compass, Sparkles, Target, Zap
 } from 'lucide-react';
 import { AnimatedNumber } from '../motion';
-import { bankSummary, domainBankProfiles } from '../../lib/skillGraph';
+import { bankSummary, domainBankProfiles } from '../../domain/skillGraph';
 import { TOPIC_META } from '../../lib/topics';
 import type { Topic } from '../../types';
 import HumanHeroPlayground from './HumanHeroPlayground';

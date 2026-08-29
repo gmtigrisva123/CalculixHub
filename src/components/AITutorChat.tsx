@@ -7,10 +7,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { Sparkles, Send, X, Bot, HelpCircle } from 'lucide-react';
 import MathText from './MathText';
-import { apiUrl } from '../lib/apiBase';
+import { apiUrl } from '../services/apiBase';
 import { backdrop, duration, ease, spring, travel } from '../lib/motion';
-import { useAmbient } from '../lib/useAmbient';
-import { useIsDesktop } from '../lib/useBreakpoint';
+import { useAmbient } from '../hooks/useAmbient';
+import { useIsDesktop } from '../hooks/useBreakpoint';
 
 interface ChatMessage {
   id: string;
