@@ -267,25 +267,24 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
 
         <div className="relative mx-auto grid max-w-[73.75rem] items-center gap-14 px-7 pt-24 lg:[grid-template-columns:minmax(0,1.02fr)_minmax(0,0.98fr)]">
           <div>
-            <p className="cx-pill">
-              <span className="relative inline-block h-1.5 w-1.5">
+            <p className="cx-pill bg-azure-400/10 border-azure-400/30 text-azure-400">
+              <span className="relative inline-block h-2 w-2">
                 {!still && (
-                  <span className="absolute inset-0 animate-ping rounded-full bg-proof-405 opacity-70" />
+                  <span className="absolute inset-0 animate-ping rounded-full bg-azure-400 opacity-75" />
                 )}
-                <span className="absolute inset-0 rounded-full bg-proof-405" />
+                <span className="absolute inset-0 rounded-full bg-azure-400" />
               </span>
-              An AI-native operating system for mathematical thinking
+              QUANTUM ADAPTIVE KERNEL V2.0
             </p>
 
-            <h1 className="type-hero mt-6.5 text-stone-50">
-              Think in proofs.
+            <h1 className="type-hero mt-6.5 text-stone-50 text-[clamp(2.5rem,5vw,4.25rem)] leading-[1.08] font-serif">
+              Master Structural Proofs.
               <br />
-              <span className="italic text-azure-400">Train like a competitor.</span>
+              <span className="italic text-azure-400">The Quantum Calculus OS.</span>
             </h1>
 
-            <p className="type-lead mt-6.5 max-w-[52ch] text-stone-400">
-              Most practice apps guess at your level. CalculixHub measures it, tells you how sure it is, and stops the
-              moment it knows enough.
+            <p className="type-lead mt-6.5 max-w-[52ch] text-stone-300">
+              Legacy platforms rely on static question sets. CalculixHub measures your latent mathematical ability via 3PL Item Response Theory and adjusts in real time.
             </p>
 
             <div className="mt-8.5 flex flex-wrap gap-3.5">
@@ -570,7 +569,7 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
             return (
               <article
                 key={tile.title}
-                className={`cx-card-bezel ${spanClass} p-7.5 backdrop-blur-md flex flex-col justify-between group cursor-pointer hover:-translate-y-0.5`}
+                className={`cx-card-quantum ${spanClass} p-8 flex flex-col justify-between group cursor-pointer hover:-translate-y-1 hover:shadow-2xl`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
