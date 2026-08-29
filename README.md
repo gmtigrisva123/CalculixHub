@@ -503,7 +503,6 @@ There is no test suite yet; see [Roadmap](#roadmap).
 │       ├── MathText.tsx       KaTeX rendering
 │       └── charts/            Radar + velocity charts
 │
-├── calculix_realtime_patch/   Staged, NOT wired in — see Roadmap
 └── .github/workflows/         CI
 ```
 
@@ -543,8 +542,6 @@ For the complete application, use the Vercel or Cloudflare deployment.
 Dependency updates are automated via [Dependabot](.github/dependabot.yml).
 
 The remaining workflows in `.github/workflows/` (`cleanup`, `format`, `metrics`, `notify`, `release`, `rollback`, `sync`, `test`) are `workflow_dispatch` placeholders that currently only echo a message. They are scaffolding, not active pipeline stages.
-
-`calculix_realtime_patch/` is excluded from type checking, because it imports a dependency that is not installed. See [Roadmap](#roadmap).
 
 ---
 
@@ -588,7 +585,7 @@ When touching [`irt.ts`](src/lib/irt.ts), please state the psychometric reasonin
 
 **Testing.** The highest-value gap. `irt.ts` and `analytics.ts` are pure and deterministic — a property-based suite asserting that EAP stays bounded on degenerate response patterns, and that Fisher information peaks near `θ ≈ b`, would lock in the engine's correctness cheaply.
 
-**Persistence and realtime.** [`calculix_realtime_patch/`](calculix_realtime_patch/) contains a staged Supabase integration — auth middleware, a realtime progress hook, event tracking, a live dashboard, and SQL migrations. **It is not wired in.** Activating it requires installing `@supabase/supabase-js`, adding `vite/client` types, following the instructions in `calculix_realtime_patch/server/README_IMPORT_IN_SERVER_TS.md`, and removing the directory from `exclude` in `tsconfig.json`. Until then it is excluded from type checking and ships dormant.
+**Persistence and realtime.** The Supabase integration is wired in: the browser client lives in [`src/lib/supabase.ts`](src/lib/supabase.ts), the service-role admin client in [`src/server/auth/supabaseAdmin.ts`](src/server/auth/supabaseAdmin.ts), realtime subscriptions in [`src/lib/data/realtime.ts`](src/lib/data/realtime.ts), and the schema in [`supabase/migrations/`](supabase/migrations/). What remains is operational rather than structural: seeding a project, running the migrations against it, and setting the environment variables listed in [`.env.example`](.env.example).
 
 **Real authentication.** The current sign-in is a front-end mock and must be replaced before any deployment handling real learner data.
 
