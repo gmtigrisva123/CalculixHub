@@ -52,8 +52,8 @@
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { m, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from 'motion/react';
-import { ITEM_BANK } from '../../lib/itemBank';
-import { probCorrect } from '../../lib/irt';
+import { ITEM_BANK } from '../../domain/itemBank';
+import { probCorrect } from '../../domain/irt';
 
 /* -------------------------------------------------------------------------- */
 /* Geometry                                                                    */

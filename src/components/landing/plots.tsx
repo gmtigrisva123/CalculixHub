@@ -17,9 +17,9 @@
  */
 
 import { m } from 'motion/react';
-import { ITEM_BANK } from '../../lib/itemBank';
-import { itemInformation, probCorrect, type Domain, type IRTItem } from '../../lib/irt';
-import { domainBankProfiles, formatDifficulty } from '../../lib/skillGraph';
+import { ITEM_BANK } from '../../domain/itemBank';
+import { itemInformation, probCorrect, type Domain, type IRTItem } from '../../domain/irt';
+import { domainBankProfiles, formatDifficulty } from '../../domain/skillGraph';
 import { ease } from '../../lib/motion';
 
 /* -------------------------------------------------------------------------- */

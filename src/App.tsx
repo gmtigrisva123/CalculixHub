@@ -16,10 +16,10 @@ import {
   LogOut,
 } from 'lucide-react';
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
-import { computeStreak } from './lib/streak';
-import { apiUrl, isNativePlatform } from './lib/apiBase';
-import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './lib/reminders';
-import { useOnlineStatus, useGradeQueueFlush, flushGradeQueue } from './lib/offline';
+import { computeStreak } from './domain/streak';
+import { apiUrl, isNativePlatform } from './services/apiBase';
+import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './platform/reminders';
+import { useOnlineStatus, useGradeQueueFlush, flushGradeQueue } from './platform/offline';
 import PullToRefresh from './components/PullToRefresh';
 import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
 import MobileHeader from './components/MobileHeader';
@@ -38,7 +38,7 @@ import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components
 import ThemeToggle from './components/ThemeToggle';
 import { spring } from './lib/motion';
 import { useAuth } from './context/AuthContext';
-import { useLearnerSnapshot } from './lib/data/people';
+import { useLearnerSnapshot } from './services/data/people';
 
 const DISCUSSION_CLEANUP_KEY = 'calculix_discussions_demo_cleanup_v1';
 const LEGACY_DEMO_DISCUSSION_IDS = new Set(['disc-1', 'disc-2']);

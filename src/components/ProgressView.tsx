@@ -11,7 +11,7 @@ import { AreaChart, TrendingUp, AlertTriangle, BookOpen, Clock, Lightbulb, Radar
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 import { UserStats, Topic } from '../types';
 import { TOPIC_META, formatMinutes } from '../lib/topics';
-import { forecastProgress, analyzeErrorPatterns, buildLearningPath, computeMetrics } from '../lib/analytics';
+import { forecastProgress, analyzeErrorPatterns, buildLearningPath, computeMetrics } from '../domain/analytics';
 import RadarChart from './charts/RadarChart';
 import VelocityChart from './charts/VelocityChart';
 

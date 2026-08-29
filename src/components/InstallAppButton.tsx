@@ -10,9 +10,9 @@ import {
   isInstalled,
   isIosSafari,
   type BeforeInstallPromptEvent,
-} from '../lib/pwa';
+} from '../platform/pwa';
 import { backdrop, scaleIn, spring, staggerDelay } from '../lib/motion';
-import { useMediaQuery } from '../lib/useBreakpoint';
+import { useMediaQuery } from '../hooks/useBreakpoint';
 
 type Variant = 'nav' | 'row';
 

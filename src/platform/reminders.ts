@@ -16,7 +16,7 @@
  *             limitation is stated in the UI rather than papered over.
  */
 
-import { isNativePlatform } from './apiBase';
+import { isNativePlatform } from '../services/apiBase';
 
 const ENABLED_KEY = 'calculix_reminders_enabled';
 const HOUR_KEY = 'calculix_reminders_hour';

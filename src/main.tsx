@@ -1,8 +1,8 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
-import {registerServiceWorker} from './lib/pwa';
+import {registerServiceWorker} from './platform/pwa';
 import { Analytics } from "@vercel/analytics/react";
 import MotionProvider from './components/motion/MotionProvider';
 import { AuthProvider } from './context/AuthContext';

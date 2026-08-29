@@ -6,8 +6,8 @@
 import { m } from 'motion/react';
 import React, { useMemo } from 'react';
 import { FlaskConical, Download, ShieldCheck, Layers, Users2, AlertTriangle } from 'lucide-react';
-import { ITEM_BANK } from '../lib/itemBank';
-import { ItemSource, Domain, probCorrect } from '../lib/irt';
+import { ITEM_BANK } from '../domain/itemBank';
+import { ItemSource, Domain, probCorrect } from '../domain/irt';
 import { duration, ease, spring, staggerDelay } from '../lib/motion';
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 

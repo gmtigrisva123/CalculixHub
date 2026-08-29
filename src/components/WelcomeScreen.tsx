@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import { Level, Topic } from '../types';
 import MathText from './MathText';
-import { apiUrl } from '../lib/apiBase';
+import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';
 import LandingPage from './landing/LandingPage';
 import { duration, ease, spring, travel } from '../lib/motion';
-import { useAmbient } from '../lib/useAmbient';
+import { useAmbient } from '../hooks/useAmbient';
 import { AnimatedNumber, Reveal, SpringBar } from './motion';
 import {
   IRTItem,
@@ -36,14 +36,14 @@ import {
   itemInformation,
   MIN_ITEMS,
   MAX_ITEMS,
-} from '../lib/irt';
-import { ITEM_BANK } from '../lib/itemBank';
+} from '../domain/irt';
+import { ITEM_BANK } from '../domain/itemBank';
 import {
   DomainBankProfile,
   bankSummary,
   domainBankProfiles,
   formatDifficulty,
-} from '../lib/skillGraph';
+} from '../domain/skillGraph';
 import { useAuth } from '../context/AuthContext';
 
 interface WelcomeScreenProps {
