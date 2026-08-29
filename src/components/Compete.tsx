@@ -444,16 +444,29 @@ export default function Compete({
                   transition={spring.smooth}
                   initial={{ opacity: 0, y: travel.sm }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-center justify-between p-3 rounded-control border transition-[background-color,border-color] duration-160 ease-standard ${
-                    isCurrentUser ? 'bg-azure-50/60 border-azure-200' : 'bg-surface-raised hover:bg-stone-50 border-stone-100'
+                  className={`flex items-center justify-between p-3 rounded-control border transition-[background-color,border-color,box-shadow] duration-160 ease-standard ${
+                    isCurrentUser
+                      ? 'bg-azure-50/70 border-azure-300 shadow-e1'
+                      : entry.rank === 1
+                      ? 'bg-gradient-to-r from-amber-500/10 to-transparent border-amber-300/60'
+                      : entry.rank === 2
+                      ? 'bg-gradient-to-r from-slate-400/10 to-transparent border-slate-300/60'
+                      : entry.rank === 3
+                      ? 'bg-gradient-to-r from-amber-700/10 to-transparent border-amber-600/60'
+                      : 'bg-surface-raised hover:bg-stone-50 border-stone-100'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-6 text-center select-none">
-                      {entry.rank === 1 ? <span className="text-base">🥇</span>
-                        : entry.rank === 2 ? <span className="text-base">🥈</span>
-                        : entry.rank === 3 ? <span className="text-base">🥉</span>
-                        : <span className="text-xs font-semibold text-stone-400">#{entry.rank}</span>}
+                    <div className="w-7 text-center select-none flex items-center justify-center">
+                      {entry.rank === 1 ? (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-[11px] font-bold text-stone-950 shadow-xs">1</span>
+                      ) : entry.rank === 2 ? (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-400 text-[11px] font-bold text-stone-900 shadow-xs">2</span>
+                      ) : entry.rank === 3 ? (
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-600 to-amber-800 text-[11px] font-bold text-amber-100 shadow-xs">3</span>
+                      ) : (
+                        <span className="text-xs font-semibold text-stone-400">#{entry.rank}</span>
+                      )}
                     </div>
 
                     <div className="space-y-0.5">
