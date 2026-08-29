@@ -288,8 +288,8 @@ export default function Dashboard({
         {/* AI recommendation */}
         <div className="space-y-4.5">
           <div className="flex items-baseline justify-between gap-4">
-            <h2 className="type-title text-[26px]">AI recommendation</h2>
-            <span className="type-eyebrow text-content-subtle tracking-[0.18em]">EduReach Core Engine</span>
+            <h2 className="type-title text-[26px]">Practice recommendation</h2>
+            <span className="type-eyebrow text-content-subtle tracking-[0.18em]">Calculix Practice Coach</span>
           </div>
 
           <div className="cx-card cx-tint-combinatorics p-6.5">
