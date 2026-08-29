@@ -23,5 +23,5 @@
     "exactOptionalPropertyTypes": false,
     "types": ["vite/client", "node"]
   },
-  "include": ["src/server/**/*", "api/**/*", "server.ts", "vitest.config.ts", "shared/**/*"]
+  "include": ["server/**/*", "api/**/*", "shared/**/*", "vitest.config.ts"]
 }
