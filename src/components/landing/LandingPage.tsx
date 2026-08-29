@@ -544,25 +544,50 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
       <section id="product" className="mx-auto max-w-[73.75rem] px-7 pt-27">
         <SectionHead
           index="03"
-          kicker="The product"
-          title="Eight places to train, one score behind them"
-          standfirst="The test is the front door, not the house. Your result fills in a skill map, builds a study plan, and sets where you start. Every formula is typeset properly."
+          kicker="The product matrix"
+          title="Eight specialized labs, driven by one adaptive kernel"
+          standfirst="The placement assessment is only the entryway. Your evaluated ability matrix dynamically orchestrates your study path, contest tier, and targeted concept reinforcement."
           accent="var(--hu-violet-600)"
         />
 
-        {/*
-          A hairline grid: the 1px gap over a line-coloured ground *is* the rule
-          between tiles, so eight cards need no borders of their own.
-        */}
-        <div className="mt-13 grid gap-px border border-line bg-line [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]">
-          {PRODUCT_TILES.map((tile) => {
+        {/* Asymmetrical Bento Grid */}
+        <div className="mt-13 grid grid-cols-1 md:grid-cols-12 gap-5">
+          {PRODUCT_TILES.map((tile, idx) => {
             const Icon = tile.icon;
             const meta = TOPIC_META[tile.topic];
+            const spans = [
+              'md:col-span-8',
+              'md:col-span-4',
+              'md:col-span-4',
+              'md:col-span-8',
+              'md:col-span-6',
+              'md:col-span-6',
+              'md:col-span-4',
+              'md:col-span-8',
+            ];
+            const spanClass = spans[idx % spans.length];
+
             return (
-              <article key={tile.title} className="bg-surface px-6.5 pt-7.5 pb-8.5 transition-colors duration-240 ease-standard hover:bg-surface-raised">
-                <Icon className="h-5 w-5" style={{ color: meta.vars['--cx-hue'] }} />
-                <h3 className="type-title mt-4 text-[22px]">{tile.title}</h3>
-                <p className="type-caption mt-2 leading-[1.7] text-content-muted">{tile.body}</p>
+              <article
+                key={tile.title}
+                className={`cx-card-bezel ${spanClass} p-7.5 backdrop-blur-md flex flex-col justify-between group cursor-pointer hover:-translate-y-0.5`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-sunken border border-line-faint">
+                      <Icon className="h-4.5 w-4.5" style={{ color: meta.vars['--cx-hue'] }} />
+                    </div>
+                    <span className="cx-tag cx-tag-neutral text-[9px] uppercase tracking-widest">{tile.topic}</span>
+                  </div>
+                  <h3 className="type-title text-[24px] font-medium group-hover:text-accent transition-colors duration-160">
+                    {tile.title}
+                  </h3>
+                  <p className="type-body mt-2.5 leading-[1.65] text-content-muted">{tile.body}</p>
+                </div>
+                <div className="mt-6 border-t border-line-faint pt-4 flex items-center justify-between">
+                  <span className="type-eyebrow text-[10px] text-content-subtle">Explore module</span>
+                  <span className="cx-btn-pill-icon">↗</span>
+                </div>
               </article>
             );
           })}
