@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { UserStats, Topic } from '../types';
+import { UserStats, Topic } from '../../shared/types';
 
 /**
  * Learner analytics: progress forecasting, error-pattern analysis, and the

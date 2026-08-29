@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Award, Sparkles, BookOpenCheck } from 'lucide-react';
-import { Problem, Topic, Level, SmartFeedback, UserStats } from '../types';
+import { Problem, Topic, Level, SmartFeedback, UserStats } from '../../shared/types';
 import { TOPIC_META, TOPIC_LIST, LEVEL_LIST, LEVEL_META } from '../lib/topics';
 import MathText from './MathText';
 import { apiUrl, apiFetch } from '../services/apiBase';

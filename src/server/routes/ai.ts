@@ -23,7 +23,7 @@
 
 import { Type } from '@google/genai';
 import type { ZodType } from 'zod';
-import type { Level, Topic } from '../../types';
+import type { Level, Topic } from '../../../shared/types';
 import { recordAttempt } from '../attempts';
 import { verifyAccessToken } from '../auth/supabaseAdmin';
 import { findProblem } from '../data';

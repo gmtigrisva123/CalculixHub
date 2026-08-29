@@ -22,7 +22,7 @@
  */
 
 import { z } from 'zod';
-import type { Level, Topic } from '../types';
+import type { Level, Topic } from '../../shared/types';
 
 export const TOPICS = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'] as const satisfies readonly Topic[];
 export const LEVELS = ['Foundation', 'Advanced', 'Olympiad'] as const satisfies readonly Level[];

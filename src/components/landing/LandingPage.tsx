@@ -18,7 +18,7 @@ import {
 import { AnimatedNumber } from '../motion';
 import { bankSummary, domainBankProfiles } from '../../domain/skillGraph';
 import { TOPIC_META } from '../../lib/topics';
-import type { Topic } from '../../types';
+import type { Topic } from '../../../shared/types';
 import HumanHeroPlayground from './HumanHeroPlayground';
 import InteractiveFormulaLab from './InteractiveFormulaLab';
 

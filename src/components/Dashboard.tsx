@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { Flame, Trophy, Percent, Clock, Sparkles, Brain, Calendar, AlertTriangle, ChevronRight } from 'lucide-react';
-import { UserStats, WeeklyChallenge, Contest, AIRecommendation, Topic, Level } from '../types';
+import { UserStats, WeeklyChallenge, Contest, AIRecommendation, Topic, Level } from '../../shared/types';
 import { TOPIC_META, getRankForPoints, formatMinutes } from '../lib/topics';
 import { getLastNDateKeys } from '../domain/streak';
 import { apiUrl } from '../services/apiBase';

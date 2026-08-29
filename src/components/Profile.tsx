@@ -6,7 +6,7 @@
 import React from 'react';
 import { m } from 'motion/react';
 import { LogOut } from 'lucide-react';
-import { UserStats, Problem } from '../types';
+import { UserStats, Problem } from '../../shared/types';
 import { TOPIC_META, getRankForPoints, nextRankFor } from '../lib/topics';
 import { spring } from '../lib/motion';
 import { AnimatedNumber, StaggerItem } from './motion';

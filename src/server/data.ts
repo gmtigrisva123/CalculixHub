@@ -20,7 +20,7 @@ import type {
   LeaderboardEntry,
   Problem,
   WeeklyChallenge,
-} from '../types';
+} from '../../shared/types';
 
 export const problems: Problem[] = [
   // --- ALGEBRA ---
