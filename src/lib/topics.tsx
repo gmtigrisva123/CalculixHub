@@ -5,7 +5,7 @@
 
 import type { CSSProperties } from 'react';
 import { Sigma, Triangle, Shuffle, Hash, type LucideIcon } from 'lucide-react';
-import { Topic, Level } from '../types';
+import { Topic, Level } from '../../shared/types';
 
 /**
  * A style object that may also carry CSS custom properties.

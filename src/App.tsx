@@ -15,7 +15,7 @@ import {
   CheckCircle,
   LogOut,
 } from 'lucide-react';
-import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from './types';
+import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from '../shared/types';
 import { computeStreak } from './domain/streak';
 import { apiUrl, isNativePlatform } from './services/apiBase';
 import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './platform/reminders';

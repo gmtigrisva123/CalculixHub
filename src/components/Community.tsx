@@ -6,7 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { MessageSquare, Sparkles, Send, ThumbsUp, ThumbsDown, Reply, Award, UserCheck, BadgeCheck } from 'lucide-react';
-import { CommunityDiscussion, Problem } from '../types';
+import { CommunityDiscussion, Problem } from '../../shared/types';
 import MathText from './MathText';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { StaggerItem } from './motion';

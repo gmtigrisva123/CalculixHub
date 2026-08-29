@@ -6,7 +6,7 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { Trophy, Calendar, Zap, HelpCircle, Check, Medal, Flag, Users2, Swords, Gauge, Target, Repeat, TrendingUp } from 'lucide-react';
-import { WeeklyChallenge, Contest, LeaderboardEntry, UserStats } from '../types';
+import { WeeklyChallenge, Contest, LeaderboardEntry, UserStats } from '../../shared/types';
 import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
 import { computeMetrics } from '../domain/analytics';
 import { duration, ease, spring, travel } from '../lib/motion';

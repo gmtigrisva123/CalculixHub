@@ -62,7 +62,7 @@ import {
 } from 'three';
 import { domainBankProfiles } from '../../domain/skillGraph';
 import { TOPIC_META } from '../../lib/topics';
-import type { Topic } from '../../types';
+import type { Topic } from '../../../shared/types';
 import { ItemCurvesPlot } from './plots';
 
 interface SkillGraphStageProps {

@@ -22,7 +22,7 @@
  *      is lost, and that is logged rather than surfaced as a failure.
  */
 
-import type { Problem } from '../types';
+import type { Problem } from '../../shared/types';
 import { adminClient } from './auth/supabaseAdmin';
 
 export interface RecordAttemptInput {

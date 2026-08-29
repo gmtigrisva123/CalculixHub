@@ -11,7 +11,7 @@ import {
   Globe, Shield, TrendingUp, Users, Check, X, Download,
   ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare, Compass
 } from 'lucide-react';
-import { Level, Topic } from '../types';
+import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
 import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';

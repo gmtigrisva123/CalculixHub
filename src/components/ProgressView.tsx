@@ -9,7 +9,7 @@ import { AreaChart, TrendingUp, AlertTriangle, BookOpen, Clock, Lightbulb, Radar
 // in-view draw, and every list below staggers itself. Wrapping the cards too
 // would animate the same content twice on one scroll.
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
-import { UserStats, Topic } from '../types';
+import { UserStats, Topic } from '../../shared/types';
 import { TOPIC_META, formatMinutes } from '../lib/topics';
 import { forecastProgress, analyzeErrorPatterns, buildLearningPath, computeMetrics } from '../domain/analytics';
 import RadarChart from './charts/RadarChart';
