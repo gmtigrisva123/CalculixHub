@@ -477,9 +477,15 @@ export default function Learn({
                           className="shrink-0"
                         >
                           {smartFeedback.correct ? (
-                            <div className="bg-proof-50 text-proof-700 border border-proof-100 p-1 rounded-full flex items-center justify-center"><CheckCircle className="w-4 h-4" /></div>
+                            <div className="bg-proof-50 dark:bg-proof-950/60 text-proof-700 dark:text-proof-300 border border-proof-200 p-2.5 rounded-card flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-4.5 h-4.5 text-proof-500 animate-bounce" />
+                                <span className="font-bold text-xs uppercase tracking-wider text-proof-700 dark:text-proof-200">Correct! Solution Unlocked</span>
+                              </div>
+                              <span className="cx-tag cx-tag-accent text-[10px] tracking-wider animate-pulse">+{activeProblem.points} PTS</span>
+                            </div>
                           ) : (
-                            <div className="bg-rose-50 text-rose-700 border border-rose-100 p-1 rounded-full flex items-center justify-center"><AlertCircle className="w-4 h-4" /></div>
+                            <div className="bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 p-1.5 rounded-full flex items-center justify-center"><AlertCircle className="w-4 h-4" /></div>
                           )}
                         </m.div>
                         <m.span

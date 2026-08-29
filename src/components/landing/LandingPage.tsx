@@ -31,6 +31,7 @@ import { bankSummary, domainBankProfiles } from '../../lib/skillGraph';
 import { TOPIC_META } from '../../lib/topics';
 import type { Topic } from '../../types';
 import { BankSpread, InformationPlot, ItemCurvesPlot } from './plots';
+import InteractiveRiddleStage from './InteractiveRiddleStage';
 /*
  * three.js is code-split, and that is not a micro-optimisation.
  *
@@ -383,6 +384,10 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
           standfirst="Scoring happens in your browser — no waiting, works offline. Here is what it does while you answer."
           accent="var(--ac)"
         />
+
+        <div className="mt-10">
+          <InteractiveRiddleStage onRegister={onRegister} />
+        </div>
 
         <div className="mt-14 grid gap-5 lg:grid-cols-3">
           <article className="cx-card cx-tint-algebra px-7 pt-7 pb-8">
