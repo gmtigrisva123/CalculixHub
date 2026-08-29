@@ -56,7 +56,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    "calculix_realtime_patch",
     "src/server",
     "api",
     "server.ts",
