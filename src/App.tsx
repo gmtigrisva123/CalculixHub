@@ -347,6 +347,14 @@ export default function App() {
     localStorage.setItem('calculix_stats', JSON.stringify(newStats));
   };
 
+  const handleRewardPoints = (pts: number) => {
+    const updatedUserStats: UserStats = {
+      ...userStats,
+      points: userStats.points + pts,
+    };
+    saveStatsToLocal(updatedUserStats);
+  };
+
   // Solve problem event trigger
   const handleSolveProblemStatus = (id: string, isCorrect: boolean, scorePoints: number) => {
     // 1. Update completed list if correct
@@ -675,6 +683,7 @@ export default function App() {
               onNavigateToTab={navigateWithFilters}
               onJoinChallenge={handleJoinChallenge}
               onJoinContest={handleJoinContest}
+              onRewardPoints={handleRewardPoints}
             />
           )}
 

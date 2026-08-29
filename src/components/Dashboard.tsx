@@ -14,6 +14,7 @@ import { duration, ease, spring, staggerDelay, travel } from '../lib/motion';
 import { useAmbient } from '../lib/useAmbient';
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 import { TiltCard, TiltLayer } from './surface';
+import DailyReflexWidget from './DailyReflexWidget';
 
 interface DashboardProps {
   userStats: UserStats;
@@ -22,6 +23,7 @@ interface DashboardProps {
   onNavigateToTab: (tab: string, arg?: { topic?: Topic; level?: Level }) => void;
   onJoinChallenge: (id: string) => void;
   onJoinContest: (id: string) => void;
+  onRewardPoints?: (pts: number) => void;
 }
 
 export default function Dashboard({
@@ -31,6 +33,7 @@ export default function Dashboard({
   onNavigateToTab,
   onJoinChallenge,
   onJoinContest,
+  onRewardPoints,
 }: DashboardProps) {
   const [recommendation, setRecommendation] = useState<AIRecommendation | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
@@ -131,6 +134,9 @@ export default function Dashboard({
           </div>
         </div>
       </section>
+
+      {/* Daily Math Reflex Warm-up Puzzle */}
+      <DailyReflexWidget onRewardXP={onRewardPoints} />
 
       {/*
         Stats.
