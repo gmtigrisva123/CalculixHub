@@ -25,7 +25,7 @@ export default function AITutorChat() {
     {
       id: 'init',
       sender: 'tutor',
-      text: "Hi, I'm the Calculix AI Tutor. I like to work through problems Socratically, from algebra to graph theory, rather than just handing you an answer. What are you stuck on, or what kind of problem would you like to train on?",
+      text: "Hello! I'm your Calculix Math Coach. I help you work through challenging competition problems step-by-step through guided reasoning. What concept or problem would you like to explore today?",
       timestamp: new Date(),
     },
   ]);
@@ -123,7 +123,7 @@ export default function AITutorChat() {
           ref={sparkleRef}
           className="w-5 h-5 animate-pulse group-hover:scale-110 transition-transform duration-160 ease-standard"
         />
-        <span className="font-bold tracking-wide text-sm">Ask AI Tutor</span>
+        <span className="font-bold tracking-wide text-sm">Ask Math Assistant</span>
         <div
           ref={pingRef}
           className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-proof-400 ring-2 ring-white animate-ping"
