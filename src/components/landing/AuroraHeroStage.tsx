@@ -1,5 +1,7 @@
 import { m, useTransform, MotionValue } from 'framer-motion';
 
+import MathText from '../MathText';
+
 interface AuroraHeroStageProps {
   progress: MotionValue<number>;
   still?: boolean;
@@ -74,7 +76,12 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
           transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
         />
 
-        {/* Floating Math Symbols */}
+        {/*
+          The drifting glyphs are set by KaTeX rather than typed as Unicode.
+          They are decoration, but they are decoration on a mathematics site,
+          and the body face's integral sign is a different shape from the one a
+          reader recognises from a textbook.
+        */}
         <div className="absolute inset-0 pointer-events-none text-white font-serif select-none mix-blend-overlay">
           {/* Integral */}
           <m.div 
@@ -82,7 +89,7 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
             animate={still ? undefined : { y: ['-5%', '5%', '-5%'], rotate: [-5, 5, -5] }}
             transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
           >
-            ∫
+            <MathText text="\(\int\)" />
           </m.div>
 
           {/* Summation */}
@@ -91,7 +98,7 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
             animate={still ? undefined : { y: ['5%', '-5%', '5%'], rotate: [5, -5, 5] }}
             transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
           >
-            Σ
+            <MathText text="\(\sum\)" />
           </m.div>
 
           {/* Pi */}
@@ -100,7 +107,7 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
             animate={still ? undefined : { y: ['-8%', '8%', '-8%'], rotate: [-10, 10, -10] }}
             transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
           >
-            π
+            <MathText text="\(\pi\)" />
           </m.div>
 
           {/* Infinity */}
@@ -109,7 +116,7 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
             animate={still ? undefined : { y: ['8%', '-8%', '8%'], rotate: [10, -10, 10] }}
             transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
           >
-            ∞
+            <MathText text="\(\infty\)" />
           </m.div>
 
           {/* Nabla / Gradient */}
@@ -118,7 +125,7 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
             animate={still ? undefined : { y: ['-4%', '4%', '-4%'], rotate: [-15, 15, -15] }}
             transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
           >
-            ∇
+            <MathText text="\(\nabla\)" />
           </m.div>
 
           {/* Theta */}
@@ -127,7 +134,7 @@ export default function AuroraHeroStage({ progress, still }: AuroraHeroStageProp
             animate={still ? undefined : { y: ['6%', '-6%', '6%'], rotate: [8, -8, 8] }}
             transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
           >
-            θ
+            <MathText text="\(\theta\)" />
           </m.div>
         </div>
       </m.div>
