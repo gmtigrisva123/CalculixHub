@@ -21,6 +21,7 @@ import { ITEM_BANK } from '../../domain/itemBank';
 import { itemInformation, probCorrect, type Domain, type IRTItem } from '../../domain/irt';
 import { domainBankProfiles, formatDifficulty } from '../../domain/skillGraph';
 import { ease } from '../../lib/motion';
+import MathText from '../MathText';
 
 /* -------------------------------------------------------------------------- */
 /* Shared plot frame                                                           */
@@ -62,6 +63,17 @@ function samplePath(f: (theta: number) => number, max: number): string {
   }
   return d;
 }
+
+/**
+ * The two axis captions are notation, so they are typeset rather than spelled.
+ *
+ * SVG `<text>` cannot hold KaTeX's markup, which is a box model of nested spans
+ * — so the captions go in a `<foreignObject>`, which is HTML laid out in the
+ * viewBox's own user units and therefore scales with the plot exactly as the
+ * `<text>` it replaces did. The boxes are wider than the captions on purpose:
+ * a formula that overflows a foreignObject is clipped rather than spilled.
+ */
+const AXIS_CAPTION = 'text-current opacity-45 text-[9px] leading-none whitespace-nowrap';
 
 /** The frame every plot shares: rules on the ticks, an axis, and theta labels. */
 function PlotFrame({ yTicks, yLabel }: { yTicks: { at: number; label: string }[]; yLabel: string }) {
@@ -109,22 +121,17 @@ function PlotFrame({ yTicks, yLabel }: { yTicks: { at: number; label: string }[]
         y2={H - PAD.bottom}
       />
 
-      <text
-        x={W - PAD.right}
-        y={H - 4}
-        textAnchor="end"
-        className="fill-current opacity-45 text-[9px] uppercase tracking-[0.14em]"
-      >
-        ability θ
-      </text>
-      <text
-        x={PAD.left}
-        y={PAD.top - 9}
-        textAnchor="start"
-        className="fill-current opacity-45 text-[9px] uppercase tracking-[0.14em]"
-      >
-        {yLabel}
-      </text>
+      <foreignObject x={W - PAD.right - 96} y={H - 15} width={96} height={14}>
+        <div className={`flex h-full items-center justify-end gap-[3px] ${AXIS_CAPTION}`}>
+          <span className="uppercase tracking-[0.14em]">ability</span>
+          <MathText text="\(\theta\)" />
+        </div>
+      </foreignObject>
+      <foreignObject x={PAD.left} y={PAD.top - 17} width={72} height={14}>
+        <div className={`flex h-full items-center ${AXIS_CAPTION}`}>
+          <MathText text={yLabel} />
+        </div>
+      </foreignObject>
     </g>
   );
 }
@@ -184,7 +191,7 @@ export function ItemCurvesPlot() {
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 w-full h-auto" role="img"
         aria-label="Item characteristic curves for the easiest, median and hardest items in the bank.">
         <PlotFrame
-          yLabel="P"
+          yLabel="\(P(\theta)\)"
           yTicks={[
             { at: toY(1, 1), label: '1.0' },
             { at: toY(0.5, 1), label: '0.5' },
@@ -264,7 +271,7 @@ export function InformationPlot() {
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 w-full h-auto" role="img"
         aria-label="Fisher information curves for the same three items, each peaking at its own difficulty.">
         <PlotFrame
-          yLabel="I(θ)"
+          yLabel="\(I(\theta)\)"
           yTicks={[
             { at: toY(top, top), label: top.toFixed(1) },
             { at: toY(top / 2, top), label: (top / 2).toFixed(1) },
