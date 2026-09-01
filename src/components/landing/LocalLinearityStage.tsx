@@ -54,6 +54,7 @@ import { useEffect, useRef } from 'react';
 import { m, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from 'motion/react';
 import { ITEM_BANK } from '../../domain/itemBank';
 import { probCorrect } from '../../domain/irt';
+import MathText from '../MathText';
 
 /* -------------------------------------------------------------------------- */
 /* Geometry                                                                    */
@@ -422,13 +423,15 @@ export default function LocalLinearityStage({ progress, still }: LocalLinearityS
             */}
             <div className="plot-strip absolute inset-x-0 top-0 hidden sm:flex items-center justify-between gap-4 px-4 py-2.5 text-[10.5px] sm:text-[11px] font-mono uppercase tracking-[0.14em] text-white/40 whitespace-nowrap">
               <span>
-                P(correct | <span className="font-serif italic tracking-normal lowercase">θ</span>) · 3PL
+                <MathText text="\(P(\text{correct} \mid \theta)\)" /> · 3PL
               </span>
               <span className="hidden lg:inline truncate">
                 {HERO_ITEM.source} · {HERO_ITEM.concept}
               </span>
               <span className="hidden sm:inline tnum">
-                a {HERO_ITEM.a.toFixed(1)} · b {HERO_ITEM.b.toFixed(1)} · c {HERO_ITEM.c.toFixed(2)}
+                <MathText text={`\\(a = ${HERO_ITEM.a.toFixed(1)}\\)`} /> ·{' '}
+                <MathText text={`\\(b = ${HERO_ITEM.b.toFixed(1)}\\)`} /> ·{' '}
+                <MathText text={`\\(c = ${HERO_ITEM.c.toFixed(2)}\\)`} />
               </span>
             </div>
 
@@ -438,7 +441,7 @@ export default function LocalLinearityStage({ progress, still }: LocalLinearityS
             <span className="plot-corner border-r border-b right-3 bottom-3" />
 
             <span className="absolute left-9 bottom-2.5 text-[10.5px] font-mono uppercase tracking-[0.16em] text-white/30">
-              ability <span className="font-serif italic tracking-normal lowercase">θ</span> →
+              ability <MathText text="\(\theta\)" /> →
             </span>
           </m.div>
         </div>
@@ -468,10 +471,10 @@ export default function LocalLinearityStage({ progress, still }: LocalLinearityS
         <div className="relative">
           <div className="absolute left-6 -top-1 whitespace-nowrap text-[11px] font-mono tnum text-azure-200/80 leading-[1.5]">
             <div>
-              <span className="font-serif italic">θ</span> = <Live value={thetaText} />
+              <MathText text="\(\theta\)" /> = <Live value={thetaText} />
             </div>
             <div className="text-white/45">
-              P = <Live value={probText} />
+              <MathText text="\(P\)" /> = <Live value={probText} />
             </div>
           </div>
         </div>
@@ -488,7 +491,7 @@ export default function LocalLinearityStage({ progress, still }: LocalLinearityS
             <Live value={zoomText} className="text-white/85" />
           </span>
           <span className="px-4 sm:px-5 py-2.5">
-            <span className="text-white/35">window <span className="font-serif italic lowercase tracking-normal">Δθ</span> </span>
+            <span className="text-white/35">window <MathText text="\(\Delta\theta\)" /> </span>
             <Live value={windowText} className="text-white/85" />
           </span>
           <span className="hidden sm:inline px-5 py-2.5 text-white/35 normal-case tracking-[0.06em]">
