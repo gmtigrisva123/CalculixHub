@@ -262,6 +262,24 @@ h1, h2, h3, h4,
 }
 
 /*
+ * Notation is set by KaTeX, not by the paragraph it sits in.
+ *
+ * Several of the labels that carry formulas -- the plotter bezel, the HUD, the
+ * eyebrow rows on the psychometrics panel -- are styled as instrument type:
+ * uppercase, letter-spaced, sometimes italic. Those are typographic decisions
+ * about the *label*, and every one of them is wrong for the maths inside it:
+ * `text-transform` turns a lowercase theta into a capital one, which is a
+ * different symbol, and tracking pushes a subscript off its base. Resetting the
+ * three inherited properties at the KaTeX root means a formula can be dropped
+ * into any label on the site without the label's styling corrupting it.
+ */
+.katex {
+  text-transform: none;
+  letter-spacing: normal;
+  font-style: normal;
+}
+
+/*
  * KaTeX inherits its colour, which is what makes it theme-aware for free — but
  * only as long as no ancestor sets an explicit colour on it. Stating it keeps a
  * formula legible when a card's own text colour changes at night.
