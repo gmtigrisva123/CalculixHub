@@ -49,7 +49,7 @@ const PLAYGROUND_ITEMS: MathPlaygroundItem[] = [
     latexProblem: 'How many positive integers less than $1000$ are divisible by neither $5$ nor $7$?',
     options: ['684', '686', '714', '720'],
     correctIdx: 1, // 999 - floor(999/5) - floor(999/7) + floor(999/35) = 999 - 199 - 142 + 28 = 686.
-    explanation: 'There are $999$ positive integers under $1000$. By Inclusion-Exclusion: $199$ are multiples of $5$, $142$ are multiples of $7$, and $28$ are multiples of $35$. Total excluded = $199 + 142 - 28 = 313$. Remaining = $999 - 313 = 686$.',
+    explanation: 'There are $999$ positive integers under $1000$. By inclusion-exclusion, $199$ are multiples of $5$, $142$ are multiples of $7$, and $28$ are multiples of $35$. Total excluded: $199 + 142 - 28 = 313$. Remaining: $999 - 313 = 686$.',
   },
 ];
 
