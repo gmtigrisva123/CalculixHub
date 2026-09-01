@@ -409,6 +409,14 @@ export default function App() {
     saveStatsToLocal(updatedUserStats);
   };
 
+  const handleRewardPoints = (pts: number) => {
+    const updatedUserStats: UserStats = {
+      ...userStats,
+      points: userStats.points + pts,
+    };
+    saveStatsToLocal(updatedUserStats);
+  };
+
   // Solve problem event trigger
   const handleSolveProblemStatus = (id: string, isCorrect: boolean, scorePoints: number) => {
     // 1. Update completed list if correct
