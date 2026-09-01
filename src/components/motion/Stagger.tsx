@@ -19,6 +19,7 @@ interface StaggerItemProps {
   /** Reveal on scroll instead of on mount. For lists below the fold. */
   inView?: boolean;
   as?: 'div' | 'li' | 'article' | 'tr';
+  onClick?: () => void;
 }
 
 /**
@@ -41,6 +42,7 @@ export function StaggerItem({
   max,
   inView = false,
   as = 'div',
+  onClick,
 }: StaggerItemProps) {
   const Component = m[as];
   const delay = staggerDelay(index, step, max);
@@ -50,6 +52,7 @@ export function StaggerItem({
   return (
     <Component
       className={className}
+      onClick={onClick}
       initial={{ opacity: 0, y: travel.sm }}
       {...(inView
         ? { whileInView: settled, viewport: { once: true, amount: 0.1 } }

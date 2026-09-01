@@ -5,10 +5,10 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { MessageSquare, Sparkles, Send, ThumbsUp, ThumbsDown, Reply, Award, UserCheck, BadgeCheck } from 'lucide-react';
+import { MessageSquare, Sparkles, Send, ThumbsUp, ThumbsDown, Award, UserCheck, BadgeCheck, Filter } from 'lucide-react';
 import { CommunityDiscussion, Problem } from '../../shared/types';
 import MathText from './MathText';
-import { duration, ease, spring, travel } from '../lib/motion';
+import { duration, ease, spring } from '../lib/motion';
 import { StaggerItem } from './motion';
 
 interface CommunityProps {
@@ -18,8 +18,7 @@ interface CommunityProps {
 }
 
 const VOTES_KEY = 'calculix_discussion_votes';
-
-type VoteMap = Record<string, number>; // discussionId -> net vote delta applied by this user
+type VoteMap = Record<string, number>;
 
 function loadVotes(): VoteMap {
   try {
@@ -38,7 +37,9 @@ export default function Community({ discussions, problems, onAddComment }: Commu
     localStorage.setItem(VOTES_KEY, JSON.stringify(votes));
   }, [votes]);
 
-  const filteredDiscussions = discussions.filter((disc) => selectedProblemId === 'All' || disc.problemId === selectedProblemId);
+  const filteredDiscussions = discussions.filter(
+    (disc) => selectedProblemId === 'All' || disc.problemId === selectedProblemId
+  );
 
   const handlePostComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +62,6 @@ export default function Community({ discussions, problems, onAddComment }: Commu
   const castVote = (id: string, delta: 1 | -1) => {
     setVotes((prev) => {
       const current = prev[id] || 0;
-      // Clicking the same direction again clears the vote; switching direction flips it.
       const next = current === delta ? 0 : delta;
       return { ...prev, [id]: next };
     });
@@ -69,7 +69,6 @@ export default function Community({ discussions, problems, onAddComment }: Commu
 
   const isVerifiedSolution = (disc: CommunityDiscussion) => disc.role === 'Mentor' || disc.role === 'Admin';
 
-  // Data-driven contributor ranking, replacing what used to be hardcoded names.
   const topContributors = useMemo(() => {
     const counts = new Map<string, number>();
     for (const disc of discussions) {
@@ -78,49 +77,46 @@ export default function Community({ discussions, problems, onAddComment }: Commu
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
   }, [discussions]);
 
-  // Data-driven featured solution: highest-voted verified (Mentor/Admin) post.
-  const featuredSolution = useMemo(() => {
-    const verified = discussions.filter(isVerifiedSolution);
-    if (verified.length === 0) return null;
-    return [...verified].sort((a, b) => (b.likes + (votes[b.id] || 0)) - (a.likes + (votes[a.id] || 0)))[0];
-  }, [discussions, votes]);
-
-  const medal = (idx: number) => (idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉');
-
   return (
     <div className="space-y-8">
-      <div className="border-b border-stone-100 pb-4">
-        <h1 className="type-title text-content flex items-center gap-2">
-          <MessageSquare className="w-7 h-7 text-proof-600" /> Discussions &amp; Solutions
+      {/* Header */}
+      <div className="border-b border-line pb-4">
+        <p className="type-eyebrow text-emerald-500 font-mono text-xs uppercase">Mathematical Forum &amp; Discussions</p>
+        <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
+          <MessageSquare className="w-6 h-6 text-emerald-500" /> Community Solutions
         </h1>
-        <p className="text-xs text-stone-500 mt-1">
-          Problem-centric discussion &mdash; post a solution, critique reasoning, and learn from mentors and peers.
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Main Discussion Feed */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-stone-50 border border-stone-150 p-4 rounded-card space-y-2 select-none">
-            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Filter by problem</span>
-            <div className="flex gap-2 overflow-x-auto pb-1 scroll-smooth">
+          {/* Problem Filter Bar */}
+          <div className="cx-glass-panel p-4 space-y-2">
+            <span className="text-[10px] font-bold text-content-subtle uppercase tracking-wider block font-mono">
+              Filter Threads by Problem
+            </span>
+            <div className="flex gap-2 overflow-x-auto pb-1">
               <m.button
                 onClick={() => setSelectedProblemId('All')}
                 whileTap={{ scale: 0.95 }}
-                transition={spring.press}
-                className={`text-xs font-bold px-4 py-2 rounded-control border whitespace-nowrap transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer ${
-                  selectedProblemId === 'All' ? 'bg-ink-950 border-ink-950 text-white' : 'bg-surface-raised border-stone-200 text-stone-600 hover:bg-stone-50'
+                className={`text-xs font-mono font-semibold px-3.5 py-1.5 rounded-lg border whitespace-nowrap transition-colors ${
+                  selectedProblemId === 'All'
+                    ? 'border-indigo-500 bg-indigo-500/15 text-indigo-500'
+                    : 'border-line bg-surface-sunken/40 text-content-subtle hover:border-line-strong'
                 }`}
               >
-                All threads
+                All Threads
               </m.button>
+
               {problems.map((prob) => (
                 <m.button
                   key={prob.id}
                   onClick={() => setSelectedProblemId(prob.id)}
                   whileTap={{ scale: 0.95 }}
-                  transition={spring.press}
-                  className={`text-xs font-bold px-4 py-2 rounded-control border whitespace-nowrap transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer ${
-                    selectedProblemId === prob.id ? 'bg-ink-950 border-ink-950 text-white' : 'bg-surface-raised border-stone-200 text-stone-600 hover:bg-stone-50'
+                  className={`text-xs font-mono font-semibold px-3.5 py-1.5 rounded-lg border whitespace-nowrap transition-colors ${
+                    selectedProblemId === prob.id
+                      ? 'border-indigo-500 bg-indigo-500/15 text-indigo-500'
+                      : 'border-line bg-surface-sunken/40 text-content-subtle hover:border-line-strong'
                   }`}
                 >
                   {prob.title}
@@ -129,195 +125,116 @@ export default function Community({ discussions, problems, onAddComment }: Commu
             </div>
           </div>
 
-          <form onSubmit={handlePostComment} className="bg-surface-raised border border-stone-100 rounded-panel p-5 shadow-e1 space-y-4">
+          {/* Post Creation Form */}
+          <form onSubmit={handlePostComment} className="cx-glass-panel p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-violet-500" />
-              <h3 className="font-semibold text-xs uppercase tracking-wider text-stone-700">Post a solution or question</h3>
+              <Sparkles className="w-5 h-5 text-indigo-500" />
+              <h3 className="font-semibold text-sm text-content">Post a Solution or Explanation</h3>
             </div>
 
-            <div className="space-y-3">
-              <textarea
-                id="field-community-comment"
-                placeholder={
-                  selectedProblemId === 'All'
-                    ? 'Pick a specific problem above to start a focused discussion...'
-                    : `Got an interesting approach to "${problems.find((p) => p.id === selectedProblemId)?.title}"? Share it here...`
-                }
-                value={newCommentText}
-                onChange={(e) => setNewCommentText(e.target.value)}
-                rows={3}
-                className="w-full border border-stone-200 focus:border-stone-900 rounded-card p-4 text-xs font-medium outline-hidden transition-[border-color] duration-160 ease-standard text-stone-800 bg-stone-50 placeholder:text-stone-400"
-              />
+            <textarea
+              id="field-community-comment"
+              placeholder={
+                selectedProblemId === 'All'
+                  ? 'Select a problem above to start a dedicated thread...'
+                  : `Share your mathematical approach or solution for "${problems.find((p) => p.id === selectedProblemId)?.title}"...`
+              }
+              value={newCommentText}
+              onChange={(e) => setNewCommentText(e.target.value)}
+              rows={3}
+              className="w-full p-4 rounded-xl border border-line bg-surface-sunken/60 text-content text-xs font-mono focus:outline-hidden focus:border-indigo-500"
+            />
 
-              <div className="flex justify-between items-center bg-stone-50/50 p-2 rounded-control">
-                <span className="text-[11px] text-stone-400 font-semibold italic">* Keep it constructive &mdash; explain your reasoning, don't just paste an answer.</span>
-                <m.button
-                  id="btn-submit-comment"
-                  type="submit"
-                  disabled={!newCommentText.trim()}
-                  whileTap={{ scale: 0.95 }}
-                  transition={spring.press}
-                  className="bg-content hover:bg-content-muted text-surface-raised font-bold text-xs px-4.5 py-2 rounded-control transition-[background-color,opacity] duration-160 ease-standard shadow-e2 disabled:opacity-40 cursor-pointer flex items-center gap-1.5 shrink-0"
-                >
-                  <Send className="w-3.5 h-3.5" /> Post
-                </m.button>
-              </div>
+            <div className="flex justify-end">
+              <m.button
+                type="submit"
+                disabled={!newCommentText.trim()}
+                whileTap={{ scale: 0.96 }}
+                className="cx-btn cx-btn-fill px-5 py-2 rounded-xl text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" /> Post Discussion
+              </m.button>
             </div>
           </form>
 
-          <div className="space-y-4 pt-1">
-            {filteredDiscussions.length === 0 && (
-              <div className="text-center py-12 bg-surface-raised rounded-card border border-dashed border-stone-200 text-stone-400 text-sm">
-                No discussion here yet &mdash; be the first to post.
-              </div>
-            )}
-            {/*
-              A newly posted thread is prepended to this list. AnimatePresence
-              plus `layout` means it expands into place and pushes the existing
-              threads down, rather than the whole column jumping by the height
-              of a card the moment Post is pressed.
-            */}
-            <AnimatePresence initial={false}>
+          {/* Thread Cards */}
+          <div className="space-y-4">
             {filteredDiscussions.map((disc, index) => {
-              const myVote = votes[disc.id] || 0;
-              const netLikes = disc.likes + myVote;
-              const verified = isVerifiedSolution(disc);
+              const currentVote = votes[disc.id] || 0;
+              const netLikes = disc.likes + currentVote;
+
               return (
-                <m.div
-                  key={disc.id}
-                  layout
-                  initial={{ opacity: 0, y: -travel.sm, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97, transition: { duration: duration.fast, ease: ease.exit } }}
-                  transition={{ ...spring.smooth, delay: Math.min(index * 0.03, 0.18) }}
-                  className="bg-surface-raised border border-stone-100 rounded-panel p-5 md:p-6 shadow-e1 space-y-4 transition-[border-color] duration-160 ease-standard hover:border-stone-200"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-stone-100 border border-stone-150 flex items-center justify-center font-bold text-sm text-stone-600 select-none">
-                        {disc.user.substring(0, 1)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-stone-900">{disc.user}</span>
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                            disc.role === 'Mentor' ? 'bg-azure-50 text-azure-700 border border-azure-100'
-                            : disc.role === 'Admin' ? 'bg-rose-50 text-rose-700 border border-rose-100'
-                            : 'bg-stone-50 text-stone-600 border border-stone-150'
-                          }`}>
-                            {disc.role}
+                <StaggerItem key={disc.id} index={index} className="cx-glass-panel p-6 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-content text-sm">{disc.user}</span>
+                        <span className="cx-tag cx-tag-accent text-[9px]">{disc.role}</span>
+                        {isVerifiedSolution(disc) && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            <BadgeCheck className="w-3.5 h-3.5" /> Verified Solution
                           </span>
-                          {verified && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-proof-50 text-proof-700 border border-proof-100">
-                              <BadgeCheck className="w-3 h-3" /> Verified
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-stone-400 font-medium block mt-0.5">{disc.timestamp}</span>
+                        )}
                       </div>
+                      <span className="text-[11px] font-mono text-content-subtle">{disc.problemTitle}</span>
                     </div>
 
-                    <span className="text-[11px] font-bold text-stone-450 bg-stone-50 border border-stone-100 px-2.5 py-1 rounded-md block">{disc.problemTitle}</span>
+                    <span className="text-[11px] font-mono text-content-subtle">{disc.timestamp}</span>
                   </div>
 
-                  <MathText text={disc.content} as="p" className="text-xs text-stone-700 leading-relaxed" />
+                  <div className="text-xs text-content leading-relaxed font-mono">
+                    <MathText text={disc.content} />
+                  </div>
 
-                  <div className="flex items-center gap-4 border-t border-stone-100 pt-3 text-xs select-none">
-                    <div className="flex items-center gap-1.5">
-                      {/*
-                        Voting is a one-tap action with a tiny visual result —
-                        an icon fills in and a number changes by one. The kick
-                        on press is what confirms the tap registered at all.
-                      */}
-                      <m.button
-                        onClick={() => castVote(disc.id, 1)}
-                        whileTap={{ scale: 0.8 }}
-                        animate={{ scale: myVote === 1 ? 1.12 : 1 }}
-                        transition={spring.press}
-                        className={`hover:text-azure-600 transition-colors duration-160 ease-standard cursor-pointer ${myVote === 1 ? 'text-azure-600' : 'text-stone-400'}`}
-                        title="Upvote"
-                      >
-                        <ThumbsUp className={`w-4 h-4 ${myVote === 1 ? 'fill-azure-500 text-azure-500' : ''}`} />
-                      </m.button>
-                      <span className="font-mono font-bold text-stone-600 w-6 text-center overflow-hidden">
-                        <AnimatePresence mode="wait" initial={false}>
-                          <m.span
-                            key={netLikes}
-                            className="block"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: duration.fast, ease: ease.standard }}
-                          >
-                            {netLikes}
-                          </m.span>
-                        </AnimatePresence>
-                      </span>
-                      <m.button
-                        onClick={() => castVote(disc.id, -1)}
-                        whileTap={{ scale: 0.8 }}
-                        animate={{ scale: myVote === -1 ? 1.12 : 1 }}
-                        transition={spring.press}
-                        className={`hover:text-rose-600 transition-colors duration-160 ease-standard cursor-pointer ${myVote === -1 ? 'text-rose-600' : 'text-stone-400'}`}
-                        title="Downvote"
-                      >
-                        <ThumbsDown className={`w-4 h-4 ${myVote === -1 ? 'fill-rose-500 text-rose-500' : ''}`} />
-                      </m.button>
-                    </div>
+                  {/* Voting & Actions Bar */}
+                  <div className="flex items-center gap-3 pt-3 border-t border-line text-xs font-mono">
+                    <button
+                      type="button"
+                      onClick={() => castVote(disc.id, 1)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border transition-colors ${
+                        currentVote === 1
+                          ? 'border-emerald-500 bg-emerald-500/15 text-emerald-500'
+                          : 'border-line bg-surface-sunken/40 text-content-subtle hover:border-line-strong'
+                      }`}
+                    >
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <span>{netLikes}</span>
+                    </button>
 
-                    <button className="flex items-center gap-1.5 text-stone-400 hover:text-stone-800 transition-colors font-semibold">
-                      <Reply className="w-4 h-4" />
-                      <span>{disc.replies} replies</span>
+                    <button
+                      type="button"
+                      onClick={() => castVote(disc.id, -1)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border transition-colors ${
+                        currentVote === -1
+                          ? 'border-rose-500 bg-rose-500/15 text-rose-500'
+                          : 'border-line bg-surface-sunken/40 text-content-subtle hover:border-line-strong'
+                      }`}
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </m.div>
+                </StaggerItem>
               );
             })}
-            </AnimatePresence>
           </div>
         </div>
 
+        {/* Right Sidebar: Top Contributors */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="ramp-static bg-ink-950 border border-ink-850 text-white rounded-panel p-5 shadow-e2 relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-24 h-24 bg-violet-500/10 rounded-full blur-xl pointer-events-none" />
+          <div className="cx-glass-panel p-6 space-y-4">
+            <h3 className="type-title text-base font-bold text-content flex items-center gap-2">
+              <Award className="w-5 h-5 text-amber-500" /> Top Contributors
+            </h3>
 
-            <div className="flex items-center gap-2 mb-3.5 text-violet-300">
-              <Award className="w-4.5 h-4.5" />
-              <h3 className="font-semibold text-xs uppercase tracking-wider">Featured Solution</h3>
-            </div>
-
-            {featuredSolution ? (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-xs text-stone-200">{featuredSolution.problemTitle}</h4>
-                <MathText text={featuredSolution.content} as="p" className="text-[12px] text-stone-400 leading-relaxed line-clamp-4" />
-                <div className="flex items-center justify-between border-t border-ink-800 pt-3 mt-4 text-[11px]">
-                  <span className="text-stone-500 font-semibold">By {featuredSolution.user}</span>
-                  <span className="text-violet-400 font-bold">{featuredSolution.likes + (votes[featuredSolution.id] || 0)} votes</span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-[12px] text-stone-500 leading-relaxed">No mentor-verified solution yet &mdash; once a Mentor or Admin posts one, the highest-voted answer appears here.</p>
-            )}
-          </div>
-
-          <div className="bg-surface-raised border border-stone-100 rounded-panel p-5 shadow-e1 space-y-4">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-sm text-stone-900 flex items-center gap-1.5 font-serif">
-                <UserCheck className="w-4.5 h-4.5 text-proof-600" /> Top Contributors
-              </h3>
-              <p className="text-[11px] text-stone-400">Ranked by number of posts in this discussion feed.</p>
-            </div>
-
-            <div className="space-y-3.5 pt-1 text-xs">
-              {topContributors.length === 0 && <p className="text-stone-400 text-[12px]">No contributions yet.</p>}
-              {topContributors.map(([user, count], idx) => (
-                <StaggerItem key={user} index={idx} inView className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-stone-400 w-4">{medal(idx)}</span>
-                    <span className="font-bold text-stone-800">{user}</span>
+            <div className="space-y-3">
+              {topContributors.map(([name, count], idx) => (
+                <div key={name} className="flex items-center justify-between p-3 rounded-xl border border-line bg-surface-sunken/30">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-mono text-sm">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>
+                    <span className="font-semibold text-content text-xs">{name}</span>
                   </div>
-                  <span className="text-[11px] bg-stone-100 font-semibold px-2 py-0.5 rounded-md text-stone-600 shrink-0">{count} posts</span>
-                </StaggerItem>
+                  <span className="text-xs font-mono font-bold text-indigo-500">{count} posts</span>
+                </div>
               ))}
             </div>
           </div>

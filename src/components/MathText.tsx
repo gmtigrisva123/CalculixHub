@@ -12,7 +12,9 @@ import katex from 'katex';
 // text nodes (escaped by React), only the KaTeX-generated markup for the
 // matched math segments is trusted HTML, so this is safe to use on
 // user-submitted community content as well as seeded problem content.
-const SEGMENT_PATTERN = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$([^$\n]+?)\$/g;
+// Recognizes $$...$$, \[...\], \(...\), $...$, and \begin{env}...\end{env} segments
+const SEGMENT_PATTERN =
+  /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$([^$\n]+?)\$|\\begin\{([a-z*]+)\}([\s\S]+?)\\end\{\5\}/g;
 
 interface Segment {
   type: 'text' | 'math';
@@ -31,7 +33,7 @@ function parseSegments(source: string): Segment[] {
       segments.push({ type: 'text', content: source.slice(lastIndex, match.index), display: false });
     }
 
-    const [, displayDollar, displayBracket, inlineParen, inlineDollar] = match;
+    const [, displayDollar, displayBracket, inlineParen, inlineDollar, envName, envBody] = match;
     if (displayDollar !== undefined) {
       segments.push({ type: 'math', content: displayDollar, display: true });
     } else if (displayBracket !== undefined) {
@@ -40,6 +42,8 @@ function parseSegments(source: string): Segment[] {
       segments.push({ type: 'math', content: inlineParen, display: false });
     } else if (inlineDollar !== undefined) {
       segments.push({ type: 'math', content: inlineDollar, display: false });
+    } else if (envName !== undefined && envBody !== undefined) {
+      segments.push({ type: 'math', content: `\\begin{${envName}}${envBody}\\end{${envName}}`, display: true });
     }
 
     lastIndex = SEGMENT_PATTERN.lastIndex;
@@ -64,6 +68,50 @@ function renderMath(expr: string, display: boolean): string {
   }
 }
 
+/** Render basic markdown bold, italic, code, and linebreaks inside text segments */
+function renderMarkdownText(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  return lines.map((line, lineIdx) => {
+    // Process markdown formatting (**bold**, *italic*, `code`)
+    const parts: React.ReactNode[] = [];
+    const mdPattern = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`)/g;
+    let lastIdx = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = mdPattern.exec(line)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(line.slice(lastIdx, match.index));
+      }
+
+      const [full, , bold, italic, code] = match;
+      if (bold !== undefined) {
+        parts.push(<strong key={`${lineIdx}-${match.index}`} className="font-bold">{bold}</strong>);
+      } else if (italic !== undefined) {
+        parts.push(<em key={`${lineIdx}-${match.index}`} className="italic">{italic}</em>);
+      } else if (code !== undefined) {
+        parts.push(
+          <code key={`${lineIdx}-${match.index}`} className="px-1 py-0.5 rounded bg-surface-sunken font-mono text-xs">
+            {code}
+          </code>
+        );
+      }
+
+      lastIdx = mdPattern.lastIndex;
+    }
+
+    if (lastIdx < line.length) {
+      parts.push(line.slice(lastIdx));
+    }
+
+    return (
+      <React.Fragment key={lineIdx}>
+        {parts}
+        {lineIdx < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
+}
+
 interface MathTextProps {
   text: string;
   className?: string;
@@ -77,21 +125,12 @@ export default function MathText({ text, className, as: Tag = 'span' }: MathText
     <Tag className={className}>
       {segments.map((seg, idx) => {
         if (seg.type === 'text') {
-          return (
-            <React.Fragment key={idx}>
-              {seg.content.split('\n').map((line, lineIdx, arr) => (
-                <React.Fragment key={lineIdx}>
-                  {line}
-                  {lineIdx < arr.length - 1 && <br />}
-                </React.Fragment>
-              ))}
-            </React.Fragment>
-          );
+          return <React.Fragment key={idx}>{renderMarkdownText(seg.content)}</React.Fragment>;
         }
         return (
           <span
             key={idx}
-            className={seg.display ? 'block my-2 overflow-x-auto' : undefined}
+            className={seg.display ? 'block my-2 overflow-x-auto text-center' : 'inline-block px-0.5'}
             // eslint-disable-next-line react/no-danger
             dangerouslySetInnerHTML={{ __html: renderMath(seg.content, seg.display) }}
           />

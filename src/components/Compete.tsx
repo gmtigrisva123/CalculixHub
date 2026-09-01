@@ -5,12 +5,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { Trophy, Calendar, Zap, HelpCircle, Check, Medal, Flag, Users2, Swords, Gauge, Target, Repeat, TrendingUp } from 'lucide-react';
+import { Trophy, Calendar, Zap, Medal, Flag, Users2, Swords, Gauge, Target, Repeat, TrendingUp, ChevronRight } from 'lucide-react';
 import { WeeklyChallenge, Contest, LeaderboardEntry, UserStats } from '../../shared/types';
 import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
 import { computeMetrics } from '../domain/analytics';
-import { duration, ease, spring, travel } from '../lib/motion';
-import { useAmbient } from '../hooks/useAmbient';
+import { duration, ease, spring } from '../lib/motion';
 import { AnimatedNumber, StaggerItem } from './motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -40,15 +39,11 @@ export default function Compete({
   const [dimension, setDimension] = useState<RankDimension>('points');
   const [registeredChallengeId, setRegisteredChallengeId] = useState<string | null>(null);
 
-  // Same fix as Profile: `calculix_user_name` has had no writer since accounts
-  // moved into Postgres, so this always fell through to "You" and the learner
-  // never saw their own name on the leaderboard they appear in.
   const { profile } = useAuth();
   const userName = profile?.display_name || profile?.username || 'You';
   const userAge = 16;
   const userCountry = 'Vietnam';
 
-  // The current learner's own four-axis metrics, computed from real activity.
   const myMetrics = useMemo(() => computeMetrics(userStats), [userStats]);
 
   const displayLeaderboard = useMemo(() => {
@@ -85,14 +80,13 @@ export default function Compete({
     return scoped.map((entry, idx) => ({ ...entry, rank: idx + 1 }));
   }, [leaderboard, userName, userPoints, activeAxis, dimension, myMetrics]);
 
-  const dimensions: { key: RankDimension; label: string; icon: typeof Gauge; unit: string }[] = [
-    { key: 'points', label: 'Points', icon: Trophy, unit: 'pts' },
-    { key: 'speed', label: 'Speed', icon: Gauge, unit: '' },
-    { key: 'accuracy', label: 'Accuracy', icon: Target, unit: '' },
-    { key: 'consistency', label: 'Consistency', icon: Repeat, unit: '' },
-    { key: 'improvement', label: 'Improvement', icon: TrendingUp, unit: '' },
+  const dimensions: { key: RankDimension; label: string; icon: typeof Gauge }[] = [
+    { key: 'points', label: 'Points', icon: Trophy },
+    { key: 'speed', label: 'Speed', icon: Gauge },
+    { key: 'accuracy', label: 'Accuracy', icon: Target },
+    { key: 'consistency', label: 'Consistency', icon: Repeat },
+    { key: 'improvement', label: 'Improvement', icon: TrendingUp },
   ];
-  const activeDimension = dimensions.find((d) => d.key === dimension)!;
 
   const rank = getRankForPoints(userPoints);
   const next = nextRankFor(userPoints);
@@ -106,396 +100,230 @@ export default function Compete({
   const axisTabs: { key: LeaderboardAxis; label: string; icon: typeof Flag }[] = [
     { key: 'Global', label: 'Global', icon: Trophy },
     { key: 'Country', label: 'Country', icon: Flag },
-    { key: 'Cohort', label: 'Age group', icon: Users2 },
+    { key: 'Cohort', label: 'Age Group', icon: Users2 },
   ];
 
   return (
     <div className="space-y-8">
-      <div className="border-b border-stone-100 pb-4">
-        <h1 className="type-title text-content flex items-center gap-2">
-          <Trophy className="w-7 h-7 text-azure-600" /> Competition System
-        </h1>
-        <p className="text-xs text-stone-500 mt-1">
-          Join live weekly sprints, sit monthly timed contests, and climb the ranked ladder from Beginner to Elite.
-        </p>
+      {/* Header */}
+      <div className="border-b border-line pb-4 flex items-center justify-between">
+        <div>
+          <p className="type-eyebrow text-amber-500 font-mono text-xs uppercase">Competition Arena</p>
+          <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-amber-500" /> Contest &amp; Leaderboard
+          </h1>
+        </div>
+        <span className="text-xs font-mono text-content-subtle">{userPoints} Total Points</span>
       </div>
 
-      {/* Skill ladder progress */}
-      <div className="cx-card p-5.5 space-y-3">
+      {/* Skill Ladder Progress */}
+      <div className="cx-glass-panel p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className={`text-[11px] font-bold uppercase px-2.5 py-1 rounded-lg border ${rank.bg} ${rank.text} ${rank.border}`}>{rank.name}</span>
-            <span className="text-xs text-stone-500">Your current skill tier &mdash; {userPoints} pts</span>
+            <span className="text-xs font-bold uppercase px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-500">
+              {rank.name}
+            </span>
+            <span className="text-xs text-content-subtle font-mono">Current Rank Tier &mdash; {userPoints} pts</span>
           </div>
-          {next && <span className="text-[12px] text-stone-400 font-medium">{next.minPoints - userPoints} pts to {next.name}</span>}
+          {next && (
+            <span className="text-xs font-mono text-content-subtle">
+              {next.minPoints - userPoints} pts to <span className="font-bold text-indigo-500">{next.name}</span>
+            </span>
+          )}
         </div>
-        <div className="grid grid-cols-4 gap-1.5">
+
+        <div className="grid grid-cols-4 gap-2">
           {RANK_TIERS.map((tier, index) => {
             const active = tier.name === rank.name;
             const reached = userPoints >= tier.minPoints;
             return (
-              /*
-                The ladder fills left to right as tiers are reached. Scaling on
-                the x axis from the left edge is the cheapest possible way to
-                say "you have got this far", and reads as a single continuous
-                bar rather than four independent blocks.
-              */
               <m.div
                 key={tier.name}
                 title={tier.name}
-                className={`h-2 rounded-full origin-left ${reached ? (active ? 'bg-azure-600' : 'bg-proof-500') : 'bg-stone-150'}`}
-                initial={{ scaleX: 0, opacity: 0 }}
-                animate={{ scaleX: 1, opacity: 1 }}
+                className={`h-2.5 rounded-full ${
+                  reached ? (active ? 'bg-indigo-500 shadow-md shadow-indigo-500/30' : 'bg-emerald-500') : 'bg-line'
+                }`}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
                 transition={{ ...spring.smooth, delay: index * 0.06 }}
               />
             );
           })}
         </div>
-        <div className="grid grid-cols-4 text-center text-[11px] font-bold uppercase text-stone-400">
-          {RANK_TIERS.map((t) => <span key={t.name}>{t.name}</span>)}
+
+        <div className="grid grid-cols-4 text-center text-[10px] font-bold font-mono uppercase text-content-subtle">
+          {RANK_TIERS.map((t) => (
+            <span key={t.name}>{t.name}</span>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
-        <div className="lg:col-span-7 space-y-6">
-
+      {/* Contests & Leaderboard Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Contests & Challenges */}
+        <div className="lg:col-span-6 space-y-6">
           {/* Monthly Contests */}
-          <div className="space-y-4">
-            <h2 className="type-title text-[23px] flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-stone-700" /> Monthly Contests
+          <div className="cx-glass-panel p-6 space-y-4">
+            <h2 className="type-title text-lg font-bold text-content flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-indigo-500" /> Monthly Contests
             </h2>
 
             <div className="space-y-3">
-              {contests.length === 0 && (
-                <div className="text-center py-8 bg-surface-raised rounded-card border border-dashed border-stone-200 text-stone-400 text-xs">No contests scheduled right now.</div>
-              )}
-              {contests.map((cont, index) => (
-                <StaggerItem
-                  key={cont.id}
-                  index={index}
-                  className={`bg-surface-raised border rounded-card p-5 hover:border-stone-300 transition-[border-color,opacity] duration-160 ease-standard ${cont.status === 'past' ? 'opacity-70' : ''}`}
-                >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1">
-                      <div className="flex gap-2 items-center">
-                        <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded-md ${
-                          cont.status === 'past' ? 'bg-stone-100 text-stone-500 border border-stone-200' : 'bg-rose-50 text-rose-700 border border-rose-100 animate-pulse'
-                        }`}>
-                          {cont.status === 'past' ? 'Finished' : 'Open for registration'}
-                        </span>
-                        <span className="text-[11px] text-stone-400 font-bold uppercase">{cont.problemCount} problems</span>
+              {contests.length === 0 ? (
+                <div className="text-center py-8 border border-dashed border-line rounded-xl text-xs text-content-subtle font-mono">
+                  No contests scheduled currently.
+                </div>
+              ) : (
+                contests.map((cont, index) => (
+                  <StaggerItem
+                    key={cont.id}
+                    index={index}
+                    className="p-4 rounded-xl border border-line bg-surface-sunken/40 space-y-3 hover:border-indigo-500/40 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            {cont.status}
+                          </span>
+                          <span className="text-xs font-mono text-content-subtle">{cont.problemCount} Problems</span>
+                        </div>
+                        <h3 className="font-semibold text-content text-sm">{cont.title}</h3>
                       </div>
-                      <h3 className="font-semibold text-stone-800 text-sm">{cont.title}</h3>
+                      <span className="text-xs font-mono font-bold text-indigo-500">{cont.duration}</span>
                     </div>
-                    <div className="text-right text-xs shrink-0 font-semibold text-stone-500">{cont.duration}</div>
-                  </div>
 
-                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-stone-100 pt-3">
-                    <div className="text-xs text-stone-500 font-medium">
-                      Date: <span className="text-stone-900 font-semibold">{cont.date}</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-line text-xs font-mono">
+                      <span className="text-content-subtle">Date: <strong className="text-content">{cont.date}</strong></span>
+                      <m.button
+                        onClick={() => onJoinContest(cont.id)}
+                        disabled={cont.status === 'past'}
+                        whileTap={{ scale: 0.95 }}
+                        className="cx-btn cx-btn-primary px-3 py-1.5 rounded-lg text-xs"
+                      >
+                        {cont.status === 'past' ? 'Finished' : 'Register / Enter'}
+                      </m.button>
                     </div>
-                    <m.button
-                      onClick={() => onJoinContest(cont.id)}
-                      disabled={cont.status === 'past'}
-                      whileTap={cont.status === 'past' ? undefined : { scale: 0.95 }}
-                      transition={spring.press}
-                      className={`text-xs font-bold px-4 py-2 rounded-control transition-[background-color,box-shadow,color,border-color] duration-160 ease-standard cursor-pointer ${
-                        cont.joined ? 'bg-proof-50 text-proof-700 border border-proof-100'
-                        : cont.status === 'past' ? 'bg-stone-50 text-stone-300 border border-stone-100 pointer-events-none'
-                        : 'bg-content hover:bg-content-muted text-surface-raised hover:shadow-e1'
-                      }`}
-                    >
-                      <AnimatePresence mode="wait" initial={false}>
-                        <m.span
-                          key={cont.joined ? 'registered' : cont.status === 'past' ? 'ended' : 'register'}
-                          className="block"
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          transition={{ duration: duration.fast, ease: ease.standard }}
-                        >
-                          {cont.joined ? 'Registered' : cont.status === 'past' ? 'Ended' : 'Register'}
-                        </m.span>
-                      </AnimatePresence>
-                    </m.button>
-                  </div>
-                </StaggerItem>
-              ))}
+                  </StaggerItem>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Weekly Challenges */}
-          <div className="space-y-4">
-            <h2 className="type-title text-[23px] flex items-center gap-2">
-              <Zap className="w-5 h-5 text-azure-600 shrink-0" /> Weekly Challenges
+          {/* Weekly Sprints */}
+          <div className="cx-glass-panel p-6 space-y-4">
+            <h2 className="type-title text-lg font-bold text-content flex items-center gap-2">
+              <Zap className="w-5 h-5 text-amber-500" /> Weekly Sprints
             </h2>
 
-            <div className="space-y-3.5">
-              {weeklyChallenges.length === 0 && (
-                <div className="text-center py-8 bg-surface-raised rounded-card border border-dashed border-stone-200 text-stone-400 text-xs">No active weekly challenge right now.</div>
-              )}
-              {weeklyChallenges.map((wc) => (
-                <div key={wc.id} className="ramp-static bg-ink-950 border border-ink-850 text-white rounded-panel p-6 relative overflow-hidden shadow-e3">
-                  <div className="absolute right-0 top-0 w-32 h-32 bg-azure-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                  <div className="flex justify-between items-start gap-4 mb-3">
-                    <div>
-                      <span className="bg-azure-400/15 text-azure-300 border border-azure-500/20 text-[11px] font-bold uppercase px-2 py-0.5 rounded-md tracking-wider">This week</span>
-                      <h3 className="font-semibold text-base text-azure-100 mt-2">{wc.title}</h3>
-                    </div>
-                    <div className="text-right whitespace-nowrap">
-                      <span className="block text-[11px] text-stone-400 font-bold uppercase">Reward</span>
-                      <span className="text-sm font-semibold text-azure-400">+{wc.points}</span>
-                    </div>
+            <div className="space-y-3">
+              {weeklyChallenges.map((chal, index) => (
+                <div key={chal.id} className="p-4 rounded-xl border border-line bg-surface-sunken/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="cx-tag cx-tag-accent text-[10px]">Due {chal.dueDate}</span>
+                    <span className="text-xs font-mono text-amber-500 font-bold">+{chal.points} Pts</span>
                   </div>
-
-                  <p className="text-stone-400 text-xs leading-relaxed">{wc.description}</p>
-
-                  <div className="mt-5 pt-4.5 border-t border-ink-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div className="flex gap-4 text-stone-400 font-medium">
-                      <span>Due: <b className="text-stone-200">{wc.dueDate}</b></span>
-                      <span><b className="text-stone-200">{wc.participants}</b> participating</span>
-                    </div>
+                  <h3 className="font-semibold text-content text-sm">{chal.title}</h3>
+                  <p className="text-xs text-content-muted leading-relaxed">{chal.description}</p>
+                  <div className="pt-2 flex justify-end">
                     <m.button
-                      onClick={() => handleRegisterChallenge(wc.id)}
+                      onClick={() => handleRegisterChallenge(chal.id)}
                       whileTap={{ scale: 0.95 }}
-                      transition={spring.press}
-                      className={`font-semibold px-4.5 py-2.5 rounded-control transition-colors duration-160 ease-standard h-9 flex items-center justify-center cursor-pointer ${
-                        wc.completed ? 'bg-ink-800 text-stone-400 border border-ink-700' : 'bg-surface-raised hover:bg-stone-100 text-content font-bold'
-                      }`}
+                      className="cx-btn cx-btn-fill px-4 py-1.5 rounded-lg text-xs bg-indigo-600 hover:bg-indigo-500 text-white"
                     >
-                      {/*
-                        Joining flips the label to a tick for three seconds and
-                        then back. That confirmation is the whole point of the
-                        interaction, so the tick lands on a spring with real
-                        bounce while the surrounding text just crossfades.
-                      */}
-                      <AnimatePresence mode="wait" initial={false}>
-                        {registeredChallengeId === wc.id ? (
-                          <m.span
-                            key="joined"
-                            className="flex items-center gap-1 text-proof-600"
-                            initial={{ opacity: 0, scale: 0.7 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ type: 'spring', visualDuration: 0.28, bounce: 0.45 }}
-                          >
-                            <Check className="w-3.5 h-3.5" /> Joined
-                          </m.span>
-                        ) : (
-                          <m.span
-                            key={wc.completed ? 'registered' : 'join'}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: duration.fast, ease: ease.standard }}
-                          >
-                            {wc.completed ? 'Registered' : 'Join challenge'}
-                          </m.span>
-                        )}
-                      </AnimatePresence>
+                      {registeredChallengeId === chal.id ? 'Joined!' : 'Join Challenge'}
                     </m.button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Seasonal Tournament preview */}
-          <div className="space-y-4">
-            <h2 className="type-title text-[23px] flex items-center gap-2">
-              <Swords className="w-5 h-5 text-violet-600" /> Seasonal Tournament
-              <span className="text-[11px] font-bold uppercase bg-stone-100 text-stone-500 px-2 py-0.5 rounded-md tracking-wider">Preview</span>
-            </h2>
-            <div className="cx-card p-5.5">
-              <p className="text-xs text-stone-500 mb-4">A multi-stage championship league &mdash; qualifiers, brackets, and live finals. Full scheduling is coming soon.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {['Qualifiers', 'Round of 16', 'Semifinal', 'Final'].map((stage, idx) => (
-                  <div key={stage} className={`rounded-control border p-3 text-center ${idx === 0 ? 'bg-violet-50 border-violet-200' : 'bg-stone-50 border-stone-150'}`}>
-                    <span className={`text-[11px] font-bold uppercase tracking-wider block ${idx === 0 ? 'text-violet-700' : 'text-stone-400'}`}>Stage {idx + 1}</span>
-                    <span className={`text-xs font-bold block mt-1 ${idx === 0 ? 'text-violet-900' : 'text-stone-600'}`}>{stage}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
         </div>
 
-        {/* Leaderboard */}
-        <div className="lg:col-span-5 bg-surface-raised border border-stone-100 rounded-panel p-5 shadow-e1 h-fit space-y-5">
-          <div className="space-y-1">
-            <h2 className="type-title text-[23px] flex items-center gap-2">
-              <Medal className="w-5 h-5 text-azure-600" /> Leaderboard
-            </h2>
-            <p className="text-[12px] text-stone-500 leading-relaxed">Ranked in real time as students complete challenges and contests.</p>
-          </div>
+        {/* Right Column: Ranked Leaderboard */}
+        <div className="lg:col-span-6 space-y-6">
+          <div className="cx-glass-panel p-6 space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="type-title text-lg font-bold text-content flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-500" /> Live Leaderboard
+              </h2>
 
-          {/* Cohort axis */}
-          <div className="bg-stone-50 p-1 rounded-control flex border border-stone-100">
-            {axisTabs.map((tab) => {
-              const TabIcon = tab.icon;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveAxis(tab.key)}
-                  className={`relative flex-1 text-center py-2 text-xs font-bold rounded-lg transition-colors duration-160 ease-standard cursor-pointer flex items-center justify-center gap-1 ${
-                    activeAxis === tab.key ? 'text-stone-950' : 'text-stone-500 hover:text-stone-900'
-                  }`}
-                >
-                  {/*
-                    A segmented control is the clearest case in the product for
-                    a shared indicator: the white thumb slides between the three
-                    axes exactly the way iOS's own UISegmentedControl does,
-                    instead of one segment losing its background while another
-                    gains one.
-                  */}
-                  {activeAxis === tab.key && (
-                    <m.span
-                      layoutId="leaderboard-axis-thumb"
-                      className="absolute inset-0 bg-surface-raised rounded-lg shadow-e1"
-                      transition={spring.snappy}
-                    />
-                  )}
-                  <TabIcon className="w-3.5 h-3.5 relative z-10" />
-                  <span className="relative z-10">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+              {/* Axis Tabs */}
+              <div className="flex gap-1 p-1 bg-surface-sunken rounded-lg border border-line">
+                {axisTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeAxis === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveAxis(tab.key)}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                        isActive ? 'bg-indigo-600 text-white shadow-sm' : 'text-content-subtle hover:text-content'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          {/* Ranking dimension */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Rank by</span>
-            <div className="flex flex-wrap gap-1.5">
-              {dimensions.map((d) => {
-                const DimIcon = d.icon;
+            {/* Metric Dimensions */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {dimensions.map((dim) => {
+                const Icon = dim.icon;
+                const isActive = dimension === dim.key;
                 return (
-                  <m.button
-                    key={d.key}
-                    onClick={() => setDimension(d.key)}
-                    whileTap={{ scale: 0.94 }}
-                    transition={spring.press}
-                    className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-[background-color,border-color,color] duration-160 ease-standard cursor-pointer flex items-center gap-1 ${
-                      dimension === d.key
-                        ? 'bg-ink-950 border-ink-950 text-white'
-                        : 'bg-surface-raised border-stone-200 text-stone-600 hover:bg-stone-50'
+                  <button
+                    key={dim.key}
+                    onClick={() => setDimension(dim.key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium border shrink-0 transition-colors ${
+                      isActive
+                        ? 'border-indigo-500 bg-indigo-500/15 text-indigo-500'
+                        : 'border-line bg-surface-sunken/40 text-content-subtle hover:border-line-strong'
                     }`}
                   >
-                    <DimIcon className="w-3 h-3" /> {d.label}
-                  </m.button>
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{dim.label}</span>
+                  </button>
                 );
               })}
             </div>
-          </div>
 
-          {/* The learner's own four-axis profile */}
-          <div className="cx-card p-3 space-y-2">
-            <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Your performance profile</span>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              {[
-                { label: 'Speed', value: myMetrics.speed },
-                { label: 'Accuracy', value: myMetrics.accuracy },
-                { label: 'Consist.', value: myMetrics.consistency },
-                { label: 'Improve', value: myMetrics.improvement },
-              ].map((m) => (
-                <div key={m.label}>
-                  <span className="text-sm font-bold text-stone-900 font-mono block">
-                    <AnimatedNumber value={m.value} />
-                  </span>
-                  <span className="text-[10px] uppercase font-bold text-stone-400">{m.label}</span>
-                </div>
-              ))}
+            {/* Leaderboard Table */}
+            <div className="space-y-2">
+              {displayLeaderboard.map((entry) => {
+                const isMe = entry.name === userName;
+                const valueDisplay = dimension === 'points' ? `${entry.points} pts` : `${entry[dimension] ?? 0}`;
+
+                return (
+                  <div
+                    key={entry.name}
+                    className={`p-3.5 rounded-xl border flex items-center justify-between transition-colors ${
+                      isMe
+                        ? 'border-indigo-500/60 bg-indigo-500/10 font-bold'
+                        : 'border-line bg-surface-sunken/30 hover:border-line-strong'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 text-center font-mono font-bold text-sm text-content-subtle">
+                        {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
+                      </span>
+                      <div>
+                        <h4 className="font-semibold text-content text-sm flex items-center gap-1.5">
+                          <span>{entry.name}</span>
+                          {isMe && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500 text-white font-mono uppercase">You</span>}
+                        </h4>
+                        <span className="text-[11px] font-mono text-content-subtle">{entry.country} &bull; Age {entry.age}</span>
+                      </div>
+                    </div>
+
+                    <span className="font-mono font-bold text-sm text-indigo-500 tnum">{valueDisplay}</span>
+                  </div>
+                );
+              })}
             </div>
-            {userStats.completedCount === 0 && (
-              <p className="text-[11px] text-stone-400 leading-relaxed pt-1 border-t border-stone-200">
-                Solve problems across several days to populate these axes.
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2 pt-1">
-            {displayLeaderboard.length === 0 && (
-              <div className="text-center py-6 text-stone-400 text-xs">No entries in this view yet.</div>
-            )}
-            {displayLeaderboard.map((entry) => {
-              const isCurrentUser = entry.name === userName;
-              const entryRank = getRankForPoints(entry.points);
-              return (
-                /*
-                  Reordering is the point of this list.
-
-                  Switching the ranking dimension between points, speed,
-                  accuracy, consistency and improvement re-sorts every row. It
-                  used to snap, so there was no way to follow where you had
-                  moved to — the one question a leaderboard exists to answer.
-                  With `layout`, rows glide to their new positions and the
-                  learner can watch themselves rise or fall.
-
-                  This requires the key to be a stable identity. It used to
-                  include the rank, which changes on exactly the re-sorts we
-                  want to animate, so React treated a moved row as a brand new
-                  one. Name alone is unique here: the current user is merged
-                  into the seeded leaderboard by name rather than appended.
-                */
-                <m.div
-                  key={entry.name}
-                  layout
-                  transition={spring.smooth}
-                  initial={{ opacity: 0, y: travel.sm }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-center justify-between p-3 rounded-control border transition-[background-color,border-color,box-shadow] duration-160 ease-standard ${
-                    isCurrentUser
-                      ? 'bg-azure-50/70 border-azure-300 shadow-e1'
-                      : entry.rank === 1
-                      ? 'bg-gradient-to-r from-amber-500/10 to-transparent border-amber-300/60'
-                      : entry.rank === 2
-                      ? 'bg-gradient-to-r from-slate-400/10 to-transparent border-slate-300/60'
-                      : entry.rank === 3
-                      ? 'bg-gradient-to-r from-amber-700/10 to-transparent border-amber-600/60'
-                      : 'bg-surface-raised hover:bg-stone-50 border-stone-100'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 text-center select-none flex items-center justify-center">
-                      {entry.rank === 1 ? (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-[11px] font-bold text-stone-950 shadow-xs">1</span>
-                      ) : entry.rank === 2 ? (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-400 text-[11px] font-bold text-stone-900 shadow-xs">2</span>
-                      ) : entry.rank === 3 ? (
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-amber-600 to-amber-800 text-[11px] font-bold text-amber-100 shadow-xs">3</span>
-                      ) : (
-                        <span className="text-xs font-semibold text-stone-400">#{entry.rank}</span>
-                      )}
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-xs font-bold ${isCurrentUser ? 'text-azure-700' : 'text-stone-900'}`}>{entry.name}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${entryRank.bg} ${entryRank.text}`}>{entryRank.name}</span>
-                      </div>
-                      <div className="flex gap-2 items-center text-[11px] text-stone-400 font-medium">
-                        <span>{entry.country}</span><span>&bull;</span><span>{entry.age} yo</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-semibold text-stone-900 font-mono">
-                      {dimension === 'points' ? `${entry.points} pts` : (entry[dimension] ?? 0)}
-                    </span>
-                    {dimension !== 'points' && (
-                      <span className="text-[10px] uppercase font-bold text-stone-400 block">{activeDimension.label}</span>
-                    )}
-                  </div>
-                </m.div>
-              );
-            })}
-          </div>
-
-          <div className="cx-card p-3 text-[11px] text-stone-500 flex items-start gap-1.5 leading-relaxed">
-            <HelpCircle className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
-            <span>Rankings update instantly as students finish challenges and problems.</span>
           </div>
         </div>
       </div>

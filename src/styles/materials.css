@@ -111,16 +111,15 @@
  */
 .material-accent {
   background-image: linear-gradient(
-    180deg,
-    hsl(36 65% 68%) 0%,
-    hsl(36 55% 55%) 55%,
-    hsl(36 58% 45%) 100%
+    135deg,
+    hsl(238 84% 67%) 0%,
+    hsl(220 90% 56%) 50%,
+    hsl(190 90% 50%) 100%
   );
-  color: var(--ac-contrast);
+  color: #ffffff;
   box-shadow:
-    inset 0 1px 0 hsl(38 80% 90% / 0.45),
-    inset 0 -1px 0 hsl(30 60% 18% / 0.35),
-    var(--ev-accent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 14px rgba(99, 102, 241, 0.35);
 }
 
 /*

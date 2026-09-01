@@ -151,7 +151,7 @@ const envSchema = z.object({
    * identifier; set this to whatever the deployment's project actually has
    * access to.
    */
-  GEMINI_MODEL: z.string().trim().min(1).default('gemini-2.5-flash'),
+  GEMINI_MODEL: z.string().trim().min(1).default('gemini-2.0-flash'),
 
   /**
    * Supabase project URL, e.g. "https://abcd.supabase.co".

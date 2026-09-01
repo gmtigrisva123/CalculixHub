@@ -6,7 +6,6 @@
 import React, { useState, useEffect } from 'react';
 import { m } from 'motion/react';
 import {
-  Settings,
   Sparkles,
   Search,
   BookOpen,
@@ -32,6 +31,7 @@ import ProgressView from './components/ProgressView';
 import Community from './components/Community';
 import Profile from './components/Profile';
 import ResearchAnalytics from './components/ResearchAnalytics';
+import Settings from './components/Settings';
 import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
 import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components/motion';
@@ -39,6 +39,8 @@ import ThemeToggle from './components/ThemeToggle';
 import { spring } from './lib/motion';
 import { useAuth } from './context/AuthContext';
 import { useLearnerSnapshot } from './services/data/people';
+import AchievementToast from './components/AchievementToast';
+import { checkNewAchievements, type Achievement } from './domain/achievements';
 
 const DISCUSSION_CLEANUP_KEY = 'calculix_discussions_demo_cleanup_v1';
 const LEGACY_DEMO_DISCUSSION_IDS = new Set(['disc-1', 'disc-2']);
@@ -69,6 +71,13 @@ export default function App() {
 
   // Deep navigation overrides for AI recommendations
   const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(undefined);
+  const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
+
+  const queueAchievements = (newlyUnlocked: Achievement[]) => {
+    if (newlyUnlocked.length > 0) {
+      setAchievementQueue((prev) => [...prev, ...newlyUnlocked]);
+    }
+  };
 
   // Connectivity, and any answers captured while offline. The queue drains
   // automatically as soon as the connection returns.
@@ -91,8 +100,11 @@ export default function App() {
   const { status: authStatus, profile, signOut, hasOnboarded } = useAuth();
   const isLoggedIn = authStatus === 'authenticated';
 
-  const handleLoginSuccess = (name: string, level: Level, initialSkills?: Record<Topic, number>) => {
+  const [guestAllowed, setGuestAllowed] = useState<boolean>(() => {
+    return localStorage.getItem('calculix_guest_access') === 'true';
+  });
 
+  const handleLoginSuccess = (name: string, level: Level, initialSkills?: Record<Topic, number>) => {
     // Seed the learner's tier and, when they came through the adaptive
     // placement test, their measured per-domain skill profile.
     const updatedStats: UserStats = {
@@ -100,7 +112,10 @@ export default function App() {
       level,
       ...(initialSkills ? { skills: initialSkills } : {}),
     };
+    setUserStats(updatedStats);
     saveStatsToLocal(updatedStats);
+    localStorage.setItem('calculix_guest_access', 'true');
+    setGuestAllowed(true);
   };
 
   const handleLogout = async () => {
@@ -114,11 +129,12 @@ export default function App() {
     for (const key of [
       'calculix_is_logged_in', 'calculix_user_name', 'calculix_stats',
       'calculix_completed', 'calculix_discussions', 'calculix_contests',
-      'calculix_registered_users',
+      'calculix_registered_users', 'calculix_guest_access',
     ]) {
       localStorage.removeItem(key);
       sessionStorage.removeItem(key);
     }
+    setGuestAllowed(false);
 
     setActiveTab('dashboard');
     setCompletedProblems([]);
@@ -309,8 +325,15 @@ export default function App() {
     const localStats = localStorage.getItem('calculix_stats');
     if (localStats) {
       const parsedStats: UserStats = JSON.parse(localStats);
-      // Recompute on load too, not just after the next solve — otherwise a
-      // stale streak number could linger for a full day after a miss.
+      // If no problems completed yet, ensure skills start at 0
+      if ((parsedStats.completedCount ?? 0) === 0) {
+        parsedStats.skills = {
+          Algebra: 0,
+          Geometry: 0,
+          Combinatorics: 0,
+          'Number Theory': 0,
+        };
+      }
       parsedStats.streak = computeStreak((parsedStats.learningTimeline || []).map((t) => t.date));
       setUserStats(parsedStats);
     }
@@ -339,12 +362,43 @@ export default function App() {
     if (localContests) {
       setContests(JSON.parse(localContests));
     }
+
+    // Auto-register today's visit in learningTimeline so today's cell turns active golden with flame icon
+    const todayStr = new Date().toISOString().slice(0, 10);
+    setUserStats((prev) => {
+      const existingTimeline = prev.learningTimeline || [];
+      if (!existingTimeline.some((t) => t.date === todayStr)) {
+        const updatedTimeline = [...existingTimeline, { date: todayStr, points: prev.points, accuracy: prev.accuracy }];
+        const newStats = {
+          ...prev,
+          streak: Math.max(1, computeStreak(updatedTimeline.map((t) => t.date))),
+          learningTimeline: updatedTimeline,
+        };
+        localStorage.setItem('calculix_stats', JSON.stringify(newStats));
+        return newStats;
+      }
+      return prev;
+    });
   }, []);
 
-  // Sync to local storage on edits
-  const saveStatsToLocal = (newStats: UserStats) => {
+  // Check for any unalerted achievement unlocks 1 second after entering the workspace
+  useEffect(() => {
+    if (isLoggedIn || guestAllowed) {
+      const timer = setTimeout(() => {
+        const newlyUnlocked = checkNewAchievements(userStats, completedProblems.length);
+        queueAchievements(newlyUnlocked);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, guestAllowed, activeTab, userStats, completedProblems.length]);
+
+  // Sync to local storage on edits & evaluate achievement unlocks
+  const saveStatsToLocal = (newStats: UserStats, overrideCount?: number) => {
     setUserStats(newStats);
     localStorage.setItem('calculix_stats', JSON.stringify(newStats));
+    const count = overrideCount !== undefined ? overrideCount : completedProblems.length;
+    const newlyUnlocked = checkNewAchievements(newStats, count);
+    queueAchievements(newlyUnlocked);
   };
 
   const handleRewardPoints = (pts: number) => {
@@ -370,7 +424,7 @@ export default function App() {
     let updatedSkills = { ...userStats.skills };
     if (problem) {
       const topicName = problem.topic;
-      const currentScale = updatedSkills[topicName] || 50;
+      const currentScale = updatedSkills[topicName] ?? 0;
       if (isCorrect) {
         // Boost score for correct solution
         updatedSkills[topicName] = Math.min(100, currentScale + 8);
@@ -416,7 +470,7 @@ export default function App() {
       learningTimeline: updatedTimeline,
     };
 
-    saveStatsToLocal(updatedUserStats);
+    saveStatsToLocal(updatedUserStats, updatedCompleted.length);
 
     if (isCorrect) {
       fetch(apiUrl('/api/live-stats/event'), {
@@ -517,7 +571,7 @@ export default function App() {
     setTimeout(() => setSaveSuccessNotify(false), 3000);
   };
 
-  if (!isLoggedIn || (isLoggedIn && !hasOnboarded)) {
+  if ((!isLoggedIn && !guestAllowed) || (isLoggedIn && !hasOnboarded)) {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
@@ -659,17 +713,23 @@ export default function App() {
             was meant to skip.
           */}
           {activeTab !== 'learn' && activeTab !== 'compete' && activeTab !== 'community' && (
-            <header className="hidden md:flex items-end justify-between gap-6 border-b border-line pb-4.5 select-none">
+            <header className="hidden md:flex items-center justify-between gap-6 border-b border-line pb-4.5 select-none">
               <div>
-                <p className="type-eyebrow text-accent-text">CalculixHub Workspace</p>
-                <h2 className="type-title mt-1.5 font-normal text-[clamp(1.75rem,2.6vw,2.375rem)]">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="type-eyebrow text-accent-text">Calculix OS Workspace</p>
+                </div>
+                <h2 className="type-title mt-1 font-semibold text-[clamp(1.75rem,2.6vw,2.375rem)] text-content">
                   {screenTitle(activeTab)}
                 </h2>
               </div>
 
-              <span className="text-[12px] tracking-[0.08em] text-content-subtle tnum">
-                UTC {new Date().toISOString().slice(0, 10)}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[12px] tracking-[0.08em] text-content-subtle tnum px-3 py-1.5 rounded-pill bg-surface-sunken border border-line">
+                  UTC {new Date().toISOString().slice(0, 10)}
+                </span>
+                <ThemeToggle variant="bar" />
+              </div>
             </header>
           )}
 
@@ -727,180 +787,24 @@ export default function App() {
               completedProblems={completedProblems}
               problems={problems}
               onLogout={handleLogout}
+              onTriggerAlert={(badge) => queueAchievements([badge])}
             />
           )}
 
           {activeTab === 'research' && <ResearchAnalytics />}
 
           {activeTab === 'settings' && (
-            /*
-              Two columns, the design's split: training and preferences on the
-              left, account and the destructive action on the right. The whole
-              screen used to be one bordered card 42rem wide with nine stacked
-              sections inside it, which put "Reset training data" — the only
-              irreversible control in the product — three scrolls below the fold
-              and inside the same box as a dropdown.
-            */
-            <div className="grid [grid-template-columns:repeat(auto-fit,minmax(22.5rem,1fr))] items-start gap-8.5">
-              <div className="space-y-6.5">
-                <form onSubmit={handleSaveSettings}>
-                  <h3 className="type-title text-[26px]">Training</h3>
-                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">
-                    What you are aiming at, and how much time you have for it.
-                  </p>
-
-                  <label className="cx-label" htmlFor="set-goal">Personal goal</label>
-                  <select
-                    id="set-goal"
-                    value={customGoal}
-                    onChange={(e) => setCustomGoal(e.target.value)}
-                    className="cx-input mb-5"
-                  >
-                    <option value="Qualify for a regional/national math olympiad">Qualify for a regional or national olympiad</option>
-                    <option value="Score maximum on SAT Math and AMC 8/10/12">Score maximum on SAT Math and AMC 8/10/12</option>
-                    <option value="Build strong Algebra and Combinatorics reflexes">Build strong Algebra and Combinatorics reflexes</option>
-                  </select>
-
-                  <label className="cx-label" htmlFor="set-pace">Daily practice target</label>
-                  <select
-                    id="set-pace"
-                    value={studyPace}
-                    onChange={(e) => setStudyPace(e.target.value)}
-                    className="cx-input"
-                  >
-                    <option value="15 minutes / day">15 minutes a day — light, keeps momentum</option>
-                    <option value="30 minutes / day">30 minutes a day — serious reflex training</option>
-                    <option value="60 minutes / day">60 minutes a day — push toward a breakthrough</option>
-                  </select>
-
-                  <h3 className="type-title mt-8 text-[26px]">Preferences</h3>
-                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">
-                    Applied the moment you choose them.
-                  </p>
-
-                  <div className="cx-card">
-                    <div className="flex items-center justify-between gap-4.5 border-b border-line-faint px-5.5 py-4.5">
-                      <div>
-                        <span className="block text-[15px]">Daily streak reminder</span>
-                        <span className="block text-[13px] text-content-subtle">
-                          A nudge at 6pm on days you have not practised.
-                        </span>
-                      </div>
-                      <label className="relative inline-flex shrink-0 cursor-pointer select-none items-center">
-                        <input
-                          type="checkbox"
-                          checked={studyReminders}
-                          onChange={(e) => handleToggleReminders(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        {/*
-                          The knob rides --ease-emphasized so it settles into
-                          each end rather than stopping dead, which is what makes
-                          a switch feel like a physical throw. The track is an
-                          outline that tints rather than a filled pill that
-                          changes colour — the same restraint every other control
-                          here follows.
-                        */}
-                        <div className="peer h-6 w-11 rounded-pill border border-content/22 transition-colors duration-240 ease-standard after:absolute after:top-[3px] after:left-[3px] after:h-4.5 after:w-4.5 after:rounded-full after:bg-stone-400 after:transition-[transform,background-color] after:duration-240 after:ease-emphasized after:content-[''] peer-checked:border-accent peer-checked:bg-accent/20 peer-checked:after:translate-x-5 peer-checked:after:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2" />
-                      </label>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-4.5 px-5.5 py-4.5">
-                      <div>
-                        <span className="block text-[15px]">Appearance</span>
-                        <span className="block text-[13px] text-content-subtle">
-                          Daylight for a lit room, lamplight for a dark one.
-                        </span>
-                      </div>
-                      {/*
-                        Appearance sits inside the card but outside the form's
-                        deferred contract on purpose: it applies on choice, and
-                        the label under it says so.
-                      */}
-                      <ThemeToggle />
-                    </div>
-                  </div>
-
-                  {/*
-                    States the actual outcome. A toggle that reports "on" while
-                    the OS is blocking notifications is worse than no toggle.
-                  */}
-                  <Collapse open={Boolean(reminderNotice)}>
-                    <p className="mt-3.5 border-l-2 border-accent/40 pl-3.5 text-[13px] leading-[1.7] text-accent-text">
-                      {reminderNotice}
-                    </p>
-                  </Collapse>
-
-                  <div className="mt-6.5 flex flex-wrap items-center gap-3">
-                    <m.button
-                      id="btn-save-settings"
-                      type="submit"
-                      whileTap={{ scale: 0.97 }}
-                      transition={spring.press}
-                      className="cx-btn cx-btn-fill"
-                    >
-                      Apply settings
-                    </m.button>
-                    {/*
-                      The confirmation is the only feedback that the form did
-                      anything. It grows in beside the button that produced it
-                      rather than above the whole panel, so nothing below shifts.
-                    */}
-                    <Collapse open={saveSuccessNotify}>
-                      <span className="inline-flex items-center gap-2 text-[13.5px] text-proof">
-                        <CheckCircle className="h-3.75 w-3.75" /> Applied
-                      </span>
-                    </Collapse>
-                  </div>
-                </form>
-              </div>
-
-              <div className="space-y-6.5">
-                <div>
-                  <h3 className="type-title text-[26px]">Account</h3>
-                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">This device and this install.</p>
-                  <div className="cx-card">
-                    <InstallAppButton variant="row" />
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="type-title text-[26px]">The platform</h3>
-                  <p className="type-caption mt-1.5 mb-4.5 text-content-subtle">What is running underneath.</p>
-                  <p className="type-body text-content-muted">
-                    Four core layers: <span className="italic">Learning Engine</span>,{' '}
-                    <span className="italic">AI Personalisation (EduReach)</span>,{' '}
-                    <span className="italic">Competition Arena</span> and{' '}
-                    <span className="italic">Analytics Radar</span>.
-                  </p>
-                </div>
-
-                {/*
-                  The one destructive control, in its own tinted panel at the
-                  end of the column — the only place on this screen where a
-                  fill is used to mean "stop and read this".
-                */}
-                <div className="cx-card cx-tint-accent p-6">
-                  <h4 className="type-title text-[21px]">Reset training data</h4>
-                  <p className="type-caption mt-2 mb-4.5 leading-[1.75] text-content-muted">
-                    Clears your answers, streak and skill estimates from this browser. The account itself stays.
-                    This cannot be undone.
-                  </p>
-                  <m.button
-                    type="button"
-                    onClick={() => {
-                      localStorage.clear();
-                      window.location.reload();
-                    }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={spring.press}
-                    className="cx-btn cx-btn-primary py-2.75 text-[15px]"
-                  >
-                    Reset everything
-                  </m.button>
-                </div>
-              </div>
-            </div>
+            <Settings
+              customGoal={customGoal}
+              setCustomGoal={setCustomGoal}
+              studyPace={studyPace}
+              setStudyPace={setStudyPace}
+              studyReminders={studyReminders}
+              onToggleReminders={handleToggleReminders}
+              reminderNotice={reminderNotice}
+              onSaveSettings={handleSaveSettings}
+              saveSuccessNotify={saveSuccessNotify}
+            />
           )}
           </TabTransition>
 
@@ -913,6 +817,13 @@ export default function App() {
 
       {/* MOBILE BOTTOM NAVIGATION RAIL */}
       <MobileTabBar activeTab={activeTab} onSelect={selectTab} />
+
+      {/* ACHIEVEMENT UNLOCK TOAST NOTIFICATION */}
+      <AchievementToast
+        achievement={achievementQueue[0] || null}
+        onClose={() => setAchievementQueue((prev) => prev.slice(1))}
+        onNavigateToProfile={() => selectTab('profile')}
+      />
 
     </div>
   );

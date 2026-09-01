@@ -38,8 +38,8 @@ export default function InteractiveFormulaLab() {
             <Sliders className="h-4.5 w-4.5" />
           </div>
           <div>
-            <h3 className="font-serif text-[20px] font-medium text-content">Live Concept & Formula Lab</h3>
-            <p className="text-[13px] text-content-subtle">Adjust variables below to see real-time mathematical proof derivations.</p>
+            <h3 className="font-serif text-[20px] font-medium text-content">Interactive Math Concept Lab</h3>
+            <p className="text-[13px] text-content-subtle">Tweak values below to watch live discriminant and modular remainder derivations in real time.</p>
           </div>
         </div>
 

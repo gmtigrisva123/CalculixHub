@@ -454,7 +454,7 @@ export default function SkillGraphStage({ onActiveChange, still }: SkillGraphSta
       ref={hostRef}
       className="relative h-[clamp(23.75rem,46vw,35rem)] w-full"
       role="img"
-      aria-label={`The item bank as a graph: a central core linked to ${PROFILES.length} domains — ${PROFILES.map((p) => `${p.domain}, ${p.itemCount} items`).join('; ')}.`}
+      aria-label={`The item bank as a graph: a central core linked to ${PROFILES.length} domains — ${PROFILES.map((p) => p.domain).join('; ')}.`}
     />
   );
 }
