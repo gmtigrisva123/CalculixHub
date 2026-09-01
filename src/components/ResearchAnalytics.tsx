@@ -46,7 +46,9 @@ export default function ResearchAnalytics() {
             {/* Theta slider */}
             <div className="space-y-2">
               <div className="flex justify-between">
-                <label className="text-content font-semibold">Ability Parameter (θ):</label>
+                <label className="text-content font-semibold">
+                  Ability Parameter <MathText text="\(\theta\)" />:
+                </label>
                 <span className="font-bold text-indigo-500">{theta.toFixed(2)}</span>
               </div>
               <input
@@ -63,7 +65,9 @@ export default function ResearchAnalytics() {
             {/* Discrimination a */}
             <div className="space-y-2">
               <div className="flex justify-between">
-                <label className="text-content font-semibold">Discrimination (a):</label>
+                <label className="text-content font-semibold">
+                  Discrimination <MathText text="\(a_i\)" />:
+                </label>
                 <span className="font-bold text-cyan-500">{paramA.toFixed(2)}</span>
               </div>
               <input
@@ -80,7 +84,9 @@ export default function ResearchAnalytics() {
             {/* Difficulty b */}
             <div className="space-y-2">
               <div className="flex justify-between">
-                <label className="text-content font-semibold">Difficulty (b):</label>
+                <label className="text-content font-semibold">
+                  Difficulty <MathText text="\(b_i\)" />:
+                </label>
                 <span className="font-bold text-amber-500">{paramB.toFixed(2)}</span>
               </div>
               <input
@@ -97,7 +103,9 @@ export default function ResearchAnalytics() {
             {/* Pseudo-guessing c */}
             <div className="space-y-2">
               <div className="flex justify-between">
-                <label className="text-content font-semibold">Pseudo-Guessing (c):</label>
+                <label className="text-content font-semibold">
+                  Pseudo-Guessing <MathText text="\(c_i\)" />:
+                </label>
                 <span className="font-bold text-emerald-500">{paramC.toFixed(2)}</span>
               </div>
               <input
@@ -115,11 +123,15 @@ export default function ResearchAnalytics() {
           {/* Real-time Computed Values */}
           <div className="p-4 rounded-xl border border-line bg-surface-sunken/40 space-y-2 text-xs font-mono">
             <div className="flex justify-between">
-              <span className="text-content-subtle">Prob. Correct P(θ):</span>
+              <span className="text-content-subtle">
+                Prob. Correct <MathText text="\(P_i(\theta)\)" />:
+              </span>
               <span className="font-bold text-emerald-500">{(currentProb * 100).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-content-subtle">Fisher Information I(θ):</span>
+              <span className="text-content-subtle">
+                Fisher Information <MathText text="\(I_i(\theta)\)" />:
+              </span>
               <span className="font-bold text-indigo-500">{currentInfo.toFixed(3)}</span>
             </div>
           </div>
@@ -134,16 +146,19 @@ export default function ResearchAnalytics() {
           <div className="p-5 rounded-xl border border-line bg-surface-sunken/30 space-y-4 text-xs font-mono leading-relaxed text-content">
             <p className="font-semibold text-indigo-500">3-Parameter Logistic (3PL) Response Model:</p>
             <div className="p-3 bg-surface-raised rounded-lg border border-line text-center text-sm font-serif">
-              <MathText text="P_i(\theta) = c_i + \frac{1 - c_i}{1 + e^{-D \cdot a_i \cdot (\theta - b_i)}}" />
+              <MathText text="\[P_i(\theta) = c_i + \frac{1 - c_i}{1 + e^{-D a_i (\theta - b_i)}}\]" />
             </div>
 
-            <p className="font-semibold text-cyan-500 pt-2">Fisher Information Function I_i(θ):</p>
+            <p className="font-semibold text-cyan-500 pt-2">
+              Fisher Information Function <MathText text="\(I_i(\theta)\)" />:
+            </p>
             <div className="p-3 bg-surface-raised rounded-lg border border-line text-center text-sm font-serif">
-              <MathText text="I_i(\theta) = D^2 a_i^2 \frac{1 - P_i(\theta)}{P_i(\theta)} \left[ \frac{P_i(\theta) - c_i}{1 - c_i} \right]^2" />
+              <MathText text="\[I_i(\theta) = D^2 a_i^2 \frac{1 - P_i(\theta)}{P_i(\theta)} \left[ \frac{P_i(\theta) - c_i}{1 - c_i} \right]^2\]" />
             </div>
 
             <p className="text-content-subtle text-[11px] leading-normal pt-2">
-              CalculixHub uses Expected A Posteriori (EAP) ability estimation to update learner skill θ dynamically after each item response.
+              CalculixHub uses Expected A Posteriori (EAP) ability estimation to update learner skill{' '}
+              <MathText text="\(\theta\)" /> dynamically after each item response.
             </p>
           </div>
         </div>

@@ -51,7 +51,7 @@ export default function InteractiveFormulaLab() {
               activeTab === 'quadratic' ? 'bg-indigo-600 text-white font-bold' : 'text-content-muted hover:text-content'
             }`}
           >
-            Algebra (Roots & $\Delta$)
+            Algebra (Roots &amp; <MathText text="\(\Delta\)" />)
           </button>
           <button
             type="button"
@@ -60,7 +60,7 @@ export default function InteractiveFormulaLab() {
               activeTab === 'modular' ? 'bg-indigo-600 text-white font-bold' : 'text-content-muted hover:text-content'
             }`}
           >
-            Number Theory ($\pmod m$)
+            Number Theory <MathText text="\(\pmod m\)" />
           </button>
         </div>
       </div>
@@ -71,7 +71,9 @@ export default function InteractiveFormulaLab() {
           <div className="md:col-span-6 space-y-5">
             <div>
               <div className="flex justify-between text-[13.5px] font-serif mb-1.5">
-                <span className="text-content-subtle">Coefficient $a$:</span>
+                <span className="text-content-subtle">
+                  Coefficient <MathText text="\(a\)" />:
+                </span>
                 <span className="font-bold text-indigo-600 dark:text-indigo-400 tnum">{a}</span>
               </div>
               <input
@@ -87,7 +89,9 @@ export default function InteractiveFormulaLab() {
 
             <div>
               <div className="flex justify-between text-[13.5px] font-serif mb-1.5">
-                <span className="text-content-subtle">Coefficient $b$:</span>
+                <span className="text-content-subtle">
+                  Coefficient <MathText text="\(b\)" />:
+                </span>
                 <span className="font-bold text-indigo-600 dark:text-indigo-400 tnum">{b}</span>
               </div>
               <input
@@ -103,7 +107,9 @@ export default function InteractiveFormulaLab() {
 
             <div>
               <div className="flex justify-between text-[13.5px] font-serif mb-1.5">
-                <span className="text-content-subtle">Constant $c$:</span>
+                <span className="text-content-subtle">
+                  Constant <MathText text="\(c\)" />:
+                </span>
                 <span className="font-bold text-indigo-600 dark:text-indigo-400 tnum">{c}</span>
               </div>
               <input
@@ -127,7 +133,9 @@ export default function InteractiveFormulaLab() {
 
             <div className="border-t border-line-faint pt-3 text-[14.5px]">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-content-muted">Discriminant $\\Delta = b^2 - 4ac$:</span>
+                <span className="text-content-muted">
+                  Discriminant <MathText text="\(\Delta = b^2 - 4ac\)" />:
+                </span>
                 <span className={`font-serif font-bold tnum ${discriminant > 0 ? 'text-emerald-600' : discriminant === 0 ? 'text-amber-600' : 'text-rose-500'}`}>
                   {discriminant}
                 </span>
@@ -145,8 +153,8 @@ export default function InteractiveFormulaLab() {
               <span className="text-content-subtle text-[12.5px] block uppercase tracking-wider mb-1">Calculated Roots</span>
               {discriminant >= 0 ? (
                 <div className="font-serif text-[16px] text-indigo-600 dark:text-indigo-400 space-x-4 tnum">
-                  <span>$x_1 = {root1}$</span>
-                  <span>$x_2 = {root2}$</span>
+                  <MathText text={`\\(x_1 = ${root1}\\)`} />
+                  <MathText text={`\\(x_2 = ${root2}\\)`} />
                 </div>
               ) : (
                 <div className="font-serif text-[15px] text-content-muted">
@@ -161,7 +169,9 @@ export default function InteractiveFormulaLab() {
           <div className="md:col-span-6 space-y-5">
             <div>
               <div className="flex justify-between text-[13.5px] font-serif mb-1.5">
-                <span className="text-content-subtle">Integer $N$:</span>
+                <span className="text-content-subtle">
+                  Integer <MathText text="\(N\)" />:
+                </span>
                 <span className="font-bold text-indigo-600 dark:text-indigo-400 tnum">{modVal}</span>
               </div>
               <input
@@ -177,7 +187,9 @@ export default function InteractiveFormulaLab() {
 
             <div>
               <div className="flex justify-between text-[13.5px] font-serif mb-1.5">
-                <span className="text-content-subtle">Modulus $m$:</span>
+                <span className="text-content-subtle">
+                  Modulus <MathText text="\(m\)" />:
+                </span>
                 <span className="font-bold text-indigo-600 dark:text-indigo-400 tnum">{modDiv}</span>
               </div>
               <input
@@ -199,9 +211,13 @@ export default function InteractiveFormulaLab() {
             </div>
 
             <div className="border-t border-line-faint pt-3 text-[14px] text-content-muted leading-[1.6]">
-              <p>Quotient form: ${modVal} = {modDiv} \times {quotient} + {remainder}$</p>
+              <p>
+                Quotient form:{' '}
+                <MathText text={`\\(${modVal} = ${modDiv} \\times ${quotient} + ${remainder}\\)`} />
+              </p>
               <p className="mt-1 text-[13px] text-content-subtle">
-                Remainder $r = {remainder}$ satisfies $0 \le r &lt; {modDiv}$.
+                Remainder <MathText text={`\\(r = ${remainder}\\)`} /> satisfies{' '}
+                <MathText text={`\\(0 \\le r < ${modDiv}\\)`} />.
               </p>
             </div>
           </div>

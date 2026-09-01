@@ -27,7 +27,7 @@ const DEMO_QUESTIONS: DemoQuestion[] = [
     latexProblem: 'For how many real numbers $x$ does $(x^2 - 5x + 5)^{x^2 - 9x + 20} = 1$ hold?',
     options: ['3', '4', '5', '6'],
     correctIdx: 2, // 5 solutions: base=1 (x=1,4), exp=0 & base!=0 (x=5), base=-1 & exp even (x=2,3). Total 5!
-    explanation: 'Check three cases: (1) Base = 1 gives $x=1, 4$. (2) Exponent = 0 gives $x=5$ (base is $-5 \\neq 0$). (3) Base = $-1$ gives $x=2, 3$ (exponent is even for both). Total = 5 solutions.',
+    explanation: 'Check three cases. (1) Base $= 1$ gives $x = 1, 4$. (2) Exponent $= 0$ gives $x = 5$ (the base is $-5 \\neq 0$). (3) Base $= -1$ gives $x = 2, 3$ (the exponent is even for both). Total: $5$ solutions.',
   },
   {
     id: 'demo-2',

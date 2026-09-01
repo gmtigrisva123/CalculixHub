@@ -375,9 +375,17 @@ export default function Learn({
                         </>
                       )}
                     </div>
-                    <p className="text-xs leading-relaxed font-medium">{smartFeedback.explanation}</p>
+                    <MathText
+                      as="p"
+                      className="text-xs leading-relaxed font-medium"
+                      text={smartFeedback.explanation}
+                    />
                     {smartFeedback.guidance && (
-                      <p className="text-[11px] opacity-80 leading-relaxed font-mono">{smartFeedback.guidance}</p>
+                      <MathText
+                        as="p"
+                        className="text-[11px] opacity-80 leading-relaxed font-mono"
+                        text={smartFeedback.guidance}
+                      />
                     )}
                   </div>
                 )}

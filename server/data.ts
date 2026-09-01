@@ -167,8 +167,8 @@ export const problems: Problem[] = [
     question: 'How many primitive Pythagorean triples $(x, y, z)$ satisfy $x^2 + y^2 = z^2$ with $z \\le 50$ and $x$ even? (e.g. the triple $8, 15, 17$)',
     type: 'text',
     correctAnswer: '7',
-    hint: 'Use the primitive triple parametrization $x=2uv, y=u^2-v^2, z=u^2+v^2$ with $u > v > 0$, opposite parity, and $\\gcd(u,v)=1$. Count pairs with $u^2+v^2 \\le 50$.',
-    solution: 'We need pairs $(u,v)$ with: $u > v > 0$; $\\gcd(u,v) = 1$; opposite parity; and $u^2 + v^2 \\le 50$.\nEnumerating u:\n- u=2, v=1 -> z=5 (valid)\n- u=3, v=2 -> z=13 (valid)\n- u=4, v=1 -> z=17 (valid); v=3 -> z=25 (valid)\n- u=5, v=2 -> z=29 (valid); v=4 -> z=41 (valid)\n- u=6, v=1 -> z=37 (valid); v=5 -> z=61 (rejected, >50)\n- u=7, v=2 -> z=53 (rejected, >50)\nValid primitive triples: (2,1)->5, (3,2)->13, (4,1)->17, (4,3)->25, (5,2)->29, (5,4)->41, (6,1)->37. Total: 7.',
+    hint: 'Use the primitive triple parametrisation $x = 2uv$, $y = u^2 - v^2$, $z = u^2 + v^2$ with $u > v > 0$, opposite parity, and $\\gcd(u,v) = 1$. Count the pairs with $u^2 + v^2 \\le 50$.',
+    solution: 'We need pairs $(u,v)$ with $u > v > 0$, $\\gcd(u,v) = 1$, opposite parity, and $u^2 + v^2 \\le 50$.\nEnumerating $u$:\n- $u=2$: $v=1 \\Rightarrow z=5$ (valid)\n- $u=3$: $v=2 \\Rightarrow z=13$ (valid)\n- $u=4$: $v=1 \\Rightarrow z=17$ (valid); $v=3 \\Rightarrow z=25$ (valid)\n- $u=5$: $v=2 \\Rightarrow z=29$ (valid); $v=4 \\Rightarrow z=41$ (valid)\n- $u=6$: $v=1 \\Rightarrow z=37$ (valid); $v=5 \\Rightarrow z=61 > 50$ (rejected)\n- $u=7$: $v=2 \\Rightarrow z=53 > 50$ (rejected)\nValid primitive triples: $(2,1) \\to 5$, $(3,2) \\to 13$, $(4,1) \\to 17$, $(4,3) \\to 25$, $(5,2) \\to 29$, $(5,4) \\to 41$, $(6,1) \\to 37$. Total: $7$.',
     points: 35,
   },
 ];

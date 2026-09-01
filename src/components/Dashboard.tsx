@@ -14,6 +14,7 @@ import { duration, ease, spring, staggerDelay } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 import DailyReflexWidget from './DailyReflexWidget';
+import MathText from './MathText';
 
 interface DashboardProps {
   userStats: UserStats;
@@ -139,9 +140,14 @@ export default function Dashboard({
           </h1>
           
           <p className="type-lead mt-4 text-stone-300 text-sm md:text-base leading-relaxed">
-            {unmeasured
-              ? 'Solve 8 to 16 adaptive 3PL IRT items to measure your domain abilities across Algebra, Geometry, Combinatorics, and Number Theory.'
-              : 'Targeted adaptive practice engineered to elevate your ability parameter θ toward AMC, AIME, and Olympiad standards.'}
+            {unmeasured ? (
+              'Solve 8 to 16 adaptive 3PL IRT items to measure your domain abilities across Algebra, Geometry, Combinatorics, and Number Theory.'
+            ) : (
+              <>
+                Targeted adaptive practice engineered to elevate your ability parameter{' '}
+                <MathText text="\(\theta\)" /> toward AMC, AIME, and Olympiad standards.
+              </>
+            )}
           </p>
           
           <div className="mt-6 flex flex-wrap gap-3.5">
@@ -413,8 +419,16 @@ export default function Dashboard({
                   <span className="text-xs font-bold text-indigo-500 uppercase tracking-wide">Recommended Focus</span>
                   <span className="cx-tag cx-tag-accent text-[10px]">{recommendation.recommendedTopic}</span>
                 </div>
-                <h4 className="font-semibold text-content text-base">{recommendation.recommendation}</h4>
-                <p className="text-xs text-content-muted leading-relaxed">{recommendation.rationale}</p>
+                <MathText
+                  as="h4"
+                  className="font-semibold text-content text-base"
+                  text={recommendation.recommendation}
+                />
+                <MathText
+                  as="p"
+                  className="text-xs text-content-muted leading-relaxed"
+                  text={recommendation.rationale}
+                />
               </div>
 
               <m.button
