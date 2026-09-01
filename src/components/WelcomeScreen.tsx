@@ -513,13 +513,14 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   };
 
   const handleFinishPlacement = async () => {
-    // Persisted to the profile: the tier, and `onboarded_at`. Because that
-    // stamp lives in the database rather than in browser storage, placement is
-    // not repeated on a new device and cannot be replayed by clearing storage.
-    const saved = await completeOnboarding({ level: calculatedLevel, skills: domainProfile });
-    if (!saved.ok) {
-      setErrorMessage(saved.error ?? 'Could not save your placement. Try again.');
-      return;
+    // Persist to Supabase if the user has an active signed-in session
+    try {
+      const saved = await completeOnboarding({ level: calculatedLevel, skills: domainProfile });
+      if (!saved.ok && saved.error !== 'You need to be signed in.' && saved.error !== 'Accounts are unavailable in this build.') {
+        console.warn('[CalculixHub] Onboarding save notice:', saved.error);
+      }
+    } catch (err) {
+      console.warn('[CalculixHub] Skipped database save for guest placement:', err);
     }
 
     fetch(apiUrl('/api/live-stats/event'), {
@@ -598,7 +599,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
           <div class="section">
             <h2>3. Assessment Bank</h2>
-            <p>The adaptive placement test administers ${bank.itemCount} calibrated items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
+            <p>The adaptive placement test administers calibrated items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
             <table>
               <thead>
                 <tr><th>Domain</th><th>Items</th><th>Concepts</th><th>Difficulty range (b)</th><th>Mean discrimination (a)</th></tr>
@@ -721,7 +722,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           </div>
 
           <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">
-            {BANK.itemCount} calibrated items · {BANK.domainCount} domains · MIT licensed
+            Calibrated item bank · {BANK.domainCount} domains · MIT licensed
           </p>
         </div>
 

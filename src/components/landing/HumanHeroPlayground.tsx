@@ -90,8 +90,8 @@ export default function HumanHeroPlayground({ onRegister }: HumanHeroPlaygroundP
             <Lightbulb className="h-4 w-4" />
           </div>
           <div>
-            <span className="type-eyebrow text-indigo-600 dark:text-indigo-400 tracking-[0.16em]">Interactive Problem Playground</span>
-            <p className="text-[13px] text-content-subtle font-medium">{item.questionText}</p>
+            <span className="type-eyebrow text-indigo-600 dark:text-indigo-400 tracking-[0.16em]">Test Your Contest Instinct Live</span>
+            <p className="text-[13px] text-content-subtle font-medium">Can you spot the proof pattern below?</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

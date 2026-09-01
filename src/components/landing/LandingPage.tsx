@@ -48,69 +48,69 @@ const NAV_LINKS = [
 const PILLARS = [
   {
     icon: Target,
-    title: 'Adaptive Skill Diagnosis',
+    title: 'Instant Blind-Spot Radar',
     topic: 'Algebra' as Topic,
-    description: 'Finds your exact strengths and knowledge gaps across Algebra, Geometry, Combinatorics, and Number Theory without wasting time on what you already master.',
+    description: 'Pinpoints your exact knowledge gaps in Algebra, Geometry, Combinatorics, and Number Theory in 5 questions. Zero wasted time on what you already get.',
   },
   {
     icon: BookOpen,
-    title: 'Calibrated Competition Bank',
+    title: 'Curated Contest Vault',
     topic: 'Geometry' as Topic,
-    description: 'Hundreds of hand-curated questions from AMC 8, AMC 10/12, AIME, and Olympiad archives, categorized by difficulty and mathematical technique.',
+    description: 'Real AMC 8/10/12, AIME, and Olympiad problems categorized by core mathematical technique, difficulty, and proof structure.',
   },
   {
     icon: Compass,
-    title: 'Socratic Step-by-Step Hints',
+    title: 'Nudge-by-Nudge Hints',
     topic: 'Combinatorics' as Topic,
-    description: 'Receive guided mathematical hints that help you discover the proof idea on your own, rather than spoiling the solution immediately.',
+    description: 'Stuck? Get progressive Socratic hints that guide you to the "aha!" moment on your own — no premature answer spoilers.',
   },
   {
     icon: Trophy,
-    title: 'Ranked Sprints & Discussions',
+    title: 'Ranked Sprints & Proof Sharing',
     topic: 'Number Theory' as Topic,
-    description: 'Participate in weekly timed contests, compare elegant proof approaches in problem forums, and track your ranking progress.',
+    description: 'Race against the clock in weekly contest sprints, compare clean proof write-ups with peers, and track your global ranking.',
   },
 ];
 
 const METHOD_COMPARISON = [
   {
     feature: 'Learning Approach',
-    oldWay: 'Memorizing formulas & trick shortcuts without proof',
-    calculixWay: 'Dissecting problem structures & building rigorous proofs',
+    oldWay: 'Memorizing trick shortcuts that fail on real contest problems',
+    calculixWay: 'Deconstructing core proof structures until solution paths feel natural',
   },
   {
-    feature: 'Level Placement',
-    oldWay: 'Fixed grade levels that ignore your real problem-solving speed',
-    calculixWay: 'Adaptive 3PL diagnostic that measures your exact ability level',
+    feature: 'Skill Placement',
+    oldWay: 'Fixed grade levels that ignore your true problem-solving speed',
+    calculixWay: 'Adaptive 3PL diagnostic that measures your exact ability in 5 questions',
   },
   {
     feature: 'When You Get Stuck',
-    oldWay: 'Staring at a full answer key or giving up',
-    calculixWay: 'Progressive hints that guide your reasoning one step at a time',
+    oldWay: 'Staring at a wall of algebra or peeking at the full answer key',
+    calculixWay: 'Progressive Socratic hints that reveal the proof idea without spoiling it',
   },
   {
     feature: 'Progress Tracking',
-    oldWay: 'Raw score percentages that depend on test difficulty',
-    calculixWay: 'Multi-axis analytics tracking speed, accuracy, and consistency',
+    oldWay: 'Misleading raw percentages that depend on test difficulty',
+    calculixWay: 'Multi-axis analytics tracking speed, accuracy, and structural mastery',
   },
 ];
 
 const HUMAN_FAQ = [
   {
-    question: 'Who is CalculixHub designed for?',
-    answer: 'CalculixHub is built for ambitious middle and high school students, math team competitors, and self-learners who want to excel in contests like AMC 8/10/12, AIME, and Olympiads.',
+    question: 'Who is CalculixHub built for?',
+    answer: 'For ambitious students, math team competitors, and self-learners aiming to crush AMC 8/10/12, AIME, and Olympiad contests — or anyone who loves solving hard math problems.',
   },
   {
-    question: 'How does the placement test work?',
-    answer: 'The test adapts to your responses in real time. If you answer correctly, it administers a slightly more challenging problem. It stops as soon as it determines your baseline skill level.',
+    question: 'How does the diagnostic test work?',
+    answer: 'It adjusts to your skill live. Nail a question and it steps up the difficulty. Miss one and it isolates your exact conceptual gap in real time.',
   },
   {
-    question: 'Is CalculixHub free to use?',
-    answer: 'Yes! All core features — including the adaptive placement test, problem sets, hint system, and leaderboard — are completely free for students.',
+    question: 'Is CalculixHub 100% free?',
+    answer: 'Yes! All core tools — adaptive placement tests, problem archives, progressive hints, and leaderboards — are completely free for students.',
   },
   {
-    question: 'Can teachers or math club leaders use this?',
-    answer: 'Absolutely. Teachers can recommend specific topics, track student progress, and use our discussion forums for math team practice sessions.',
+    question: 'Can math team captains or coaches use this?',
+    answer: 'Absolutely. Coaches and captains use CalculixHub to host team practice sprints, track domain mastery, and share proof approaches in discussion threads.',
   },
 ];
 
@@ -163,57 +163,68 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
       </header>
 
       {/* HERO SECTION */}
-      <section id="top" className="mx-auto max-w-6xl px-6 pt-16 pb-20 md:pt-24 md:pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <section id="top" className="relative mx-auto max-w-6xl px-6 pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden">
+        {/* Subtle radial glow background */}
+        <div
+          className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-[450px] w-[800px] rounded-full opacity-30 blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.25), rgba(99,102,241,0.15), transparent 70%)' }}
+          aria-hidden="true"
+        />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative">
           <div className="lg:col-span-6 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] font-semibold tracking-wider uppercase">
-              <Sparkles className="h-3.5 w-3.5 text-amber-600" />
-              Built for Ambitious Math Students
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.75 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] font-bold tracking-widest uppercase shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </span>
+              <span>Can you solve an AMC 10 question in 30 seconds?</span>
             </div>
 
-            <h1 className="type-display text-[clamp(2.5rem,4.5vw,3.75rem)] leading-[1.1] text-content font-serif">
-              Master Competition Mathematics from <span className="italic text-accent">AMC to Olympiad Level</span>
+            <h1 className="type-display text-[clamp(2.6rem,4.8vw,4rem)] leading-[1.08] text-content font-serif tracking-tight">
+              You don't lack talent. <br />
+              <span className="italic text-accent">You lack a diagnostic that finds your exact blind spots.</span>
             </h1>
 
-            <p className="type-lead text-content-muted text-[17px] leading-[1.65] max-w-[50ch]">
-              Build genuine mathematical intuition, solve challenging problems step-by-step, and prepare for top national contests with adaptive practice.
+            <p className="type-lead text-content-muted text-[17.5px] leading-[1.65] max-w-[50ch]">
+              Stop grinding 500 random problems. Calculix isolates your structural misconceptions in 5 questions and guides you through proofs step-by-step.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <m.button
                 onClick={onRegister}
                 whileTap={{ scale: 0.97 }}
-                className="cx-btn cx-btn-fill px-7 py-3.5 text-[16px] shadow-e2"
+                className="cx-btn cx-btn-fill px-7 py-3.5 text-[16px] shadow-e2 flex items-center gap-2 group"
               >
-                <span>Free Diagnostic Test</span>
-                <ArrowRight className="h-4 w-4" />
+                <span>Start Free 2-Minute Diagnostic</span>
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </m.button>
               <a href="#why" className="cx-btn cx-btn-secondary px-6 py-3.5 text-[16px] no-underline">
-                Explore Curriculum
+                See How It Works
               </a>
             </div>
 
             {/* Live Stats Ticker */}
             <div className="grid grid-cols-3 gap-4 border-t border-line-faint pt-6 mt-8">
               <div>
-                <span className="type-eyebrow block text-content-subtle text-[10px]">Active Students</span>
+                <span className="type-eyebrow block text-content-subtle text-[10px]">Active Competitors</span>
                 <span className="font-serif text-[28px] font-medium text-content tnum">
                   <AnimatedNumber value={Math.max(liveStats.activeUsers, 1420)} />+
                 </span>
               </div>
               <div>
-                <span className="type-eyebrow block text-content-subtle text-[10px]">Calibrated Items</span>
-                <span className="font-serif text-[28px] font-medium text-content tnum">{BANK.itemCount}</span>
+                <span className="type-eyebrow block text-content-subtle text-[10px]">Problem Archives</span>
+                <span className="font-serif text-[28px] font-medium text-content tnum">AMC – IMO</span>
               </div>
               <div>
-                <span className="type-eyebrow block text-content-subtle text-[10px]">Contest Topics</span>
+                <span className="type-eyebrow block text-content-subtle text-[10px]">Core Fields</span>
                 <span className="font-serif text-[28px] font-medium text-content tnum">4 Domains</span>
               </div>
             </div>
           </div>
 
           {/* Hero Interactive Playground */}
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-6 relative">
             <HumanHeroPlayground onRegister={onRegister} />
           </div>
         </div>
@@ -223,12 +234,12 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
       <section id="why" className="border-y border-line bg-surface-raised/60 py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <span className="type-eyebrow text-accent-text tracking-[0.18em]">The Calculix Method</span>
+            <span className="type-eyebrow text-accent-text tracking-[0.18em]">Why Traditional Prep Fails</span>
             <h2 className="type-display text-[clamp(2rem,3.2vw,2.75rem)]">
-              Designed for Deep Understanding, Not Rote Memorization
+              Grinding random problems won't get you past AIME.
             </h2>
             <p className="type-body text-content-muted">
-              Most platforms test whether you remember a formula. CalculixHub teaches you how to think like a mathematician.
+              Most prep tools give you an answer key and wish you luck. CalculixHub deconstructs the underlying proof structure so the solution becomes obvious.
             </p>
           </div>
 
@@ -263,10 +274,10 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
       {/* 4 PILLARS OF LEARNING */}
       <section id="pillars" className="mx-auto max-w-6xl px-6 py-24">
         <div className="mb-14 space-y-3">
-          <span className="type-eyebrow text-proof">Core Ecosystem</span>
-          <h2 className="type-display text-[clamp(2rem,3.2vw,2.75rem)]">Four Pillars of Mathematical Mastery</h2>
+          <span className="type-eyebrow text-proof">ENGINE UNDER THE HOOD</span>
+          <h2 className="type-display text-[clamp(2rem,3.2vw,2.75rem)]">Built around how contest winners actually study</h2>
           <p className="type-lead text-content-muted max-w-[60ch]">
-            An integrated learning workflow built around active problem-solving and proof exploration.
+            An integrated workflow designed to eliminate guesswork and build sharp contest execution.
           </p>
         </div>
 
@@ -277,7 +288,7 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
             return (
               <div
                 key={pillar.title}
-                className="cx-card p-7 transition-colors duration-240 hover:bg-surface-raised flex flex-col justify-between"
+                className="cx-card p-7 transition-all duration-300 hover:bg-surface-raised hover:-translate-y-1 hover:border-amber-500/30 hover:shadow-e4 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -304,13 +315,13 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
         <div className="mx-auto max-w-6xl px-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-line pb-6">
             <div>
-              <span className="type-eyebrow text-amber-700">Calibrated Problem Catalog</span>
+              <span className="type-eyebrow text-amber-700">REAL CONTEST ARCHIVES</span>
               <h2 className="type-display text-[clamp(2rem,3.2vw,2.75rem)] mt-2">
-                {BANK.itemCount} Calibrated Competition Problems
+                Hand-Curated AMC, AIME & Olympiad Vault
               </h2>
             </div>
             <p className="type-body text-content-muted max-w-[45ch]">
-              Spanning AMC 8, AMC 10/12, AIME, and Olympiad archives across 4 core domains.
+              Categorized by difficulty (theta scale), topic, and the exact proof techniques needed to solve them.
             </p>
           </div>
 
@@ -323,14 +334,14 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
                   type="button"
                   onMouseEnter={() => setActiveTopic(profile.domain as Topic)}
                   onMouseLeave={() => setActiveTopic(null)}
-                  className="cx-card p-6 text-left transition-colors duration-240 hover:bg-surface-raised cursor-pointer"
+                  className="cx-card p-6 text-left transition-all duration-300 hover:bg-surface-raised hover:-translate-y-1 hover:border-amber-500/30 hover:shadow-e4 cursor-pointer"
                 >
                   <span className="mb-4 block h-0.5 w-7" style={{ background: meta.vars['--cx-hue'] }} />
                   <span className="block font-serif text-[48px] leading-none text-content font-medium tnum">
-                    {profile.itemCount}
+                    {profile.conceptCount}
                   </span>
                   <span className="type-eyebrow mt-2 mb-1 block tracking-[0.16em] text-content">{meta.label}</span>
-                  <span className="block text-[12.5px] text-content-subtle">{profile.conceptCount} core concepts</span>
+                  <span className="block text-[12.5px] text-content-subtle">Core concepts tagged</span>
                 </button>
               );
             })}
@@ -341,8 +352,8 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
       {/* HUMAN FAQ */}
       <section id="faq" className="mx-auto max-w-6xl px-6 py-24">
         <div className="mb-14 space-y-3">
-          <span className="type-eyebrow text-proof">Frequently Asked Questions</span>
-          <h2 className="type-display text-[clamp(2rem,3.2vw,2.75rem)]">Everything You Need to Know</h2>
+          <span className="type-eyebrow text-proof">NO FLUFF</span>
+          <h2 className="type-display text-[clamp(2rem,3.2vw,2.75rem)]">Answers to what you're actually wondering</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -358,19 +369,19 @@ export default function LandingPage({ liveStats, onSignIn, onRegister }: Landing
       {/* FINAL CTA */}
       <section className="ramp-static cx-band border-t border-line py-24 text-center">
         <div className="mx-auto max-w-3xl px-6 space-y-6">
-          <span className="cx-pill mx-auto">Start Your Practice Today</span>
+          <span className="cx-pill mx-auto">READY TO LEVEL UP?</span>
           <h2 className="type-hero text-stone-50 text-[clamp(2.25rem,4vw,3.5rem)]">
-            Ready to Build Your Mathematical Edge?
+            Discover your skill baseline in 3 minutes.
           </h2>
           <p className="type-lead text-stone-300 max-w-[50ch] mx-auto">
-            Take the free diagnostic placement test. No account required to see your detailed skill breakdown.
+            Free diagnostic test. Get an immediate, actionable breakdown of your strengths and knowledge gaps.
           </p>
           <m.button
             onClick={onRegister}
             whileTap={{ scale: 0.97 }}
             className="cx-btn cx-btn-fill px-8 py-4 text-[17px] shadow-lg mx-auto"
           >
-            <span>Take Diagnostic Test</span>
+            <span>Start Free Diagnostic</span>
             <ArrowRight className="h-4.5 w-4.5" />
           </m.button>
         </div>

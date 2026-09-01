@@ -329,7 +329,7 @@ export function BankSpread() {
               <div className="flex items-baseline justify-between gap-4">
                 <span className="text-[14px] font-medium text-current opacity-85">{profile.domain}</span>
                 <span className="text-[11.5px] font-mono tnum text-current opacity-40">
-                  {profile.itemCount} items · b {formatDifficulty(profile.easiestB)} →{' '}
+                  b {formatDifficulty(profile.easiestB)} →{' '}
                   {formatDifficulty(profile.hardestB)}
                 </span>
               </div>
