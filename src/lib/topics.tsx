@@ -5,7 +5,7 @@
 
 import type { CSSProperties } from 'react';
 import { Sigma, Triangle, Shuffle, Hash, type LucideIcon } from 'lucide-react';
-import { Topic, Level } from '../../shared/types';
+import { Topic, Level, CompetitionLevel } from '../../shared/types';
 
 /**
  * A style object that may also carry CSS custom properties.
@@ -148,6 +148,15 @@ export const LEVEL_META: Record<Level, LevelMeta> = {
 };
 
 export const LEVEL_LIST: Level[] = ['Foundation', 'Advanced', 'Olympiad'];
+
+export const COMPETITION_META: Record<CompetitionLevel, { label: string; scope: string; text: string; bg: string; border: string }> = {
+  AMC: { label: 'AMC', scope: 'Multiple choice', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+  AIME: { label: 'AIME', scope: 'Three-digit answer', text: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200' },
+  USAMO: { label: 'USAMO', scope: 'Proof response · Pro', text: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200' },
+  IMO: { label: 'IMO', scope: 'Proof response · Pro', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+};
+
+export const COMPETITION_LIST: CompetitionLevel[] = ['AMC', 'AIME', 'USAMO', 'IMO'];
 
 // Competition skill ladder (blueprint 2.3.2): Beginner -> Intermediate -> Advanced -> Elite.
 // Independent of the learning `Level` above, which governs content difficulty rather than rank.

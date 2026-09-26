@@ -12,6 +12,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { createTestDatabase, type TestDatabase } from './db.harness';
 
 let db: TestDatabase;
@@ -24,6 +25,8 @@ beforeAll(async () => {
   ada = await db.createUser({ email: 'ada@example.com', username: 'ada', displayName: 'Ada' });
   bob = await db.createUser({ email: 'bob@example.com', username: 'bob', displayName: 'Bob' });
   eve = await db.createUser({ email: 'eve@example.com', username: 'eve', displayName: 'Eve' });
+  // Exercise every authorization/counter test after a SQL Editor-style rerun.
+  await db.exec(readFileSync(new URL('../../supabase/core-setup.sql', import.meta.url), 'utf8'));
 });
 
 afterAll(async () => {
@@ -470,5 +473,122 @@ describe('the anonymous visitor', () => {
     await expect(
       db.asUser(null, `insert into public.posts (author_id, body) values ($1, 'spam')`, [ada]),
     ).rejects.toThrow(/row-level security|permission denied/i);
+  });
+});
+
+
+describe('SQL Editor reruns', () => {
+  const core = () => readFileSync(new URL('../../supabase/core-setup.sql', import.meta.url), 'utf8');
+  const notifications = () => readFileSync(new URL('../../supabase/migrations/20260801000500_notifications.sql', import.meta.url), 'utf8');
+  const tables = ['profiles','follows','problem_attempts','user_stats','skill_mastery','communities','community_members','posts','comments','post_likes','comment_likes','saved_posts','conversations','conversation_participants','messages','notifications'];
+  const snapshot = async () => {
+    const rows: Record<string, unknown> = {};
+    for (const table of tables) rows[table] = await db.query(`select to_jsonb(t) as row from public.${table} t order by to_jsonb(t)::text`);
+    return rows;
+  };
+  it('reapplies all five core migrations twice without changing existing user data', async () => {
+    const before = await snapshot();
+    const policies = await db.query(`select schemaname,tablename,policyname,roles,cmd,qual,with_check from pg_policies where schemaname='public' order by tablename,policyname`);
+    for (let pass=0; pass<2; pass++) await db.exec(core());
+    expect(await snapshot()).toEqual(before);
+    expect(await db.query(`select schemaname,tablename,policyname,roles,cmd,qual,with_check from pg_policies where schemaname='public' order by tablename,policyname`)).toEqual(policies);
+    expect(await db.asUser(ada,'update profiles set bio=$1 where id=$2 returning id',['unauthorized',bob])).toHaveLength(0);
+  });
+  it('rebuilds missing named triggers and policies after partial setup', async () => {
+    await db.exec('drop trigger messages_touch_conversation on public.messages; drop policy profiles_update_own on public.profiles;');
+    await db.exec(core());
+    expect((await db.query(`select count(*)::int as n from pg_trigger where tgname='messages_touch_conversation' and tgrelid='public.messages'::regclass`))[0]).toEqual({n:1});
+    expect((await db.query(`select count(*)::int as n from pg_policies where schemaname='public' and tablename='profiles' and policyname='profiles_update_own'`))[0]).toEqual({n:1});
+  });
+  it('adds only missing Realtime tables and preserves previous publication members', async () => {
+    await db.exec('create publication supabase_realtime for table public.posts,public.profiles;');
+    const before = await snapshot();
+    await db.exec(notifications()); await db.exec(notifications());
+    const members = await db.query<{tablename:string}>(`select tablename from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' order by tablename`);
+    expect(members.map(row=>row.tablename)).toEqual(['comment_likes','comments','messages','notifications','post_likes','posts','profiles','user_stats']);
+    expect(await snapshot()).toEqual(before);
+  });
+  it('handles a publication configured for all tables', async () => {
+    await db.exec('drop publication supabase_realtime; create publication supabase_realtime for all tables;');
+    await db.exec(notifications());
+    expect((await db.query(`select puballtables from pg_publication where pubname='supabase_realtime'`))[0]).toEqual({puballtables:true});
+  });
+});
+
+describe('authoritative realtime data', () => {
+  it('returns only the signed-in learner history and the exact database totals', async () => {
+    const [result] = await db.asUser<{snapshot:any}>(ada,'select public.learning_snapshot() as snapshot');
+    const [totals] = await db.query('select points,problems_solved,time_spent_seconds from public.user_stats where user_id=$1',[ada]);
+    expect(result!.snapshot.stats.points).toBe(totals!.points);
+    expect(result!.snapshot.stats.problems_solved).toBe(totals!.problems_solved);
+    expect(result!.snapshot.stats.time_spent_seconds).toBe(totals!.time_spent_seconds);
+    const rows = await db.query<{problem_id:string}>('select distinct problem_id from public.problem_attempts where user_id=$1 and is_correct',[ada]);
+    expect([...result!.snapshot.completed].sort()).toEqual(rows.map(r=>r.problem_id).sort());
+    await expect(db.asUser(null,'select public.learning_snapshot()')).rejects.toThrow(/permission denied|sign in/i);
+  });
+  it('stores goals per account and prevents another learner changing them', async () => {
+    await db.asUser(ada,"insert into public.learner_preferences(user_id,goal,pace) values($1,'Prepare for AIME','20 minutes / day')",[ada]);
+    expect(await db.asUser(bob,'select * from public.learner_preferences where user_id=$1',[ada])).toHaveLength(0);
+    expect(await db.asUser(bob,"update public.learner_preferences set goal='hijacked' where user_id=$1 returning user_id",[ada])).toHaveLength(0);
+    const [result] = await db.asUser<{snapshot:any}>(ada,'select public.learning_snapshot() as snapshot');
+    expect(result!.snapshot.preferences.goal).toBe('Prepare for AIME');
+  });
+  it('publishes invalidation versions without exposing private data or allowing forged events', async () => {
+    const [before] = await db.query<{version:number}>('select version from realtime_signals where scope=$1',['ranking']);
+    await db.asUser(ada,"update profiles set bio='A real profile edit' where id=$1",[ada]);
+    const [after] = await db.query<{version:number}>('select version from realtime_signals where scope=$1',['ranking']);
+    expect(Number(after!.version)).toBe(Number(before!.version)+1);
+    const signals = await db.asUser(null,'select * from realtime_signals');
+    expect(signals).toHaveLength(4);
+    expect(Object.keys(signals[0]!).sort()).toEqual(['changed_at','scope','version']);
+    expect(await db.asUser(ada,"update realtime_signals set version=999999 where scope='ranking' returning scope")).toHaveLength(0);
+  });
+  it('starts a private direct conversation atomically and reuses it', async () => {
+    const [first] = await db.asUser<{id:string}>(ada,'select start_conversation($1) as id',[eve]);
+    const [second] = await db.asUser<{id:string}>(eve,'select start_conversation($1) as id',[ada]);
+    expect(second!.id).toBe(first!.id);
+    expect(await db.asUser(bob,'select id from conversations where id=$1',[first!.id])).toHaveLength(0);
+    await db.asUser(ada,"insert into messages(conversation_id,sender_id,body) values($1,$2,'A private message')",[first!.id,ada]);
+    expect(await db.asUser(eve,'select id from messages where conversation_id=$1',[first!.id])).toHaveLength(1);
+    expect(await db.asUser(bob,'select id from messages where conversation_id=$1',[first!.id])).toHaveLength(0);
+    await expect(db.asUser(ada,'select start_conversation($1)',[ada])).rejects.toThrow(/another learner/i);
+  });
+  it('can rerun realtime setup without changing histories or preferences and completes the publication', async () => {
+    const before = await db.query('select to_jsonb(t) as row from problem_attempts t order by id');
+    await db.exec('drop publication supabase_realtime; create publication supabase_realtime for table public.profiles;');
+    const sql=readFileSync(new URL('../../supabase/realtime-setup.sql',import.meta.url),'utf8');
+    await db.exec(sql); await db.exec(sql);
+    expect(await db.query('select to_jsonb(t) as row from problem_attempts t order by id')).toEqual(before);
+    const members=await db.query<{tablename:string}>("select tablename from pg_publication_tables where pubname='supabase_realtime' and schemaname='public'");
+    expect(members).toHaveLength(18);
+    expect(members.map(r=>r.tablename)).not.toContain('admin_settings');
+    expect(members.map(r=>r.tablename)).not.toContain('arena_entries');
+    expect(members.map(r=>r.tablename)).toContain('learner_preferences');
+    expect(members.map(r=>r.tablename)).toContain('communities');
+    expect(members.map(r=>r.tablename)).toContain('community_members');
+  });
+  it('routes every private Admin/Arena and catalog change through published scope signals', async () => {
+    for (const [table,column,scope] of [['admin_settings','version','admin'],['admin_members','user_id','admin'],['admin_audit','action','admin'],['arenas','title','arena'],['arena_entries','score','arena'],['problem_catalog','updated_at','catalog']]) {
+      const triggers=await db.query("select tgname from pg_trigger where tgrelid=$1::regclass and tgname='refresh_live_signal'",['public.'+table]);
+      expect(triggers).toHaveLength(1);
+      const [before]=await db.query<{version:number}>('select version from realtime_signals where scope=$1',[scope]);
+      // Statement triggers invalidate even when a write matches no records.
+      await db.exec(`update public.${table} set ${column}=${column} where false;`);
+      const [after]=await db.query<{version:number}>('select version from realtime_signals where scope=$1',[scope]);
+      expect(Number(after!.version)).toBe(Number(before!.version)+1);
+      if(table!=='problem_catalog') expect(await db.asUser(null,`select * from public.${table}`)).toHaveLength(0);
+    }
+    const views=await db.query<{tablename:string}>("select tablename from pg_publication_tables where pubname='supabase_realtime' and tablename in ('leaderboard_view','user_stats_view')");
+    expect(views).toHaveLength(0);
+  });
+  it('repairs existing community publication gaps idempotently without publishing private tables', async () => {
+    await db.exec('alter publication supabase_realtime drop table public.communities,public.community_members;');
+    const fix=readFileSync(new URL('../../supabase/realtime-publication-fix.sql',import.meta.url),'utf8');
+    await db.exec(fix);await db.exec(fix);
+    const members=await db.query<{tablename:string}>("select tablename from pg_publication_tables where pubname='supabase_realtime' and schemaname='public'");
+    expect(members).toHaveLength(18);
+    expect(members.map(r=>r.tablename)).not.toContain('admin_settings');
+    expect(members.map(r=>r.tablename)).not.toContain('arenas');
+    expect((await db.query("select relreplident from pg_class where oid='public.community_members'::regclass"))[0]).toEqual({relreplident:'f'});
   });
 });

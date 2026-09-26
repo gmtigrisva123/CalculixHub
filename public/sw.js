@@ -22,7 +22,7 @@
  *      letting the UI show its offline state instead of a stale answer.
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2-live';
 const SHELL_CACHE = `calculix-shell-${VERSION}`;
 const ASSET_CACHE = `calculix-assets-${VERSION}`;
 
@@ -128,7 +128,8 @@ async function handleAsset(request) {
  *                       platform as busier or quieter than it is.
  *   /api/chat, /api/evaluate, /api/recommend -- POST and Gemini-backed.
  */
-const CACHEABLE_API_ROUTES = ['api/problems', 'api/statistics-seed'];
+// Database-backed content must fail visibly offline rather than reuse stale rows.
+const CACHEABLE_API_ROUTES = [];
 
 /**
  * Network-first with a cache fallback, for the item bank and seed data.

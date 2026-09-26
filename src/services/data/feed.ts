@@ -20,6 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import type { CommentWithAuthor, PostWithAuthor } from '../database.types';
 import { useRealtimeSubscription } from './realtime';
+import { useLiveQuery } from './liveQuery';
 
 /** Every read returns this, so a caller can never mistake an error for "empty". */
 export interface QueryState<T> {
@@ -66,13 +67,8 @@ export function usePostFeed(options: { problemId?: string; viewerId?: string | n
   reload: () => Promise<void>;
 } {
   const { problemId, viewerId } = options;
-  const [state, setState] = useState<QueryState<PostWithAuthor[]>>({ data: [], loading: true, error: null });
-
   const load = useCallback(async () => {
-    if (!supabase) {
-      setState({ data: [], loading: false, error: null });
-      return;
-    }
+    if (!supabase) throw Error('The community database is not configured.');
 
     let query = supabase
       .from('posts')
@@ -86,8 +82,7 @@ export function usePostFeed(options: { problemId?: string; viewerId?: string | n
     const { data, error } = await query;
 
     if (error) {
-      setState({ data: [], loading: false, error: describeError(error) });
-      return;
+      throw Error(describeError(error));
     }
 
     const posts = (data ?? []) as unknown as PostWithAuthor[];
@@ -110,27 +105,24 @@ export function usePostFeed(options: { problemId?: string; viewerId?: string | n
       }
     }
 
-    setState({ data: posts, loading: false, error: null });
+    return posts;
   }, [problemId, viewerId]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useRealtimeSubscription({ table: 'posts' }, () => void load());
-  useRealtimeSubscription({ table: 'post_likes' }, () => void load());
-
-  return { ...state, reload: load };
+  const state=useLiveQuery('posts:'+(problemId??'All')+':'+(viewerId??'guest'),[] as PostWithAuthor[],load);
+  useRealtimeSubscription({table:'posts',onReconnect:state.reload},()=>void state.reload());
+  useRealtimeSubscription({table:'post_likes'},()=>void state.reload());
+  useRealtimeSubscription({table:'profiles'},()=>void state.reload());
+  useRealtimeSubscription({table:'communities',onReconnect:state.reload},()=>void state.reload());
+  useRealtimeSubscription({table:'community_members',enabled:Boolean(viewerId),onReconnect:state.reload},()=>void state.reload());
+  useRealtimeSubscription({table:'saved_posts',filter:viewerId?`user_id=eq.${viewerId}`:undefined,enabled:Boolean(viewerId)},()=>void state.reload());
+  return state;
 }
 
 /** Live comments for one post. */
 export function useComments(postId: string | null): QueryState<CommentWithAuthor[]> & { reload: () => Promise<void> } {
-  const [state, setState] = useState<QueryState<CommentWithAuthor[]>>({ data: [], loading: Boolean(postId), error: null });
-
   const load = useCallback(async () => {
     if (!supabase || !postId) {
-      setState({ data: [], loading: false, error: null });
-      return;
+      return [] as CommentWithAuthor[];
     }
 
     const { data, error } = await supabase
@@ -142,23 +134,16 @@ export function useComments(postId: string | null): QueryState<CommentWithAuthor
       .order('created_at', { ascending: true });
 
     if (error) {
-      setState({ data: [], loading: false, error: describeError(error) });
-      return;
+      throw Error(describeError(error));
     }
 
-    setState({ data: (data ?? []) as unknown as CommentWithAuthor[], loading: false, error: null });
+    return (data??[]) as unknown as CommentWithAuthor[];
   }, [postId]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useRealtimeSubscription(
-    { table: 'comments', filter: postId ? `post_id=eq.${postId}` : undefined, enabled: Boolean(postId) },
-    () => void load(),
-  );
-
-  return { ...state, reload: load };
+  const state=useLiveQuery('comments:'+(postId??'none'),[] as CommentWithAuthor[],load);
+  useRealtimeSubscription({table:'comments',filter:postId?`post_id=eq.${postId}`:undefined,enabled:Boolean(postId),onReconnect:state.reload},()=>void state.reload());
+  useRealtimeSubscription({table:'profiles',enabled:Boolean(postId)},()=>void state.reload());
+  return state;
 }
 
 /**

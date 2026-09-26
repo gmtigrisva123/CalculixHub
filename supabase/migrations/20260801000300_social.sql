@@ -1,3 +1,5 @@
+-- Rerunnable migration: replace only named triggers/policies; preserve data.
+begin;
 -- CalculixHub: the social graph.
 --
 -- Posts, comments, likes, saves and communities. The existing Community screen
@@ -74,6 +76,7 @@ create index if not exists posts_problem_idx on public.posts (problem_id, create
 create index if not exists posts_community_idx on public.posts (community_id, created_at desc) where deleted_at is null;
 create index if not exists posts_author_idx on public.posts (author_id, created_at desc) where deleted_at is null;
 
+drop trigger if exists posts_touch_updated_at on public.posts;
 create trigger posts_touch_updated_at
   before update on public.posts
   for each row execute function public.touch_updated_at();
@@ -95,6 +98,7 @@ create table if not exists public.comments (
 
 create index if not exists comments_post_idx on public.comments (post_id, created_at) where deleted_at is null;
 
+drop trigger if exists comments_touch_updated_at on public.comments;
 create trigger comments_touch_updated_at
   before update on public.comments
   for each row execute function public.touch_updated_at();
@@ -152,6 +156,7 @@ begin
 end;
 $$;
 
+drop trigger if exists post_likes_sync_count on public.post_likes;
 create trigger post_likes_sync_count
   after insert or delete on public.post_likes
   for each row execute function public.sync_post_like_count();
@@ -172,6 +177,7 @@ begin
 end;
 $$;
 
+drop trigger if exists comment_likes_sync_count on public.comment_likes;
 create trigger comment_likes_sync_count
   after insert or delete on public.comment_likes
   for each row execute function public.sync_comment_like_count();
@@ -198,6 +204,7 @@ begin
 end;
 $$;
 
+drop trigger if exists comments_sync_post_count on public.comments;
 create trigger comments_sync_post_count
   after insert or delete or update of deleted_at on public.comments
   for each row execute function public.sync_post_comment_count();
@@ -220,6 +227,7 @@ begin
 end;
 $$;
 
+drop trigger if exists follows_sync_counts on public.follows;
 create trigger follows_sync_counts
   after insert or delete on public.follows
   for each row execute function public.sync_follow_counts();
@@ -240,6 +248,7 @@ begin
 end;
 $$;
 
+drop trigger if exists community_members_sync_count on public.community_members;
 create trigger community_members_sync_count
   after insert or delete on public.community_members
   for each row execute function public.sync_community_member_count();
@@ -287,6 +296,7 @@ alter table public.saved_posts enable row level security;
 -- they just created -- membership is only inserted on the next statement. That
 -- is a real failure, not a theoretical one: it made every private community
 -- impossible to create.
+drop policy if exists communities_select_visible on public.communities;
 create policy communities_select_visible
   on public.communities for select
   using (
@@ -295,10 +305,12 @@ create policy communities_select_visible
     or public.is_community_member(id, auth.uid())
   );
 
+drop policy if exists communities_insert_authenticated on public.communities;
 create policy communities_insert_authenticated
   on public.communities for insert
   with check (auth.uid() is not null and auth.uid() = created_by);
 
+drop policy if exists communities_update_owner on public.communities;
 create policy communities_update_owner
   on public.communities for update
   using (exists (
@@ -306,6 +318,7 @@ create policy communities_update_owner
     where m.community_id = id and m.user_id = auth.uid() and m.role in ('owner', 'moderator')
   ));
 
+drop policy if exists community_members_select_visible on public.community_members;
 create policy community_members_select_visible
   on public.community_members for select
   using (
@@ -317,10 +330,12 @@ create policy community_members_select_visible
   );
 
 -- Join and leave act on your own membership only.
+drop policy if exists community_members_insert_self on public.community_members;
 create policy community_members_insert_self
   on public.community_members for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists community_members_delete_self on public.community_members;
 create policy community_members_delete_self
   on public.community_members for delete
   using (auth.uid() = user_id);
@@ -338,6 +353,7 @@ create policy community_members_delete_self
 -- Hiding deleted content from a feed is the query's job (`.is('deleted_at',
 -- null)`), not this policy's. This decides *who* may see a row; the query
 -- decides which rows to show.
+drop policy if exists posts_select_visible on public.posts;
 create policy posts_select_visible
   on public.posts for select
   using (
@@ -351,6 +367,7 @@ create policy posts_select_visible
     )
   );
 
+drop policy if exists posts_insert_own on public.posts;
 create policy posts_insert_own
   on public.posts for insert
   with check (
@@ -361,6 +378,7 @@ create policy posts_insert_own
     )
   );
 
+drop policy if exists posts_update_own on public.posts;
 create policy posts_update_own
   on public.posts for update
   using (auth.uid() = author_id)
@@ -370,6 +388,7 @@ create policy posts_update_own
 
 -- Same reasoning as posts_select_visible: without the author clause a comment
 -- author cannot soft-delete their own comment.
+drop policy if exists comments_select_visible on public.comments;
 create policy comments_select_visible
   on public.comments for select
   using (
@@ -377,6 +396,7 @@ create policy comments_select_visible
     and exists (select 1 from public.posts p where p.id = post_id)
   );
 
+drop policy if exists comments_insert_own on public.comments;
 create policy comments_insert_own
   on public.comments for insert
   with check (
@@ -384,6 +404,7 @@ create policy comments_insert_own
     and exists (select 1 from public.posts p where p.id = post_id and p.deleted_at is null)
   );
 
+drop policy if exists comments_update_own on public.comments;
 create policy comments_update_own
   on public.comments for update
   using (auth.uid() = author_id)
@@ -391,15 +412,26 @@ create policy comments_update_own
 
 -- Likes and saves --------------------------------------------------------------
 
+drop policy if exists post_likes_select_all on public.post_likes;
 create policy post_likes_select_all on public.post_likes for select using (true);
+drop policy if exists post_likes_insert_own on public.post_likes;
 create policy post_likes_insert_own on public.post_likes for insert with check (auth.uid() = user_id);
+drop policy if exists post_likes_delete_own on public.post_likes;
 create policy post_likes_delete_own on public.post_likes for delete using (auth.uid() = user_id);
 
+drop policy if exists comment_likes_select_all on public.comment_likes;
 create policy comment_likes_select_all on public.comment_likes for select using (true);
+drop policy if exists comment_likes_insert_own on public.comment_likes;
 create policy comment_likes_insert_own on public.comment_likes for insert with check (auth.uid() = user_id);
+drop policy if exists comment_likes_delete_own on public.comment_likes;
 create policy comment_likes_delete_own on public.comment_likes for delete using (auth.uid() = user_id);
 
 -- Saves are private: what someone bookmarks is nobody else's business.
+drop policy if exists saved_posts_select_own on public.saved_posts;
 create policy saved_posts_select_own on public.saved_posts for select using (auth.uid() = user_id);
+drop policy if exists saved_posts_insert_own on public.saved_posts;
 create policy saved_posts_insert_own on public.saved_posts for insert with check (auth.uid() = user_id);
+drop policy if exists saved_posts_delete_own on public.saved_posts;
 create policy saved_posts_delete_own on public.saved_posts for delete using (auth.uid() = user_id);
+
+commit;

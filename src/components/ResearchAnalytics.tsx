@@ -8,8 +8,11 @@ import { m } from 'motion/react';
 import { FlaskConical, BarChart2, Calculator, Info, LineChart, Sparkles } from 'lucide-react';
 import { probCorrect, itemInformation } from '../domain/irt';
 import MathText from './MathText';
+import { useAuth } from '../context/AuthContext';
+import { useLearnerSnapshot } from '../services/data/people';
 
 export default function ResearchAnalytics() {
+  const {user}=useAuth();const saved=useLearnerSnapshot(user?.id??null);
   const [theta, setTheta] = useState<number>(0.5);
   const [paramA, setParamA] = useState<number>(1.2);
   const [paramB, setParamB] = useState<number>(0.0);
@@ -27,6 +30,8 @@ export default function ResearchAnalytics() {
 
   return (
     <div className="space-y-8">
+      {saved.error&&<p role="alert">{saved.error}</p>}
+      <p className="arena-note">Your saved record: {saved.data.stats?.attempts_total??0} attempts · {saved.data.accuracyPct===null?'No measured accuracy yet':saved.data.accuracyPct+'% accuracy'}. The explorer below is a mathematical sandbox; its sliders are not measured learner ability.</p>
       {/* Header */}
       <div className="border-b border-line pb-4">
         <p className="type-eyebrow text-cyan-500 font-mono text-xs uppercase">Psychometrics Laboratory</p>

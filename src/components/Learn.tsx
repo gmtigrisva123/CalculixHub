@@ -3,24 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Award, Sparkles, BookOpenCheck, Filter } from 'lucide-react';
-import { Problem, Topic, Level, SmartFeedback, UserStats } from '../../shared/types';
-import { TOPIC_META, TOPIC_LIST, LEVEL_LIST, LEVEL_META } from '../lib/topics';
+import { Problem, Topic, Level, CompetitionLevel, SmartFeedback, UserStats } from '../../shared/types';
+import { TOPIC_META, TOPIC_LIST, LEVEL_LIST, LEVEL_META, COMPETITION_LIST } from '../lib/topics';
+import NumericAnswerGrid from './NumericAnswerGrid';
+import GeometryDiagram from './GeometryDiagram';
+import { useAuth } from '../context/AuthContext';
 import MathText from './MathText';
 import { apiUrl, apiFetch } from '../services/apiBase';
-import { gradeLocally, queueGrade } from '../platform/offline';
+import { gradeLocally } from '../platform/offline';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
 import { Collapse, StaggerItem } from './motion';
 import AITutorChat from './AITutorChat';
+import { EMPTY_PRACTICE, submitPractice } from '../../shared/practiceRules';
 
 interface LearnProps {
   problems: Problem[];
   completedProblems: string[];
   userStats: UserStats;
   onSolveProblem: (id: string, isCorrect: boolean, scorePoints: number) => void;
+  savedAttempts?: Record<string,{count:number;finished:boolean;forfeited:boolean}>;
   initialFilters?: { topic?: Topic; level?: Level };
 }
 
@@ -29,17 +34,51 @@ export default function Learn({
   completedProblems,
   onSolveProblem,
   initialFilters,
+  savedAttempts,
 }: LearnProps) {
   const [selectedTopic, setSelectedTopic] = useState<Topic | 'All'>('All');
   const [selectedLevel, setSelectedLevel] = useState<Level | 'All'>('All');
+  const [selectedCompetition, setSelectedCompetition] = useState<CompetitionLevel | 'All'>('All');
+  const { user } = useAuth();
+  const started=useRef(performance.now());
+  const currentUser=useRef(user?.id);currentUser.current=user?.id;
+  const submissionLock = useRef(false);
+  const [practiceSession] = useState(() => {
+    const key = 'calculix_practice_session';
+    const current = localStorage.getItem(key);
+    if (current) return current;
+    const id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+    return id;
+  });
+  const attemptKey = 'calculix_learn_attempts_v2:' + (user?.id ?? 'guest');
+  const [attempts, setAttempts] = useState<Record<string, { count: number; finished: boolean; forfeited: boolean }>>({});
+  useEffect(() => {
+    if(user){setAttempts(savedAttempts??{});return;}
+    try { setAttempts(JSON.parse(localStorage.getItem(attemptKey) ?? '{}')); }
+    catch { setAttempts({}); }
+  }, [attemptKey,savedAttempts,user?.id]);
+  const saveAttempt = (id: string, state: { count: number; finished: boolean; forfeited: boolean }) => {
+    setAttempts(previous => {
+      const next = { ...previous, [id]: state };
+      if(!user)localStorage.setItem(attemptKey, JSON.stringify(next));
+      return next;
+    });
+  };
+  useEffect(()=>{setActiveProblem(null);setShowFullSolution(false);setShowAITutor(false);},[user?.id]);
+  const maxAttempts = 3;
 
   const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
+  const attempt = activeProblem ? attempts[activeProblem.id] : undefined;
+  const locked = Boolean(activeProblem?.proOnly || attempt?.finished || completedProblems.includes(activeProblem?.id ?? ''));
   const [answerInput, setAnswerInput] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [smartFeedback, setSmartFeedback] = useState<SmartFeedback | null>(null);
   const [showFullSolution, setShowFullSolution] = useState(false);
+  const [revealedWithoutScore, setRevealedWithoutScore] = useState(false);
   const [showAITutor, setShowAITutor] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialFilters) {
@@ -51,15 +90,19 @@ export default function Learn({
   const filteredProblems = problems.filter((prob) => {
     const matchTopic = selectedTopic === 'All' || prob.topic === selectedTopic;
     const matchLevel = selectedLevel === 'All' || prob.level === selectedLevel;
-    return matchTopic && matchLevel;
+    return matchTopic && matchLevel && (selectedCompetition === 'All' || prob.competition === selectedCompetition);
   });
 
   const handleSelectProblem = (prob: Problem) => {
+    started.current=performance.now();
     setActiveProblem(prob);
     setAnswerInput('');
     setShowHint(false);
     setSmartFeedback(null);
-    setShowFullSolution(completedProblems.includes(prob.id));
+    setShowFullSolution(Boolean(attempts[prob.id]?.finished || completedProblems.includes(prob.id)) && !prob.proOnly);
+    setRevealedWithoutScore(Boolean(attempts[prob.id]?.forfeited));
+    setShowAITutor(false);
+    setAiPrompt(null);
   };
 
   const handleCloseWorkspace = () => {
@@ -68,59 +111,117 @@ export default function Learn({
     setShowHint(false);
     setSmartFeedback(null);
     setShowFullSolution(false);
+    setRevealedWithoutScore(false);
+    setShowAITutor(false);
+    setAiPrompt(null);
   };
 
   const applyVerdict = (feedback: SmartFeedback, correct: boolean) => {
     if (!activeProblem) return;
 
     setSmartFeedback(feedback);
+    const next = feedback.attemptsUsed === undefined ? submitPractice(attempts[activeProblem.id] ?? EMPTY_PRACTICE, correct)
+      : { count: feedback.attemptsUsed, finished: Boolean(feedback.finished), forfeited: Boolean(feedback.forfeited) };
+    saveAttempt(activeProblem.id, next);
 
     if (correct) {
+      setRevealedWithoutScore(false);
       const isFresh = !completedProblems.includes(activeProblem.id);
-      onSolveProblem(activeProblem.id, true, isFresh ? activeProblem.points : 0);
+      onSolveProblem(activeProblem.id, true, isFresh ? feedback.pointsAwarded??0 : 0);
       setShowFullSolution(true);
     } else {
+      setShowFullSolution(next.finished);
+      setRevealedWithoutScore(next.forfeited);
+      setShowAITutor(false);
+      setAiPrompt(null);
       onSolveProblem(activeProblem.id, false, 0);
     }
   };
 
+  const handleRevealSolution = async () => {
+    if (!activeProblem || evaluating || activeProblem.proOnly) return;
+    const actingUser = user?.id;
+    setEvaluating(true);
+    try {
+      const response=await apiFetch('/api/evaluate',{method:'POST',body:JSON.stringify({problemId:activeProblem.id,userAnswer:'__forfeit__',practiceSession,forfeit:true,durationMs:Math.min(14400000,Math.round(performance.now()-started.current))})});
+      if(!response.ok&&user)throw Error('Could not save the pass. Please reconnect and retry.');
+      if (currentUser.current !== actingUser) return;
+      saveAttempt(activeProblem.id,{count:attempts[activeProblem.id]?.count??0,finished:true,forfeited:true});
+      onSolveProblem(activeProblem.id,false,0);
+    } catch(e) {if(user){setSmartFeedback({correct:false,explanation:'Could not save the pass.',guidance:'Reconnect and try again.'});setEvaluating(false);return;}saveAttempt(activeProblem.id,{count:attempts[activeProblem.id]?.count??0,finished:true,forfeited:true});}
+    setEvaluating(false);
+    setShowFullSolution(true);
+    setRevealedWithoutScore(true);
+    setSmartFeedback(null);
+    setAiPrompt(
+      [
+        'A learner could not solve this problem and asked for a clear explanation.',
+        'Explain the worked solution step by step in warm, precise English.',
+        'Do not award points, and do not assume the learner already knows the key theorem.',
+        `Problem: ${activeProblem.title}`,
+        `Question: ${activeProblem.question}`,
+        `Correct answer: ${activeProblem.correctAnswer}`,
+        `Worked solution: ${activeProblem.solution}`,
+      ].join('\n\n'),
+    );
+    setShowAITutor(true);
+  };
+
   const handleSubmitAnswer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!answerInput.trim() || !activeProblem || evaluating) return;
+    if (!answerInput.trim() || answerInput.includes('_') || !activeProblem || evaluating || locked || submissionLock.current) return;
+    submissionLock.current = true;
+    const actingUser=user?.id;
 
     setEvaluating(true);
     setSmartFeedback(null);
+    setShowFullSolution(false);
+    setRevealedWithoutScore(false);
+    setShowAITutor(false);
+    setAiPrompt(null);
 
     try {
       const response = await apiFetch('/api/evaluate', {
         method: 'POST',
-        body: JSON.stringify({ problemId: activeProblem.id, userAnswer: answerInput }),
+        body: JSON.stringify({ problemId: activeProblem.id, userAnswer: answerInput, practiceSession,durationMs:Math.min(14400000,Math.round(performance.now()-started.current)) }),
       });
 
+      if (!response.ok) throw new Error(`Grading unavailable (${response.status})`);
       if (response.ok) {
         const data: SmartFeedback = await response.json();
+        if(currentUser.current!==actingUser)return;
         applyVerdict(data, data.correct);
+        started.current=performance.now();
       }
     } catch (err) {
-      console.warn('Grading offline; queueing for explanation:', err);
+      if(user){setSmartFeedback({correct:false,explanation:'Your answer has not been saved.',guidance:'Reconnect and submit again. Points and progress only update after a successful database save.'});return;}
       const correct = gradeLocally(answerInput, activeProblem.correctAnswer);
-      queueGrade(activeProblem.id, answerInput);
+
 
       applyVerdict(
         {
           correct,
           explanation: correct
             ? 'Correct! Your answer matches the worked solution.'
-            : 'Not quite. Review the worked solution below and check your steps.',
+            : 'Not quite. Check your reasoning and try again while attempts remain.',
           guidance:
-            "Device offline — answer recorded locally. Detailed AI analysis will sync once reconnected.",
+            "Answer checked in this browser. Online feedback is currently unavailable.",
         },
         correct,
       );
     } finally {
       setEvaluating(false);
+      submissionLock.current = false;
     }
   };
+
+  useEffect(()=>{
+    if(!activeProblem)return;
+    const live=problems.find(p=>p.id===activeProblem.id);
+    if(!live){handleCloseWorkspace();return;}
+    if(live!==activeProblem)setActiveProblem(live);
+    if(user&&savedAttempts?.[activeProblem.id]?.finished){setShowFullSolution(!live.proOnly);setRevealedWithoutScore(Boolean(savedAttempts[activeProblem.id].forfeited));}
+  },[problems,savedAttempts,user?.id]);
 
   const idleSparkleRef = useAmbient<SVGSVGElement>();
 
@@ -140,13 +241,14 @@ export default function Learn({
             {/* Header */}
             <header className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">Adaptive Problem Engine</p>
-                <h1 className="type-title text-2xl font-bold text-content mt-1">Problem Catalog</h1>
+                <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">Make a little room to think</p>
+                <h1 className="type-title text-2xl font-bold text-content mt-1">Find a question worth your time</h1>
               </div>
               <span className="text-xs font-mono text-content-subtle">
                 {completedProblems.length} of {problems.length} solved
               </span>
             </header>
+            <p className="text-sm text-content-muted">Competition preparation, from short answers to proof techniques. These are training questions and variants, not official contest papers. Proof submissions will open with Pro.</p>
 
             {/* Filter Bar */}
             <div className="cx-glass-panel p-5 space-y-4">
@@ -222,13 +324,20 @@ export default function Learn({
             </div>
 
             {/* Problem Cards Grid */}
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Competition level">
+              {(['All', ...COMPETITION_LIST] as const).map(contest => <button key={contest}
+                aria-pressed={selectedCompetition === contest} onClick={() => setSelectedCompetition(contest)}
+                className={'cx-chip px-4 py-2 border rounded-xl ' + (selectedCompetition === contest ? 'border-indigo-500 text-indigo-500' : 'border-line text-content-muted')}>
+                {contest === 'All' ? 'All competitions' : contest}
+              </button>)}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredProblems.map((prob, index) => {
                 const isSolved = completedProblems.includes(prob.id);
                 return (
-                  <div key={prob.id} onClick={() => handleSelectProblem(prob)}>
+                    <button type="button" className="text-left" key={prob.id} onClick={() => handleSelectProblem(prob)}>
                     <StaggerItem
-                      index={index}
+                        index={Math.min(index, 7)}
                       className="cx-card-quantum p-5 space-y-3 flex flex-col justify-between hover:border-indigo-500/50 cursor-pointer transition-colors h-full"
                     >
                       <div className="space-y-2">
@@ -236,7 +345,7 @@ export default function Learn({
                           <div className="flex items-center gap-2">
                             <span className="cx-tag cx-tag-accent text-[10px]">{prob.topic}</span>
                             <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-sunken border border-line text-content-subtle">
-                              {prob.level}
+                              {prob.competition ?? prob.level}{prob.proOnly ? ' · Pro locked' : ''}
                             </span>
                           </div>
                           {isSolved && (
@@ -259,7 +368,7 @@ export default function Learn({
                         </span>
                       </div>
                     </StaggerItem>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -302,6 +411,7 @@ export default function Learn({
                 <div className="text-sm leading-relaxed text-content space-y-4">
                   <MathText text={activeProblem.question} />
                 </div>
+                {activeProblem.figure && <GeometryDiagram figure={activeProblem.figure}/>}
 
                 {/* Hint Drawer */}
                 {activeProblem.hint && (
@@ -325,23 +435,34 @@ export default function Learn({
 
               {/* Response & Grading Panel */}
               <div className="lg:col-span-5 space-y-5">
-                <form onSubmit={handleSubmitAnswer} className="cx-glass-panel p-6 space-y-4">
+                {activeProblem.proOnly ? <section className="cx-glass-panel p-6 space-y-3">
+                  <h3 className="font-semibold text-content">Proof practice · Pro</h3>
+                  <p className="text-content-muted">Written proofs and detailed grading are coming with Pro. This problem is currently locked.</p>
+                  <button disabled className="cx-btn w-full opacity-60">Pro coming soon</button>
+                </section> : <form onSubmit={handleSubmitAnswer} className="cx-glass-panel p-6 space-y-4">
                   <h3 className="font-semibold text-sm text-content">Submit Your Answer</h3>
+                  <p className="text-sm text-content-subtle">{Math.min(attempt?.count ?? 0, 3)} of 3 attempts used{attempt?.forfeited ? ' · No points available' : ''}</p>
 
                   <div className="space-y-2">
-                    <input
+                    {activeProblem.answerMode === 'numeric-grid' && activeProblem.answerDigits ? <NumericAnswerGrid
+                      digits={activeProblem.answerDigits} value={answerInput} onChange={setAnswerInput} disabled={evaluating || locked}
+                    /> : activeProblem.options?.length ? <div className="space-y-2">{activeProblem.options.map((option, index) => <button
+                      type="button" key={option} disabled={evaluating || locked} aria-pressed={answerInput === option}
+                      onClick={() => setAnswerInput(option)} className={'w-full text-left p-3 border rounded-xl ' + (answerInput === option ? 'border-indigo-500 bg-indigo-500/10' : 'border-line')}>
+                      <span className="mr-3">{String.fromCharCode(65 + index)}.</span><MathText text={option}/>
+                    </button>)}</div> : <input
                       type="text"
                       value={answerInput}
                       onChange={(e) => setAnswerInput(e.target.value)}
                       placeholder="Enter numerical or algebraic answer..."
-                      disabled={evaluating}
+                      disabled={evaluating || locked}
                       className="w-full px-4 py-3 rounded-xl border border-line bg-surface-sunken text-content font-mono text-sm focus:outline-hidden focus:border-indigo-500"
-                    />
+                    />}
                   </div>
 
                   <m.button
                     type="submit"
-                    disabled={!answerInput.trim() || evaluating}
+                    disabled={!answerInput.trim() || answerInput.includes('_') || evaluating || locked}
                     whileTap={{ scale: 0.96 }}
                     className="w-full cx-btn cx-btn-fill py-3 rounded-xl font-medium bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2"
                   >
@@ -353,7 +474,31 @@ export default function Learn({
                       'Submit Answer'
                     )}
                   </m.button>
-                </form>
+                </form>}
+
+                {!showFullSolution && !activeProblem.proOnly && (
+                  <m.button
+                    type="button"
+                    onClick={handleRevealSolution}
+                    disabled={evaluating}
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-left text-xs text-amber-800 transition-colors hover:bg-amber-500/15 dark:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 font-semibold">
+                        <BookOpenCheck className="h-4 w-4 shrink-0" />
+                        I can&apos;t solve this — show me
+                      </span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider opacity-75">No points</span>
+                    </span>
+                  </m.button>
+                )}
+
+                {revealedWithoutScore && (
+                  <p className="text-[11px] leading-relaxed text-content-subtle">
+                    The solution is open for learning. This problem will not add points or count as solved.
+                  </p>
+                )}
 
                 {/* Smart Feedback Banner */}
                 {smartFeedback && (
@@ -420,7 +565,11 @@ export default function Learn({
 
             {/* AI Tutor Overlay Modal */}
             {showAITutor && (
-              <AITutorChat />
+              <AITutorChat
+                key={aiPrompt ?? 'general'}
+                autoOpen={Boolean(aiPrompt)}
+                initialPrompt={aiPrompt ?? undefined}
+              />
             )}
           </m.div>
         )}

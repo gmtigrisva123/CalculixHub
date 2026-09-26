@@ -5,6 +5,16 @@
 
 export type Topic = 'Algebra' | 'Geometry' | 'Combinatorics' | 'Number Theory';
 export type Level = 'Foundation' | 'Advanced' | 'Olympiad';
+export type CompetitionLevel = 'AMC' | 'AIME' | 'USAMO' | 'IMO';
+export type AnswerMode = 'choice' | 'numeric-grid' | 'proof';
+
+export interface GeometryFigure {
+  kind: 'triangle' | 'circle' | 'quadrilateral' | 'coordinate-grid' | 'regular-polygon';
+  labels?: string[];
+  values?: number[];
+  construction?: 'median' | 'bisector' | 'centers' | 'ceva' | 'euler-line' | 'diagonals';
+  illustrative?: boolean;
+}
 
 export interface Problem {
   id: string;
@@ -18,6 +28,20 @@ export interface Problem {
   hint: string;
   solution: string;
   points: number;
+  /** Competition band used for filtering and transparent score calibration. */
+  competition?: CompetitionLevel;
+  /** Numeric AIME-style responses use one digit column per required digit. */
+  answerMode?: AnswerMode;
+  answerDigits?: number;
+  /** Proof and extended-response items are staged for the future Pro tier. */
+  proOnly?: boolean;
+  /** Maximum submissions before the worked solution is revealed. */
+  maxAttempts?: number;
+  /** A precise, code-rendered figure for geometry items. */
+  figure?: GeometryFigure;
+  /** Explainable difficulty dimensions used by the score calibration rubric. */
+  estimatedSteps?: number;
+  abstraction?: number;
 }
 
 export interface UserStats {
@@ -104,7 +128,11 @@ export interface AIRecommendation {
 }
 
 export interface SmartFeedback {
-  correct: boolean;
-  explanation: string;
-  guidance: string;
+    pointsAwarded?: number;
+    correct: boolean;
+    explanation: string;
+    guidance: string;
+    attemptsUsed?: number;
+    finished?: boolean;
+    forfeited?: boolean;
 }

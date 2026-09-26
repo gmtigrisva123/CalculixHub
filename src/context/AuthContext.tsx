@@ -25,7 +25,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { isBackendConfigured, supabase } from '../services/supabase';
-import type { Level, ProfileRow, Topic } from '../services/database.types';
+import { useRealtimeSubscription } from '../services/data/realtime';
+import type { Level, ProfileRow } from '../services/database.types';
+import { clearSocialCallback, initialSocialCallback, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'unavailable';
 
@@ -38,6 +40,7 @@ export interface AuthResult {
 }
 
 interface AuthContextValue {
+  authError: string | null;
   status: AuthStatus;
   session: Session | null;
   user: User | null;
@@ -47,12 +50,13 @@ interface AuthContextValue {
 
   signUp(input: { email: string; password: string; username: string; displayName: string }): Promise<AuthResult>;
   signIn(input: { email: string; password: string }): Promise<AuthResult>;
+  signInWithSocial(provider: SocialProvider): Promise<AuthResult>;
   signOut(): Promise<void>;
   requestPasswordReset(email: string): Promise<AuthResult>;
   updatePassword(newPassword: string): Promise<AuthResult>;
 
   /** Records placement results and marks onboarding complete, server-side. */
-  completeOnboarding(input: { level: Level; skills?: Partial<Record<Topic, number>> }): Promise<AuthResult>;
+  completeOnboarding(input: { level: Level }): Promise<AuthResult>;
   refreshProfile(): Promise<void>;
 }
 
@@ -91,6 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(isBackendConfigured ? 'loading' : 'unavailable');
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [authError, setAuthError] = useState<string | null>(initialSocialCallback.error);
+  const socialInFlight = useRef(false);
 
   // Guards against a state update after unmount, and against an in-flight
   // profile fetch for a previous user landing on the next one.
@@ -142,7 +148,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    void supabase.auth.getSession().then(({ data }) => apply(data.session));
+    const client = supabase;
+    void (async () => {
+      try {
+        const initialized = await client.auth.initialize();
+        const { data, error } = await client.auth.getSession();
+        if (cancelled) return;
+        if (initialSocialCallback.returning && (initialized.error || error || !data.session)) {
+          setAuthError(initialSocialCallback.error ?? 'Your sign-in link expired or could not be verified. Please start again in this browser.');
+        }
+        clearSocialCallback();
+        await apply(data.session);
+      } catch {
+        if (!cancelled) { setAuthError('Could not connect to sign-in. Check your connection and retry.'); await apply(null); }
+      }
+    })();
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, next) => {
       void apply(next);
@@ -161,8 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (activeUserId.current === userId) setProfile(loaded);
   }, [loadProfile]);
 
+  useRealtimeSubscription({table:'profiles',filter:session?.user.id?`id=eq.${session.user.id}`:undefined,enabled:Boolean(session?.user.id),onReconnect:refreshProfile},()=>void refreshProfile());
+
   const signUp = useCallback<AuthContextValue['signUp']>(async ({ email, password, username, displayName }) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
+    setAuthError(null);
 
     // Checked here for a fast, clear message. The database enforces both the
     // format and case-insensitive uniqueness regardless of what is sent.
@@ -198,11 +221,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback<AuthContextValue['signIn']>(async ({ email, password }) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
+    setAuthError(null);
 
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) return { ok: false, error: friendlyAuthError(error.message, 'signIn') };
 
     return { ok: true };
+  }, []);
+
+  const signInWithSocial = useCallback<AuthContextValue['signInWithSocial']>(async (provider) => {
+    if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
+    if (provider !== 'google' && provider !== 'facebook') return { ok: false, error: 'Unsupported sign-in provider.' };
+    if (socialInFlight.current) return { ok: false, error: 'Sign-in is already opening.' };
+    socialInFlight.current = true;
+    setAuthError(null);
+    try {
+      const url = import.meta.env.VITE_SUPABASE_URL.trim();
+      const response = await fetch(`${url}/auth/v1/settings`, {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
+        signal: AbortSignal.timeout(10000), cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('Sign-in is temporarily unavailable. Please try again.');
+      const settings = await response.json();
+      if (!settings.external?.[provider]) {
+        return { ok: false, error: `${provider === 'google' ? 'Google' : 'Facebook'} sign-in is not available yet. Please use email for now.` };
+      }
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: socialRedirect(window.location.origin, import.meta.env.BASE_URL),
+          skipBrowserRedirect: true,
+          ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : { scopes: 'email' }),
+        },
+      });
+      if (error || !data.url) throw new Error('Could not start sign-in. Please try again.');
+      const destination = safeAuthorizationUrl(data.url, url);
+      // OAuth providers must open at the top level, including from the phone preview.
+      (window.top ?? window).location.assign(destination);
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not open sign-in. Check your connection and try again from the full website.' };
+    } finally { socialInFlight.current = false; }
   }, []);
 
   const signOut = useCallback(async () => {
@@ -258,19 +317,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
+      authError,
       session,
       user: session?.user ?? null,
       profile,
       hasOnboarded: Boolean(profile?.onboarded_at),
       signUp,
       signIn,
+      signInWithSocial,
       signOut,
       requestPasswordReset,
       updatePassword,
       completeOnboarding,
       refreshProfile,
     }),
-    [status, session, profile, signUp, signIn, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
+    [status, authError, session, profile, signUp, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

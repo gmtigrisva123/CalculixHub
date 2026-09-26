@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
+import { useRealtimeSubscription } from '../services/data/realtime';
 import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';
 import LandingPage from './landing/LandingPage';
@@ -47,7 +48,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 interface WelcomeScreenProps {
-  onLoginSuccess: (name: string, level: Level, initialSkills?: Record<Topic, number>) => void;
+  onLoginSuccess: (name: string, level: Level) => void;
 }
 
 const DOMAINS: Domain[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
@@ -151,7 +152,7 @@ const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOr
 
 
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
-  const { signIn, signUp, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
+  const { signIn, signUp, signInWithSocial, authError, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
 
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'placement'>('landing');
   const [email, setEmail] = useState('');
@@ -163,6 +164,18 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [socialProvider, setSocialProvider] = useState<'google' | 'facebook' | null>(null);
+  useEffect(() => {
+    if (authError) { setAuthMode('login'); setErrorMessage(authError); }
+    else if (authStatus === 'authenticated' && !hasOnboarded) setAuthMode('placement');
+  }, [authError, authStatus, hasOnboarded]);
+  const handleSocialSignIn = async (provider: 'google' | 'facebook') => {
+    if (submitting) return;
+    setSubmitting(true); setSocialProvider(provider); setErrorMessage(''); setSuccessMessage('');
+    const result = await signInWithSocial(provider);
+    if (!result.ok) setErrorMessage(result.error ?? 'Could not start sign-in.');
+    setSubmitting(false); setSocialProvider(null);
+  };
 
   // --- REAL-TIME STATISTICS STATE & POLLING ---
   /*
@@ -179,40 +192,17 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
    * from this state is the client-side half of deleting them outright.
    */
   const [liveStats, setLiveStats] = useState({
-    activeUsers: 0,
+    registeredUsers: 0,
     testsCompleted: 0,
     problemsSolved: 0,
   });
+  const [statsAvailable, setStatsAvailable] = useState(false);
 
-  useEffect(() => {
-    const fetchLiveStats = async () => {
-      try {
-        const res = await fetch(apiUrl('/api/live-stats'));
-        if (res.ok) {
-          const data = (await res.json()) as Record<string, unknown>;
-          // Read the three fields by name and keep the previous value for
-          // anything the server omits or sends as a non-number. These are
-          // rendered with `.toLocaleString()`, so a missing field would not
-          // degrade a number -- it would throw and take the landing page down.
-          // Naming them also stops unsourced fields the endpoint still returns
-          // from re-entering state through a blanket spread.
-          const numeric = (key: string, fallback: number) =>
-            typeof data[key] === 'number' && Number.isFinite(data[key]) ? (data[key] as number) : fallback;
-
-          setLiveStats((previous) => ({
-            activeUsers: numeric('activeUsers', previous.activeUsers),
-            testsCompleted: numeric('testsCompleted', previous.testsCompleted),
-            problemsSolved: numeric('problemsSolved', previous.problemsSolved),
-          }));
-        }
-      } catch (err) {
-        console.error('Error fetching live stats from server:', err);
-      }
-    };
-    fetchLiveStats();
-    const interval = setInterval(fetchLiveStats, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const fetchLiveStats=async()=>{
+   try{const response=await fetch(apiUrl('/api/live-stats'));if(!response.ok){setStatsAvailable(false);return;}const data=await response.json();setLiveStats({registeredUsers:Number(data.registeredUsers),testsCompleted:Number(data.testsCompleted),problemsSolved:Number(data.problemsSolved)});setStatsAvailable(true);}catch{setStatsAvailable(false);}
+  };
+  useEffect(()=>{void fetchLiveStats();},[]);
+  useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.ranking',onReconnect:fetchLiveStats},()=>void fetchLiveStats());
 
   // --- LANDING PAGE INTERACTIVE STATES ---
   /*
@@ -254,34 +244,6 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const [activeArchTab, setActiveArchTab] = useState<'engine' | 'ai' | 'compete' | 'analytics'>('engine');
   const [isArchExpanded, setIsArchExpanded] = useState<boolean>(false);
   const [communityDarkMode, setCommunityDarkMode] = useState<boolean>(true);
-
-  // Base like counts for the community preview thread, plus this visitor's
-  // own vote (-1, 0, or +1) so a single browser can only cast one vote per
-  // post instead of incrementing the counter indefinitely on every click.
-  const PREVIEW_BASE_VOTES: Record<string, number> = { 'disc-1': 42, 'disc-2': 18 };
-  const PREVIEW_VOTES_KEY = 'calculix_landing_preview_votes';
-  const [myPreviewVote, setMyPreviewVote] = useState<Record<string, 1 | -1 | 0>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(PREVIEW_VOTES_KEY) || '{}');
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem(PREVIEW_VOTES_KEY, JSON.stringify(myPreviewVote));
-  }, [myPreviewVote]);
-
-  const castPreviewVote = (id: string, direction: 1 | -1) => {
-    setMyPreviewVote((prev) => {
-      const current = prev[id] || 0;
-      // Clicking the same direction again clears the vote; the opposite direction flips it.
-      const next = current === direction ? 0 : direction;
-      return { ...prev, [id]: next };
-    });
-  };
-
-  const previewVoteCount = (id: string) => PREVIEW_BASE_VOTES[id] + (myPreviewVote[id] || 0);
 
   const [hoveredStep, setHoveredStep] = useState<number | null>(null);
 
@@ -515,7 +477,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const handleFinishPlacement = async () => {
     // Persist to Supabase if the user has an active signed-in session
     try {
-      const saved = await completeOnboarding({ level: calculatedLevel, skills: domainProfile });
+      const saved = await completeOnboarding({ level: calculatedLevel });
       if (!saved.ok && saved.error !== 'You need to be signed in.' && saved.error !== 'Accounts are unavailable in this build.') {
         console.warn('[CalculixHub] Onboarding save notice:', saved.error);
       }
@@ -523,13 +485,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       console.warn('[CalculixHub] Skipped database save for guest placement:', err);
     }
 
-    fetch(apiUrl('/api/live-stats/event'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'test-completed' }),
-    }).catch((err) => console.error('Error reporting test-completed event:', err));
-
-    onLoginSuccess(fullName || 'Calculix Student', calculatedLevel, domainProfile);
+    // Placement estimates stay inside the assessment flow. The workspace
+    // starts with a clean dashboard and only learns from practice activity.
+    onLoginSuccess(fullName || 'Calculix Student', calculatedLevel);
   };
 
   // --- PDF IMPACT REPORT EXPORT ---
@@ -580,17 +538,17 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             <div class="metric-grid">
               <div class="metric-card">
                 <div class="metric-label">Learners active</div>
-                <div class="metric-val">${liveStats.activeUsers}</div>
+                <div class="metric-val">${statsAvailable ? liveStats.registeredUsers : 'Unavailable'}</div>
                 <div class="metric-label">Arrivals in the last 15 minutes</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">IRT assessments completed</div>
-                <div class="metric-val">${liveStats.testsCompleted}</div>
+                <div class="metric-val">${statsAvailable ? liveStats.testsCompleted : 'Unavailable'}</div>
                 <div class="metric-label">Since this instance started</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Problems graded</div>
-                <div class="metric-val">${liveStats.problemsSolved}</div>
+                <div class="metric-val">${statsAvailable ? liveStats.problemsSolved : 'Unavailable'}</div>
                 <div class="metric-label">Since this instance started</div>
               </div>
             </div>
@@ -698,7 +656,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
        * into. Below ~52rem the track count drops to one and the panel stacks
        * above the form, which is the correct order to read them in.
        */
-      <div className="min-h-screen grid [grid-template-columns:repeat(auto-fit,minmax(26rem,1fr))] bg-surface text-content font-sans antialiased">
+      <div className="min-h-screen grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr))] bg-surface text-content font-sans antialiased">
 
         {/* The standing panel. Absolute dark, hence `ramp-static`. */}
         <div className="ramp-static cx-band flex flex-col justify-between gap-16 px-8 py-12 sm:px-13 sm:py-14">
@@ -708,7 +666,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             <span className="cx-mark">&#8721;</span>
             <span className="flex flex-col leading-[1.15]">
               <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
-              <span className="type-eyebrow text-stone-500">Math OS Platform</span>
+              <span className="type-eyebrow text-stone-500">A place to think</span>
             </span>
           </div>
 
@@ -722,7 +680,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           </div>
 
           <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">
-            Calibrated item bank · {BANK.domainCount} domains · MIT licensed
+            A little room for your next good question.
           </p>
         </div>
 
@@ -748,7 +706,19 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   : 'One account, and the placement test result stays with you.'}
               </p>
 
-              <div className="mt-7.5 space-y-4.5">
+              <div className="mt-7.5 grid gap-3" aria-label="Social sign-in">
+                <button type="button" className="cx-btn cx-btn-secondary cx-btn-block py-3" disabled={submitting || authStatus === 'unavailable'} onClick={() => void handleSocialSignIn('google')}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.23c1.89-1.74 2.99-4.3 2.99-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.41l-3.23-2.51c-.9.6-2.05.97-3.38.97-2.6 0-4.81-1.76-5.6-4.13H3.06v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 13.92a6 6 0 0 1 0-3.84V7.49H3.06a10 10 0 0 0 0 9.02l3.34-2.59Z"/><path fill="#EA4335" d="M12 5.95c1.47 0 2.79.51 3.83 1.5l2.87-2.87A9.64 9.64 0 0 0 12 2a10 10 0 0 0-8.94 5.49l3.34 2.59C7.19 7.71 9.4 5.95 12 5.95Z"/></svg>
+                  {socialProvider === 'google' ? 'Opening Google…' : 'Continue with Google'}
+                </button>
+                <button type="button" className="cx-btn cx-btn-secondary cx-btn-block py-3" disabled={submitting || authStatus === 'unavailable'} onClick={() => void handleSocialSignIn('facebook')}>
+                  <Facebook size={20} aria-hidden="true" className="text-[#1877F2]" />
+                  {socialProvider === 'facebook' ? 'Opening Facebook…' : 'Continue with Facebook'}
+                </button>
+                <p className="text-xs text-content-subtle text-center">One secure sign-in for new and returning learners.</p>
+              </div>
+              <div className="my-5 flex items-center gap-3 text-xs text-content-subtle"><span className="h-px flex-1 bg-line"/>or use your email<span className="h-px flex-1 bg-line"/></div>
+              <div className="space-y-4.5">
                 {!isLogin && (
                   <div>
                     <label className="cx-label" htmlFor="auth-name">Display name</label>

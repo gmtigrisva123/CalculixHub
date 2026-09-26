@@ -1,0 +1,73 @@
+.dashboard-refresh { color:var(--ct); }.dr-eyebrow { font-size:8px; letter-spacing:.13em; font-weight:600; color:var(--ct-subtle); }.dr-welcome { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:28px; }.dr-welcome h1 { font-size:31px; font-weight:550; letter-spacing:-1.2px; line-height:1.2; margin:9px 0; }.dr-welcome h1 span { color:#819776; }.dr-welcome p:last-child { font-size:10px; color:var(--ct-subtle); }.dr-date { font-size:9px; color:var(--ct-subtle); background:var(--sf-raised); border:1px solid var(--ln); padding:9px 12px; border-radius:8px; white-space:nowrap; }
+.dr-top-grid { display:grid; grid-template-columns:1.85fr 1fr; gap:19px; }.dr-hero { position:relative; display:flex; min-height:260px; background:#174e36; border-radius:20px; color:#f5f9e9; padding:29px; overflow:hidden; }.dr-hero-copy { position:relative; z-index:1; }.dr-hero-label { display:flex; align-items:center; gap:6px; font-size:7px; letter-spacing:.1em; color:#bad2a9; }.dr-hero-label > span { height:4px; width:4px; background:#ccff7b; border-radius:50%; }.dr-hero h2 { font-size:34px; font-weight:500; letter-spacing:-1.35px; line-height:1.14; margin:19px 0 13px; }.dr-hero h2 span { color:#ccff7b; }.dr-hero p { font-size:10px; color:#aec69c; line-height:1.8; }.dr-hero button { display:flex; align-items:center; gap:18px; background:#ccff7b; color:#264a2d; font-size:10px; font-weight:550; padding:12px 16px; border-radius:9px; margin-top:20px; }.dr-hero-art { position:absolute; height:100%; width:46%; right:-18px; bottom:-10px; opacity:.95; }.dr-daily { padding:22px; border:1px solid var(--ln); border-radius:20px; background:#ecf1e3; color:#3f5c33; }.dr-card-title { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:7px; color:#859573; }.dr-card-title > span:first-child { display:flex; align-items:center; gap:6px; font-size:7px; letter-spacing:.04em; }.dr-daily-formula { height:69px; display:flex; align-items:center; justify-content:center; font-size:38px; font-family:Georgia,serif; font-style:italic; color:#8aa66c; letter-spacing:3px; position:relative; margin:10px 0; }.dr-daily-formula > span { position:absolute; right:2px; top:0; font-size:33px; color:#becb9e; }.dr-daily h3 { font-size:17px; letter-spacing:-.55px; font-weight:550; }.dr-daily p { font-size:9px; line-height:1.8; color:#7e8c70; margin:9px 0 14px; }.dr-daily button { display:flex; width:100%; justify-content:space-between; align-items:center; font-size:9px; font-weight:550; padding-top:13px; border-top:1px solid #d9e3ca; }
+.dr-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:22px 0 34px; }.dr-metrics article { background:var(--sf-raised); border:1px solid var(--ln); border-radius:15px; padding:18px; }.dr-metrics article > div { display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:9px; color:var(--ct-muted); }.dr-metric-icon { height:29px; width:29px; display:grid; place-items:center; border-radius:9px; }.dr-metric-icon.green { background:#edf3e4; color:#829958; }.dr-metric-icon.blue { background:#eaf0f3; color:#7096a8; }.dr-metric-icon.peach { background:#f7eee4; color:#bd9564; }.dr-metric-icon.purple { background:#eeeaf2; color:#9c86af; }.dr-metrics article > strong { display:block; font-size:28px; font-weight:550; letter-spacing:-1px; margin:14px 0 5px; }.dr-metrics article > p { font-size:8px; color:var(--ct-subtle); }
+.dr-section-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; }.dr-section-heading h2 { font-size:17px; font-weight:550; letter-spacing:-.5px; }.dr-section-heading p { font-size:9px; color:var(--ct-subtle); margin-top:5px; }.dr-section-heading > button,.dr-section-heading > span { display:flex; align-items:center; gap:5px; font-size:8px; color:var(--ct-subtle); }.dr-topic-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:13px; margin:20px 0 30px; }.dr-topic { text-align:left; padding:18px; border:1px solid var(--ln); border-radius:16px; background:var(--sf-raised); transition:transform .16s,box-shadow .16s; }.dr-topic:hover { transform:translateY(-3px); box-shadow:0 9px 24px -18px #174e3666; }.dr-topic > div:first-child { display:flex; align-items:center; justify-content:space-between; color:#a3af96; }.dr-topic-icon { height:39px; width:39px; border-radius:12px; display:grid; place-items:center; background:#f1ebdd; color:#b09561; }.dr-topic-1 .dr-topic-icon { background:#e9f0e3; color:#74936b; }.dr-topic-2 .dr-topic-icon { background:#f0eaf4; color:#a18ab0; }.dr-topic-3 .dr-topic-icon { background:#e9eff3; color:#83a0b6; }.dr-topic h3 { font-size:13px; font-weight:550; margin:18px 0 6px; letter-spacing:-.3px; }.dr-topic p { font-size:8px; color:var(--ct-subtle); }.dr-mastery-label { display:flex; justify-content:space-between; gap:3px; margin:22px 0 9px; font-size:6px; color:var(--ct-subtle); }.dr-mastery-label strong { font-size:7px; font-weight:500; }.dr-mastery-track { height:3px; border-radius:5px; background:var(--ln); overflow:hidden; }.dr-mastery-track > span { display:block; height:100%; background:#8caf66; border-radius:5px; }
+.dr-bottom-grid { display:grid; grid-template-columns:1.3fr 1fr; gap:20px; }.dr-activity,.dr-next { border:1px solid var(--ln); border-radius:18px; background:var(--sf-raised); padding:24px; }.dr-chart-head { display:flex; justify-content:space-between; align-items:center; gap:15px; margin-top:26px; }.dr-chart-head strong { font-size:30px; font-weight:500; letter-spacing:-1px; }.dr-chart-head strong > span { font-size:8px; font-weight:400; letter-spacing:0; color:var(--ct-subtle); margin-left:5px; }.dr-chart-head button { display:flex; align-items:center; gap:4px; font-size:8px; color:var(--ct-subtle); }.dr-chart { display:flex; justify-content:space-between; gap:20px; height:126px; padding:10px 6px 0; margin-top:17px; }.dr-chart > div { flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:12px; align-items:center; font-size:8px; color:var(--ct-subtle); }.dr-chart-bar-track { height:100%; width:100%; display:flex; align-items:flex-end; border-radius:6px; background:var(--sf); }.dr-chart-bar-track > span { position:relative; width:100%; background:#cbdcc1; border-radius:5px; }.dr-chart-bar-track > span.is-today { background:#8bac6c; }.dr-chart-bar-track small { position:absolute; bottom:calc(100% + 3px); left:50%; transform:translateX(-50%); font-size:7px; color:var(--ct-subtle); }.dr-chart-caption { display:flex; align-items:center; gap:5px; font-size:8px; color:var(--ct-subtle); margin-top:20px; }.dr-chart-caption > span { width:5px; height:5px; border-radius:50%; background:#a5bd84; }.dr-next .dr-section-heading > svg { color:#9cad7e; }.dr-challenge { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:21px 0; border-bottom:1px solid var(--ln); }.dr-challenge > div { display:flex; gap:10px; align-items:center; min-width:0; }.dr-challenge-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:10px; background:var(--sf-sunken); color:#869e69; flex-shrink:0; }.dr-challenge h3 { font-size:10px; font-weight:550; }.dr-challenge p { font-size:8px; color:var(--ct-subtle); margin-top:5px; }.dr-challenge > button { display:flex; gap:3px; align-items:center; font-size:8px; padding:6px; color:var(--ac-text); }.dr-challenge > button:disabled { color:var(--ct-subtle); }.dr-pocket-link { display:flex; align-items:center; justify-content:space-between; gap:10px; text-decoration:none; color:var(--ac-text); padding:15px 0 0; font-size:8px; }.dr-challenge-empty { text-align:center; padding:28px 10px; }.dr-challenge-empty > svg { margin:auto; color:#adbd90; }.dr-challenge-empty h3 { font-size:15px; font-weight:500; margin:14px 0 7px; }.dr-challenge-empty p { font-size:10px; line-height:1.8; color:var(--ct-subtle); max-width:240px; margin:auto; }.dr-challenge-empty button { display:flex; align-items:center; gap:6px; color:var(--ac-text); font-size:9px; margin:18px auto 0; }.dr-closing { display:flex; align-items:center; gap:16px; font-size:10px; color:var(--ct-subtle); margin-top:28px; }.dr-closing small { font-size:6px; letter-spacing:.08em; }.dr-closing > span:last-child { margin-left:auto; font-size:25px; color:#a9bc92; }
+@media(max-width:1150px) { .dr-hero { padding:23px; }.dr-hero h2 { font-size:29px; }.dr-hero-art { width:42%; right:-30px; }.dr-metrics { gap:10px; }.dr-metrics article { padding:15px; }.dr-metrics article > div { font-size:8px; }.dr-topic-grid { gap:10px; }.dr-topic { padding:14px; }.dr-topic h3 { font-size:12px; }.dr-activity,.dr-next { padding:19px; }.dr-chart { gap:13px; }.dr-welcome h1 { font-size:27px; }.dr-date { font-size:8px; } }
+@media(max-width:950px) and (min-width:768px) { .dr-top-grid { grid-template-columns:1fr; }.dr-daily { display:none; }.dr-topic-grid { grid-template-columns:1fr 1fr; }.dr-metrics { grid-template-columns:1fr 1fr; }.dr-bottom-grid { grid-template-columns:1fr; } }
+@media(max-width:767px) { .dr-welcome { margin-bottom:22px; }.dr-date { display:none; }.dr-welcome h1 { font-size:27px; max-width:290px; }.dr-welcome p:last-child { font-size:10px; line-height:1.7; max-width:300px; }.dr-top-grid { grid-template-columns:1fr; gap:14px; }.dr-hero { padding:24px; min-height:252px; }.dr-hero h2 { font-size:30px; }.dr-hero-art { right:-24px; opacity:.65; width:44%; }.dr-daily { padding:20px; position:relative; }.dr-daily-formula { position:absolute; right:20px; top:40px; width:37%; font-size:30px; opacity:.7; }.dr-daily h3 { margin-top:25px; }.dr-daily p { width:64%; font-size:9px; }.dr-metrics { grid-template-columns:1fr 1fr; gap:10px; margin:16px 0 27px; }.dr-metrics article { padding:17px; }.dr-metrics article > strong { font-size:27px; }.dr-metrics article > p { font-size:7px; }.dr-topic-grid { grid-template-columns:1fr 1fr; gap:10px; }.dr-topic { padding:17px; }.dr-topic h3 { font-size:13px; }.dr-topic p { font-size:8px; }.dr-bottom-grid { grid-template-columns:1fr; gap:16px; }.dr-activity,.dr-next { padding:20px; }.dr-section-heading h2 { font-size:16px; }.dr-chart { gap:20px; }.dr-closing { font-size:9px; line-height:1.8; flex-wrap:wrap; gap:7px; }.dr-closing > span:first-child { width:100%; max-width:290px; }.dr-closing > span:last-child { margin-top:-30px; }.dr-chart-head button { font-size:7px; } }
+
+/* The dashboard used tiny editorial labels throughout. Keep the compact card
+   rhythm, but raise every readable text layer to a comfortable size. */
+.dashboard-refresh { font-size:16px; }
+.dr-eyebrow { font-size:11px; }
+.dr-welcome h1 { font-size:36px; }
+.dr-welcome p:last-child { font-size:13px; }
+.dr-date { font-size:12px; }
+.dr-hero-label { font-size:11px; }
+.dr-hero h2 { font-size:42px; }
+.dr-hero p { font-size:14px; }
+.dr-hero button { font-size:13px; }
+.dr-card-title,.dr-card-title > span:first-child { font-size:11px; }
+.dr-daily h3 { font-size:21px; }
+.dr-daily p { font-size:13px; }
+.dr-daily button { font-size:13px; }
+.dr-metrics article > div { font-size:12px; }
+.dr-metrics article > strong { font-size:32px; }
+.dr-metrics article > p { font-size:12px; }
+.dr-section-heading h2 { font-size:21px; }
+.dr-section-heading p { font-size:12px; }
+.dr-section-heading > button,.dr-section-heading > span { font-size:12px; }
+.dr-topic h3 { font-size:16px; }
+.dr-topic p { font-size:12px; }
+.dr-mastery-label { font-size:10px; }
+.dr-mastery-label strong { font-size:12px; }
+.dr-chart-head strong { font-size:32px; }
+.dr-chart-head strong > span { font-size:12px; }
+.dr-chart-head button { font-size:12px; }
+.dr-chart > div { font-size:11px; }
+.dr-chart-bar-track small { font-size:10px; }
+.dr-chart-caption { font-size:11px; }
+.dr-challenge h3 { font-size:13px; }
+.dr-challenge p { font-size:11px; }
+.dr-challenge > button { font-size:11px; }
+.dr-pocket-link { font-size:11px; }
+.dr-challenge-empty h3 { font-size:18px; }
+.dr-challenge-empty p { font-size:12px; }
+.dr-challenge-empty button { font-size:12px; }
+.dr-closing { font-size:12px; }
+.dr-closing small { font-size:9px; }
+
+@media(max-width:1150px) {
+  .dr-welcome h1 { font-size:32px; }
+  .dr-hero h2 { font-size:36px; }
+}
+
+@media(max-width:767px) {
+  .dr-welcome h1 { font-size:31px; }
+  .dr-welcome p:last-child { font-size:13px; }
+  .dr-hero h2 { font-size:34px; }
+  .dr-hero p { font-size:13px; }
+  .dr-daily p { font-size:12px; }
+  .dr-metrics article > div { font-size:11px; }
+  .dr-metrics article > strong { font-size:29px; }
+  .dr-metrics article > p { font-size:10px; }
+  .dr-section-heading h2 { font-size:19px; }
+  .dr-section-heading p { font-size:11px; }
+  .dr-topic h3 { font-size:15px; }
+  .dr-topic p { font-size:11px; }
+  .dr-chart-head strong { font-size:28px; }
+  .dr-chart-head strong > span { font-size:11px; }
+  .dr-chart-head button { font-size:11px; }
+  .dr-chart-caption { font-size:10px; }
+}

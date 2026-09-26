@@ -1,0 +1,29 @@
+/* CalculixHub custom tokens: quiet study, warm paper, blue ink. */
+.quiet-calculix {
+  --color-paper: oklch(97% .011 84);
+  --color-paper-raised: oklch(98.5% .008 84);
+  --color-paper-shade: oklch(94% .015 84);
+  --color-ink: oklch(27% .023 231);
+  --color-body: oklch(43% .019 231);
+  --color-muted: oklch(51% .018 231);
+  --color-accent: oklch(48% .059 227);
+  --color-accent-soft: oklch(89% .031 227);
+  --color-pencil: oklch(56% .099 35);
+  --color-rule: oklch(83% .019 84);
+  --color-rule-faint: oklch(90% .014 84);
+  --color-grid: oklch(80% .02 84);
+  --color-transparent: transparent;
+  --font-display: 'Manrope', 'Geist', sans-serif;
+  --font-body: 'DM Sans', 'Geist', sans-serif;
+  --font-notation: 'Newsreader', Georgia, serif;
+  --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px;
+  --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px;
+  --text-display: clamp(3.5rem, 7.6vw, 7.25rem);
+  --text-heading: clamp(2.1rem, 4.3vw, 4rem);
+  --text-body: 15px;
+  --ease-out: cubic-bezier(.2,.7,.2,1);
+  --ease-in: cubic-bezier(.5,0,.8,.3);
+  --ease-in-out: cubic-bezier(.65,0,.35,1);
+  --dur-short: 160ms; --dur-reveal: 240ms;
+  --radius-control: 4px; --radius-round: 50%;
+}

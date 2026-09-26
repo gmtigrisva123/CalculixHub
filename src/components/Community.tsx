@@ -11,74 +11,45 @@ import MathText from './MathText';
 import { duration, ease, spring } from '../lib/motion';
 import { StaggerItem } from './motion';
 
-interface CommunityProps {
-  discussions: CommunityDiscussion[];
-  problems: Problem[];
-  onAddComment: (comment: Omit<CommunityDiscussion, 'id' | 'timestamp' | 'likes' | 'replies'>) => void;
+import { useAuth } from '../context/AuthContext';
+import { createPost, togglePostLike, usePostFeed, createComment, useComments } from '../services/data/feed';
+
+function Replies({postId}:{postId:string}) {
+ const {user}=useAuth();const feed=useComments(postId);const [body,setBody]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+ return <section className="space-y-3 border-t border-line pt-4" aria-label="Replies">
+  {feed.error&&<p role="alert">{feed.error}</p>}{error&&<p role="alert">{error}</p>}
+  {feed.loading?<p role="status">Loading replies…</p>:feed.data.length===0?<p>No replies yet.</p>:feed.data.map(row=><article key={row.id}><strong>{row.author?.display_name||row.author?.username||'Learner'}</strong><MathText text={row.body}/><time>{new Date(row.created_at).toLocaleString()}</time></article>)}
+  {user&&<form onSubmit={async e=>{e.preventDefault();if(busy||!body.trim())return;setBusy(true);const result=await createComment({postId,authorId:user.id,body});if(result.ok){setBody('');await feed.reload();setError('');}else setError(result.error);setBusy(false);}}><label>Reply<textarea className="w-full p-3 border border-line rounded-xl" value={body} maxLength={2000} onChange={e=>setBody(e.target.value)} required/></label><button className="arena-primary" disabled={busy||!body.trim()}>Send reply</button></form>}
+ </section>;
 }
-
-const VOTES_KEY = 'calculix_discussion_votes';
-type VoteMap = Record<string, number>;
-
-function loadVotes(): VoteMap {
-  try {
-    return JSON.parse(localStorage.getItem(VOTES_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
-
-export default function Community({ discussions, problems, onAddComment }: CommunityProps) {
-  const [selectedProblemId, setSelectedProblemId] = useState<string>('All');
-  const [newCommentText, setNewCommentText] = useState('');
-  const [votes, setVotes] = useState<VoteMap>(() => loadVotes());
-
-  useEffect(() => {
-    localStorage.setItem(VOTES_KEY, JSON.stringify(votes));
-  }, [votes]);
-
-  const filteredDiscussions = discussions.filter(
-    (disc) => selectedProblemId === 'All' || disc.problemId === selectedProblemId
-  );
-
-  const handlePostComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCommentText.trim()) return;
-
-    const connectedProb = problems.find((p) => p.id === selectedProblemId) || problems[0];
-    if (!connectedProb) return;
-
-    onAddComment({
-      problemId: connectedProb.id,
-      problemTitle: connectedProb.title,
-      user: 'You',
-      role: 'Student',
-      content: newCommentText,
-    });
-
-    setNewCommentText('');
-  };
-
-  const castVote = (id: string, delta: 1 | -1) => {
-    setVotes((prev) => {
-      const current = prev[id] || 0;
-      const next = current === delta ? 0 : delta;
-      return { ...prev, [id]: next };
-    });
-  };
-
+export default function Community({problems}:{problems:Problem[]}) {
+ const {user}=useAuth();
+ const [selectedProblemId,setSelectedProblemId]=useState('All');
+ const [newCommentText,setNewCommentText]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [openReplies,setOpenReplies]=useState<string|null>(null);
+ const feed=usePostFeed({viewerId:user?.id});
+ const discussions:CommunityDiscussion[]=feed.data.map(row=>({id:row.id,problemId:row.problem_id??'',problemTitle:problems.find(p=>p.id===row.problem_id)?.title??'An open conversation',user:row.author?.display_name||row.author?.username||'Learner',role:'Student',content:row.body,timestamp:new Date(row.created_at).toLocaleString(),likes:row.like_count,replies:row.comment_count}));
+ const votes=Object.fromEntries(feed.data.map(p=>[p.id,p.viewer_has_liked?1:0]));
+ const filteredDiscussions=discussions.filter(d=>selectedProblemId==='All'||d.problemId===selectedProblemId);
+ const handlePostComment=async(e:React.FormEvent)=>{
+  e.preventDefault();if(!user||busy||!newCommentText.trim())return;setBusy(true);setError('');
+  const result=await createPost({authorId:user.id,body:newCommentText,problemId:selectedProblemId==='All'?null:selectedProblemId});
+  if(result.ok){setNewCommentText('');await feed.reload();}else setError(result.error);setBusy(false);
+ };
+ const castVote=async(id:string,_delta:1|-1)=>{if(!user||busy)return;setBusy(true);const result=await togglePostLike({postId:id,userId:user.id,liked:Boolean(votes[id])});if(!result.ok)setError(result.error);await feed.reload();setBusy(false);};
   const isVerifiedSolution = (disc: CommunityDiscussion) => disc.role === 'Mentor' || disc.role === 'Admin';
 
   const topContributors = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const disc of discussions) {
-      counts.set(disc.user, (counts.get(disc.user) || 0) + 1);
+    const counts = new Map<string, {id:string;name:string;count:number}>();
+    for (const post of feed.data) {
+      const previous = counts.get(post.author_id);
+      counts.set(post.author_id, {id:post.author_id,name:post.author?.display_name||post.author?.username||'Learner',count:(previous?.count||0)+1});
     }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-  }, [discussions]);
+    return [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 3);
+  }, [feed.data]);
 
   return (
     <div className="space-y-8">
+      {feed.error&&<p role="alert">{feed.error}</p>}{error&&<p role="alert">{error}</p>}{feed.loading&&<p role="status">Loading conversations…</p>}{!user&&<p className="arena-note">Sign in to post, like or reply.</p>}
       {/* Header */}
       <div className="border-b border-line pb-4">
         <p className="type-eyebrow text-emerald-500 font-mono text-xs uppercase">Mathematical Forum &amp; Discussions</p>
@@ -142,13 +113,15 @@ export default function Community({ discussions, problems, onAddComment }: Commu
               value={newCommentText}
               onChange={(e) => setNewCommentText(e.target.value)}
               rows={3}
+              maxLength={5000}
+              disabled={!user||busy}
               className="w-full p-4 rounded-xl border border-line bg-surface-sunken/60 text-content text-xs font-mono focus:outline-hidden focus:border-indigo-500"
             />
 
             <div className="flex justify-end">
               <m.button
                 type="submit"
-                disabled={!newCommentText.trim()}
+                disabled={!user||busy||!newCommentText.trim()}
                 whileTap={{ scale: 0.96 }}
                 className="cx-btn cx-btn-fill px-5 py-2 rounded-xl text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-1.5"
               >
@@ -159,9 +132,10 @@ export default function Community({ discussions, problems, onAddComment }: Commu
 
           {/* Thread Cards */}
           <div className="space-y-4">
+            {!feed.loading&&!filteredDiscussions.length&&<p>No conversations here yet. Share the first idea.</p>}
             {filteredDiscussions.map((disc, index) => {
               const currentVote = votes[disc.id] || 0;
-              const netLikes = disc.likes + currentVote;
+              const netLikes = disc.likes;
 
               return (
                 <StaggerItem key={disc.id} index={index} className="cx-glass-panel p-6 space-y-4">
@@ -190,6 +164,9 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                   <div className="flex items-center gap-3 pt-3 border-t border-line text-xs font-mono">
                     <button
                       type="button"
+                      disabled={!user||busy}
+                      aria-label="Like post"
+                      aria-pressed={currentVote===1}
                       onClick={() => castVote(disc.id, 1)}
                       className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border transition-colors ${
                         currentVote === 1
@@ -201,34 +178,25 @@ export default function Community({ discussions, problems, onAddComment }: Commu
                       <span>{netLikes}</span>
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => castVote(disc.id, -1)}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border transition-colors ${
-                        currentVote === -1
-                          ? 'border-rose-500 bg-rose-500/15 text-rose-500'
-                          : 'border-line bg-surface-sunken/40 text-content-subtle hover:border-line-strong'
-                      }`}
-                    >
-                      <ThumbsDown className="w-3.5 h-3.5" />
-                    </button>
+                    <button type="button" onClick={()=>setOpenReplies(openReplies===disc.id?null:disc.id)}><MessageSquare size={15}/> {disc.replies} replies</button>
                   </div>
+                  {openReplies===disc.id&&<Replies postId={disc.id}/>}
                 </StaggerItem>
               );
             })}
           </div>
         </div>
 
-        {/* Right Sidebar: Top Contributors */}
+        {/* Right Sidebar: Contributors in this feed */}
         <div className="lg:col-span-4 space-y-6">
           <div className="cx-glass-panel p-6 space-y-4">
             <h3 className="type-title text-base font-bold text-content flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-500" /> Top Contributors
+              <Award className="w-5 h-5 text-amber-500" /> Contributors in this feed
             </h3>
 
             <div className="space-y-3">
-              {topContributors.map(([name, count], idx) => (
-                <div key={name} className="flex items-center justify-between p-3 rounded-xl border border-line bg-surface-sunken/30">
+              {topContributors.map(({id,name,count}, idx) => (
+                <div key={id} className="flex items-center justify-between p-3 rounded-xl border border-line bg-surface-sunken/30">
                   <div className="flex items-center gap-2.5">
                     <span className="font-mono text-sm">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>
                     <span className="font-semibold text-content text-xs">{name}</span>

@@ -8,7 +8,7 @@
       bottom tab rail sits under the home indicator.
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>CalculixHub — Adaptive Math OS & AI Personalization</title>
+    <title>CalculixHub — A place to think</title>
     <meta name="description" content="CalculixHub is a complete mathematics education ecosystem: AI-personalized adaptive learning (EduReach Core), live ranked competition, and real-time analytics for ambitious math students." />
     <meta name="keywords" content="calculix, calculixhub, adaptive math learning, irt, item response theory, math olympiad training, ai math tutor, amc, aime, sat math" />
     <meta name="author" content="Calculix Academic Board" />
@@ -47,7 +47,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;1,400&family=Geist:wght@400;500;600;700&display=swap"
     />
 
     <!--
@@ -79,7 +79,7 @@
               : pref;
           document.documentElement.dataset.theme = resolved;
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#161310' : '#f3f2f2');
+          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#12251c' : '#f7f9f5');
         } catch (e) {
           // Private browsing can throw on localStorage access. Daylight is a
           // safe floor, and the app corrects itself once React mounts.
@@ -97,7 +97,7 @@
       resolve against the manifest, so it needs no build-time substitution.
     -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#f3f2f2" />
+    <meta name="theme-color" content="#f7f9f5" />
 
     <!--
       iOS ignores the manifest when adding to the home screen: the name comes

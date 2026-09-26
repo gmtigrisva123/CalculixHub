@@ -23,29 +23,29 @@ const DAILY_RIDDLES: DailyRiddle[] = [
   {
     id: 'riddle-1',
     topic: 'Number Theory',
-    title: 'Remainder Challenge',
-    latexProblem: 'What is the remainder when $2^{100}$ is divided by $7$?',
-    options: ['1', '2', '4', '5'],
-    correctIdx: 1, // 2^3 = 8 = 1 mod 7. 2^100 = (2^3)^33 * 2 = 1 * 2 = 2 mod 7.
-    explanation: 'Since $2^3 = 8 \\equiv 1 \\pmod 7$, we have $2^{100} = (2^3)^{33} \\times 2 \\equiv 1^{33} \\times 2 = 2 \\pmod 7$.',
+    title: 'A long power, reduced',
+    latexProblem: 'What is the remainder when $7^{2026}$ is divided by $1000$?',
+    options: ['349', '549', '649', '749'],
+    correctIdx: 2,
+    explanation: 'Because $7^{100} \\equiv 1 \\pmod{1000}$, reduce to $7^{26}$. Repeated squaring gives $7^{16}\\cdot7^8\\cdot7^2 \\equiv 601\\cdot801\\cdot49 \\equiv 649 \\pmod{1000}$.',
   },
   {
     id: 'riddle-2',
     topic: 'Algebra',
-    title: 'Symmetric Roots',
-    latexProblem: 'If $x + \\frac{1}{x} = 3$, what is the value of $x^2 + \\frac{1}{x^2}$?',
-    options: ['5', '7', '9', '11'],
-    correctIdx: 1, // (x + 1/x)^2 - 2 = 9 - 2 = 7.
-    explanation: 'Squaring both sides: $(x + \\frac{1}{x})^2 = x^2 + 2 + \\frac{1}{x^2} = 9$, so $x^2 + \\frac{1}{x^2} = 9 - 2 = 7$.',
+    title: 'A recurrence in disguise',
+    latexProblem: 'If $r,s$ are roots of $t^2-7t+1=0$, what is $r^6+s^6$ modulo $1000$?',
+    options: ['482', '682', '582', '782'],
+    correctIdx: 1,
+    explanation: 'Set $S_n=r^n+s^n$. The roots give $S_n=7S_{n-1}-S_{n-2}$, with $S_0=2$ and $S_1=7$. The sequence ends at $S_6=103682$, so the remainder is $682$.',
   },
   {
     id: 'riddle-3',
     topic: 'Combinatorics',
-    title: 'Handshake Puzzle',
-    latexProblem: 'Five friends meet and each pair shakes hands exactly once. How many total handshakes occur?',
-    options: ['8', '10', '12', '15'],
-    correctIdx: 1, // 5C2 = 10
-    explanation: 'The number of ways to choose 2 friends from 5 is $\\binom{5}{2} = \\frac{5 \\times 4}{2} = 10$ handshakes.',
+    title: 'Digit sets and permutations',
+    latexProblem: 'How many four-digit integers have distinct digits and digit sum divisible by $9$?',
+    options: ['516', '486', '504', '540'],
+    correctIdx: 0,
+    explanation: 'There are 14 valid digit sets without zero and 10 with zero. They contribute $14\\cdot4!$ and $10\\cdot(4!-3!)$, for $336+180=516$.',
   },
 ];
 

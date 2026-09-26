@@ -113,9 +113,9 @@ export default function Settings({
     <div className="space-y-8">
       {/* Header */}
       <div className="border-b border-line pb-4">
-        <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">System Configuration</p>
+        <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">MAKE THIS SPACE YOURS</p>
         <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
-          <SettingsIcon className="w-6 h-6 text-indigo-500" /> Workspace Settings
+          <SettingsIcon className="w-6 h-6 text-indigo-500" /> A rhythm that works for you
         </h1>
       </div>
 
