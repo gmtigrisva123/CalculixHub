@@ -162,7 +162,7 @@ export function corsHeaders(origin: string): Record<string, string> {
   return {
     'access-control-allow-origin': origin,
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'content-type, authorization',
+    'access-control-allow-headers': 'content-type, authorization, x-admin-session',
     'access-control-allow-credentials': 'true',
     'access-control-max-age': '600',
     vary: 'Origin',

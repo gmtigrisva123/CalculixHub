@@ -17,6 +17,7 @@ import { supabase } from '../supabase';
 import type { NotificationWithActor } from '../database.types';
 import type { QueryState } from './feed';
 import { useRealtimeSubscription } from './realtime';
+import { useLiveQuery } from './liveQuery';
 
 export interface NotificationFeed extends QueryState<NotificationWithActor[]> {
   unreadCount: number;
@@ -26,78 +27,28 @@ export interface NotificationFeed extends QueryState<NotificationWithActor[]> {
 }
 
 export function useNotifications(userId: string | null, limit = 50): NotificationFeed {
-  const [state, setState] = useState<QueryState<NotificationWithActor[]>>({
-    data: [],
-    loading: Boolean(userId),
-    error: null,
-  });
-
-  const load = useCallback(async () => {
-    if (!supabase || !userId) {
-      setState({ data: [], loading: false, error: null });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .select(`id, user_id, actor_id, type, entity_type, entity_id, body, read_at, created_at,
-               actor:profiles!notifications_actor_id_fkey (id, username, display_name, avatar_url)`)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    setState({
-      data: (data ?? []) as unknown as NotificationWithActor[],
-      loading: false,
-      error: error ? 'Could not load notifications.' : null,
-    });
-  }, [userId, limit]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Filtered server-side to this learner. The RLS policy already restricts the
-  // stream, but narrowing it here avoids waking every client on every insert.
-  useRealtimeSubscription(
-    { table: 'notifications', filter: userId ? `user_id=eq.${userId}` : undefined, enabled: Boolean(userId) },
-    () => void load(),
-  );
-
-  const markAllRead = useCallback(async () => {
-    if (!supabase || !userId) return;
-
-    // Applied locally first so the badge clears immediately; the realtime
-    // update that follows reconciles it with what the database actually did.
-    setState((previous) => ({
-      ...previous,
-      data: previous.data.map((row) => (row.read_at ? row : { ...row, read_at: new Date().toISOString() })),
-    }));
-
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', userId)
-      .is('read_at', null);
-
-    if (error) await load();
-  }, [userId, load]);
-
-  const markRead = useCallback(
-    async (id: string) => {
-      if (!supabase || !userId) return;
-      await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id);
-    },
-    [userId],
-  );
-
-  return {
-    ...state,
-    unreadCount: state.data.filter((row) => !row.read_at).length,
-    markAllRead,
-    markRead,
-    reload: load,
-  };
+ const [mutationError,setMutationError]=useState<string|null>(null);
+ const load=useCallback(async()=>{
+  if(!userId)return {items:[] as NotificationWithActor[],unread:0};
+  if(!supabase)throw Error('Notifications are not configured.');
+  const [rows,total]=await Promise.all([
+   supabase.from('notifications').select('*,actor:profiles!notifications_actor_id_fkey(id,username,display_name,avatar_url)').eq('user_id',userId).order('created_at',{ascending:false}).limit(limit),
+   supabase.from('notifications').select('id',{count:'exact',head:true}).eq('user_id',userId).is('read_at',null)
+  ]);
+  if(rows.error||total.error)throw Error('Could not load notifications.');
+  return {items:(rows.data??[]) as unknown as NotificationWithActor[],unread:total.count??0};
+ },[userId,limit]);
+ const state=useLiveQuery('notifications:'+(userId??'guest')+':'+limit,{items:[] as NotificationWithActor[],unread:0},load);
+ useEffect(()=>setMutationError(null),[userId]);
+ useRealtimeSubscription({table:'notifications',filter:userId?`user_id=eq.${userId}`:undefined,enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
+ useRealtimeSubscription({table:'profiles',enabled:Boolean(userId)},()=>void state.reload());
+ const mark=async(id?:string)=>{
+  if(!supabase||!userId)return;
+  let query=supabase.from('notifications').update({read_at:new Date().toISOString()}).eq('user_id',userId);
+  query=id?query.eq('id',id):query.is('read_at',null);
+  const {error}=await query;setMutationError(error?'Could not mark notifications as read.':null);await state.reload();
+ };
+ return {data:state.data.items,loading:state.loading,error:mutationError??state.error,unreadCount:state.data.unread,reload:state.reload,markRead:id=>mark(id),markAllRead:()=>mark()};
 }
 
 /** Human-readable line for a notification row. */

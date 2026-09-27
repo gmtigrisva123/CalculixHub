@@ -22,11 +22,14 @@
  */
 
 import { Type } from '@google/genai';
+import { compareAnswer } from '../../shared/gradeAnswer';
+import { EMPTY_PRACTICE, submitPractice, type PracticeState } from '../../shared/practiceRules';
 import type { ZodType } from 'zod';
 import type { Level, Topic } from '../../shared/types';
 import { recordAttempt } from '../attempts';
 import { verifyAccessToken } from '../auth/supabaseAdmin';
 import { findProblem } from '../data';
+import { loadProblemBank } from '../catalog';
 import { parseJsonReply, type ModelClient } from '../gemini';
 import { json, problem, readJsonBody } from '../http';
 import type { Handler, RouteContext } from '../pipeline';
@@ -152,39 +155,38 @@ const EVALUATOR_SYSTEM_INSTRUCTION = [
  * to users who lost connectivity -- the hardest kind to observe.
  */
 function gradeAnswer(submitted: string, expected: string): boolean {
-  return submitted.trim().toLowerCase() === expected.trim().toLowerCase();
+  return compareAnswer(submitted, expected);
 }
 
 export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
+  // Browser session practice. Account history also constrains persisted rewards.
+  const practice = new Map<string, PracticeState>();
   return async (context) => {
     const parsed = await parseBody(context, evaluateRequestSchema(context.config.maxTextChars));
     if (!parsed.ok) return parsed.response;
 
-    const { problemId, userAnswer, durationMs } = parsed.value;
-    const item = findProblem(problemId);
+    const { problemId, userAnswer, durationMs, practiceSession, forfeit } = parsed.value;
+    const item = (await loadProblemBank(context.config)).find(item=>item.id===problemId);
     if (!item) return problem(404, 'not-found', 'Problem not found', 'No item with that identifier.');
+    if (item.proOnly) return problem(403, 'pro-required', 'Proof practice is locked', 'Pro proof grading is coming soon.');
 
     // The verdict, decided here and nowhere else.
-    const correct = gradeAnswer(userAnswer, item.correctAnswer);
-
-    // Persist for a signed-in learner. Identity comes from the verified bearer
-    // token, never from the request body -- a `userId` field in JSON is a claim
-    // anyone can make, while a signature is proof.
-    //
-    // Anonymous practice is still allowed and still graded; it simply is not
-    // recorded, so it cannot appear on a leaderboard.
-    let pointsAwarded = 0;
     const caller = await verifyAccessToken(context.request.headers.get('authorization'));
-
-    if (caller) {
-      const outcome = await recordAttempt({
-        userId: caller.id,
-        problem: item,
-        submittedAnswer: userAnswer,
-        isCorrect: correct,
-        durationMs,
-      });
-      pointsAwarded = outcome.pointsAwarded;
+    const key=(practiceSession??context.clientKey)+':'+item.id;
+    let correct=gradeAnswer(userAnswer,item.correctAnswer);
+    let pointsAwarded=0;
+    let progress:{attemptsUsed:number;finished:boolean;forfeited:boolean};
+    if(caller){
+      const outcome=await recordAttempt({userId:caller.id,problem:item,submittedAnswer:forfeit?'__forfeit__':userAnswer,isCorrect:!forfeit&&correct,durationMs,authorization:context.request.headers.get('authorization')!});
+      if(outcome.status==='failed'||outcome.status==='not-configured')return problem(503,'save-failed','Answer not saved','Reconnect and retry. Your progress has not been changed.');
+      correct=outcome.correct??correct;pointsAwarded=outcome.pointsAwarded;
+      progress={attemptsUsed:outcome.attemptsUsed??0,finished:outcome.finished??false,forfeited:outcome.forfeited??false};
+      if(forfeit||outcome.status==='exhausted'||outcome.status==='already-solved')return json({correct,pointsAwarded,...progress,explanation:correct?'Your solved answer is saved.':'This question is closed.',guidance:'Study the worked solution.'});
+    }else{
+      const prior=practice.get(key)??EMPTY_PRACTICE;
+      if(prior.finished||forfeit){const state={...prior,finished:true,forfeited:forfeit||prior.forfeited};practice.set(key,state);return json({correct:false,pointsAwarded:0,attemptsUsed:state.count,finished:true,forfeited:state.forfeited,explanation:'This practice attempt is closed.',guidance:'Study the worked solution; no further points are available.'});}
+      const state=submitPractice(prior,correct);practice.set(key,state);
+      progress={attemptsUsed:state.count,finished:state.finished,forfeited:state.forfeited};
     }
 
     if (model) {
@@ -220,7 +222,7 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
         if (commentary) {
           // `correct` and `pointsAwarded` come from the server, never from the
           // parsed reply. The model supplies prose and nothing else.
-          return json({ correct, pointsAwarded, ...commentary, isFallback: false });
+          return json({ correct, pointsAwarded, ...progress, ...commentary, isFallback: false });
         }
       }
     }
@@ -228,6 +230,7 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
     return json({
       correct,
       pointsAwarded,
+      ...progress,
       explanation: correct
         ? `Correct! You reasoned through the logical structure of this ${item.topic} problem cleanly.`
         : `Not quite - that isn't the expected answer. You likely slipped somewhere in the intermediate steps, or the hint's technique hasn't clicked yet.`,

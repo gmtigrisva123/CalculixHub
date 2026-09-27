@@ -16,44 +16,31 @@ import { supabase } from '../supabase';
 import type { LeaderboardRow, ProfileRow, SkillMasteryRow, Topic, UserStatsRow } from '../database.types';
 import type { QueryState } from './feed';
 import { useRealtimeSubscription } from './realtime';
+import { useLiveQuery } from './liveQuery';
+import type { UserStats } from '../../../shared/types';
 
 /** Empty is a legitimate answer: a platform with no activity has no ranking. */
-export function useLeaderboard(limit = 50): QueryState<LeaderboardRow[]> {
-  const [state, setState] = useState<QueryState<LeaderboardRow[]>>({ data: [], loading: true, error: null });
-
-  const load = useCallback(async () => {
-    if (!supabase) {
-      setState({ data: [], loading: false, error: null });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('leaderboard_view')
-      .select('*')
-      .order('rank', { ascending: true })
-      .limit(limit);
-
-    setState({
-      data: (data ?? []) as LeaderboardRow[],
-      loading: false,
-      error: error ? 'Could not load the leaderboard.' : null,
-    });
-  }, [limit]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Ranks move when anyone's totals move, so the feed follows user_stats.
-  useRealtimeSubscription({ table: 'user_stats' }, () => void load());
-
-  return state;
+export function useLeaderboard(limit = 50) {
+ const load=useCallback(async()=>{
+  if(!supabase)throw Error('Database is not configured.');
+  const {data,error}=await supabase.from('leaderboard_view').select('*').order('rank').limit(limit);
+  if(error)throw Error('Could not load the leaderboard.');return (data??[]) as LeaderboardRow[];
+ },[limit]);
+ const state=useLiveQuery('leaderboard:'+limit,[] as LeaderboardRow[],load);
+ useRealtimeSubscription({table:'user_stats',onReconnect:state.reload},()=>void state.reload());
+ useRealtimeSubscription({table:'profiles'},()=>void state.reload());
+ return state;
 }
 
 export interface LearnerSnapshot {
+  rank?: number | null;
   stats: UserStatsRow | null;
   skills: Record<Topic, number>;
   accuracyPct: number | null;
+  completed: string[];
+  attempts: Record<string,{count:number;finished:boolean;forfeited:boolean}>;
+  timeline: UserStats['learningTimeline'];
+  preferences: {goal:string;pace:string}|null;
 }
 
 const EMPTY_SKILLS: Record<Topic, number> = {
@@ -69,53 +56,23 @@ const EMPTY_SKILLS: Record<Topic, number> = {
  * Returns zeros rather than null for a learner with no activity, so the
  * dashboard renders a real "nothing yet" state instead of placeholder numbers.
  */
-export function useLearnerSnapshot(userId: string | null): QueryState<LearnerSnapshot> & { reload: () => Promise<void> } {
-  const [state, setState] = useState<QueryState<LearnerSnapshot>>({
-    data: { stats: null, skills: { ...EMPTY_SKILLS }, accuracyPct: null },
-    loading: Boolean(userId),
-    error: null,
-  });
-
-  const load = useCallback(async () => {
-    if (!supabase || !userId) {
-      setState({ data: { stats: null, skills: { ...EMPTY_SKILLS }, accuracyPct: null }, loading: false, error: null });
-      return;
-    }
-
-    const [statsResult, masteryResult] = await Promise.all([
-      supabase.from('user_stats').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('skill_mastery').select('*').eq('user_id', userId),
-    ]);
-
-    if (statsResult.error || masteryResult.error) {
-      setState((previous) => ({ ...previous, loading: false, error: 'Could not load your progress.' }));
-      return;
-    }
-
-    const stats = (statsResult.data as UserStatsRow | null) ?? null;
-    const skills = { ...EMPTY_SKILLS };
-    for (const row of (masteryResult.data ?? []) as SkillMasteryRow[]) {
-      skills[row.topic] = Number(row.mastery);
-    }
-
-    const accuracyPct =
-      stats && stats.attempts_total > 0
-        ? Math.round((stats.attempts_correct / stats.attempts_total) * 1000) / 10
-        : null;
-
-    setState({ data: { stats, skills, accuracyPct }, loading: false, error: null });
-  }, [userId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useRealtimeSubscription(
-    { table: 'user_stats', filter: userId ? `user_id=eq.${userId}` : undefined, enabled: Boolean(userId) },
-    () => void load(),
-  );
-
-  return { ...state, reload: load };
+export function useLearnerSnapshot(userId: string | null) {
+ const empty:LearnerSnapshot={stats:null,skills:{...EMPTY_SKILLS},accuracyPct:null,completed:[],attempts:{},timeline:[],preferences:null};
+ const load=useCallback(async()=>{
+  if(!userId)return {stats:null,skills:{...EMPTY_SKILLS},accuracyPct:null,completed:[],attempts:{},timeline:[],preferences:null} as LearnerSnapshot;
+  if(!supabase)throw Error('Database is not configured.');
+  const {data,error}=await supabase.rpc('learning_snapshot');
+  if(error)throw Error('Could not load your saved progress. Apply the realtime database setup.');
+  const stats=data.stats as UserStatsRow|null;
+  return {...data,skills:{...EMPTY_SKILLS,...data.skills},accuracyPct:stats&&stats.attempts_total>0?Math.round(stats.attempts_correct/stats.attempts_total*1000)/10:null} as LearnerSnapshot;
+ },[userId]);
+ const state=useLiveQuery('learner:'+(userId??'guest'),empty,load);
+ useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.ranking',enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
+ useRealtimeSubscription({table:'problem_attempts',filter:userId?`user_id=eq.${userId}`:undefined,enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
+ useRealtimeSubscription({table:'user_stats',filter:userId?`user_id=eq.${userId}`:undefined,enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
+ useRealtimeSubscription({table:'skill_mastery',filter:userId?`user_id=eq.${userId}`:undefined,enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
+ useRealtimeSubscription({table:'learner_preferences',filter:userId?`user_id=eq.${userId}`:undefined,enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
+ return state;
 }
 
 export async function searchProfiles(term: string, limit = 20): Promise<ProfileRow[]> {
@@ -128,12 +85,13 @@ export async function searchProfiles(term: string, limit = 20): Promise<ProfileR
   // through -- a bare `%` would otherwise match the entire directory.
   const escaped = cleaned.replace(/[\\%_]/g, (match) => `\\${match}`);
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('id, username, display_name, avatar_url, bio, country, level, follower_count, following_count, onboarded_at, created_at')
     .or(`username.ilike.%${escaped}%,display_name.ilike.%${escaped}%`)
     .limit(limit);
 
+  if (error) throw new Error('Could not search learners. Please reconnect and try again.');
   return (data ?? []) as ProfileRow[];
 }
 

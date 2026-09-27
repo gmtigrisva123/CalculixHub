@@ -1,3 +1,5 @@
+-- Rerunnable migration: replace only named triggers/policies; preserve data.
+begin;
 -- CalculixHub: identity.
 --
 -- Profiles and the follow graph. Inserts no data: every row in this database
@@ -90,6 +92,7 @@ begin
 end;
 $$;
 
+drop trigger if exists profiles_touch_updated_at on public.profiles;
 create trigger profiles_touch_updated_at
   before update on public.profiles
   for each row execute function public.touch_updated_at();
@@ -166,6 +169,7 @@ begin
 end;
 $$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -181,27 +185,34 @@ alter table public.follows enable row level security;
 -- leaderboard without them. Only non-sensitive columns exist on this table --
 -- the email address and password digest live in auth.users, which is not
 -- readable through the API at all.
+drop policy if exists profiles_select_all on public.profiles;
 create policy profiles_select_all
   on public.profiles for select
   using (true);
 
 -- A profile row is created by trigger, never by a client. No insert policy is
 -- defined, so no client can insert one.
+drop policy if exists profiles_update_own on public.profiles;
 create policy profiles_update_own
   on public.profiles for update
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
+drop policy if exists follows_select_all on public.follows;
 create policy follows_select_all
   on public.follows for select
   using (true);
 
 -- WITH CHECK is what stops a caller writing a row that claims someone else
 -- follows a target. USING alone would leave the insert path open.
+drop policy if exists follows_insert_own on public.follows;
 create policy follows_insert_own
   on public.follows for insert
   with check (auth.uid() = follower_id);
 
+drop policy if exists follows_delete_own on public.follows;
 create policy follows_delete_own
   on public.follows for delete
   using (auth.uid() = follower_id);
+
+commit;

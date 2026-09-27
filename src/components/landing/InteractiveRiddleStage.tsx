@@ -23,20 +23,20 @@ const DEMO_QUESTIONS: DemoQuestion[] = [
   {
     id: 'demo-1',
     topic: 'Algebra',
-    source: 'AMC 10A / IRT b=+0.8',
-    latexProblem: 'For how many real numbers $x$ does $(x^2 - 5x + 5)^{x^2 - 9x + 20} = 1$ hold?',
-    options: ['3', '4', '5', '6'],
-    correctIdx: 2, // 5 solutions: base=1 (x=1,4), exp=0 & base!=0 (x=5), base=-1 & exp even (x=2,3). Total 5!
-    explanation: 'Check three cases. (1) Base $= 1$ gives $x = 1, 4$. (2) Exponent $= 0$ gives $x = 5$ (the base is $-5 \\neq 0$). (3) Base $= -1$ gives $x = 2, 3$ (the exponent is even for both). Total: $5$ solutions.',
+    source: 'AIME-style / Periodic congruence',
+    latexProblem: 'How many integers $n$ with $1\\le n\\le1000$ satisfy $n\\equiv2^n\\pmod 7$?',
+    options: ['142', '132', '140', '144'],
+    correctIdx: 0,
+    explanation: 'The condition repeats every $\\operatorname{lcm}(7,3)=21$. The valid residues are $11,15,16$. Forty-seven full periods contribute $141$, and the remaining range adds $998$, for $142$.',
   },
   {
     id: 'demo-2',
     topic: 'Geometry',
-    source: 'AIME I / IRT b=+1.4',
-    latexProblem: 'In $\\triangle ABC$, $AB=13$, $BC=14$, $AC=15$. What is the radius $r$ of the inscribed circle?',
-    options: ['3', '4', '5', '6'],
-    correctIdx: 1, // Area = sqrt(21 * 8 * 7 * 6) = 84. s = 21. r = 84 / 21 = 4.
-    explanation: 'By Heron\'s formula, semiperimeter $s = \\frac{13+14+15}{2} = 21$. Area $K = \\sqrt{21 \\times 8 \\times 7 \\times 6} = 84$. Inradius $r = \\frac{K}{s} = \\frac{84}{21} = 4$.',
+    source: 'AIME-style / Brahmagupta',
+    latexProblem: 'A cyclic quadrilateral has sides $4,5,6,7$. What is the square of its area?',
+    options: ['720', '800', '840', '960'],
+    correctIdx: 2,
+    explanation: 'The semiperimeter is $11$. Brahmagupta gives $K^2=(11-4)(11-5)(11-6)(11-7)=7\\cdot6\\cdot5\\cdot4=840$.',
   },
 ];
 

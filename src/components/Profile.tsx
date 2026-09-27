@@ -25,13 +25,12 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const solvedQuestions = problems.filter((p) => completedProblems.includes(p.id));
   const rank = getRankForPoints(userStats.points);
 
-  const unlockedIds = getUnlockedAchievementIds();
+  const { profile } = useAuth();
   const badges = ACHIEVEMENTS.map((a) => ({
     ...a,
-    unlocked: unlockedIds.has(a.id) || a.condition(userStats, solvedQuestions.length),
+    unlocked: Boolean(profile) && a.condition(userStats, solvedQuestions.length),
   }));
 
-  const { profile } = useAuth();
   const displayName = profile?.display_name || profile?.username || 'Calculix Learner';
   const nextTier = nextRankFor(userStats.points);
 
@@ -40,7 +39,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
       {/* Header */}
       <div className="border-b border-line pb-4 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">Student Honor Space</p>
+          <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">YOUR OWN LEARNING JOURNEY</p>
           <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
             <User className="w-6 h-6 text-indigo-500" /> {displayName}
           </h1>
@@ -109,12 +108,12 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
           <div className="p-3.5 rounded-xl border border-line bg-surface-sunken/30 space-y-1">
             <span className="text-[10px] font-mono uppercase text-content-subtle block">Member Since</span>
-            <span className="text-xs font-semibold text-content block">{profile?.created_at ? profile.created_at.slice(0, 10) : '2026-09-01'}</span>
+            <span className="text-xs font-semibold text-content block">{profile?.created_at ? profile.created_at.slice(0, 10) : 'Not available'}</span>
           </div>
 
           <div className="p-3.5 rounded-xl border border-line bg-surface-sunken/30 space-y-1">
             <span className="text-[10px] font-mono uppercase text-content-subtle block">Country</span>
-            <span className="text-xs font-semibold text-content block">{profile?.country ?? 'Vietnam'}</span>
+            <span className="text-xs font-semibold text-content block">{profile?.country ?? 'Not set'}</span>
           </div>
         </div>
       </section>

@@ -3,30 +3,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { m } from 'motion/react';
-import {
-  Sparkles,
-  Search,
-  BookOpen,
-  HelpCircle,
-  Award,
-  CheckCircle,
-  LogOut,
-} from 'lucide-react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import WorkspaceShell from './components/WorkspaceShell';
+const IPhonePrototype = lazy(() => import('./components/prototype/IPhonePrototype'));
+
+export default function App() {
+  return new URLSearchParams(window.location.search).get('preview') === 'ios'
+    ? <Suspense fallback={<div className="prototype-loading" role="status">Opening your pocket-sized learning space…</div>}><IPhonePrototype /></Suspense>
+    : <LearningApp />;
+}
+
 import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from '../shared/types';
 import { computeStreak } from './domain/streak';
-import { apiUrl, isNativePlatform } from './services/apiBase';
+import { apiUrl, apiFetch, isNativePlatform } from './services/apiBase';
 import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './platform/reminders';
-import { useOnlineStatus, useGradeQueueFlush, flushGradeQueue } from './platform/offline';
+import { useOnlineStatus } from './platform/offline';
 import PullToRefresh from './components/PullToRefresh';
-import { NAV_ITEMS, screenTitle, type TabKey } from './lib/navigation';
-import MobileHeader from './components/MobileHeader';
-import MobileTabBar from './components/MobileTabBar';
-import InstallAppButton from './components/InstallAppButton';
+import { NAV_ITEMS, type TabKey } from './lib/navigation';
 import Dashboard from './components/Dashboard';
 import Learn from './components/Learn';
-import Compete from './components/Compete';
+import Arena from './components/Arena';
+import Inbox from './components/Inbox';
+import { supabase } from './services/supabase';
+import { useRealtimeSubscription } from './services/data/realtime';
+import AdminWorkspace from './components/AdminWorkspace';
 import ProgressView from './components/ProgressView';
 import Community from './components/Community';
 import Profile from './components/Profile';
@@ -34,27 +34,13 @@ import ResearchAnalytics from './components/ResearchAnalytics';
 import Settings from './components/Settings';
 import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
-import { TabTransition, SpringBar, AnimatedNumber, Collapse } from './components/motion';
-import ThemeToggle from './components/ThemeToggle';
-import { spring } from './lib/motion';
+import { TabTransition } from './components/motion';
 import { useAuth } from './context/AuthContext';
-import { useLearnerSnapshot } from './services/data/people';
+import { useLeaderboard, useLearnerSnapshot } from './services/data/people';
 import AchievementToast from './components/AchievementToast';
-import { checkNewAchievements, type Achievement } from './domain/achievements';
+import { ACHIEVEMENTS, type Achievement } from './domain/achievements';
 
-const DISCUSSION_CLEANUP_KEY = 'calculix_discussions_demo_cleanup_v1';
-const LEGACY_DEMO_DISCUSSION_IDS = new Set(['disc-1', 'disc-2']);
-
-const isLegacyDemoDiscussion = (discussion: CommunityDiscussion) => {
-  const normalizedContent = discussion.content.trim().toLowerCase();
-
-  return (
-    LEGACY_DEMO_DISCUSSION_IDS.has(discussion.id) ||
-    (discussion.role === 'Student' && normalizedContent === 'hello')
-  );
-};
-
-export default function App() {
+function LearningApp() {
   /**
    * Opening tab, honouring a ?tab= query parameter.
    *
@@ -70,7 +56,10 @@ export default function App() {
   });
 
   // Deep navigation overrides for AI recommendations
-  const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(undefined);
+  const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(() => {
+    const topic = new URLSearchParams(window.location.search).get('topic');
+    return topic && ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'].includes(topic) ? { topic: topic as Topic } : undefined;
+  });
   const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
 
   const queueAchievements = (newlyUnlocked: Achievement[]) => {
@@ -82,7 +71,7 @@ export default function App() {
   // Connectivity, and any answers captured while offline. The queue drains
   // automatically as soon as the connection returns.
   const online = useOnlineStatus();
-  const pendingGrades = useGradeQueueFlush(online);
+  const pendingGrades = 0;
 
   /**
    * Authentication.
@@ -97,25 +86,17 @@ export default function App() {
    * which is what stops a refresh flashing the landing page at a signed-in
    * learner before the session is rehydrated.
    */
-  const { status: authStatus, profile, signOut, hasOnboarded } = useAuth();
+  const { status: authStatus, authError, profile, signOut, hasOnboarded } = useAuth();
   const isLoggedIn = authStatus === 'authenticated';
 
   const [guestAllowed, setGuestAllowed] = useState<boolean>(() => {
-    return localStorage.getItem('calculix_guest_access') === 'true';
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('home') || params.has('auth') || params.has('error') || window.location.hash.includes('error=')) return false;
+    return new URLSearchParams(window.location.search).get('demo') === '1' || localStorage.getItem('calculix_guest_access') === 'true';
   });
 
-  const handleLoginSuccess = (name: string, level: Level, initialSkills?: Record<Topic, number>) => {
-    // Seed the learner's tier and, when they came through the adaptive
-    // placement test, their measured per-domain skill profile.
-    const updatedStats: UserStats = {
-      ...userStats,
-      level,
-      ...(initialSkills ? { skills: initialSkills } : {}),
-    };
-    setUserStats(updatedStats);
-    saveStatsToLocal(updatedStats);
-    localStorage.setItem('calculix_guest_access', 'true');
-    setGuestAllowed(true);
+  const handleLoginSuccess = (_name:string,_level:Level) => {
+    localStorage.setItem('calculix_guest_access','true');setGuestAllowed(true);
   };
 
   const handleLogout = async () => {
@@ -139,11 +120,11 @@ export default function App() {
     setActiveTab('dashboard');
     setCompletedProblems([]);
     setUserStats({
-      rank: 10,
+      rank: 0,
       points: 0,
       streak: 0,
       completedCount: 0,
-      accuracy: 100,
+      accuracy: 0,
       timeSpent: 0,
       skills: {
         Algebra: 0,
@@ -157,6 +138,7 @@ export default function App() {
   };
 
   // States
+  const [catalogError,setCatalogError]=useState('');
   const [problems, setProblems] = useState<Problem[]>([]);
   const [weeklyChallenges, setWeeklyChallenges] = useState<WeeklyChallenge[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
@@ -164,11 +146,11 @@ export default function App() {
   const [discussions, setDiscussions] = useState<CommunityDiscussion[]>([]);
   const [completedProblems, setCompletedProblems] = useState<string[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({
-    rank: 10,
+    rank: 0,
     points: 0,
     streak: 0,
     completedCount: 0,
-    accuracy: 100,
+    accuracy: 0,
     timeSpent: 0,
     skills: {
       Algebra: 0,
@@ -180,51 +162,21 @@ export default function App() {
     learningTimeline: [],
   });
 
-  /**
-   * Progress, restored from the database.
-   *
-   * This is what makes an account mean something. Everything above initialises
-   * `userStats` from localStorage, which is per-browser and per-device: a
-   * learner who signed in on a second machine, cleared their cache, or simply
-   * reinstalled the app saw zeros, no matter how much work the server had
-   * faithfully recorded against their user id.
-   *
-   * The write half of this loop already existed and was already correct --
-   * `/api/evaluate` verifies the caller's token and calls `recordAttempt`, and a
-   * database trigger derives `user_stats` and `skill_mastery` from the appended
-   * rows so the totals cannot drift from the attempts behind them. Only the read
-   * back was missing, so the numbers accumulated where nothing displayed them.
-   *
-   * `useLearnerSnapshot` also subscribes to realtime changes on this learner's
-   * row, which means a solve on the phone moves the total on the laptop without
-   * a refresh.
-   */
-  const { data: snapshot } = useLearnerSnapshot(isLoggedIn ? profile?.id ?? null : null);
-
-  useEffect(() => {
-    // Signed out, practice is still local and localStorage remains correct.
-    if (!isLoggedIn || !snapshot.stats) return;
-
-    const row = snapshot.stats;
-
-    setUserStats((previous) => ({
-      ...previous,
-      level: profile?.level ?? previous.level,
-      points: row.points,
-      streak: row.current_streak,
-      completedCount: row.problems_solved,
-      // Null until the learner has attempted anything; keeping the previous
-      // value avoids flashing 0% accuracy at someone who has simply not started.
-      accuracy: snapshot.accuracyPct ?? previous.accuracy,
-      // The column is seconds and the UI is minutes.
-      timeSpent: Math.round(row.time_spent_seconds / 60),
-      skills: snapshot.skills,
-    }));
-  }, [isLoggedIn, snapshot, profile?.level]);
+  const learner=useLearnerSnapshot(isLoggedIn ? profile?.id ?? null : null);
+  const ranking=useLeaderboard();
+  useEffect(()=>{
+   const row=learner.data.stats;
+   setCompletedProblems(learner.data.completed);
+   setUserStats({level:hasOnboarded?profile?.level:undefined,rank:learner.data.rank??0,
+    points:row?.points??0,streak:row?.current_streak??0,completedCount:row?.problems_solved??0,
+    accuracy:learner.data.accuracyPct??0,timeSpent:(row?.time_spent_seconds??0)/60,skills:learner.data.skills,
+    weaknesses:[],learningTimeline:learner.data.timeline});
+  },[learner.data,ranking.data,profile?.id,profile?.level,hasOnboarded]);
+  useEffect(()=>setLeaderboard(ranking.data.map(r=>({rank:r.rank,name:r.display_name||r.username,points:r.points,country:r.country??'',age:0,avatarSeed:r.username,accuracy:r.accuracy_pct??undefined}))),[ranking.data]);
 
   // Settings State
-  const [customGoal, setCustomGoal] = useState<string>('Qualify for a regional/national math olympiad');
-  const [studyPace, setStudyPace] = useState<string>('30 minutes / day');
+  const [customGoal, setCustomGoal] = useState<string>('Build fundamental mathematical problem-solving skills');
+  const [studyPace, setStudyPace] = useState<string>('30 minutes / day (Recommended)');
   // Reflects what is actually scheduled, not an optimistic default: the OS can
   // refuse permission, and the toggle must not claim to be on when it is not.
   const [studyReminders, setStudyReminders] = useState<boolean>(() => remindersEnabled());
@@ -267,6 +219,7 @@ export default function App() {
           : 'Reminders need notification permission. Tap the toggle again and choose Allow.',
     );
   };
+  useEffect(()=>{setCustomGoal(learner.data.preferences?.goal??'Build fundamental mathematical problem-solving skills');setStudyPace(learner.data.preferences?.pace??'30 minutes / day (Recommended)');},[learner.data.preferences]);
   const [saveSuccessNotify, setSaveSuccessNotify] = useState<boolean>(false);
 
   // 1. Fetch static math database problems
@@ -279,266 +232,38 @@ export default function App() {
       const response = await fetch(apiUrl('/api/problems'));
       if (response.ok) {
         const data = await response.json();
-        setProblems(data);
-      }
+        setProblems(data);setCatalogError('');
+      }else setCatalogError('Could not load the live question catalog. Please retry.');
     } catch (err) {
-      console.error('Error fetching math catalog:', err);
+      setCatalogError('The live question catalog is unavailable.');
     }
   };
 
-  // 2. Fetch standard seeds (Leaderboard, etc.)
-  const fetchSeeds = async () => {
+  useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.catalog',onReconnect:fetchProblems},()=>void fetchProblems());
+  const fetchArenaSchedule = async () => {
     try {
-      const response = await fetch(apiUrl('/api/statistics-seed'));
-      if (response.ok) {
-        const data = await response.json();
-        setWeeklyChallenges(data.weeklyChallenges || []);
-        setContests(data.contests || []);
-        setLeaderboard(data.leaderboard || []);
-      }
-    } catch (err) {
-      console.error('Error fetching math seeds:', err);
-    }
+      const response = await apiFetch('/api/arenas');
+      if (!response.ok) return;
+      const rows = await response.json();
+      setContests(rows.map((arena:any)=>({id:arena.id,title:arena.title,date:arena.starts_at,
+        duration:`${arena.duration_minutes} minutes`,problemCount:arena.question_count??0,
+        status:arena.status==='closed'||Date.parse(arena.ends_at)<=Date.now()?'past':Date.parse(arena.starts_at)>Date.now()?'upcoming':'ongoing'})));
+    } catch { /* Arena displays the connection error when opened. */ }
   };
-
-  /** Pull-to-refresh handler: re-read server data and replay anything queued. */
-  const handleRefresh = async () => {
-    await Promise.all([fetchProblems(), fetchSeeds(), flushGradeQueue()]);
-  };
-
-  // Load from database seeds & localStorage on mount
-  useEffect(() => {
-    fetchProblems();
-    fetchSeeds();
-
-    // Re-arm the daily reminder. Normally a no-op, since iOS keeps scheduled
-    // notifications across restarts; it matters after a reinstall, where the
-    // stored preference says enabled but nothing is actually scheduled.
-    void syncReminders();
-
-    // 3. Sync local storage states
-    const localCompleted = localStorage.getItem('calculix_completed');
-    if (localCompleted) {
-      setCompletedProblems(JSON.parse(localCompleted));
-    }
-
-    const localStats = localStorage.getItem('calculix_stats');
-    if (localStats) {
-      const parsedStats: UserStats = JSON.parse(localStats);
-      // If no problems completed yet, ensure skills start at 0
-      if ((parsedStats.completedCount ?? 0) === 0) {
-        parsedStats.skills = {
-          Algebra: 0,
-          Geometry: 0,
-          Combinatorics: 0,
-          'Number Theory': 0,
-        };
-      }
-      parsedStats.streak = computeStreak((parsedStats.learningTimeline || []).map((t) => t.date));
-      setUserStats(parsedStats);
-    }
-
-    const localDiscussions = localStorage.getItem('calculix_discussions');
-    if (localDiscussions) {
-      const parsedDiscussions = JSON.parse(localDiscussions) as CommunityDiscussion[];
-      const shouldCleanDemoDiscussions = !localStorage.getItem(DISCUSSION_CLEANUP_KEY);
-      const storedDiscussions = shouldCleanDemoDiscussions
-        ? parsedDiscussions.filter((discussion) => !isLegacyDemoDiscussion(discussion))
-        : parsedDiscussions;
-
-      if (shouldCleanDemoDiscussions) {
-        localStorage.setItem(DISCUSSION_CLEANUP_KEY, 'true');
-        if (storedDiscussions.length > 0) {
-          localStorage.setItem('calculix_discussions', JSON.stringify(storedDiscussions));
-        } else {
-          localStorage.removeItem('calculix_discussions');
-        }
-      }
-
-      setDiscussions(storedDiscussions);
-    }
-
-    const localContests = localStorage.getItem('calculix_contests');
-    if (localContests) {
-      setContests(JSON.parse(localContests));
-    }
-
-    // Auto-register today's visit in learningTimeline so today's cell turns active golden with flame icon
-    const todayStr = new Date().toISOString().slice(0, 10);
-    setUserStats((prev) => {
-      const existingTimeline = prev.learningTimeline || [];
-      if (!existingTimeline.some((t) => t.date === todayStr)) {
-        const updatedTimeline = [...existingTimeline, { date: todayStr, points: prev.points, accuracy: prev.accuracy }];
-        const newStats = {
-          ...prev,
-          streak: Math.max(1, computeStreak(updatedTimeline.map((t) => t.date))),
-          learningTimeline: updatedTimeline,
-        };
-        localStorage.setItem('calculix_stats', JSON.stringify(newStats));
-        return newStats;
-      }
-      return prev;
-    });
-  }, []);
-
-  // Check for any unalerted achievement unlocks 1 second after entering the workspace
-  useEffect(() => {
-    if (isLoggedIn || guestAllowed) {
-      const timer = setTimeout(() => {
-        const newlyUnlocked = checkNewAchievements(userStats, completedProblems.length);
-        queueAchievements(newlyUnlocked);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoggedIn, guestAllowed, activeTab, userStats, completedProblems.length]);
-
-  // Sync to local storage on edits & evaluate achievement unlocks
-  const saveStatsToLocal = (newStats: UserStats, overrideCount?: number) => {
-    setUserStats(newStats);
-    localStorage.setItem('calculix_stats', JSON.stringify(newStats));
-    const count = overrideCount !== undefined ? overrideCount : completedProblems.length;
-    const newlyUnlocked = checkNewAchievements(newStats, count);
-    queueAchievements(newlyUnlocked);
-  };
-
-  const handleRewardPoints = (pts: number) => {
-    const updatedUserStats: UserStats = {
-      ...userStats,
-      points: userStats.points + pts,
-    };
-    saveStatsToLocal(updatedUserStats);
-  };
-
-  // Solve problem event trigger
-  const handleSolveProblemStatus = (id: string, isCorrect: boolean, scorePoints: number) => {
-    // 1. Update completed list if correct
-    let updatedCompleted = [...completedProblems];
-    if (isCorrect && !completedProblems.includes(id)) {
-      updatedCompleted.push(id);
-      setCompletedProblems(updatedCompleted);
-      localStorage.setItem('calculix_completed', JSON.stringify(updatedCompleted));
-    }
-
-    // 2. Estimate skill map adaptively
-    const problem = problems.find((p) => p.id === id);
-    let updatedSkills = { ...userStats.skills };
-    if (problem) {
-      const topicName = problem.topic;
-      const currentScale = updatedSkills[topicName] ?? 0;
-      if (isCorrect) {
-        // Boost score for correct solution
-        updatedSkills[topicName] = Math.min(100, currentScale + 8);
-      } else {
-        // Moderate drag down or stable
-        updatedSkills[topicName] = Math.max(0, currentScale - 2);
-      }
-    }
-
-    // Sort skills to find weakest
-    const skillList = Object.entries(updatedSkills) as [string, number][];
-    skillList.sort((a, b) => a[1] - b[1]);
-    const weakestName = skillList[0][0];
-
-    // 3. Recalculate metrics
-    const preCount = userStats.completedCount;
-    const newCount = isCorrect ? preCount + 1 : preCount;
-
-    const calculatedPoints = userStats.points + scorePoints;
-    const tempAcc = isCorrect ? 100 : 0;
-    const accumulatedAcc = Math.round((userStats.accuracy * 4 + tempAcc) / 5);
-    const finalAccuracy = userStats.completedCount === 0 ? tempAcc : accumulatedAcc;
-
-    // Track one real timeline point per attempt (capped) so the Progress
-    // view's chart reflects actual history instead of a decorative fake line.
-    const today = new Date().toISOString().slice(0, 10);
-    const existingTimeline = userStats.learningTimeline || [];
-    const withoutToday = existingTimeline.filter((entry) => entry.date !== today);
-    const updatedTimeline = [...withoutToday, { date: today, points: calculatedPoints, accuracy: finalAccuracy }].slice(-14);
-
-    const updatedUserStats: UserStats = {
-      ...userStats,
-      points: calculatedPoints,
-      completedCount: newCount,
-      accuracy: finalAccuracy,
-      // Consecutive calendar days with activity, derived from the real
-      // timeline instead of incrementing once per correct answer (which
-      // used to count 5 problems solved in one sitting as a "5 day streak").
-      streak: computeStreak(updatedTimeline.map((t) => t.date)),
-      timeSpent: userStats.timeSpent + 3, // Add avg 3 minutes per try
-      skills: updatedSkills,
-      weaknesses: [weakestName],
-      learningTimeline: updatedTimeline,
-    };
-
-    saveStatsToLocal(updatedUserStats, updatedCompleted.length);
-
-    if (isCorrect) {
-      fetch(apiUrl('/api/live-stats/event'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'problem-solved' }),
-      }).catch(err => console.error('Error reporting problem-solved event:', err));
-    }
-  };
-
-  // Register or Join Challenge
-  const handleJoinChallenge = (id: string) => {
-    const updated = weeklyChallenges.map((wc) => {
-      if (wc.id === id) {
-        return { ...wc, completed: true, participants: wc.participants + 1 };
-      }
-      return wc;
-    });
-    setWeeklyChallenges(updated);
-
-    // Boost points slightly for registry
-    const updatedStats = {
-      ...userStats,
-      points: userStats.points + 10,
-    };
-    saveStatsToLocal(updatedStats);
-  };
-
-  // Register or Join Contest
-  const handleJoinContest = (id: string) => {
-    const updated = contests.map((cont) => {
-      if (cont.id === id) {
-        return { ...cont, joined: true };
-      }
-      return cont;
-    });
-    setContests(updated);
-    localStorage.setItem('calculix_contests', JSON.stringify(updated));
-
-    // Boost points slightly for registration
-    const updatedStats = {
-      ...userStats,
-      points: userStats.points + 15,
-    };
-    saveStatsToLocal(updatedStats);
-  };
-
-  // Add customized comment from student inside forum
-  const handleAddCommunityComment = (comment: Omit<CommunityDiscussion, 'id' | 'timestamp' | 'likes' | 'replies'>) => {
-    const newDiscussionEntry: CommunityDiscussion = {
-      ...comment,
-      id: Date.now().toString(),
-      timestamp: 'Just now',
-      likes: 0,
-      replies: 0,
-    };
-
-    const updatedAll = [newDiscussionEntry, ...discussions];
-    setDiscussions(updatedAll);
-    localStorage.setItem('calculix_discussions', JSON.stringify(updatedAll));
-
-    // Reward active contributor points
-    const updatedStats = {
-      ...userStats,
-      points: userStats.points + 5,
-    };
-    saveStatsToLocal(updatedStats);
-  };
+  useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.arena',onReconnect:fetchArenaSchedule},()=>void fetchArenaSchedule());
+  useEffect(()=>{void fetchArenaSchedule();},[]);
+  const handleRefresh=async()=>{await Promise.all([fetchProblems(),learner.reload(),ranking.reload()]);};
+  useEffect(()=>{void fetchProblems();void syncReminders();},[]);
+  const shown=React.useRef(new Set<string>());
+  useEffect(()=>{shown.current.clear();setAchievementQueue([]);},[profile?.id]);
+  useEffect(()=>{
+   if(!isLoggedIn||learner.loading||learner.error)return;
+   const fresh=ACHIEVEMENTS.filter(a=>a.condition(userStats,completedProblems.length)&&!shown.current.has(a.id));
+   fresh.forEach(a=>shown.current.add(a.id));if(fresh.length)queueAchievements(fresh);
+  },[isLoggedIn,learner.loading,learner.error,userStats,completedProblems.length]);
+  const handleSolveProblemStatus=(_id:string,_correct:boolean,_points:number)=>{if(isLoggedIn)void learner.reload();};
+  const handleJoinChallenge=(_id:string)=>setActiveTab('compete');
+  const handleJoinContest=(_id:string)=>setActiveTab('compete');
 
   // Navigation controller with search query injection
   const navigateWithFilters = (tab: string, args?: { topic?: Topic; level?: Level }) => {
@@ -565,175 +290,30 @@ export default function App() {
     setActiveTab(tab);
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaveSuccessNotify(true);
-    setTimeout(() => setSaveSuccessNotify(false), 3000);
+  const handleSaveSettings=async(e:React.FormEvent)=>{
+   e.preventDefault();setSaveSuccessNotify(false);
+   if(!supabase||!profile?.id){setReminderNotice('Sign in to save your learning preferences.');return;}
+   const {error}=await supabase.from('learner_preferences').upsert({user_id:profile.id,goal:customGoal,pace:studyPace});
+   if(error){setReminderNotice('Could not save your preferences. Please retry.');return;}
+   await learner.reload();setSaveSuccessNotify(true);
   };
 
-  if ((!isLoggedIn && !guestAllowed) || (isLoggedIn && !hasOnboarded)) {
+  if (authStatus === 'loading') return <main className="min-h-screen flex items-center justify-center bg-surface text-content"><p role="status">Opening your learning space…</p></main>;
+  if ((!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <div className="cx-ground min-h-screen flex flex-col md:flex-row relative text-content antialiased font-sans">
-
-      {/* MOBILE APP BAR — identity, points and reminders; navigation lives in the bottom rail */}
-      <MobileHeader
-        activeTab={activeTab}
-        points={userStats.points}
-        onBellClick={() => setActiveTab('settings')}
-        online={online}
-        pendingGrades={pendingGrades}
-        cachedProblems={problems.length}
-      />
-
-      {/* SIDEBAR NAVIGATION BAR (Desktop only — mobile navigates via MobileTabBar) */}
-      {/*
-        `ramp-static` because this column is dark in both themes — in daylight
-        it is the ink spine the brand is built on, and after dark it stays put
-        while the page around it drops to meet it. Its text is written with the
-        bridged `stone-*` classes, which invert; pinning the ramp is what stops
-        `text-stone-500` becoming a dark grey on a ground that never moved.
-      */}
-      <aside
-        id="side-nav-rail"
-        className="ramp-static hidden md:sticky md:flex top-0 left-0 h-screen z-40 bg-surface-rail border-r border-[rgba(231,226,217,0.14)] w-66 px-5 py-6.5 shrink-0 flex-col justify-between overflow-y-auto"
-      >
-        <div className="select-none">
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <span className="cx-mark">&#8721;</span>
-            <span className="flex flex-col leading-[1.15]">
-              <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
-              <span className="type-eyebrow text-stone-600">Math OS Platform</span>
-            </span>
-          </div>
-
-          {/* Learning status — a hairline meter, not a filled card. */}
-          <div className="mt-6.5 rounded-card border border-[rgba(231,226,217,0.16)] px-3.75 py-3.5">
-            <span className="type-eyebrow block text-stone-600">Learning status</span>
-            <div className="mt-2.25 flex items-baseline justify-between">
-              <span className="text-[13px] text-stone-300">You</span>
-              <span className="font-serif text-[19px] text-azure-400 tnum">
-                <AnimatedNumber value={userStats.points} /> pts
-              </span>
-            </div>
-            <SpringBar
-              value={(userStats.points / 500) * 100}
-              track="w-full h-0.5 bg-[rgba(231,226,217,0.14)] mt-2.5"
-              fill="h-0.5 bg-azure-400"
-              label="Progress toward 500 points"
-            />
-            <span className="mt-2 block text-[10px] tracking-[0.04em] text-stone-600">Toward 500 points</span>
-          </div>
-
-          {/* Nav */}
-          <nav className="mt-6.5 flex flex-col gap-0.5" id="side-nav-links">
-            {NAV_ITEMS.map((item) => {
-              const ItemIcon = item.icon;
-              const isActive = activeTab === item.key;
-              return (
-                /*
-                  The active mark is a 2px left edge and a 14% wash, both drawn
-                  by `.cx-rail-item` off `aria-current`. The previous build slid
-                  a shared `layoutId` rectangle between links; that reads well
-                  with a filled pill and not at all with an edge, where the
-                  travelling element would be a 2px line skating up and down the
-                  column. State here is carried by the attribute a screen reader
-                  reads anyway, which is one fewer thing to keep in sync.
-                */
-                <button
-                  key={item.key}
-                  onClick={() => selectTab(item.key)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className="cx-rail-item"
-                >
-                  <ItemIcon className="w-3.75 h-3.75 shrink-0" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Identity and session */}
-        <div className="mt-6 border-t border-[rgba(231,226,217,0.12)] pt-4">
-          <button
-            type="button"
-            onClick={() => selectTab('profile')}
-            className="mb-3.5 flex w-full items-center justify-between gap-2.5 text-left cursor-pointer"
-          >
-            <span className="truncate text-[13px] text-stone-300">
-              {profile?.display_name ?? profile?.username ?? 'Student'}
-            </span>
-            <span className="cx-tag cx-tag-neutral shrink-0 border-[rgba(231,226,217,0.24)] text-stone-400 text-[9px] tracking-[0.14em]">
-              {userStats.level || 'Unplaced'}
-            </span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="cx-btn cx-btn-on-dark cx-btn-block py-2.5 text-[14px]"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Log out</span>
-          </button>
-
-          <div className="pt-4 text-[10px] leading-[1.6] text-stone-600 select-none">
-            <p>© 2026 Calculix Platform.</p>
-            <p>Democratizing math with AI.</p>
-          </div>
-        </div>
-      </aside>
-
-      {/* MAIN CONTAINER CONTENT VIEWPORT */}
-      {/* pb-26 on mobile clears the fixed bottom rail (~85px incl. safe area). */}
-      <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-26 md:px-10 md:pt-8.5 md:pb-16 relative">
+    <>
+      <WorkspaceShell activeTab={activeTab} onSelect={selectTab}
+        name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
+        points={userStats.points} streak={userStats.streak} online={online}
+        pendingGrades={pendingGrades} onLogout={handleLogout}>
+        {catalogError&&<p role="alert" className="arena-notice">{catalogError}</p>}
+        {learner.error&&<div role="alert" className="arena-notice">{learner.error}</div>}
+        {ranking.error&&<div role="alert" className="arena-notice">{ranking.error}</div>}
+        {!isLoggedIn&&<p className="arena-note">Guest practice is not saved. Sign in to track your progress across devices.</p>}
         <PullToRefresh onRefresh={handleRefresh}>
-        <div className="max-w-7xl mx-auto space-y-7">
-          
-          {/*
-            The workspace header: a tracked kicker over a flush-left display
-            line, closed by a hairline. Every screen in the design opens this
-            way, which is what makes eight unrelated workspaces read as chapters
-            of one document.
-
-            Learn, Compete and Community ship their own headers, so this one
-            stands down for them rather than stacking a second title above.
-          */}
-          {/*
-            Learn, Compete and Community ship their own headers, so this one
-            stands down for them rather than stacking a second title above.
-
-            It is a render guard, not a `hidden` class. The previous version
-            appended `hidden` to a className that already began `hidden md:flex`
-            — and `md:flex` wins at every width this header is visible at, so
-            the "suppressed" header rendered anyway on exactly the screens it
-            was meant to skip.
-          */}
-          {activeTab !== 'learn' && activeTab !== 'compete' && activeTab !== 'community' && (
-            <header className="hidden md:flex items-center justify-between gap-6 border-b border-line pb-4.5 select-none">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="type-eyebrow text-accent-text">Calculix OS Workspace</p>
-                </div>
-                <h2 className="type-title mt-1 font-semibold text-[clamp(1.75rem,2.6vw,2.375rem)] text-content">
-                  {screenTitle(activeTab)}
-                </h2>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-[12px] tracking-[0.08em] text-content-subtle tnum px-3 py-1.5 rounded-pill bg-surface-sunken border border-line">
-                  UTC {new Date().toISOString().slice(0, 10)}
-                </span>
-                <ThemeToggle variant="bar" />
-              </div>
-            </header>
-          )}
-
-          {/* RENDER DYNAMIC TAB CONTENT VIEW */}
           <TabTransition tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <Dashboard
@@ -743,7 +323,6 @@ export default function App() {
               onNavigateToTab={navigateWithFilters}
               onJoinChallenge={handleJoinChallenge}
               onJoinContest={handleJoinContest}
-              onRewardPoints={handleRewardPoints}
             />
           )}
 
@@ -754,31 +333,19 @@ export default function App() {
               userStats={userStats}
               onSolveProblem={handleSolveProblemStatus}
               initialFilters={overrideFilters}
+              savedAttempts={learner.data.attempts}
             />
           )}
 
-          {activeTab === 'compete' && (
-            <Compete
-              weeklyChallenges={weeklyChallenges}
-              contests={contests}
-              leaderboard={leaderboard}
-              onJoinChallenge={handleJoinChallenge}
-              onJoinContest={handleJoinContest}
-              userPoints={userStats.points}
-              userStats={userStats}
-            />
-          )}
+          {activeTab === 'compete' && <Arena />}
+          {activeTab === 'admin' && <AdminWorkspace onContentChange={() => void fetchProblems()} />}
 
           {activeTab === 'progress' && (
             <ProgressView userStats={userStats} />
           )}
 
           {activeTab === 'community' && (
-            <Community
-              discussions={discussions}
-              problems={problems}
-              onAddComment={handleAddCommunityComment}
-            />
+            <Community problems={problems} />
           )}
 
           {activeTab === 'profile' && (
@@ -790,6 +357,8 @@ export default function App() {
               onTriggerAlert={(badge) => queueAchievements([badge])}
             />
           )}
+
+          {activeTab === 'inbox' && <Inbox />}
 
           {activeTab === 'research' && <ResearchAnalytics />}
 
@@ -807,24 +376,12 @@ export default function App() {
             />
           )}
           </TabTransition>
-
-        </div>
         </PullToRefresh>
-      </main>
-
-      {/* CHATBOT COOPERATIVE ASSISTANT ON FLOATING LAYER */}
+      </WorkspaceShell>
       <AITutorChat />
-
-      {/* MOBILE BOTTOM NAVIGATION RAIL */}
-      <MobileTabBar activeTab={activeTab} onSelect={selectTab} />
-
-      {/* ACHIEVEMENT UNLOCK TOAST NOTIFICATION */}
-      <AchievementToast
-        achievement={achievementQueue[0] || null}
-        onClose={() => setAchievementQueue((prev) => prev.slice(1))}
-        onNavigateToProfile={() => selectTab('profile')}
-      />
-
-    </div>
+      <AchievementToast achievement={achievementQueue[0] || null}
+        onClose={() => setAchievementQueue(prev => prev.slice(1))}
+        onNavigateToProfile={() => selectTab('profile')} />
+    </>
   );
 }

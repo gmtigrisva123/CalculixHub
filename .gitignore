@@ -42,3 +42,7 @@ Thumbs.db
 # the link -- not to the repository. `supabase/migrations/` is the part that is
 # meant to be committed, and it stays tracked.
 supabase/.temp/
+
+# Local tooling stays inside this project
+.cache/
+.artifacts/

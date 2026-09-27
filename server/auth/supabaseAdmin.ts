@@ -9,8 +9,8 @@
  *   - `verifyAccessToken` uses the **anon** key to ask Supabase who a bearer
  *     token belongs to. It is the identity check.
  *   - `adminClient` uses the **service-role** key, which bypasses every
- *     row-level security policy in the project. It exists for exactly one
- *     reason: writing graded attempts, which no client may write.
+ *     row-level security policy in the project. Only the authenticated,
+ *     code-gated Admin route may use it. Student attempts use scoped RPCs.
  *
  * The service-role key is the most dangerous credential in the system. It is
  * read only from a server environment variable, never prefixed `VITE_` (which
@@ -88,7 +88,7 @@ export async function verifyAccessToken(authorizationHeader: string | null): Pro
 
   const { data, error } = await client.auth.getUser(match[1]!);
 
-  if (error || !data.user) return null;
+  if (error || !data.user || data.user.banned_until && Date.parse(data.user.banned_until)>Date.now()) return null;
   return { id: data.user.id, email: data.user.email ?? undefined };
 }
 

@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../services/apiBase';
+import { compareAnswer } from '../../shared/gradeAnswer';
 
 const QUEUE_KEY = 'calculix_pending_grades';
 
@@ -83,7 +84,7 @@ export function pendingGradeCount(): number {
  * the attempt is still queued for replay.
  */
 export function gradeLocally(userAnswer: string, correctAnswer: string): boolean {
-  return userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+  return compareAnswer(userAnswer, correctAnswer);
 }
 
 /**

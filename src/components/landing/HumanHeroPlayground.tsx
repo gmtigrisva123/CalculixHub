@@ -24,32 +24,32 @@ const PLAYGROUND_ITEMS: MathPlaygroundItem[] = [
   {
     id: 'pg-1',
     topic: 'Algebra',
-    source: 'AMC 10A / Intermediate',
+    source: 'AIME-style / Power sums',
     questionText: 'Test your algebraic reasoning:',
-    latexProblem: 'If $x + \\frac{1}{x} = 3$, what is the exact value of $x^3 + \\frac{1}{x^3}$?',
-    options: ['18', '21', '24', '27'],
-    correctIdx: 0, // (x + 1/x)^3 - 3(x + 1/x) = 27 - 9 = 18.
-    explanation: 'Cube both sides: $(x + \\frac{1}{x})^3 = x^3 + \\frac{1}{x^3} + 3(x + \\frac{1}{x}) = 27$. Substituting $x + \\frac{1}{x} = 3$ gives $x^3 + \\frac{1}{x^3} = 27 - 3(3) = 18$.',
+    latexProblem: 'A positive $x$ satisfies $x + \\frac{1}{x} = 3$. What are the last three digits of $\\left(x^5 + \\frac{1}{x^5}\\right)^2$?',
+    options: ['109', '119', '129', '139'],
+    correctIdx: 2,
+    explanation: 'Let $T_n=x^n+x^{-n}$. The recurrence $T_n=3T_{n-1}-T_{n-2}$ gives $T_5=123$. Thus $T_5^2=15129$, so the last three digits are $129$.',
   },
   {
     id: 'pg-2',
     topic: 'Geometry',
-    source: 'AIME I / Advanced',
+    source: 'AIME-style / Euler centers',
     questionText: 'Test your geometric intuition:',
-    latexProblem: 'In a right triangle with legs $a=6$ and $b=8$, what is the length of the altitude drawn to the hypotenuse?',
-    options: ['4.0', '4.8', '5.0', '5.2'],
-    correctIdx: 1, // Hypotenuse c = 10. Area = 1/2 * 6 * 8 = 24. Altitude h = 2 * 24 / 10 = 4.8.
-    explanation: 'The hypotenuse $c = \\sqrt{6^2 + 8^2} = 10$. The area of the triangle is $\\frac{1}{2} \\times 6 \\times 8 = 24$. Using area with hypotenuse as base: $\\frac{1}{2} \\times 10 \\times h = 24 \\implies h = 4.8$.',
+    latexProblem: 'A triangle has sides $10$, $17$, and $21$. If $O$ and $I$ are its circumcenter and incenter, what is the numerator remainder of $OI^2$ modulo $1000$?',
+    options: ['365', '465', '435', '495'],
+    correctIdx: 1,
+    explanation: 'Heron gives $K=84$, so $r=7/2$. Also $R=abc/(4K)=85/8$. Euler’s formula gives $OI^2=R(R-2r)=2465/64$, whose numerator remainder is $465$.',
   },
   {
     id: 'pg-3',
     topic: 'Combinatorics',
-    source: 'AMC 12B / Intermediate',
+    source: 'AIME-style / Catalan paths',
     questionText: 'Test your counting strategy:',
-    latexProblem: 'How many positive integers less than $1000$ are divisible by neither $5$ nor $7$?',
-    options: ['684', '686', '714', '720'],
-    correctIdx: 1, // 999 - floor(999/5) - floor(999/7) + floor(999/35) = 999 - 199 - 142 + 28 = 686.
-    explanation: 'There are $999$ positive integers under $1000$. By inclusion-exclusion, $199$ are multiples of $5$, $142$ are multiples of $7$, and $28$ are multiples of $35$. Total excluded: $199 + 142 - 28 = 313$. Remaining: $999 - 313 = 686$.',
+    latexProblem: 'A path from $(0,0)$ to $(10,10)$ stays on or below $y=x$ and avoids $(5,5)$. What is the path count modulo $1000$?',
+    options: ['12', '24', '32', '42'],
+    correctIdx: 2,
+    explanation: 'The Catalan count is $C_{10}=16796$. Paths through $(5,5)$ number $C_5^2=42^2=1764$. Their difference is $15032$, giving remainder $32$.',
   },
 ];
 

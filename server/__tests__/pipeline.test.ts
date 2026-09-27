@@ -59,6 +59,18 @@ function get(path: string, init: RequestInit = {}): Request {
   });
 }
 
+describe('real platform activity', () => {
+  it('refuses browser claims instead of manufacturing activity counters', async () => {
+    const response = await makeApp()(post('/api/live-stats/event',{type:'problem_solved',points:9999}));
+    expect(response.status).toBe(410);
+  });
+  it('reports unavailable statistics when the database is not configured', async () => {
+    const response = await makeApp()(get('/api/live-stats'));
+    expect(response.status).toBe(503);
+    expect(await response.json()).not.toHaveProperty('registeredUsers');
+  });
+});
+
 describe('the crash this pipeline was built to fix', () => {
   it('answers POST /api/chat with an empty body instead of throwing', async () => {
     const app = makeApp();

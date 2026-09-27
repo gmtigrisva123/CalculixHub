@@ -4,6 +4,7 @@
  */
 
 import {
+  ShieldCheck,
   Brain,
   Calendar,
   FlaskConical,
@@ -23,7 +24,9 @@ export type TabKey =
   | 'community'
   | 'profile'
   | 'research'
-  | 'settings';
+  | 'settings'
+  | 'admin'
+  | 'inbox';
 
 export interface NavItem {
   key: TabKey;
@@ -50,12 +53,14 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: Trophy, inTabBar: true },
   { key: 'learn', label: 'Learn', shortLabel: 'Learn', icon: Brain, inTabBar: true },
-  { key: 'compete', label: 'Compete', shortLabel: 'Arena', icon: Calendar, inTabBar: true },
+  { key: 'compete', label: 'Arena', shortLabel: 'Arena', icon: Calendar, inTabBar: true },
   { key: 'progress', label: 'Progress', shortLabel: 'Stats', icon: TrendingUp, inTabBar: true },
   { key: 'community', label: 'Community', shortLabel: 'Forum', icon: MessageSquare, inTabBar: true },
   { key: 'profile', label: 'Profile', shortLabel: 'You', icon: User, inTabBar: true },
   { key: 'research', label: 'Research', shortLabel: 'Lab', icon: FlaskConical, inTabBar: true },
   { key: 'settings', label: 'Settings', shortLabel: 'Config', icon: Settings, inTabBar: true },
+  { key: 'admin', label: 'Admin', shortLabel: 'Admin', icon: ShieldCheck, inTabBar: false },
+  { key: 'inbox', label: 'Inbox', shortLabel: 'Inbox', icon: MessageSquare, inTabBar: false },
 ] as const;
 
 export const TAB_BAR_ITEMS: readonly NavItem[] = NAV_ITEMS.filter((item) => item.inTabBar);

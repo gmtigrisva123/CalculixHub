@@ -1,3 +1,5 @@
+-- Rerunnable migration: replace only named triggers/policies; preserve data.
+begin;
 -- CalculixHub: direct messaging.
 --
 -- Modelled as conversations with participants rather than a sender/recipient
@@ -57,6 +59,7 @@ begin
 end;
 $$;
 
+drop trigger if exists messages_touch_conversation on public.messages;
 create trigger messages_touch_conversation
   after insert on public.messages
   for each row execute function public.touch_conversation_on_message();
@@ -83,6 +86,7 @@ alter table public.messages enable row level security;
 
 -- `created_by` for the same reason as communities: INSERT ... RETURNING is a
 -- read, and the creator is not yet a participant at that point.
+drop policy if exists conversations_select_participant on public.conversations;
 create policy conversations_select_participant
   on public.conversations for select
   using (
@@ -90,10 +94,12 @@ create policy conversations_select_participant
     or public.is_conversation_participant(id, auth.uid())
   );
 
+drop policy if exists conversations_insert_authenticated on public.conversations;
 create policy conversations_insert_authenticated
   on public.conversations for insert
   with check (auth.uid() is not null and auth.uid() = created_by);
 
+drop policy if exists conversation_participants_select_participant on public.conversation_participants;
 create policy conversation_participants_select_participant
   on public.conversation_participants for select
   using (public.is_conversation_participant(conversation_id, auth.uid()));
@@ -101,6 +107,7 @@ create policy conversation_participants_select_participant
 -- You may add yourself to a conversation you created, or be added by an
 -- existing participant. Anything else would let a stranger insert themselves
 -- into a private thread.
+drop policy if exists conversation_participants_insert on public.conversation_participants;
 create policy conversation_participants_insert
   on public.conversation_participants for insert
   with check (
@@ -112,20 +119,24 @@ create policy conversation_participants_insert
   );
 
 -- Only your own read cursor.
+drop policy if exists conversation_participants_update_own on public.conversation_participants;
 create policy conversation_participants_update_own
   on public.conversation_participants for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+drop policy if exists conversation_participants_delete_own on public.conversation_participants;
 create policy conversation_participants_delete_own
   on public.conversation_participants for delete
   using (auth.uid() = user_id);
 
+drop policy if exists messages_select_participant on public.messages;
 create policy messages_select_participant
   on public.messages for select
   using (deleted_at is null and public.is_conversation_participant(conversation_id, auth.uid()));
 
 -- Both halves matter: you must be in the thread, and the message must be yours.
+drop policy if exists messages_insert_participant on public.messages;
 create policy messages_insert_participant
   on public.messages for insert
   with check (
@@ -133,7 +144,10 @@ create policy messages_insert_participant
     and public.is_conversation_participant(conversation_id, auth.uid())
   );
 
+drop policy if exists messages_update_own on public.messages;
 create policy messages_update_own
   on public.messages for update
   using (auth.uid() = sender_id)
   with check (auth.uid() = sender_id);
+
+commit;

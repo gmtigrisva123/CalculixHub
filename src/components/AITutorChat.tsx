@@ -19,10 +19,20 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-export default function AITutorChat() {
-  const [isOpen, setIsOpen] = useState(false);
+interface AITutorChatProps {
+  /** Open the tutor immediately for a contextual explanation request. */
+  autoOpen?: boolean;
+  /** A problem-specific prompt waiting for the learner to save a Gemini key. */
+  initialPrompt?: string;
+}
+
+export default function AITutorChat({ autoOpen = false, initialPrompt }: AITutorChatProps) {
+  const [isOpen, setIsOpen] = useState(autoOpen);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [userApiKey, setUserApiKey] = useState('');
+  const [hasSavedApiKey, setHasSavedApiKey] = useState(false);
+  const [pendingPrompt, setPendingPrompt] = useState(initialPrompt ?? '');
+  const promptSentRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init',
@@ -44,7 +54,16 @@ export default function AITutorChat() {
   useEffect(() => {
     const saved = localStorage.getItem('calculix_gemini_api_key') || '';
     setUserApiKey(saved);
+    setHasSavedApiKey(Boolean(saved));
+    if (saved) setShowKeyModal(false);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!initialPrompt) return;
+    setPendingPrompt(initialPrompt);
+    promptSentRef.current = false;
+    setIsOpen(true);
+  }, [initialPrompt]);
 
   useEffect(() => {
     if (chatBottomRef.current) {
@@ -55,6 +74,7 @@ export default function AITutorChat() {
   const handleSaveInlineKey = (key: string) => {
     const trimmed = key.trim();
     setUserApiKey(trimmed);
+    setHasSavedApiKey(Boolean(trimmed));
     if (trimmed) {
       localStorage.setItem('calculix_gemini_api_key', trimmed);
     } else {
@@ -223,6 +243,21 @@ Let's work through this step-by-step:
       setLoading(false);
     }
   };
+
+  // A contextual explanation waits for the learner to press Save in the key
+  // panel. Typing into the password field alone never activates the request.
+  useEffect(() => {
+    if (!isOpen || !pendingPrompt || promptSentRef.current || loading) return;
+    if (!hasSavedApiKey) {
+      setShowKeyModal(true);
+      return;
+    }
+
+    promptSentRef.current = true;
+    const prompt = pendingPrompt;
+    setPendingPrompt('');
+    void handleSendMessage(undefined, prompt);
+  }, [hasSavedApiKey, isOpen, loading, pendingPrompt]);
 
   // Quick suggestions
   const sendQuickOption = (promptText: string) => {

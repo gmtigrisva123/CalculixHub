@@ -25,6 +25,8 @@ export type ChangeEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
 export interface SubscriptionOptions {
   /** Table in the public schema, e.g. `posts`. */
   table: string;
+  onReconnect?: () => void;
+  onStatus?: (status:string) => void;
   event?: ChangeEvent;
   /** PostgREST filter, e.g. `user_id=eq.<uuid>`. Narrows the stream server-side. */
   filter?: string;
@@ -46,6 +48,9 @@ export function useRealtimeSubscription<T extends Record<string, unknown>>(
 ): void {
   const handler = useRef(onChange);
   handler.current = onChange;
+  const ready=useRef(options.onReconnect);ready.current=options.onReconnect;
+  const statusHandler=useRef(options.onStatus);statusHandler.current=options.onStatus;
+  const channelId=useRef(crypto.randomUUID());
 
   const { table, event = '*', filter, enabled = true } = options;
 
@@ -68,13 +73,15 @@ export function useRealtimeSubscription<T extends Record<string, unknown>>(
     // different filters makes the second subscriber silently inherit the
     // first's stream.
     const channel = client
-      .channel(`realtime:${table}:${event}:${filter ?? 'all'}`)
+      .channel(`realtime:${table}:${event}:${filter ?? 'all'}:${channelId.current}`)
       .on<T>(
         'postgres_changes',
         { schema: 'public', table, event, ...(filter ? { filter } : {}) },
         (payload) => handler.current(payload),
       )
       .subscribe((subscriptionStatus) => {
+        statusHandler.current?.(subscriptionStatus);
+        if (subscriptionStatus === 'SUBSCRIBED') ready.current?.();
         if (subscriptionStatus === 'CHANNEL_ERROR') {
           console.warn(`[CalculixHub] Realtime channel error on "${table}". Falling back to fetched data.`);
         }

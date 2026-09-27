@@ -11,9 +11,10 @@
  */
 
 import { initialContests, initialDiscussions, initialLeaderboard, initialWeeklyChallenges, problems } from '../data';
-import { adminClient } from '../auth/supabaseAdmin';
+import { createClient } from '@supabase/supabase-js';
 import { json } from '../http';
 import type { Handler } from '../pipeline';
+import { loadProblemBank } from '../catalog';
 
 /**
  * How long a client may reuse this content.
@@ -42,8 +43,8 @@ const CONTENT_CACHE = 'private, max-age=300';
  * work and its own review -- not something to slip into a request-pipeline
  * change. It is the next piece of work after this one.
  */
-export const problemsHandler: Handler = () =>
-  json(problems, { headers: { 'cache-control': CONTENT_CACHE } });
+export const problemsHandler: Handler = async ctx =>
+  json(await loadProblemBank(ctx.config), { headers: { 'cache-control': 'no-store' } });
 
 /**
  * Platform content, plus the live leaderboard.
@@ -57,9 +58,9 @@ export const problemsHandler: Handler = () =>
  * Challenges and contests remain fixtures. They are platform content rather
  * than user data, so nothing about them is a claim about a person.
  */
-export const statisticsSeedHandler: Handler = async () => {
-  const client = adminClient();
-  let leaderboard = initialLeaderboard;
+export const statisticsSeedHandler: Handler = async ctx => {
+  const client = ctx.config.supabaseUrl && ctx.config.supabaseAnonKey ? createClient(ctx.config.supabaseUrl, ctx.config.supabaseAnonKey, {auth:{persistSession:false}}) : null;
+  let leaderboard: import('../../shared/types').LeaderboardEntry[] = [];
 
   if (client) {
     const { data, error } = await client
@@ -93,9 +94,9 @@ export const statisticsSeedHandler: Handler = async () => {
   return json(
     {
       leaderboard,
-      weeklyChallenges: initialWeeklyChallenges,
-      contests: initialContests,
-      discussions: initialDiscussions,
+      weeklyChallenges: [],
+      contests: [],
+      discussions: [],
     },
     // Not cached: a ranking that lags behind the activity that produced it is
     // the thing a leaderboard most needs to avoid.

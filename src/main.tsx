@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './styles/refresh.css';
 import {registerServiceWorker} from './platform/pwa';
 import { Analytics } from "@vercel/analytics/react";
 import MotionProvider from './components/motion/MotionProvider';

@@ -101,7 +101,9 @@ const problemId = z
 export const evaluateRequestSchema = (maxChars: number) =>
   z.object({
     problemId,
-    userAnswer: promptText(maxChars),
+      userAnswer: promptText(maxChars),
+      practiceSession: z.string().uuid().optional(),
+      forfeit: z.boolean().optional(),
     // How long the learner spent, reported by the client and therefore
     // advisory. Bounded so it cannot poison the aggregate time-spent figure:
     // the column accepts up to 24 hours and a single item cannot legitimately

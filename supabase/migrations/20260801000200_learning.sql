@@ -1,3 +1,5 @@
+-- Rerunnable migration: replace only named triggers/policies; preserve data.
+begin;
 -- CalculixHub: learning activity.
 --
 -- `problem_attempts` is the source of truth for everything this platform claims
@@ -163,6 +165,7 @@ begin
 end;
 $$;
 
+drop trigger if exists problem_attempts_apply_stats on public.problem_attempts;
 create trigger problem_attempts_apply_stats
   after insert on public.problem_attempts
   for each row execute function public.apply_attempt_to_stats();
@@ -207,6 +210,7 @@ alter table public.user_stats enable row level security;
 alter table public.skill_mastery enable row level security;
 
 -- An attempt log is private: it records what someone got wrong.
+drop policy if exists problem_attempts_select_own on public.problem_attempts;
 create policy problem_attempts_select_own
   on public.problem_attempts for select
   using (auth.uid() = user_id);
@@ -217,13 +221,17 @@ create policy problem_attempts_select_own
 -- server. If a client could insert here it could award itself any score, so
 -- attempts are written only through the service role, which bypasses RLS. The
 -- absence of a policy is the control.
+drop policy if exists user_stats_select_all on public.user_stats;
 create policy user_stats_select_all
   on public.user_stats for select
   using (true);
 
+drop policy if exists skill_mastery_select_own on public.skill_mastery;
 create policy skill_mastery_select_own
   on public.skill_mastery for select
   using (auth.uid() = user_id);
 
 comment on table public.problem_attempts is
   'Append-only. Written by the server after grading; no client-facing write policy exists, which is what makes every derived statistic trustworthy.';
+
+commit;
