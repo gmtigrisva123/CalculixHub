@@ -3,17 +3,19 @@ import type { UserStats, WeeklyChallenge, Contest, Topic, Level } from '../../sh
 import { TOPIC_META } from '../lib/topics';
 import { getLastNDateKeys } from '../domain/streak';
 import '../styles/dashboard-refresh.css';
+import { useSurfaceReveal } from '../hooks/useSurfaceReveal';
 
 interface DashboardProps { userStats: UserStats; weeklyChallenges: WeeklyChallenge[]; contests: Contest[]; onNavigateToTab: (tab: string, arg?: { topic?: Topic; level?: Level }) => void; onJoinChallenge: (id: string) => void; onJoinContest: (id: string) => void; onRewardPoints?: (pts: number) => void; }
 const DESCRIPTIONS: Record<Topic, string> = { Algebra: 'Make the patterns click', Geometry: 'See a different angle', Combinatorics: 'Count the possibilities', 'Number Theory': 'Discover what adds up' };
 export default function Dashboard({ userStats: stats, weeklyChallenges, contests, onNavigateToTab: navigate, onJoinChallenge, onJoinContest }: DashboardProps) {
+  const surfaceRef = useSurfaceReveal('.dr-hero, .dr-daily, .dr-metrics article, .dr-topic, .dr-activity, .dr-next');
   const days = getLastNDateKeys(7);
   const timeline = stats.learningTimeline || [];
   const daily = days.map(date => { const index = timeline.findIndex(item => item.date === date); const points = index < 0 ? 0 : Math.max(0, timeline[index].points - (index > 0 ? timeline[index - 1].points : 0)); return { date, points }; });
   const maxPoints = Math.max(25, ...daily.map(day => day.points));
   const weekPoints = daily.reduce((sum, day) => sum + day.points, 0);
   const topics = Object.keys(TOPIC_META) as Topic[];
-  return <div className="dashboard-refresh">
+  return <div className="dashboard-refresh" ref={surfaceRef}>
     <div className="dr-welcome"><div><p className="dr-eyebrow">YOUR LEARNING SPACE</p><h1>A little time <span>to understand.</span></h1><p>Pick something interesting. Take it at your own pace.</p></div><span className="dr-date">{new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })}</span></div>
     <div className="dr-top-grid"><section className="dr-hero"><div className="dr-hero-copy"><span className="dr-hero-label"><span/> WHERE WOULD YOU LIKE TO BEGIN?</span><h2>One question.<br /><span>Your own way through.</span></h2><p>No need to rush the answer.<br />Give yourself a little room to work it out.</p><button onClick={() => navigate('learn')}>Open my practice <ArrowUpRight size={17}/></button></div><div className="dr-working-note" aria-hidden="true"><span>a different approach</span><strong>(x + y)²</strong><i>= x² + 2xy + y²</i><svg viewBox="0 0 180 35"><path d="M10 23Q75 7 165 16" fill="none" stroke="currentColor"/></svg><small>Start with what you know.</small></div></section>
     <section className="dr-daily"><div className="dr-card-title"><span><Sparkles size={15}/> SOMETHING TO THINK ABOUT</span><span>Today</span></div><div className="dr-daily-formula" aria-hidden="true">x² + y²<span>✳</span></div><h3>Look for the simpler step.</h3><p>A fresh perspective starts with a little practice. Take a few minutes for your mind.</p><button onClick={() => navigate('learn', {topic:'Algebra'})}>Explore algebra <ArrowRight size={15}/></button></section></div>
