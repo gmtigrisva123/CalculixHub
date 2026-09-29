@@ -16,7 +16,7 @@
  */
 
 export type Topic = 'Algebra' | 'Geometry' | 'Combinatorics' | 'Number Theory';
-export type Level = 'Foundation' | 'Advanced' | 'Olympiad';
+export type Level = 'Foundation' | 'Intermediate' | 'Advanced' | 'Olympiad';
 
 export interface ProfileRow {
   id: string;

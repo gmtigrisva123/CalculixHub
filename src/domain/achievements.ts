@@ -25,7 +25,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     id: 'b2',
-    title: 'Algebra Reflex',
+    title: 'First Fifty',
     desc: 'Reach 50 total points in problem solving',
     icon: '📐',
     condition: (stats) => (stats?.points ?? 0) >= 50,
@@ -91,9 +91,9 @@ export function saveUnlockedAchievementIds(ids: Set<string>): void {
 }
 
 /** Returns the set of achievement IDs whose Toast Alert has already been shown on screen. */
-export function getShownToastIds(): Set<string> {
+export function getShownToastIds(userId?: string): Set<string> {
   try {
-    const raw = localStorage.getItem(SHOWN_TOASTS_KEY);
+    const raw = localStorage.getItem(userId ? `${SHOWN_TOASTS_KEY}:${userId}` : SHOWN_TOASTS_KEY);
     if (!raw) return new Set();
     return new Set(JSON.parse(raw));
   } catch {
@@ -102,9 +102,9 @@ export function getShownToastIds(): Set<string> {
 }
 
 /** Save updated set of shown toast achievement IDs to storage. */
-export function saveShownToastIds(ids: Set<string>): void {
+export function saveShownToastIds(ids: Set<string>, userId?: string): void {
   try {
-    localStorage.setItem(SHOWN_TOASTS_KEY, JSON.stringify(Array.from(ids)));
+    localStorage.setItem(userId ? `${SHOWN_TOASTS_KEY}:${userId}` : SHOWN_TOASTS_KEY, JSON.stringify(Array.from(ids)));
   } catch (err) {
     console.error('[CalculixHub] Error saving shown toasts:', err);
   }

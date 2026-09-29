@@ -38,7 +38,7 @@ create table if not exists public.profiles (
   country text check (country is null or length(country) <= 56),
 
   -- Tier the learner practises at. Advanced by placement, not self-declared.
-  level text not null default 'Foundation' check (level in ('Foundation', 'Advanced', 'Olympiad')),
+  level text not null default 'Foundation' check (level in ('Foundation', 'Intermediate', 'Advanced', 'Olympiad')),
 
   -- Denormalised social counters. Maintained by trigger in the social
   -- migration. Counting followers on every profile read is the query that

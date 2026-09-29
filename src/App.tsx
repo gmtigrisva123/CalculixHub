@@ -13,7 +13,7 @@ export default function App() {
     : <LearningApp />;
 }
 
-import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, LeaderboardEntry, Topic, Level } from '../shared/types';
+import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, Topic, Level } from '../shared/types';
 import { computeStreak } from './domain/streak';
 import { apiUrl, apiFetch, isNativePlatform } from './services/apiBase';
 import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './platform/reminders';
@@ -23,6 +23,7 @@ import { NAV_ITEMS, type TabKey } from './lib/navigation';
 import Dashboard from './components/Dashboard';
 import Learn from './components/Learn';
 import Arena from './components/Arena';
+import Leaderboard from './components/Leaderboard';
 import Inbox from './components/Inbox';
 import { supabase } from './services/supabase';
 import { useRealtimeSubscription } from './services/data/realtime';
@@ -38,7 +39,7 @@ import { TabTransition } from './components/motion';
 import { useAuth } from './context/AuthContext';
 import { useLeaderboard, useLearnerSnapshot } from './services/data/people';
 import AchievementToast from './components/AchievementToast';
-import { ACHIEVEMENTS, type Achievement } from './domain/achievements';
+import { ACHIEVEMENTS, getShownToastIds, saveShownToastIds, type Achievement } from './domain/achievements';
 
 function LearningApp() {
   /**
@@ -61,6 +62,8 @@ function LearningApp() {
     return topic && ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'].includes(topic) ? { topic: topic as Topic } : undefined;
   });
   const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
+  const [tutorRequest, setTutorRequest] = useState<{ id: number; userId: string; prompt?: string } | null>(null);
+  const openTutor = (prompt?: string) => setTutorRequest(previous => ({ id: (previous?.id ?? 0) + 1, userId: profile?.id ?? 'guest', prompt }));
 
   const queueAchievements = (newlyUnlocked: Achievement[]) => {
     if (newlyUnlocked.length > 0) {
@@ -96,6 +99,9 @@ function LearningApp() {
   });
 
   const handleLoginSuccess = (_name:string,_level:Level) => {
+    const destination = new URL(window.location.href);
+    destination.searchParams.delete('auth');
+    window.history.replaceState(null, '', destination.pathname + destination.search + destination.hash);
     localStorage.setItem('calculix_guest_access','true');setGuestAllowed(true);
   };
 
@@ -142,7 +148,6 @@ function LearningApp() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [weeklyChallenges, setWeeklyChallenges] = useState<WeeklyChallenge[]>([]);
   const [contests, setContests] = useState<Contest[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [discussions, setDiscussions] = useState<CommunityDiscussion[]>([]);
   const [completedProblems, setCompletedProblems] = useState<string[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -172,7 +177,6 @@ function LearningApp() {
     accuracy:learner.data.accuracyPct??0,timeSpent:(row?.time_spent_seconds??0)/60,skills:learner.data.skills,
     weaknesses:[],learningTimeline:learner.data.timeline});
   },[learner.data,ranking.data,profile?.id,profile?.level,hasOnboarded]);
-  useEffect(()=>setLeaderboard(ranking.data.map(r=>({rank:r.rank,name:r.display_name||r.username,points:r.points,country:r.country??'',age:0,avatarSeed:r.username,accuracy:r.accuracy_pct??undefined}))),[ranking.data]);
 
   // Settings State
   const [customGoal, setCustomGoal] = useState<string>('Build fundamental mathematical problem-solving skills');
@@ -255,12 +259,13 @@ function LearningApp() {
   const handleRefresh=async()=>{await Promise.all([fetchProblems(),learner.reload(),ranking.reload()]);};
   useEffect(()=>{void fetchProblems();void syncReminders();},[]);
   const shown=React.useRef(new Set<string>());
-  useEffect(()=>{shown.current.clear();setAchievementQueue([]);},[profile?.id]);
+  useEffect(()=>{shown.current=profile?.id?getShownToastIds(profile.id):new Set();setAchievementQueue([]);},[profile?.id]);
   useEffect(()=>{
-   if(!isLoggedIn||learner.loading||learner.error)return;
+   if(!isLoggedIn||!profile?.id||learner.loading||learner.error)return;
    const fresh=ACHIEVEMENTS.filter(a=>a.condition(userStats,completedProblems.length)&&!shown.current.has(a.id));
-   fresh.forEach(a=>shown.current.add(a.id));if(fresh.length)queueAchievements(fresh);
-  },[isLoggedIn,learner.loading,learner.error,userStats,completedProblems.length]);
+   fresh.forEach(a=>shown.current.add(a.id));
+   if(fresh.length){saveShownToastIds(shown.current,profile.id);queueAchievements(fresh);}
+  },[isLoggedIn,profile?.id,learner.loading,learner.error,userStats,completedProblems.length]);
   const handleSolveProblemStatus=(_id:string,_correct:boolean,_points:number)=>{if(isLoggedIn)void learner.reload();};
   const handleJoinChallenge=(_id:string)=>setActiveTab('compete');
   const handleJoinContest=(_id:string)=>setActiveTab('compete');
@@ -299,7 +304,8 @@ function LearningApp() {
   };
 
   if (authStatus === 'loading') return <main className="min-h-screen flex items-center justify-center bg-surface text-content"><p role="status">Opening your learning space…</p></main>;
-  if ((!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
+  const registrationRequested = new URLSearchParams(window.location.search).get('auth') === 'signup';
+  if (registrationRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
@@ -334,10 +340,12 @@ function LearningApp() {
               onSolveProblem={handleSolveProblemStatus}
               initialFilters={overrideFilters}
               savedAttempts={learner.data.attempts}
+              onOpenTutor={openTutor}
             />
           )}
 
           {activeTab === 'compete' && <Arena />}
+          {activeTab === 'leaderboard' && <Leaderboard rows={ranking.data} loading={ranking.loading} error={ranking.error} onRefresh={ranking.reload} currentUserId={profile?.id ?? null} currentRank={userStats.rank} currentPoints={userStats.points} currentSolved={userStats.completedCount} onPractice={() => { if (isLoggedIn) selectTab('learn'); else window.location.assign('/?auth=signup'); }} />}
           {activeTab === 'admin' && <AdminWorkspace onContentChange={() => void fetchProblems()} />}
 
           {activeTab === 'progress' && (
@@ -378,7 +386,7 @@ function LearningApp() {
           </TabTransition>
         </PullToRefresh>
       </WorkspaceShell>
-      <AITutorChat />
+      <AITutorChat key={profile?.id ?? 'guest'} request={tutorRequest?.userId === (profile?.id ?? 'guest') ? tutorRequest : null} />
       <AchievementToast achievement={achievementQueue[0] || null}
         onClose={() => setAchievementQueue(prev => prev.slice(1))}
         onNavigateToProfile={() => selectTab('profile')} />

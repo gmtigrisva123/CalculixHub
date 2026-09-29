@@ -9,7 +9,7 @@ import { problemScore } from '../../shared/problemScore';
 const questionSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/), title: z.string().min(2).max(150), question: z.string().min(5).max(4000),
   correctAnswer: z.string().regex(/^\d{1,6}$/), solution: z.string().min(5).max(6000), hint: z.string().max(1000).default(''),
-  topic: z.enum(['Algebra','Geometry','Combinatorics','Number Theory']), level: z.enum(['Foundation','Advanced','Olympiad']),
+  topic: z.enum(['Algebra','Geometry','Combinatorics','Number Theory']), level: z.enum(['Foundation','Intermediate','Advanced','Olympiad']),
   figure: z.object({kind:z.enum(['triangle','circle','quadrilateral','coordinate-grid','regular-polygon']),labels:z.array(z.string().max(30)).max(20).optional(),values:z.array(z.number().finite()).max(30).optional(),construction:z.enum(['median','bisector','centers','ceva','euler-line','diagonals']).optional(),illustrative:z.boolean().optional()}).optional(),
   competition:z.enum(['AMC','AIME','USAMO','IMO']).optional(),
   estimatedSteps: z.number().int().min(1).max(15), abstraction: z.number().int().min(1).max(5),

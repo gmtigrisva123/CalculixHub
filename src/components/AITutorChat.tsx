@@ -20,18 +20,16 @@ interface ChatMessage {
 }
 
 interface AITutorChatProps {
-  /** Open the tutor immediately for a contextual explanation request. */
-  autoOpen?: boolean;
-  /** A problem-specific prompt waiting for the learner to save a Gemini key. */
-  initialPrompt?: string;
+  /** A new request opens the single tutor, optionally with problem context. */
+  request?: { id: number; prompt?: string } | null;
 }
 
-export default function AITutorChat({ autoOpen = false, initialPrompt }: AITutorChatProps) {
-  const [isOpen, setIsOpen] = useState(autoOpen);
+export default function AITutorChat({ request }: AITutorChatProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [userApiKey, setUserApiKey] = useState('');
   const [hasSavedApiKey, setHasSavedApiKey] = useState(false);
-  const [pendingPrompt, setPendingPrompt] = useState(initialPrompt ?? '');
+  const [pendingPrompt, setPendingPrompt] = useState('');
   const promptSentRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -59,11 +57,11 @@ export default function AITutorChat({ autoOpen = false, initialPrompt }: AITutor
   }, [isOpen]);
 
   useEffect(() => {
-    if (!initialPrompt) return;
-    setPendingPrompt(initialPrompt);
+    if (!request) return;
+    setPendingPrompt(request.prompt ?? '');
     promptSentRef.current = false;
     setIsOpen(true);
-  }, [initialPrompt]);
+  }, [request?.id]);
 
   useEffect(() => {
     if (chatBottomRef.current) {
@@ -198,7 +196,7 @@ Let's work through this step-by-step:
           const data = await response.json();
           let replyText = data.reply || "I didn't quite follow that — could you rephrase it?";
           if (data.isFallback && !savedKey) {
-            replyText += '\n\n💡 *Tip: Enter your personal Gemini API Key using the 🔑 key icon above (or in Settings) for unlimited live AI Tutor responses!*';
+            replyText += '\n\n💡 *Tip: Add your Gemini API key in Settings for live explanations; Google usage limits may apply.*';
           }
 
           setMessages((prev) => [
@@ -269,6 +267,7 @@ Let's work through this step-by-step:
       {/* Floating Chat Button */}
       <m.button
         id="btn-ai-tutor-toggle"
+        aria-label={isOpen ? 'Close Math Assistant' : 'Ask Math Assistant'}
         onClick={() => setIsOpen(!isOpen)}
         whileTap={{ scale: 0.95 }}
         transition={spring.press}
@@ -278,7 +277,7 @@ Let's work through this step-by-step:
           ref={sparkleRef}
           className="w-4 h-4 animate-pulse group-hover:scale-110 transition-transform duration-160"
         />
-        <span className="font-bold tracking-wide text-xs md:text-sm">Ask Math Assistant</span>
+        <span className="tutor-fab-label font-bold tracking-wide text-xs md:text-sm">Ask Math Assistant</span>
         <div
           ref={pingRef}
           className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-stone-900 animate-ping"
@@ -326,6 +325,7 @@ Let's work through this step-by-step:
                 <button
                   type="button"
                   title="Configure Gemini API Key"
+                  aria-label="Configure Gemini API Key"
                   onClick={() => setShowKeyModal(!showKeyModal)}
                   className={`p-2 rounded-full transition-colors cursor-pointer ${
                     userApiKey ? 'text-amber-400 hover:bg-ink-800' : 'text-stone-400 hover:text-white hover:bg-ink-800'
@@ -333,7 +333,7 @@ Let's work through this step-by-step:
                 >
                   <Key className="w-4 h-4" />
                 </button>
-                <button id="btn-close-ai-tutor" onClick={() => setIsOpen(false)} className="hover:bg-ink-800 p-2 rounded-full transition-colors text-stone-400 hover:text-white cursor-pointer">
+                <button type="button" id="btn-close-ai-tutor" aria-label="Close Math Assistant" onClick={() => setIsOpen(false)} className="hover:bg-ink-800 p-2 rounded-full transition-colors text-stone-400 hover:text-white cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -346,12 +346,13 @@ Let's work through this step-by-step:
                   <span className="text-xs font-bold text-content flex items-center gap-1.5 font-mono">
                     <Key className="w-4 h-4 text-amber-500" /> Enter Gemini API Key
                   </span>
-                  <button type="button" onClick={() => setShowKeyModal(false)} className="text-content-subtle hover:text-content text-xs">
+                  <button type="button" aria-label="Close Gemini API Key form" onClick={() => setShowKeyModal(false)} className="text-content-subtle hover:text-content text-xs">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <input
                   type="password"
+                  aria-label="Gemini API Key"
                   value={userApiKey}
                   onChange={(e) => setUserApiKey(e.target.value)}
                   placeholder="AIzaSy..."
@@ -444,6 +445,7 @@ Let's work through this step-by-step:
             <form onSubmit={handleSendMessage} className="p-3 bg-surface-raised border-t border-line flex gap-2">
               <input
                 id="field-chat-input"
+                aria-label="Message to Math Assistant"
                 type="text"
                 placeholder="Ask about inequalities, remainders, derivatives..."
                 value={inputVal}
@@ -453,6 +455,7 @@ Let's work through this step-by-step:
               />
               <m.button
                 id="btn-send-chat"
+                aria-label="Send message to Math Assistant"
                 type="submit"
                 disabled={!inputVal.trim() || loading}
                 whileTap={{ scale: 0.92 }}

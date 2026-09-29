@@ -20,6 +20,7 @@ export type TabKey =
   | 'dashboard'
   | 'learn'
   | 'compete'
+  | 'leaderboard'
   | 'progress'
   | 'community'
   | 'profile'
@@ -54,6 +55,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: Trophy, inTabBar: true },
   { key: 'learn', label: 'Learn', shortLabel: 'Learn', icon: Brain, inTabBar: true },
   { key: 'compete', label: 'Arena', shortLabel: 'Arena', icon: Calendar, inTabBar: true },
+  { key: 'leaderboard', label: 'Leaderboard', shortLabel: 'Ranks', icon: Trophy, inTabBar: false },
   { key: 'progress', label: 'Progress', shortLabel: 'Stats', icon: TrendingUp, inTabBar: true },
   { key: 'community', label: 'Community', shortLabel: 'Forum', icon: MessageSquare, inTabBar: true },
   { key: 'profile', label: 'Profile', shortLabel: 'You', icon: User, inTabBar: true },

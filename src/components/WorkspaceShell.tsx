@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Bell, ArrowLeft, ArrowUpRight, BookOpen, Check, ChevronRight, Command, Flame, Menu, Search, Smartphone, Sparkles, X } from 'lucide-react';
-import { NAV_ITEMS, type TabKey } from '../lib/navigation';
+import { NAV_ITEMS, TAB_BAR_ITEMS, type TabKey } from '../lib/navigation';
 import ThemeToggle from './ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../services/data/notifications';
@@ -30,7 +30,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
   const searchInput = useRef<HTMLInputElement>(null);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const primary = NAV_ITEMS.filter(item => ['dashboard', 'learn', 'compete', 'progress', 'community'].includes(item.key));
+  const primary = NAV_ITEMS.filter(item => ['dashboard', 'learn', 'compete', 'leaderboard', 'progress', 'community'].includes(item.key));
   const secondary = NAV_ITEMS.filter(item => !primary.includes(item));
   const selected = NAV_ITEMS.find(item => item.key === activeTab);
   const results = NAV_ITEMS.filter(item => `${item.label} ${item.shortLabel}`.toLowerCase().includes(query.toLowerCase()));
@@ -88,7 +88,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
         <main id="workspace-main" tabIndex={-1} className="workspace-content">{children}</main>
         <footer className="workspace-footer"><span><Sparkles size={13} /> At your own pace.</span><span>{points.toLocaleString()} learning points</span></footer>
       </div>
-      <nav className="workspace-mobile-tabs" aria-label="Quick navigation">{primary.slice(0, 4).map(({ key, shortLabel, icon: Icon }) => <button key={key} aria-current={activeTab === key ? 'page' : undefined} onClick={() => navigate(key)}><Icon size={21} /><span>{shortLabel}</span></button>)}<button onClick={() => setMobileMenu(true)} aria-expanded={mobileMenu}><Menu size={21} /><span>More</span></button></nav>
+      <nav className="workspace-mobile-tabs" aria-label="Quick navigation">{TAB_BAR_ITEMS.slice(0, 4).map(({ key, shortLabel, icon: Icon }) => <button key={key} aria-current={activeTab === key ? 'page' : undefined} onClick={() => navigate(key)}><Icon size={21} /><span>{shortLabel}</span></button>)}<button onClick={() => setMobileMenu(true)} aria-expanded={mobileMenu}><Menu size={21} /><span>More</span></button></nav>
       <dialog className="workspace-command" ref={dialog} onCancel={() => setSearchOpen(false)} onClick={event => { if (event.target === dialog.current) setSearchOpen(false); }} aria-labelledby="workspace-search-title">
         <div className="workspace-command-input"><Search size={20} /><label id="workspace-search-title" className="sr-only" htmlFor="workspace-query">Search workspace</label><input id="workspace-query" ref={searchInput} value={query} onChange={event => setQuery(event.target.value)} placeholder="Where would you like to go?" /><button onClick={() => setSearchOpen(false)} aria-label="Close search"><X size={20} /></button></div>
         <div className="workspace-command-results">{results.length ? results.map(({ key, label, icon: Icon }) => <button key={key} onClick={() => navigate(key)}><Icon size={19} /><span>{label}</span><ArrowUpRight size={16} /></button>) : <p>No matching pages. Try “Learn” or “Progress”.</p>}</div><p className="workspace-command-hint">Tab to explore · Enter to open · Esc to close</p>

@@ -61,7 +61,7 @@ export default function Arena() {
  return <section className="arena-space" aria-busy={busy}>
   <header className="arena-heading"><div><p className="arena-kicker"><Swords size={15}/> THE MATHEMATICS ARENA</p><h1>{view?view.arena.title:'Good minds. Great matches.'}</h1><p>{view?view.arena.description:'Find your rhythm. Take a seat. Let the ideas do the competing.'}</p></div><button className="arena-quiet" onClick={()=>{setView(null);void catalog();}} disabled={busy}><RefreshCw size={16}/>{view?'All arenas':'Refresh'}</button></header>
   {error && <div className="arena-notice" role="alert">{error}</div>}
-  {!user && <div className="arena-note">You can browse the schedule. <a href="/">Sign in or create an account</a> to register and save your match.</div>}
+  {!user && <div className="arena-note">You can browse the schedule. <a href="/?auth=signup">Sign in or create an account</a> to register and save your match.</div>}
   {!view ? <>
    <div className="arena-lobby">
     <div className="arena-orbit" aria-label="Arena journey: register, enter, think, finish">

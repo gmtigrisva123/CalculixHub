@@ -217,7 +217,7 @@ export default function Settings({
         <div className="cx-glass-panel p-6 space-y-4 border border-indigo-500/30">
           <div className="flex items-center justify-between">
             <h3 className="type-title text-base font-bold text-content flex items-center gap-2">
-              <Key className="w-5 h-5 text-amber-500" /> Gemini API Key (Unlimited AI Assistant)
+              <Key className="w-5 h-5 text-amber-500" /> Gemini API Key for Math Assistant
             </h3>
             {apiKey.trim() && (
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 font-bold">
@@ -227,7 +227,7 @@ export default function Settings({
           </div>
 
           <p className="text-xs text-content-muted leading-relaxed font-mono">
-            Enter your personal Google Gemini API Key to enable direct, unlimited Socratic AI Tutor responses with zero daily limits.
+            Use your own Google Gemini API key for live explanations. Your Google account's usage limits and charges may apply.
           </p>
 
           <div className="space-y-3">

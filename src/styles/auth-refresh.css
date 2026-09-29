@@ -1,0 +1,37 @@
+/* Authentication shares the landing's paper, ink and editorial type. */
+.cq-auth{min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:var(--color-paper);color:var(--color-ink);font-family:var(--font-body);padding:32px;gap:24px}
+.cq-auth-story{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:65px;padding:45px clamp(28px,5vw,78px);border-radius:22px;overflow:hidden;background:var(--color-accent-soft);border:1px solid var(--color-rule-faint)}
+.cq-auth-wash{position:absolute;right:-190px;bottom:60px;width:480px;height:480px;border:1px solid color-mix(in oklch,var(--color-accent) 18%,transparent);border-radius:50%;pointer-events:none}
+.cq-auth-wash:before,.cq-auth-wash:after{content:'';position:absolute;inset:55px;border:1px solid color-mix(in oklch,var(--color-accent) 15%,transparent);border-radius:50%}.cq-auth-wash:after{inset:110px}
+.cq-auth-brand .cq-symbol{width:35px;height:40px;margin-right:0}
+.cq-auth-brand span.font-serif{font-family:var(--font-display);font-size:23px;letter-spacing:-.045em;font-weight:600;color:var(--color-ink)}
+.cq-auth-brand .type-eyebrow{font-size:14px;letter-spacing:0;text-transform:none;color:var(--color-body);margin-top:6px}
+.quiet-calculix .cq-auth-story h2{font-family:var(--font-notation);font-size:clamp(42px,4.4vw,66px);font-weight:500;letter-spacing:-.045em;line-height:1.07;color:var(--color-ink);text-wrap:balance}
+.cq-auth-story-copy .type-lead{font-family:var(--font-body);font-size:18px;line-height:1.8;color:var(--color-body);margin-top:26px}
+.cq-auth-story>p{font-family:var(--font-notation);font-size:20px;font-style:italic;line-height:1.5;text-transform:none;letter-spacing:0;color:var(--color-accent)}
+.cq-auth-form-wrap{display:flex;align-items:center;justify-content:center;padding:32px clamp(20px,4vw,65px)}
+.cq-auth-form{max-width:450px}
+.cq-auth-form>p:first-child{font-size:14px;letter-spacing:.025em;text-transform:none;color:var(--color-accent)}
+.quiet-calculix .cq-auth-form h1{font-family:var(--font-notation);font-size:clamp(43px,4vw,56px);font-weight:500;letter-spacing:-.045em;line-height:1.12}
+.cq-auth-form .type-body{font-family:var(--font-body);font-size:16px;line-height:1.75;color:var(--color-body)}
+.cq-auth-form .cx-label{font-family:var(--font-body);font-size:15px;font-weight:500;letter-spacing:0;color:var(--color-ink);text-transform:none;margin-bottom:9px}
+.cq-auth-form .cx-input{min-height:52px;padding:13px 16px;background:var(--color-paper-raised);border:1px solid var(--color-rule);border-radius:9px;color:var(--color-ink);font-family:var(--font-body);font-size:16px;box-shadow:none}
+.cq-auth-form .cx-input::placeholder{color:var(--color-muted);opacity:.85}
+.cq-auth-form .cx-input:autofill{box-shadow:0 0 0 100px var(--color-paper-raised) inset;-webkit-text-fill-color:var(--color-ink);caret-color:var(--color-ink)}
+.cq-auth-form .cx-input:focus{border-color:var(--color-accent);outline:3px solid color-mix(in oklch,var(--color-accent) 17%,transparent);outline-offset:1px}
+.cq-auth-form .cx-btn{min-height:52px;border-radius:9px;font-family:var(--font-body);font-size:16px;letter-spacing:-.015em;transition:background 160ms ease,transform 160ms ease,border-color 160ms ease}
+.cq-auth-form .cx-btn-secondary{background:var(--color-paper-raised);border:1px solid var(--color-rule);color:var(--color-ink);box-shadow:none}
+.cq-auth-form .cx-btn-fill{background:var(--color-accent);border-color:var(--color-accent);color:var(--color-paper-raised);box-shadow:none}
+.cq-auth-form .cx-btn-inert{background:var(--color-paper-shade);border:1px solid var(--color-rule);color:var(--color-body)}
+.cq-auth-form .text-xs{font-size:14px;line-height:1.6;color:var(--color-body)}
+.cq-auth-form .bg-line{background:var(--color-rule)}
+.cq-auth-form button.text-accent-text,.cq-auth-form button.text-accent{color:var(--color-accent);font-family:var(--font-body);font-size:15px}
+.cq-auth-form>button:last-child{font-size:14px;color:var(--color-body);min-height:44px}
+.cq-auth-form [role=alert],.cq-auth-form [role=status]{font-size:15px;line-height:1.65}
+.cq-auth-form [role=alert]{color:#964830}.cq-auth-form [role=status]{color:#35694f}
+.cq-auth-form button:focus-visible{outline:3px solid var(--color-pencil);outline-offset:4px}
+@media(hover:hover){.cq-auth-form .cx-btn-secondary:hover:not(:disabled){background:var(--color-paper-shade);border-color:var(--color-accent)}.cq-auth-form .cx-btn-fill:hover:not(:disabled){background:var(--color-ink)}}
+.cq-auth-form .cx-btn:active:not(:disabled){transform:scale(.99)}
+@media(max-width:900px){.cq-auth{padding:20px;gap:10px;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}.cq-auth-story{padding:30px 25px}.cq-auth-form-wrap{padding:25px 20px}.quiet-calculix .cq-auth-story h2{font-size:43px}}
+@media(max-width:700px){.cq-auth{display:block;padding:16px}.cq-auth-story{gap:28px;padding:25px;border-radius:16px}.quiet-calculix .cq-auth-story h2{font-size:36px;max-width:440px;text-wrap:pretty}.cq-auth-story-copy .type-lead{font-size:16px;line-height:1.65;margin-top:15px}.cq-auth-story>p{font-size:17px}.cq-auth-wash{width:300px;height:300px;right:-170px;bottom:-80px}.cq-auth-form-wrap{padding:35px 10px 25px}.quiet-calculix .cq-auth-form h1{font-size:44px}.cq-auth-form{max-width:450px}}
+@media(prefers-reduced-motion:reduce){.cq-auth-form .cx-btn{transition:none}.cq-auth-form .cx-btn:active:not(:disabled){transform:none}}
