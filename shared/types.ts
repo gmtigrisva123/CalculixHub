@@ -4,7 +4,7 @@
  */
 
 export type Topic = 'Algebra' | 'Geometry' | 'Combinatorics' | 'Number Theory';
-export type Level = 'Foundation' | 'Advanced' | 'Olympiad';
+export type Level = 'Foundation' | 'Intermediate' | 'Advanced' | 'Olympiad';
 export type CompetitionLevel = 'AMC' | 'AIME' | 'USAMO' | 'IMO';
 export type AnswerMode = 'choice' | 'numeric-grid' | 'proof';
 

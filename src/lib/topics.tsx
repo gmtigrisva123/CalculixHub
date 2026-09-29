@@ -127,6 +127,15 @@ export const LEVEL_META: Record<Level, LevelMeta> = {
     bg: 'bg-stone-100',
     border: 'border-stone-300',
   },
+  Intermediate: {
+    label: 'Intermediate',
+    audience: 'Building competition confidence',
+    scope: 'AMC 10 - AMC 12',
+    shape: 'pentagon',
+    text: 'text-teal-700',
+    bg: 'bg-teal-100',
+    border: 'border-teal-300',
+  },
   Advanced: {
     label: 'Advanced',
     audience: 'High school (10-12)',
@@ -147,7 +156,7 @@ export const LEVEL_META: Record<Level, LevelMeta> = {
   },
 };
 
-export const LEVEL_LIST: Level[] = ['Foundation', 'Advanced', 'Olympiad'];
+export const LEVEL_LIST: Level[] = ['Foundation', 'Intermediate', 'Advanced', 'Olympiad'];
 
 export const COMPETITION_META: Record<CompetitionLevel, { label: string; scope: string; text: string; bg: string; border: string }> = {
   AMC: { label: 'AMC', scope: 'Multiple choice', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },

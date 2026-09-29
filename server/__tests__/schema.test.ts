@@ -39,6 +39,21 @@ describe('accounts and profiles', () => {
     expect(rows[0]!.n).toBe(3);
   });
 
+  it('accepts Intermediate after rerunning the path migration and rejects unknown tiers', async () => {
+    const migration = readFileSync(new URL('../../supabase/intermediate-path-setup.sql', import.meta.url), 'utf8');
+    await db.exec(migration);
+    await db.exec(migration);
+    const id = await db.createUser({ email: 'intermediate@example.com' });
+    await db.query("update public.profiles set level = 'Intermediate' where id = $1", [id]);
+    const [profile] = await db.query<{ level: string }>('select level from public.profiles where id = $1', [id]);
+    expect(profile!.level).toBe('Intermediate');
+    await db.query(`insert into public.problem_attempts
+      (user_id, problem_id, topic, level, submitted_answer, is_correct, points_awarded)
+      values ($1, 'intermediate-test', 'Algebra', 'Intermediate', '1', true, 1)`, [id]);
+    await expect(db.query("update public.profiles set level = 'Unknown' where id = $1", [id])).rejects.toThrow(/check constraint/i);
+    await db.query('delete from auth.users where id = $1', [id]);
+  });
+
   it('never leaks the email address into the public display name', async () => {
     const id = await db.createUser({ email: 'private.person@example.com' });
     const [profile] = await db.query<{ username: string; display_name: string }>(

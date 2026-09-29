@@ -4,6 +4,7 @@
  */
 
 import { UserStats, Topic } from '../../shared/types';
+import { tierForTheta } from './irt';
 
 /**
  * Learner analytics: progress forecasting, error-pattern analysis, and the
@@ -231,7 +232,7 @@ export function computeMetrics(stats: UserStats): PerformanceMetrics {
 export interface PathStep {
   order: number;
   topic: Topic;
-  tier: 'Foundation' | 'Advanced' | 'Olympiad';
+  tier: 'Foundation' | 'Intermediate' | 'Advanced' | 'Olympiad';
   focus: string;
   rationale: string;
   status: 'current' | 'next' | 'queued';
@@ -245,7 +246,7 @@ export function buildLearningPath(stats: UserStats): PathStep[] {
   const entries = (Object.entries(stats.skills) as [Topic, number][]).sort((a, b) => a[1] - b[1]);
 
   const tierFor = (mastery: number): PathStep['tier'] =>
-    mastery >= 70 ? 'Olympiad' : mastery >= 40 ? 'Advanced' : 'Foundation';
+    tierForTheta((mastery / 100) * 6 - 3);
 
   const focusFor: Record<Topic, string> = {
     Algebra: 'Symmetric expressions, inequalities, and equality cases',

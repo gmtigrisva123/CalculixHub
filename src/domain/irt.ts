@@ -4,20 +4,10 @@
  */
 
 /**
- * Computerized Adaptive Testing (CAT) engine built on the 3-Parameter Logistic
- * (3PL) Item Response Theory model.
- *
- * This replaces the earlier 1PL/Rasch stochastic-approximation approach with the
- * estimator used by real standardized adaptive tests:
- *
- *   - 3PL response model with discrimination (a), difficulty (b), guessing (c)
- *   - EAP (Expected A Posteriori) ability estimation via Gauss-Hermite style
- *     quadrature over a normal prior — stable from the very first response and
- *     immune to the divergence that plagues MLE on all-correct/all-wrong patterns
- *   - Maximum Fisher Information item selection (the information-optimal next item)
- *   - Test information -> standard error of measurement (SEM)
- *   - Content-balanced selection across the four mathematical domains
- *   - Variable-length test with an SEM-based stopping rule
+ * Bayesian adaptive placement using a 3PL response model, EAP estimation on
+ * an equally spaced quadrature grid, and content-balanced selection by expected
+ * posterior variance reduction. Item parameters and stopping thresholds are
+ * provisional until fitted and validated against real learner responses.
  */
 
 export type Domain = 'Algebra' | 'Geometry' | 'Combinatorics' | 'Number Theory';
@@ -98,17 +88,8 @@ export interface AbilityEstimate {
  * SEM is the posterior standard deviation.
  */
 export function estimateAbility(responses: ResponseRecord[]): AbilityEstimate {
-  const posterior = QUAD_NODES.map((theta, i) => {
-    let likelihood = QUAD_PRIOR[i];
-    for (const r of responses) {
-      const p = probCorrect(theta, r.item);
-      likelihood *= r.correct ? p : 1 - p;
-    }
-    return likelihood;
-  });
-
-  const total = posterior.reduce((s, v) => s + v, 0);
-  if (total <= 0 || !Number.isFinite(total)) return { theta: 0, sem: 1 };
+  const posterior = posteriorWeights(responses);
+  const total = 1;
 
   let mean = 0;
   for (let i = 0; i < QUAD_NODES.length; i++) mean += QUAD_NODES[i] * (posterior[i] / total);
@@ -132,7 +113,7 @@ export function estimateDomainAbility(responses: ResponseRecord[], domain: Domai
 // --- Adaptive item selection ---------------------------------------------
 
 /**
- * Picks the next item by Maximum Fisher Information, with content balancing:
+ * Picks the next item by expected posterior variance reduction, with content balancing:
  * domains that have been tested least are prioritized so the final profile
  * covers all four areas rather than drilling into whichever domain happens
  * to be most informative.
@@ -140,7 +121,7 @@ export function estimateDomainAbility(responses: ResponseRecord[], domain: Domai
 export function selectNextItem(
   bank: IRTItem[],
   responses: ResponseRecord[],
-  theta: number,
+  _theta: number,
 ): IRTItem | null {
   const usedIds = new Set(responses.map((r) => r.item.id));
   const available = bank.filter((it) => !usedIds.has(it.id));
@@ -159,9 +140,10 @@ export function selectNextItem(
   const candidates = pool.length > 0 ? pool : available;
 
   let best = candidates[0];
-  let bestInfo = itemInformation(theta, best);
+  const weights = posteriorWeights(responses);
+  let bestInfo = expectedVarianceReduction(best, weights);
   for (const item of candidates) {
-    const info = itemInformation(theta, item);
+    const info = expectedVarianceReduction(item, weights);
     if (info > bestInfo) {
       bestInfo = info;
       best = item;
@@ -172,30 +154,71 @@ export function selectNextItem(
 
 // --- Test administration rules -------------------------------------------
 
-export const MIN_ITEMS = 8;
-export const MAX_ITEMS = 16;
+// These are provisional decision thresholds, not empirically calibrated norms.
 export const TARGET_SEM = 0.32;
 
-/** Stop once the estimate is precise enough, or the item cap is reached. */
-export function shouldStop(responses: ResponseRecord[], sem: number): boolean {
-  if (responses.length >= MAX_ITEMS) return true;
-  if (responses.length < MIN_ITEMS) return false;
-  return sem <= TARGET_SEM;
+function posteriorWeights(responses: ResponseRecord[]): number[] {
+  const logs = QUAD_NODES.map((theta, i) => Math.log(QUAD_PRIOR[i]) +
+    responses.reduce((sum, r) => {
+      const p = Math.max(1e-12, Math.min(1 - 1e-12, probCorrect(theta, r.item)));
+      return sum + Math.log(r.correct ? p : 1 - p);
+    }, 0));
+  const peak = Math.max(...logs);
+  const weights = logs.map(value => Math.exp(value - peak));
+  const total = weights.reduce((sum, value) => sum + value, 0);
+  return weights.map(value => value / total);
 }
 
-/** Reliability (analogous to Cronbach's alpha) implied by the current SEM. */
+/** Expected reduction in posterior variance, averaging both possible answers. */
+export function expectedVarianceReduction(item: IRTItem, weights: number[]): number {
+  const mean = weights.reduce((sum, w, i) => sum + w * QUAD_NODES[i], 0);
+  const success = weights.reduce((sum, w, i) => sum + w * probCorrect(QUAD_NODES[i], item), 0);
+  const cross = weights.reduce((sum, w, i) => sum + w * QUAD_NODES[i] * probCorrect(QUAD_NODES[i], item), 0);
+  if (success <= 1e-12 || success >= 1 - 1e-12) return 0;
+  return Math.max(0, (cross - mean * success) ** 2 / (success * (1 - success)));
+}
+
+export interface PlacementDecision {
+  stop: boolean;
+  reason: 'gathering' | 'precision' | 'classification' | 'limited-information' | 'bank-exhausted';
+  confidence: number;
+}
+
+export function evaluatePlacement(responses: ResponseRecord[], bank: IRTItem[]): PlacementDecision {
+  const weights = posteriorWeights(responses);
+  const { theta, sem } = estimateAbility(responses);
+  const tier = tierForTheta(theta);
+  const confidence = weights.reduce((sum, w, i) => sum + (tierForTheta(QUAD_NODES[i]) === tier ? w : 0), 0);
+  const used = new Set(responses.map(r => r.item.id));
+  const remaining = bank.filter(item => !used.has(item.id));
+  if (!remaining.length) return { stop: true, reason: 'bank-exhausted', confidence };
+  const domains = [...new Set(bank.map(item => item.domain))];
+  // Coverage is an evidence safeguard, not a prescribed test length.
+  const covered = domains.every(domain => responses.filter(r => r.item.domain === domain).length >= 2);
+  const stable = responses.length >= 3 && [1, 2].every(offset =>
+    tierForTheta(estimateAbility(responses.slice(0, -offset)).theta) === tier);
+  if (!covered || !stable) return { stop: false, reason: 'gathering', confidence };
+  if (sem <= TARGET_SEM) return { stop: true, reason: 'precision', confidence };
+  if (confidence >= 0.95) return { stop: true, reason: 'classification', confidence };
+  const gain = Math.max(...remaining.map(item => expectedVarianceReduction(item, weights)));
+  if (gain < 0.008) return { stop: true, reason: 'limited-information', confidence };
+  return { stop: false, reason: 'gathering', confidence };
+}
+
+/** Descriptive posterior precision index; not an empirical reliability coefficient. */
 export function reliability(sem: number): number {
   return Math.max(0, Math.min(1, 1 - sem * sem));
 }
 
 // --- Score reporting ------------------------------------------------------
 
-export type Tier = 'Foundation' | 'Advanced' | 'Olympiad';
+export type Tier = 'Foundation' | 'Intermediate' | 'Advanced' | 'Olympiad';
 
-/** Maps a latent ability estimate onto the platform's three content tiers. */
+/** Maps a latent ability estimate onto the platform's four content tiers (provisional thresholds). */
 export function tierForTheta(theta: number): Tier {
   if (theta >= 1.2) return 'Olympiad';
-  if (theta >= -0.4) return 'Advanced';
+  if (theta >= 0.4) return 'Advanced';
+  if (theta >= -0.8) return 'Intermediate';
   return 'Foundation';
 }
 

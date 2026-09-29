@@ -235,7 +235,7 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
         ? `Correct! You reasoned through the logical structure of this ${item.topic} problem cleanly.`
         : `Not quite - that isn't the expected answer. You likely slipped somewhere in the intermediate steps, or the hint's technique hasn't clicked yet.`,
       guidance: correct
-        ? `Keep pushing: try the next ${item.level === 'Foundation' ? 'Advanced' : 'Olympiad'} tier now!`
+        ? `Keep pushing: try the next ${item.level === 'Foundation' ? 'Intermediate' : item.level === 'Intermediate' ? 'Advanced' : 'Olympiad'} tier now!`
         : `Hint: ${item.hint} Try re-deriving it carefully, step by step.`,
       isFallback: true,
     });

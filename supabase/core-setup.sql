@@ -39,7 +39,7 @@ create table if not exists public.profiles (
   country text check (country is null or length(country) <= 56),
 
   -- Tier the learner practises at. Advanced by placement, not self-declared.
-  level text not null default 'Foundation' check (level in ('Foundation', 'Advanced', 'Olympiad')),
+  level text not null default 'Foundation' check (level in ('Foundation', 'Intermediate', 'Advanced', 'Olympiad')),
 
   -- Denormalised social counters. Maintained by trigger in the social
   -- migration. Counting followers on every profile read is the query that
@@ -242,7 +242,7 @@ create table if not exists public.problem_attempts (
   -- used to smuggle anything into a query or a prompt.
   problem_id text not null check (problem_id ~ '^[a-z0-9][a-z0-9-]{0,63}$'),
   topic text not null check (topic in ('Algebra', 'Geometry', 'Combinatorics', 'Number Theory')),
-  level text not null check (level in ('Foundation', 'Advanced', 'Olympiad')),
+  level text not null check (level in ('Foundation', 'Intermediate', 'Advanced', 'Olympiad')),
 
   submitted_answer text not null check (length(submitted_answer) <= 4000),
 
