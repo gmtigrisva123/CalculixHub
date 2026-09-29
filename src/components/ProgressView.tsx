@@ -40,6 +40,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
   const skillEntries = topicsList.map((t) => [t, Math.max(0, currentSkills[t] ?? 0)] as [Topic, number]);
   const sortedSkills = [...skillEntries].sort((a, b) => a[1] - b[1]);
   const weakestSkill = sortedSkills[0] || ['Algebra', 0];
+  const hasLearningEvidence = userStats.completedCount > 0 || (userStats.learningTimeline?.length ?? 0) > 0;
 
   const radarData = skillEntries.map(([topic, value]) => ({ label: TOPIC_META[topic].short, value }));
   const timelineData = (userStats.learningTimeline || []).map((t) => ({ date: t.date.slice(5), value: t.points }));
@@ -103,17 +104,19 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
           {/* Weakness Alert Card */}
           <div className="cx-glass-panel p-6 space-y-4 border-amber-500/30">
             <h2 className="type-title text-lg font-bold text-content flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" /> Weakness Detection
+              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" /> Where to focus next
             </h2>
 
-            <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 space-y-1.5">
-              <h4 className="font-bold text-xs uppercase tracking-wide">Focus Area: {TOPIC_META[weakestSkill[0]].label}</h4>
+            {hasLearningEvidence ? <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 space-y-1.5">
+              <h4 className="font-bold text-xs uppercase tracking-wide">Explore {TOPIC_META[weakestSkill[0]].label}</h4>
               <p className="text-xs leading-relaxed font-medium">
-                Your current mastery is <strong>{weakestSkill[1]}%</strong>. This indicates opportunities for growth in {weakestSkill[0].toLowerCase()} techniques.
+                {weakestSkill[1] === 0 ? 'There is no mastery reading here yet. Try a few questions to build a clearer picture.' : <>Your current mastery reading is <strong>{weakestSkill[1]}%</strong>. A few more questions can help you develop this area.</>}
               </p>
-            </div>
+            </div> : <div className="p-4 rounded-xl border border-line bg-surface text-content-muted">
+              <p className="text-sm leading-relaxed">Your focus area will appear after you solve a question. There is no weakness to measure yet.</p>
+            </div>}
 
-            <div className="border-t border-line pt-4 space-y-2.5 text-xs text-content-muted">
+            {hasLearningEvidence && <div className="border-t border-line pt-4 space-y-2.5 text-xs text-content-muted">
               <h4 className="font-semibold text-content flex items-center gap-1.5">
                 <Lightbulb className="w-4 h-4 text-indigo-500" /> Recommended Action Plan:
               </h4>
@@ -122,7 +125,7 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
                 <li>Consult the <strong>Socratic AI Tutor</strong> on key formulas.</li>
                 <li>Review worked solutions carefully after each attempt.</li>
               </ul>
-            </div>
+            </div>}
           </div>
 
           {/* Practice Velocity Chart */}

@@ -5,7 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { MessageSquare, Sparkles, Send, ThumbsUp, ThumbsDown, Award, UserCheck, BadgeCheck, Filter } from 'lucide-react';
+import { MessageSquare, Sparkles, Send, ThumbsUp, ThumbsDown, Award, UserCheck, BadgeCheck, Filter, Search } from 'lucide-react';
 import { CommunityDiscussion, Problem } from '../../shared/types';
 import MathText from './MathText';
 import { duration, ease, spring } from '../lib/motion';
@@ -25,6 +25,8 @@ function Replies({postId}:{postId:string}) {
 export default function Community({problems}:{problems:Problem[]}) {
  const {user}=useAuth();
  const [selectedProblemId,setSelectedProblemId]=useState('All');
+ const [problemQuery,setProblemQuery]=useState('');
+ const matchingProblems=problems.filter(problem=>problem.title.toLocaleLowerCase().includes(problemQuery.trim().toLocaleLowerCase()));
  const [newCommentText,setNewCommentText]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [openReplies,setOpenReplies]=useState<string|null>(null);
  const feed=usePostFeed({viewerId:user?.id});
  const discussions:CommunityDiscussion[]=feed.data.map(row=>({id:row.id,problemId:row.problem_id??'',problemTitle:problems.find(p=>p.id===row.problem_id)?.title??'An open conversation',user:row.author?.display_name||row.author?.username||'Learner',role:'Student',content:row.body,timestamp:new Date(row.created_at).toLocaleString(),likes:row.like_count,replies:row.comment_count}));
@@ -66,6 +68,11 @@ export default function Community({problems}:{problems:Problem[]}) {
             <span className="text-[10px] font-bold text-content-subtle uppercase tracking-wider block font-mono">
               Filter Threads by Problem
             </span>
+            <label className="flex items-center gap-2 rounded-lg border border-line bg-surface-sunken/40 px-3 text-content-subtle focus-within:border-indigo-500">
+              <Search className="w-4 h-4 shrink-0" />
+              <span className="sr-only">Find a problem to filter discussions</span>
+              <input value={problemQuery} onChange={event=>setProblemQuery(event.target.value)} placeholder="Find a problem by title" className="min-w-0 w-full py-2 bg-transparent text-sm text-content outline-none" />
+            </label>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <m.button
                 onClick={() => setSelectedProblemId('All')}
@@ -79,7 +86,7 @@ export default function Community({problems}:{problems:Problem[]}) {
                 All Threads
               </m.button>
 
-              {problems.map((prob) => (
+              {matchingProblems.map((prob) => (
                 <m.button
                   key={prob.id}
                   onClick={() => setSelectedProblemId(prob.id)}
@@ -94,6 +101,7 @@ export default function Community({problems}:{problems:Problem[]}) {
                 </m.button>
               ))}
             </div>
+            {problemQuery && matchingProblems.length === 0 && <p className="text-xs text-content-muted">No matching problem. Try another title.</p>}
           </div>
 
           {/* Post Creation Form */}

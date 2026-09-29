@@ -85,7 +85,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           <span className="block font-serif text-2xl font-bold text-emerald-500">
             <AnimatedNumber value={solvedQuestions.length} />
           </span>
-          <span className="block text-xs font-mono text-content-subtle">Across 4 mathematical domains</span>
+          <span className="block text-xs font-mono text-content-subtle">From your saved practice</span>
         </div>
       </section>
 
