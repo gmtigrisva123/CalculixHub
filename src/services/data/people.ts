@@ -29,6 +29,7 @@ export function useLeaderboard(limit = 50) {
  const state=useLiveQuery('leaderboard:'+limit,[] as LeaderboardRow[],load);
  useRealtimeSubscription({table:'user_stats',onReconnect:state.reload},()=>void state.reload());
  useRealtimeSubscription({table:'profiles'},()=>void state.reload());
+ useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.ranking',onReconnect:state.reload},()=>void state.reload());
  return state;
 }
 
