@@ -17,7 +17,6 @@ import { gradeLocally } from '../platform/offline';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
 import { Collapse, StaggerItem } from './motion';
-import AITutorChat from './AITutorChat';
 import { EMPTY_PRACTICE, submitPractice } from '../../shared/practiceRules';
 
 interface LearnProps {
@@ -25,6 +24,7 @@ interface LearnProps {
   completedProblems: string[];
   userStats: UserStats;
   onSolveProblem: (id: string, isCorrect: boolean, scorePoints: number) => void;
+  onOpenTutor: (prompt?: string) => void;
   savedAttempts?: Record<string,{count:number;finished:boolean;forfeited:boolean}>;
   initialFilters?: { topic?: Topic; level?: Level };
 }
@@ -33,6 +33,7 @@ export default function Learn({
   problems,
   completedProblems,
   onSolveProblem,
+  onOpenTutor,
   initialFilters,
   savedAttempts,
 }: LearnProps) {
@@ -65,7 +66,7 @@ export default function Learn({
       return next;
     });
   };
-  useEffect(()=>{setActiveProblem(null);setShowFullSolution(false);setShowAITutor(false);},[user?.id]);
+  useEffect(()=>{setActiveProblem(null);setShowFullSolution(false);},[user?.id]);
   const maxAttempts = 3;
 
   const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
@@ -77,8 +78,6 @@ export default function Learn({
   const [smartFeedback, setSmartFeedback] = useState<SmartFeedback | null>(null);
   const [showFullSolution, setShowFullSolution] = useState(false);
   const [revealedWithoutScore, setRevealedWithoutScore] = useState(false);
-  const [showAITutor, setShowAITutor] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialFilters) {
@@ -101,8 +100,6 @@ export default function Learn({
     setSmartFeedback(null);
     setShowFullSolution(Boolean(attempts[prob.id]?.finished || completedProblems.includes(prob.id)) && !prob.proOnly);
     setRevealedWithoutScore(Boolean(attempts[prob.id]?.forfeited));
-    setShowAITutor(false);
-    setAiPrompt(null);
   };
 
   const handleCloseWorkspace = () => {
@@ -112,8 +109,6 @@ export default function Learn({
     setSmartFeedback(null);
     setShowFullSolution(false);
     setRevealedWithoutScore(false);
-    setShowAITutor(false);
-    setAiPrompt(null);
   };
 
   const applyVerdict = (feedback: SmartFeedback, correct: boolean) => {
@@ -132,8 +127,6 @@ export default function Learn({
     } else {
       setShowFullSolution(next.finished);
       setRevealedWithoutScore(next.forfeited);
-      setShowAITutor(false);
-      setAiPrompt(null);
       onSolveProblem(activeProblem.id, false, 0);
     }
   };
@@ -153,7 +146,7 @@ export default function Learn({
     setShowFullSolution(true);
     setRevealedWithoutScore(true);
     setSmartFeedback(null);
-    setAiPrompt(
+    onOpenTutor(
       [
         'A learner could not solve this problem and asked for a clear explanation.',
         'Explain the worked solution step by step in warm, precise English.',
@@ -164,7 +157,6 @@ export default function Learn({
         `Worked solution: ${activeProblem.solution}`,
       ].join('\n\n'),
     );
-    setShowAITutor(true);
   };
 
   const handleSubmitAnswer = async (e: React.FormEvent) => {
@@ -177,8 +169,6 @@ export default function Learn({
     setSmartFeedback(null);
     setShowFullSolution(false);
     setRevealedWithoutScore(false);
-    setShowAITutor(false);
-    setAiPrompt(null);
 
     try {
       const response = await apiFetch('/api/evaluate', {
@@ -331,6 +321,11 @@ export default function Learn({
                 {contest === 'All' ? 'All competitions' : contest}
               </button>)}
             </div>
+            {filteredProblems.length === 0 && <div className="cx-glass-panel p-7 space-y-3" role="status">
+              <h3 className="type-title text-xl text-content">No questions in this selection yet.</h3>
+              <p className="text-sm text-content-muted leading-relaxed">Try another tier or clear the filters to explore the full question library.</p>
+              <button type="button" className="cx-btn cx-btn-secondary px-4 py-2 rounded-lg text-sm" onClick={() => { setSelectedTopic('All'); setSelectedLevel('All'); setSelectedCompetition('All'); }}>Show all questions</button>
+            </div>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredProblems.map((prob, index) => {
                 const isSolved = completedProblems.includes(prob.id);
@@ -550,7 +545,7 @@ export default function Learn({
                 {/* AI Tutor Trigger Button */}
                 <m.button
                   type="button"
-                  onClick={() => setShowAITutor(true)}
+                  onClick={() => onOpenTutor()}
                   whileTap={{ scale: 0.96 }}
                   className="w-full p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 font-semibold text-xs flex items-center justify-between gap-3 transition-colors"
                 >
@@ -563,14 +558,6 @@ export default function Learn({
               </div>
             </div>
 
-            {/* AI Tutor Overlay Modal */}
-            {showAITutor && (
-              <AITutorChat
-                key={aiPrompt ?? 'general'}
-                autoOpen={Boolean(aiPrompt)}
-                initialPrompt={aiPrompt ?? undefined}
-              />
-            )}
           </m.div>
         )}
       </AnimatePresence>
