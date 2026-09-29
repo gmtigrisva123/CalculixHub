@@ -9,7 +9,7 @@ import {
   Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
   ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
   Globe, Shield, TrendingUp, Users, Check, X, Download,
-  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare, Compass
+  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare
 } from 'lucide-react';
 import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
@@ -17,6 +17,7 @@ import { useRealtimeSubscription } from '../services/data/realtime';
 import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';
 import LandingPage from './landing/LandingPage';
+import PlacementExperience from './PlacementExperience';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
 import { AnimatedNumber, Reveal, SpringBar } from './motion';
@@ -27,7 +28,7 @@ import {
   estimateAbility,
   estimateDomainAbility,
   selectNextItem,
-  shouldStop,
+  evaluatePlacement,
   reliability,
   tierForTheta,
   thetaToMastery,
@@ -35,8 +36,7 @@ import {
   recommendedSource,
   probCorrect,
   itemInformation,
-  MIN_ITEMS,
-  MAX_ITEMS,
+
 } from '../domain/irt';
 import { ITEM_BANK } from '../domain/itemBank';
 import {
@@ -154,7 +154,7 @@ const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOr
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const { signIn, signUp, signInWithSocial, authError, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'placement'>('landing');
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'placement'>(() => new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -167,7 +167,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const [socialProvider, setSocialProvider] = useState<'google' | 'facebook' | null>(null);
   useEffect(() => {
     if (authError) { setAuthMode('login'); setErrorMessage(authError); }
-    else if (authStatus === 'authenticated' && !hasOnboarded) setAuthMode('placement');
+    else if (authStatus === 'authenticated' && !hasOnboarded && new URLSearchParams(window.location.search).get('auth') !== 'signup') setAuthMode('placement');
   }, [authError, authStatus, hasOnboarded]);
   const handleSocialSignIn = async (provider: 'google' | 'facebook') => {
     if (submitting) return;
@@ -315,7 +315,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       setIrtLog([
         '[IRT] Resuming placement assessment for authenticated user.',
         '[IRT] 3PL engine initialized. Prior N(0,1), EAP estimation over 81 quadrature nodes.',
-        `[IRT] Bank loaded: ${ITEM_BANK.length} calibrated items across AMC 8 / AMC 10 / AIME / USAMO / IMO.`,
+        `[IRT] Bank loaded: ${ITEM_BANK.length} provisional items across AMC 8 / AMC 10 / AIME / USAMO / IMO.`,
       ]);
       const first = selectNextItem(ITEM_BANK, [], 0) || ITEM_BANK[0];
       setCurrentItem(first);
@@ -381,7 +381,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       setIrtLog([
         `[IRT] Registered new student: ${fullName.trim()}`,
         `[IRT] 3PL engine initialized. Prior N(0,1), EAP estimation over 81 quadrature nodes.`,
-        `[IRT] Bank loaded: ${ITEM_BANK.length} calibrated items across AMC 8 / AMC 10 / AIME / USAMO / IMO.`,
+        `[IRT] Bank loaded: ${ITEM_BANK.length} provisional items across AMC 8 / AMC 10 / AIME / USAMO / IMO.`,
       ]);
       const first = selectNextItem(ITEM_BANK, [], 0) || ITEM_BANK[0];
       setCurrentItem(first);
@@ -395,14 +395,15 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
    * then either administers the next maximum-information item or ends the test
    * once the SEM stopping rule is satisfied.
    */
-  const handleNextIrtQuestion = () => {
-    if (selectedAnswerIdx === null) {
+  const handleNextIrtQuestion = (skip = false) => {
+    if (authStatus !== 'authenticated') { setAuthMode('register'); return; }
+    if (selectedAnswerIdx === null && !skip) {
       setErrorMessage('Select one answer choice before continuing.');
       return;
     }
     setErrorMessage('');
 
-    const isCorrect = selectedAnswerIdx === currentItem.correctIdx;
+    const isCorrect = !skip && selectedAnswerIdx === currentItem.correctIdx;
     const latencySec = Math.max(1, Math.round((Date.now() - itemStartedAt) / 1000));
 
     // Probability the model assigned before seeing this response — useful for
@@ -424,7 +425,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     setSem(newSem);
     setSelectedAnswerIdx(null);
 
-    if (shouldStop(nextResponses, newSem)) {
+    if (evaluatePlacement(nextResponses, ITEM_BANK).stop) {
       const tier = tierForTheta(newTheta) as Level;
 
       // Build the per-domain profile that seeds the learner's skill radar.
@@ -444,7 +445,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       setIrtLog((prev) => [
         ...prev,
         ...logLines,
-        `[Stop] Termination rule met after ${nextResponses.length} items (SEM ${newSem.toFixed(2)} <= target, or item cap reached).`,
+        `[Stop] Termination rule met after ${nextResponses.length} items (SEM ${newSem.toFixed(2)} adaptive evidence threshold met).`,
         `[Result] theta = ${newTheta.toFixed(2)} -> tier ${tier}, percentile ${thetaToPercentile(newTheta)}.`,
       ]);
 
@@ -468,7 +469,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     setIrtLog((prev) => [
       ...prev,
       ...logLines,
-      `[Select] Next item ${next.source} / ${next.domain} (b=${next.b.toFixed(1)}), max Fisher information at theta=${newTheta.toFixed(2)}.`,
+      `[Select] Next item ${next.source} / ${next.domain} (b=${next.b.toFixed(1)}), expected posterior variance reduction at theta=${newTheta.toFixed(2)}.`,
     ]);
     setCurrentItem(next);
     setItemStartedAt(Date.now());
@@ -557,7 +558,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
           <div class="section">
             <h2>3. Assessment Bank</h2>
-            <p>The adaptive placement test administers calibrated items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
+            <p>The adaptive placement test administers provisional items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
             <table>
               <thead>
                 <tr><th>Domain</th><th>Items</th><th>Concepts</th><th>Difficulty range (b)</th><th>Mean discrimination (a)</th></tr>
@@ -582,7 +583,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             <h2>4. Four Core Layers &amp; Methodology</h2>
             <p>The system rests on four architectural pillars:</p>
             <ul>
-              <li><strong>Learning Engine:</strong> Clear tiers (Foundation, Advanced, Olympiad) that adapt to each student.</li>
+              <li><strong>Learning Engine:</strong> Clear tiers (Foundation, Intermediate, Advanced, Olympiad) that adapt to each student.</li>
               <li><strong>AI Personalization Layer:</strong> EduReach automatically isolates weak points (e.g. combinatorics) and restructures the learning path.</li>
               <li><strong>Competition System:</strong> Live, ranked arenas organized weekly by age group and skill tier.</li>
               <li><strong>Analytics Radar:</strong> Visualizes common misconceptions to support curriculum research.</li>
@@ -641,7 +642,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
    * keeps the same treatment on purpose: it runs for ten minutes, and reading
    * dense mathematical notation on near-black for that long is worse.
    */
-  if (authMode === 'login' || authMode === 'register') {
+  // Placement requires a verified Supabase session, including after session expiry.
+  const requiresRegistration = authMode === 'placement' && authStatus !== 'authenticated';
+  if (authMode === 'login' || authMode === 'register' || requiresRegistration) {
     const isLogin = authMode === 'login';
     const canSubmit = email.trim().length > 0 && password.length > 0 && (isLogin || fullName.trim().length > 0);
 
@@ -656,21 +659,21 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
        * into. Below ~52rem the track count drops to one and the panel stacks
        * above the form, which is the correct order to read them in.
        */
-      <div className="min-h-screen grid [grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr))] bg-surface text-content font-sans antialiased">
+      <div className="quiet-calculix cq-auth">
 
         {/* The standing panel. Absolute dark, hence `ramp-static`. */}
-        <div className="ramp-static cx-band flex flex-col justify-between gap-16 px-8 py-12 sm:px-13 sm:py-14">
-          <div className="cx-band__wash" aria-hidden="true" />
+        <div className="cq-auth-story">
+          <div className="cq-auth-wash" aria-hidden="true" />
 
-          <div className="relative flex items-center gap-3">
-            <span className="cx-mark">&#8721;</span>
+          <div className="cq-auth-brand relative flex items-center gap-3">
+            <span className="cq-symbol" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><path d="M30 9C11 2 2 27 18 32c7 3 15-3 15-10M7 23 32 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><circle cx="31" cy="12" r="3" fill="currentColor"/></svg></span>
             <span className="flex flex-col leading-[1.15]">
               <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
               <span className="type-eyebrow text-stone-500">A place to think</span>
             </span>
           </div>
 
-          <div className="relative max-w-[40ch]">
+          <div className="cq-auth-story-copy relative max-w-[40ch]">
             <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">
               Pick up where the estimate left off.
             </h2>
@@ -685,7 +688,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         </div>
 
         {/* The form. */}
-        <div className="flex items-center justify-center px-6 py-14 sm:px-11 sm:py-14">
+        <div className="cq-auth-form-wrap">
           <AnimatePresence mode="wait" initial={false}>
             <m.form
               key={isLogin ? 'auth-login' : 'auth-register'}
@@ -694,7 +697,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
               transition={spring.smooth}
-              className="w-full max-w-100"
+              className="cq-auth-form w-full"
             >
               <p className="type-eyebrow text-accent-text">{isLogin ? 'Sign in' : 'Create account'}</p>
               <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
@@ -766,6 +769,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     id="auth-password"
                     type="password"
                     required
+                    minLength={isLogin ? undefined : 8}
                     autoComplete={isLogin ? 'current-password' : 'new-password'}
                     placeholder="At least 8 characters"
                     value={password}
@@ -825,20 +829,6 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 {submitting ? 'Working…' : isLogin ? 'Sign in' : 'Create account'}
               </button>
 
-              <div className="flex items-center gap-3.5 my-6.5">
-                <span className="h-px flex-1 bg-line" />
-                <span className="type-eyebrow text-content-subtle tracking-[0.18em]">or</span>
-                <span className="h-px flex-1 bg-line" />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setAuthMode('placement')}
-                className="cx-btn cx-btn-secondary cx-btn-block py-3.25"
-              >
-                <Compass className="w-3.75 h-3.75" /> Continue as guest
-              </button>
-
               <p className="type-body mt-6.5 text-content-subtle">
                 {isLogin ? 'No account yet?' : 'Already registered?'}
                 <button
@@ -864,388 +854,16 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-paper-50 flex flex-col selection:bg-ink-950 selection:text-white">
-      <div className="fixed -top-40 -left-40 w-96 h-96 bg-azure-400/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="fixed top-2/3 -right-20 w-96 h-96 bg-proof-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full min-h-screen bg-surface-raised grid grid-cols-1 md:grid-cols-12 relative z-10">
-
-        {/* Left column: value proposition */}
-        <div className="ramp-static md:col-span-4 bg-ink-950 text-stone-300 p-8 md:p-12 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute right-0 bottom-0 w-48 h-48 bg-azure-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-tr from-azure-500 to-azure-700 p-2.5 rounded-control text-white font-bold w-10 h-10 flex items-center justify-center text-lg shadow-e3 font-serif">&#8721;</div>
-              <div><h1 className="font-semibold text-[15px] tracking-tight text-white leading-tight">CalculixHub</h1><span className="text-[12px] text-stone-450 block leading-tight">Math OS platform</span></div>
-            </div>
-
-            <div className="space-y-3 pt-6">
-              <h2 className="type-heading text-white">Adaptive testing, powered by IRT</h2>
-              <p className="text-[12px] text-stone-400 leading-relaxed">
-                CalculixHub applies Item Response Theory (IRT), the same statistical model behind AMC and Olympiad-grade adaptive testing, to calibrate a path that matches your real ability.
-              </p>
-            </div>
-
-            <div className="space-y-4 pt-4">
-              <div className="flex gap-2.5 items-start">
-                <div className="bg-azure-500/10 p-1.5 rounded-lg border border-azure-500/20 text-azure-400 shrink-0"><BookOpen className="w-4 h-4" /></div>
-                <div><h4 className="text-xs font-bold text-stone-100">Computer-adaptive assessment</h4><p className="text-[11px] text-stone-400 mt-0.5">Each question's difficulty is chosen live from your real performance.</p></div>
-              </div>
-              <div className="flex gap-2.5 items-start">
-                <div className="bg-proof-500/10 p-1.5 rounded-lg border border-proof-500/20 text-proof-400 shrink-0"><Activity className="w-4 h-4" /></div>
-                <div><h4 className="text-xs font-bold text-stone-100">Precise ability mapping</h4><p className="text-[11px] text-stone-400 mt-0.5">Converges on theta and narrows the standard error of measurement (SEM).</p></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-ink-800 mt-8 space-y-3.5 text-[11px] text-stone-500">
-            <div><span className="block font-semibold text-stone-350">Version 2.6 - Academic Core</span><span className="block mt-0.5">Adaptive IRT model - non-commercial ecosystem.</span></div>
-            <p className="border-t border-ink-800/60 pt-3 leading-relaxed text-stone-400">Built on the <b>EduReach Analytics Core</b> standard.</p>
-          </div>
-        </div>
-
-        {/* Right column: auth + placement */}
-        <div className="md:col-span-8 p-8 md:p-16 flex flex-col justify-center bg-surface-raised min-h-screen">
-
-          {/*
-            Auth pane transitions.
-
-            Sign in, register and the placement test all render into the same
-            right-hand column, and used to replace one another instantly — the
-            column simply became different content, with nothing connecting the
-            "Sign in" press to the form that resulted. Keying the panes gives
-            each a short lift-in and gives the outgoing one somewhere to go.
-
-            `mode="wait"` matters more here than elsewhere: these are forms, and
-            two overlapping forms would briefly duplicate autofill targets and
-            focusable inputs.
-          */}
-          <AnimatePresence mode="wait" initial={false}>
-          {/*
-            No `authMode === 'landing'` pane here.
-
-            This component returns renderLandingPage() early for the 'landing'
-            mode, so a landing branch at this point is unreachable — TypeScript
-            reports the comparison as having no overlap once React's types are
-            installed. The markup that used to sit here (a "Welcome to
-            CalculixHub" panel with Sign in / Create account buttons) had been
-            dead since the early return was introduced; the real entry points
-            are the landing page's own header and hero.
-          */}
-          {authMode === 'placement' && (
-            <m.div
-              key="auth-placement"
-              initial={{ opacity: 0, y: travel.sm }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
-              transition={spring.smooth}
-              className="space-y-5"
-            >
-              {!testCompleted ? (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                  {/* Active item */}
-                  <div className="lg:col-span-7 space-y-4">
-                    <div className="flex justify-between items-center pb-3 border-b border-stone-100">
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[11px] bg-violet-50 border border-violet-100 text-violet-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                            {currentItem.domain}
-                          </span>
-                          <span className="text-[11px] bg-azure-50 border border-azure-100 text-azure-700 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                            {currentItem.source}
-                          </span>
-                        </div>
-                        <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider">
-                          Adaptive Placement Test
-                        </h4>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[11px] uppercase text-stone-400 font-bold block">Item</span>
-                        <span className="text-sm font-bold text-stone-800 font-mono">
-                          {responses.length + 1}
-                          <span className="text-stone-400 text-[11px]">/{MIN_ITEMS}&ndash;{MAX_ITEMS}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Progress toward the minimum item count */}
-                    <SpringBar
-                      value={(responses.length / MIN_ITEMS) * 100}
-                      track="w-full bg-stone-100 rounded-full h-1"
-                      fill="bg-violet-600 h-1 rounded-full"
-                      label="Placement test progress"
-                    />
-
-                    {/*
-                      Each adaptive item replaces the last in place. Keying the
-                      question and its options on the item id turns that into a
-                      visible hand-off — the answered question leaves, the newly
-                      selected one arrives — which is the only cue the learner
-                      gets that the engine picked a different item for them.
-                    */}
-                    <AnimatePresence mode="wait" initial={false}>
-                      <m.div
-                        key={currentItem.id}
-                        initial={{ opacity: 0, y: travel.md }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -travel.sm, transition: { duration: duration.instant, ease: ease.exit } }}
-                        transition={spring.smooth}
-                        className="space-y-4"
-                      >
-                        <div className="p-4 bg-stone-50 rounded-card border border-stone-100 shadow-e1">
-                          <MathText as="p" className="text-stone-800 text-xs font-bold leading-relaxed" text={currentItem.question} />
-                        </div>
-
-                        <div className="space-y-2">
-                          {currentItem.options.map((option, oIdx) => {
-                            const isSelected = selectedAnswerIdx === oIdx;
-                            return (
-                              <m.button
-                                key={oIdx}
-                                type="button"
-                                onClick={() => setSelectedAnswerIdx(oIdx)}
-                                initial={{ opacity: 0, x: -travel.sm }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ ...spring.snappy, delay: 0.05 + oIdx * 0.04 }}
-                                whileTap={{ scale: 0.99 }}
-                                className={`w-full p-3.5 text-left text-xs rounded-control border transition-[background-color,border-color,color,box-shadow] duration-160 ease-standard cursor-pointer flex items-center justify-between gap-3 ${
-                                  isSelected ? 'border-violet-600 bg-violet-50/40 text-violet-900 font-bold shadow-e1 scale-[1.01]' : 'border-stone-200 hover:border-stone-400 hover:bg-stone-50 text-stone-650'
-                                }`}
-                              >
-                                <MathText text={option} />
-                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors duration-160 ease-standard ${isSelected ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-300'}`}>
-                                  {/*
-                                    The radio dot springs in. It is 6px across
-                                    and it is the entire confirmation that a
-                                    choice registered, so it is worth animating.
-                                  */}
-                                  <AnimatePresence>
-                                    {isSelected && (
-                                      <m.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        exit={{ scale: 0 }}
-                                        transition={{ type: 'spring', visualDuration: 0.2, bounce: 0.5 }}
-                                        className="w-1.5 h-1.5 bg-surface-raised rounded-full"
-                                      />
-                                    )}
-                                  </AnimatePresence>
-                                </div>
-                              </m.button>
-                            );
-                          })}
-                        </div>
-
-                        {/*
-                          The hint lives inside the keyed block rather than
-                          beside it. It is per-item content, and leaving it
-                          outside meant the next item's hint appeared under the
-                          previous item's question for the length of the
-                          transition — a small thing that read as a glitch.
-                        */}
-                        <div className="bg-amber-50/30 border border-amber-200/40 rounded-control p-3 flex gap-2">
-                          <HelpCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="text-[11px] font-bold text-stone-600 block">Hint:</span>
-                            <MathText as="p" className="text-[11px] text-stone-500 mt-0.5 leading-relaxed" text={currentItem.hint} />
-                          </div>
-                        </div>
-                      </m.div>
-                    </AnimatePresence>
-
-                    <AnimatePresence initial={false}>
-                      {errorMessage && (
-                        <m.div
-                          initial={{ opacity: 0, height: 0, scale: 0.95, filter: 'blur(4px)' }}
-                          animate={{ opacity: 1, height: 'auto', scale: 1, filter: 'blur(0px)' }}
-                          exit={{ opacity: 0, height: 0, scale: 0.95, filter: 'blur(4px)' }}
-                          transition={{ height: spring.snappy, opacity: { duration: duration.fast, ease: ease.standard }, scale: { duration: duration.fast, ease: ease.standard }, filter: { duration: duration.fast, ease: ease.standard } }}
-                          className="overflow-hidden"
-                        >
-                          <div className="mb-4 flex items-start gap-2 rounded-control border border-rose-200 bg-rose-100 p-3 shadow-sm">
-                            <AlertTriangle className="w-[16px] h-[16px] text-rose-600 shrink-0 mt-[1px]" strokeWidth={2.5} />
-                            <div className="text-[12.5px] font-medium leading-[1.4] text-rose-900">{errorMessage}</div>
-                          </div>
-                        </m.div>
-                      )}
-                    </AnimatePresence>
-
-                    <m.button type="button" onClick={handleNextIrtQuestion} whileTap={{ scale: 0.98 }} transition={spring.press} className="w-full material-accent text-sm py-3.5 rounded-control cursor-pointer flex justify-center items-center gap-1 font-serif">
-                      Score &amp; continue <ChevronRight className="w-4 h-4" />
-                    </m.button>
-                    <p className="text-[11px] text-stone-400 text-center leading-relaxed">
-                      The test ends automatically once your ability estimate is precise enough &mdash; typically {MIN_ITEMS}&ndash;{MAX_ITEMS} items.
-                    </p>
-                  </div>
-
-                  {/* Live IRT telemetry */}
-                  <div className="lg:col-span-5 bg-stone-50/50 p-4 rounded-card border border-stone-100 space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-stone-150">
-                      <Activity ref={telemetryPulseRef} className="w-3.5 h-3.5 text-violet-600 animate-pulse" />
-                      <h4 className="text-[11px] font-bold uppercase text-stone-800 tracking-wider">Live 3PL IRT Analysis</h4>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-[11px] font-bold text-stone-500">
-                        <span>Ability estimate &theta; (EAP)</span>
-                        <span className="text-violet-700 font-mono">{theta > 0 ? '+' : ''}{theta.toFixed(2)}</span>
-                      </div>
-                      <div className="relative w-full h-2 bg-stone-200 rounded-full overflow-hidden">
-                        {/*
-                          Not a SpringBar: this track also carries an overlaid
-                          confidence band, so the fill is animated in place
-                          rather than through the shared track/fill component.
-                          The estimate moves after every answer, and springing
-                          it is what shows the adaptive engine converging.
-                        */}
-                        <m.div
-                          className="absolute h-full bg-violet-600"
-                          animate={{ width: `${((theta + 3.0) / 6.0) * 100}%` }}
-                          transition={spring.data}
-                        />
-                        {/* Confidence band: theta +/- SEM */}
-                        <div
-                          className="absolute h-full bg-violet-400/40"
-                          style={{
-                            left: `${Math.max(0, ((theta - sem + 3.0) / 6.0) * 100)}%`,
-                            width: `${Math.min(100, ((2 * sem) / 6.0) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-stone-400 font-mono">
-                        <span>-3.0 Foundation</span><span>0.0 Advanced</span><span>+3.0 Olympiad</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-surface-raised border border-stone-150 rounded-control grid grid-cols-2 gap-2 text-center">
-                      <div>
-                        <span className="text-[10px] uppercase text-stone-400 font-bold block">Std. error (SEM)</span>
-                        <span className="text-xs font-bold text-stone-800 font-mono block mt-0.5">&plusmn; {sem.toFixed(2)}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase text-stone-400 font-bold block">Reliability</span>
-                        <span className="text-xs font-bold text-proof-600 block mt-0.5">{(reliability(sem) * 100).toFixed(0)}%</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 bg-violet-50/50 border border-violet-100 rounded-control space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-violet-900 font-bold flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" /> Projected tier</span>
-                        <span className="bg-violet-600 text-white text-[11px] font-bold px-2 py-0.5 rounded uppercase">{tierForTheta(theta)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-violet-900 font-bold">Percentile</span>
-                        <span className="text-[11px] font-bold text-violet-700 font-mono">{thetaToPercentile(theta)}th</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-violet-900 font-bold">Matched contest</span>
-                        <span className="text-[11px] font-bold text-violet-700">{recommendedSource(theta)}</span>
-                      </div>
-                    </div>
-
-                    {/* Domain coverage so far */}
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] uppercase text-stone-400 font-semibold block">Domain coverage</span>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {DOMAINS.map((d) => {
-                          const count = responses.filter((r) => r.item.domain === d).length;
-                          return (
-                            <div key={d} className={`text-[10px] font-bold px-2 py-1 rounded border flex justify-between ${count > 0 ? 'bg-proof-50 border-proof-150 text-proof-700' : 'bg-stone-100 border-stone-150 text-stone-400'}`}>
-                              <span className="truncate">{d}</span><span className="font-mono shrink-0 ml-1">{count}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase text-stone-400 font-semibold block">IRT engine log:</span>
-                      <div className="h-28 overflow-y-auto border border-stone-200 bg-ink-950 text-[10px] p-2 rounded-lg font-mono text-proof-400 space-y-1 select-none">
-                        {irtLog.map((logLine, lIdx) => (<div key={lIdx} className="leading-normal">{logLine}</div>))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* --- Results screen --- */
-                <div className="space-y-5 py-4">
-                  <div className="text-center space-y-2">
-                    <div className="mx-auto w-12 h-12 bg-proof-50 border border-proof-200 text-proof-600 rounded-full flex items-center justify-center shadow-e2"><CheckCircle2 className="w-6 h-6" /></div>
-                    <h3 className="type-heading text-stone-900">Placement complete</h3>
-                    <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-                      Measured across {responses.length} adaptively selected items. Your problem sets are now calibrated to this profile.
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-stone-50 rounded-card border border-stone-100 max-w-lg mx-auto grid grid-cols-4 gap-3 text-center">
-                    <div className="border-r border-stone-200">
-                      <span className="text-[11px] uppercase font-bold text-stone-400 block">Ability</span>
-                      <p className="text-sm font-semibold text-violet-700 mt-0.5 font-mono">{theta.toFixed(2)}</p>
-                    </div>
-                    <div className="border-r border-stone-200">
-                      <span className="text-[11px] uppercase font-bold text-stone-400 block">SEM</span>
-                      <p className="text-sm font-semibold text-stone-800 mt-0.5 font-mono">{sem.toFixed(2)}</p>
-                    </div>
-                    <div className="border-r border-stone-200">
-                      <span className="text-[11px] uppercase font-bold text-stone-400 block">Percentile</span>
-                      <p className="text-sm font-semibold text-stone-800 mt-0.5 font-mono">{thetaToPercentile(theta)}</p>
-                    </div>
-                    <div>
-                      <span className="text-[11px] uppercase font-bold text-stone-400 block">Tier</span>
-                      <span className="block text-[11px] font-bold text-proof-700 bg-proof-50 px-2 py-0.5 rounded-md w-fit mx-auto mt-1 border border-proof-150">{calculatedLevel}</span>
-                    </div>
-                  </div>
-
-                  {/* Per-domain ability profile */}
-                  <div className="max-w-lg mx-auto bg-surface-raised material-card border border-line rounded-card p-4 space-y-3">
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
-                      <BarChart3 className="w-3.5 h-3.5 text-violet-600" /> Measured domain profile
-                    </h4>
-                    {DOMAINS.map((d) => {
-                      const pct = domainProfile[d as Topic];
-                      const asked = responses.filter((r) => r.item.domain === d).length;
-                      return (
-                        <div key={d} className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="font-bold text-stone-700">{d}</span>
-                            <span className="font-mono text-stone-500">{pct}% <span className="text-stone-400">({asked} {asked === 1 ? 'item' : 'items'})</span></span>
-                          </div>
-                          <SpringBar
-                            value={pct}
-                            track="w-full bg-stone-100 rounded-full h-1.5"
-                            fill="bg-violet-500 h-1.5 rounded-full"
-                            label={`${d} ability`}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="text-left text-[12px] text-stone-600 space-y-1.5 max-w-lg mx-auto bg-stone-50 p-4 rounded-control border border-stone-100">
-                    <p className="font-bold text-stone-705 flex gap-1.5 items-center"><BookOpen className="w-3.5 h-3.5 text-violet-600" /> What happens next:</p>
-                    <ul className="list-disc pl-4 space-y-1.5 text-stone-500 text-[11px]">
-                      <li>Problems from the <strong className="text-violet-600">{calculatedLevel}</strong> tier ({recommendedSource(theta)}-calibre) are prioritized first.</li>
-                      <li>Your skill radar is seeded directly from this measured domain profile.</li>
-                      <li>EduReach targets your weakest domain first when building your learning path.</li>
-                      <li>You can join weekly matches and the leaderboard alongside peers at your level.</li>
-                    </ul>
-                  </div>
-
-                  <button type="button" onClick={handleFinishPlacement} className="w-full max-w-lg mx-auto material-accent text-sm py-3.5 rounded-control cursor-pointer flex justify-center items-center gap-1.5 font-serif">
-                    Enter CalculixHub <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </m.div>
-          )}
-          </AnimatePresence>
-
-        </div>
-      </div>
-    </div>
-  );
+  return <PlacementExperience
+    theta={theta} sem={sem} responses={responses} log={irtLog}
+    item={currentItem} selected={selectedAnswerIdx}
+    onSelect={(index) => { setSelectedAnswerIdx(index); setErrorMessage(''); }}
+    onNext={() => handleNextIrtQuestion()} onUnsure={() => handleNextIrtQuestion(true)}
+    onHome={() => setAuthMode('landing')} error={errorMessage}
+    completed={testCompleted} level={calculatedLevel}
+    provisional={evaluatePlacement(responses, ITEM_BANK).reason === 'bank-exhausted' || evaluatePlacement(responses, ITEM_BANK).reason === 'limited-information'}
+    onFinish={handleFinishPlacement}
+  />;
 }
 
 /*
