@@ -30,7 +30,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
   const searchInput = useRef<HTMLInputElement>(null);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const primary = NAV_ITEMS.filter(item => ['dashboard', 'learn', 'compete', 'leaderboard', 'progress', 'community'].includes(item.key));
+  const primary = NAV_ITEMS.filter(item => ['dashboard', 'learn', 'archive', 'compete', 'leaderboard', 'progress', 'community'].includes(item.key));
   const secondary = NAV_ITEMS.filter(item => !primary.includes(item));
   const selected = NAV_ITEMS.find(item => item.key === activeTab);
   const results = NAV_ITEMS.filter(item => `${item.label} ${item.shortLabel}`.toLowerCase().includes(query.toLowerCase()));
