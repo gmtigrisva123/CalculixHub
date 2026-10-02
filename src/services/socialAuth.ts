@@ -10,6 +10,12 @@ export function socialRedirect(origin: string, basePath = '/'): string {
   return base.href;
 }
 
+export function emailConfirmationRedirect(origin: string, basePath = '/'): string {
+  const url = new URL(socialRedirect(origin, basePath));
+  url.searchParams.set('auth', 'confirm');
+  return url.href;
+}
+
 export function socialCallbackError(href: string): string | null {
   const url = new URL(href);
   const hash = new URLSearchParams(url.hash.slice(1));
@@ -36,9 +42,12 @@ export const initialSocialCallback = typeof window !== 'undefined'
   ? { returning: new URLSearchParams(window.location.search).get('auth') === 'callback', error: socialCallbackError(window.location.href) }
   : { returning: false, error: null };
 
+export const initialEmailConfirmation = typeof window !== 'undefined'
+  && new URLSearchParams(window.location.search).get('auth') === 'confirm';
+
 export function clearSocialCallback(): void {
   const url = new URL(window.location.href);
-  if (!initialSocialCallback.returning && !initialSocialCallback.error) return;
+  if (!initialSocialCallback.returning && !initialSocialCallback.error && !initialEmailConfirmation) return;
   for (const name of ['auth', 'code', 'error', 'error_code', 'error_description']) url.searchParams.delete(name);
   if (url.hash.includes('error=')) url.hash = '';
   window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);

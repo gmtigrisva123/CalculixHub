@@ -27,7 +27,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { isBackendConfigured, supabase } from '../services/supabase';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import type { Level, ProfileRow } from '../services/database.types';
-import { clearSocialCallback, initialSocialCallback, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
+import { clearSocialCallback, emailConfirmationRedirect, initialSocialCallback, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'unavailable';
 
@@ -49,6 +49,7 @@ interface AuthContextValue {
   hasOnboarded: boolean;
 
   signUp(input: { email: string; password: string; username: string; displayName: string }): Promise<AuthResult>;
+  resendConfirmation(email: string): Promise<AuthResult>;
   signIn(input: { email: string; password: string }): Promise<AuthResult>;
   signInWithSocial(provider: SocialProvider): Promise<AuthResult>;
   signOut(): Promise<void>;
@@ -72,6 +73,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function friendlyAuthError(raw: string | undefined, context: 'signIn' | 'signUp' | 'reset'): string {
   const message = (raw ?? '').toLowerCase();
 
+  if (message.includes('email address not authorized')) {
+    return 'Confirmation email is temporarily unavailable. Please contact support.';
+  }
   if (message.includes('rate') || message.includes('too many')) {
     return 'Too many attempts. Wait a minute and try again.';
   }
@@ -209,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Read by the `handle_new_user` trigger, which creates the profile in
         // the same transaction as the account.
         data: { username, display_name: displayName.trim() },
-        emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL ?? '/'}`,
+        emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL),
       },
     });
 
@@ -219,11 +223,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, needsEmailConfirmation: !data.session };
   }, []);
 
+  const resendConfirmation = useCallback<AuthContextValue['resendConfirmation']>(async (email) => {
+    if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: { emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL) },
+    });
+    if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };
+    return { ok: true };
+  }, []);
+
   const signIn = useCallback<AuthContextValue['signIn']>(async ({ email, password }) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
     setAuthError(null);
 
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error?.code === 'email_not_confirmed' || error?.message.toLowerCase().includes('email not confirmed')) {
+      return { ok: false, needsEmailConfirmation: true };
+    }
     if (error) return { ok: false, error: friendlyAuthError(error.message, 'signIn') };
 
     return { ok: true };
@@ -323,6 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       hasOnboarded: Boolean(profile?.onboarded_at),
       signUp,
+      resendConfirmation,
       signIn,
       signInWithSocial,
       signOut,
@@ -331,7 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       refreshProfile,
     }),
-    [status, authError, session, profile, signUp, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
+    [status, authError, session, profile, signUp, resendConfirmation, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirm your CalculixHub email</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f5f3ef;color:#252520;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Confirm your email to start learning on CalculixHub.</div>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f5f3ef;">
+      <tr><td align="center" style="padding:40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e6e2da;border-radius:16px;">
+          <tr><td style="padding:36px 40px 28px;border-bottom:1px solid #e6e2da;">
+            <p style="margin:0;color:#365c4a;font-size:13px;font-weight:700;letter-spacing:0.08em;">CALCULIXHUB</p>
+          </td></tr>
+          <tr><td style="padding:38px 40px 40px;">
+            <p style="margin:0 0 12px;color:#365c4a;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">One last step</p>
+            <h1 style="margin:0 0 18px;color:#252520;font-size:30px;line-height:1.2;font-weight:600;">Confirm your email</h1>
+            <p style="margin:0 0 28px;color:#5c5c54;font-size:16px;line-height:1.7;">Thanks for joining CalculixHub. Verify your address to activate your account and begin your learning journey.</p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr><td bgcolor="#365c4a" style="border-radius:9px;">
+              <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 24px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Confirm email address</a>
+            </td></tr></table>
+            <p style="margin:28px 0 0;color:#77776e;font-size:13px;line-height:1.6;">This link expires in one hour. If you did not create a CalculixHub account, you can ignore this email.</p>
+          </td></tr>
+          <tr><td style="padding:24px 40px;border-top:1px solid #e6e2da;">
+            <p style="margin:0;color:#77776e;font-size:12px;line-height:1.6;">Button not working? Copy this link into your browser:<br><a href="{{ .ConfirmationURL }}" style="color:#365c4a;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+          </td></tr>
+        </table>
+        <p style="margin:20px 0 0;color:#77776e;font-size:12px;">CalculixHub · A place to think</p>
+      </td></tr>
+    </table>
+  </body>
+</html>
