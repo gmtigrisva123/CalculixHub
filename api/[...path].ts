@@ -1,3 +1,5 @@
+import { buildApp } from '../server/app';
+
 /**
  * Vercel's Web Handler entry point for the shared API router.
  *
@@ -9,18 +11,17 @@ export const config = { runtime: 'nodejs' };
 
 type ServerApp = (request: Request) => Promise<Response>;
 
-let appPromise: Promise<ServerApp> | undefined;
+let app: ServerApp | undefined;
 
-function load(): Promise<ServerApp> {
-  appPromise ??= import('../server/app').then(({ buildApp }) => buildApp());
-  return appPromise;
+function load(): ServerApp {
+  app ??= buildApp();
+  return app;
 }
 
 export default {
   async fetch(request: Request): Promise<Response> {
     try {
-      const app = await load();
-      return await app(request);
+      return await load()(request);
     } catch (error) {
       // Keep operational details in Vercel logs. Never return a stack,
       // configuration value, or database error to a public API caller.
