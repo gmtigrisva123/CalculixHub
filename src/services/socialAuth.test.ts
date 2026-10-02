@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailConfirmationRedirect, safeAuthorizationUrl, socialCallbackError, socialRedirect } from './socialAuth';
+import { emailConfirmationRedirect, passwordRecoveryRedirect, safeAuthorizationUrl, socialCallbackError, socialRedirect } from './socialAuth';
 
 describe('social sign-in boundaries', () => {
   it('returns to this deployment, including localhost and a subpath', () => {
@@ -14,6 +14,11 @@ describe('social sign-in boundaries', () => {
   it('returns email confirmation to a distinct first-party callback', () => {
     expect(emailConfirmationRedirect('https://www.calculixhub.com')).toBe('https://www.calculixhub.com/?auth=confirm');
     expect(() => emailConfirmationRedirect('https://www.calculixhub.com', '//evil.example')).toThrow();
+  });
+  it('keeps password recovery on the same deployment', () => {
+    expect(passwordRecoveryRedirect('https://www.calculixhub.com')).toBe('https://www.calculixhub.com/?recovery=1');
+    expect(passwordRecoveryRedirect('http://localhost:8000', '/study/')).toBe('http://localhost:8000/study/?recovery=1');
+    expect(() => passwordRecoveryRedirect('https://www.calculixhub.com', '//evil.example')).toThrow();
   });
   it('does not reflect untrusted provider error descriptions', () => {
     expect(socialCallbackError('https://calculixhub.com/?error=access_denied&error_description=SECRET')).toContain('not completed');

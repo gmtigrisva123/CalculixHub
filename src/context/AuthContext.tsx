@@ -26,8 +26,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import type { Session, User } from '@supabase/supabase-js';
 import { isBackendConfigured, supabase } from '../services/supabase';
 import { useRealtimeSubscription } from '../services/data/realtime';
+import { deriveSignupUsername } from '../services/authInput';
 import type { Level, ProfileRow } from '../services/database.types';
-import { clearSocialCallback, emailConfirmationRedirect, initialSocialCallback, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
+import { clearSocialCallback, emailConfirmationRedirect, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback, passwordRecoveryRedirect, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'unavailable';
 
@@ -45,14 +46,15 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   profile: ProfileRow | null;
+  recoveringPassword: boolean;
   /** True once placement is complete. Read from the profile, not from storage. */
   hasOnboarded: boolean;
 
-  signUp(input: { email: string; password: string; username: string; displayName: string }): Promise<AuthResult>;
+  signUp(input: { email: string; password: string; displayName: string }): Promise<AuthResult>;
   resendConfirmation(email: string): Promise<AuthResult>;
   signIn(input: { email: string; password: string }): Promise<AuthResult>;
   signInWithSocial(provider: SocialProvider): Promise<AuthResult>;
-  signOut(): Promise<void>;
+  signOut(): Promise<AuthResult>;
   requestPasswordReset(email: string): Promise<AuthResult>;
   updatePassword(newPassword: string): Promise<AuthResult>;
 
@@ -99,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(isBackendConfigured ? 'loading' : 'unavailable');
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [recoveringPassword, setRecoveringPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(initialSocialCallback.error);
   const socialInFlight = useRef(false);
 
@@ -126,24 +129,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * Rehydrate on mount, then follow every subsequent auth change.
    *
-   * `getSession` reads the persisted session and refreshes it if needed;
-   * `onAuthStateChange` then keeps this state in step with token refreshes,
-   * sign-out in another tab, and the redirect back from a recovery email.
+   * The SDK emits INITIAL_SESSION after restoring storage or exchanging a
+   * callback code. Later events cover refreshes and sign-out in another tab.
    */
   useEffect(() => {
     if (!supabase) return;
 
     let cancelled = false;
+    let revision = 0;
+    let pending: ReturnType<typeof setTimeout> | undefined;
 
-    const apply = async (next: Session | null) => {
-      if (cancelled) return;
-
+    const apply = async (next: Session | null, currentRevision: number) => {
+      if (cancelled || currentRevision !== revision) return;
+      const previousUserId = activeUserId.current;
       setSession(next);
       activeUserId.current = next?.user.id ?? null;
 
       if (next?.user) {
+        if (previousUserId !== next.user.id) {
+          setProfile(null);
+          setStatus('loading');
+        }
         const loaded = await loadProfile(next.user.id);
-        if (cancelled || activeUserId.current !== next.user.id) return;
+        if (cancelled || currentRevision !== revision || activeUserId.current !== next.user.id) return;
         setProfile(loaded);
         setStatus('authenticated');
       } else {
@@ -152,28 +160,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const client = supabase;
-    void (async () => {
-      try {
-        const initialized = await client.auth.initialize();
-        const { data, error } = await client.auth.getSession();
-        if (cancelled) return;
-        if (initialSocialCallback.returning && (initialized.error || error || !data.session)) {
+    // The client initializes itself. INITIAL_SESSION arrives after it has
+    // exchanged an OAuth, email confirmation, or recovery URL code. Querying
+    // Supabase inside this callback can deadlock its auth lock, so defer work.
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === 'PASSWORD_RECOVERY') setRecoveringPassword(true);
+      if (event === 'SIGNED_OUT') setRecoveringPassword(false);
+      if (next && (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY')) setAuthError(null);
+      if (event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY') {
+        if ((initialSocialCallback.returning || initialEmailConfirmation || initialPasswordRecovery) && !next) {
           setAuthError(initialSocialCallback.error ?? 'Your sign-in link expired or could not be verified. Please start again in this browser.');
         }
         clearSocialCallback();
-        await apply(data.session);
-      } catch {
-        if (!cancelled) { setAuthError('Could not connect to sign-in. Check your connection and retry.'); await apply(null); }
       }
-    })();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, next) => {
-      void apply(next);
+      const currentRevision = ++revision;
+      if (pending) clearTimeout(pending);
+      pending = setTimeout(() => { void apply(next, currentRevision); }, 0);
     });
 
     return () => {
       cancelled = true;
+      if (pending) clearTimeout(pending);
       subscription.subscription.unsubscribe();
     };
   }, [loadProfile]);
@@ -187,64 +194,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useRealtimeSubscription({table:'profiles',filter:session?.user.id?`id=eq.${session.user.id}`:undefined,enabled:Boolean(session?.user.id),onReconnect:refreshProfile},()=>void refreshProfile());
 
-  const signUp = useCallback<AuthContextValue['signUp']>(async ({ email, password, username, displayName }) => {
+  const signUp = useCallback<AuthContextValue['signUp']>(async ({ email, password, displayName }) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
     setAuthError(null);
 
-    // Checked here for a fast, clear message. The database enforces both the
-    // format and case-insensitive uniqueness regardless of what is sent.
-    if (!/^[A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?$/.test(username) || username.length < 3 || username.length > 24) {
-      return { ok: false, error: 'Usernames are 3-24 characters: letters, numbers and underscores.' };
-    }
+    if (!displayName.trim() || displayName.trim().length > 60) return { ok: false, error: 'Enter a display name of 1–60 characters.' };
     if (password.length < 8) {
       return { ok: false, error: 'Choose a password of at least 8 characters.' };
     }
 
-    // Best-effort pre-check so the learner is told before submitting. It is a
-    // race, not a guarantee -- the unique index is what actually decides -- so
-    // the insert path below still has to handle a collision.
-    const { data: taken } = await supabase.from('profiles').select('id').ilike('username', username).maybeSingle();
-    if (taken) return { ok: false, error: 'That username is taken. Try another.' };
-
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        // Read by the `handle_new_user` trigger, which creates the profile in
-        // the same transaction as the account.
-        data: { username, display_name: displayName.trim() },
-        emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL),
-      },
-    });
-
-    if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };
-
-    // No session means the project requires email confirmation first.
-    return { ok: true, needsEmailConfirmation: !data.session };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          // The trigger creates the profile and resolves duplicate handles.
+          data: { username: deriveSignupUsername(displayName, email), display_name: displayName.trim() },
+          emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL),
+        },
+      });
+      if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };
+      return { ok: true, needsEmailConfirmation: !data.session };
+    } catch {
+      return { ok: false, error: 'Could not connect to sign-up. Check your connection and try again.' };
+    }
   }, []);
 
   const resendConfirmation = useCallback<AuthContextValue['resendConfirmation']>(async (email) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email.trim(),
-      options: { emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL) },
-    });
-    if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };
-    return { ok: true };
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL) },
+      });
+      if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not request another link. Check your connection and try again.' };
+    }
   }, []);
 
   const signIn = useCallback<AuthContextValue['signIn']>(async ({ email, password }) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
     setAuthError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error?.code === 'email_not_confirmed' || error?.message.toLowerCase().includes('email not confirmed')) {
-      return { ok: false, needsEmailConfirmation: true };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error?.code === 'email_not_confirmed' || error?.message.toLowerCase().includes('email not confirmed')) {
+        return { ok: false, needsEmailConfirmation: true };
+      }
+      if (error) return { ok: false, error: friendlyAuthError(error.message, 'signIn') };
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not connect to sign-in. Check your connection and try again.' };
     }
-    if (error) return { ok: false, error: friendlyAuthError(error.message, 'signIn') };
-
-    return { ok: true };
   }, []);
 
   const signInWithSocial = useCallback<AuthContextValue['signInWithSocial']>(async (provider) => {
@@ -283,34 +287,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    setProfile(null);
-    setSession(null);
-    setStatus('anonymous');
+    if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) return { ok: false, error: 'Could not sign out. Please try again.' };
+      setProfile(null);
+      setSession(null);
+      setStatus('anonymous');
+      setRecoveringPassword(false);
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not sign out. Check your connection and try again.' };
+    }
   }, []);
 
   const requestPasswordReset = useCallback<AuthContextValue['requestPasswordReset']>(async (email) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}${import.meta.env.BASE_URL ?? '/'}?recovery=1`,
-    });
-
-    // Deliberately reports success either way. Distinguishing "sent" from "no
-    // such account" turns this form into an account-enumeration oracle.
-    if (error) console.warn('[CalculixHub] Password reset request failed', error.message);
-    return { ok: true };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: passwordRecoveryRedirect(window.location.origin, import.meta.env.BASE_URL),
+      });
+      // Unknown addresses already get a successful response from Supabase.
+      // An actual error means the request failed, so do not claim it was sent.
+      if (error) return { ok: false, error: friendlyAuthError(error.message, 'reset') };
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not request a reset link. Check your connection and try again.' };
+    }
   }, []);
 
   const updatePassword = useCallback<AuthContextValue['updatePassword']>(async (newPassword) => {
     if (!supabase) return { ok: false, error: 'Accounts are unavailable in this build.' };
     if (newPassword.length < 8) return { ok: false, error: 'Choose a password of at least 8 characters.' };
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) return { ok: false, error: friendlyAuthError(error.message, 'reset') };
-
-    return { ok: true };
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { ok: false, error: friendlyAuthError(error.message, 'reset') };
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not update your password. Check your connection and try again.' };
+    }
   }, []);
 
   const completeOnboarding = useCallback<AuthContextValue['completeOnboarding']>(
@@ -339,6 +356,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       profile,
+      recoveringPassword,
       hasOnboarded: Boolean(profile?.onboarded_at),
       signUp,
       resendConfirmation,
@@ -350,7 +368,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       refreshProfile,
     }),
-    [status, authError, session, profile, signUp, resendConfirmation, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
+    [status, authError, session, profile, recoveringPassword, signUp, resendConfirmation, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
