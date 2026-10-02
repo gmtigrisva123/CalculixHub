@@ -46,7 +46,7 @@ import {
   formatDifficulty,
 } from '../domain/skillGraph';
 import { useAuth } from '../context/AuthContext';
-import { initialEmailConfirmation } from '../services/socialAuth';
+import { initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback } from '../services/socialAuth';
 
 interface WelcomeScreenProps {
   onLoginSuccess: (name: string, level: Level) => void;
@@ -153,21 +153,21 @@ const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOr
 
 
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
-  const { signIn, signUp, resendConfirmation, signInWithSocial, authError, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
+  const { signIn, signUp, resendConfirmation, signInWithSocial, authError, requestPasswordReset, updatePassword, recoveringPassword, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'verify' | 'placement'>(() => {
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'verify' | 'reset' | 'placement'>(() => {
+    if (initialPasswordRecovery) return 'reset';
     if (initialEmailConfirmation) return 'login';
     return new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing';
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
   // Disables the submit button for the duration of the request, so a double
   // click cannot fire two sign-ups for the same address.
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState(initialEmailConfirmation ? 'Your email has been confirmed. Sign in to continue.' : '');
+  const [successMessage, setSuccessMessage] = useState(initialEmailConfirmation && !initialSocialCallback.error ? 'Your email has been confirmed. Sign in to continue.' : '');
   const [socialProvider, setSocialProvider] = useState<'google' | 'facebook' | null>(null);
   const [confirmationEmail, setConfirmationEmail] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -177,9 +177,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     return () => window.clearTimeout(timer);
   }, [resendCountdown]);
   useEffect(() => {
-    if (authError) { setAuthMode('login'); setErrorMessage(authError); }
-    else if (authStatus === 'authenticated' && !hasOnboarded && new URLSearchParams(window.location.search).get('auth') !== 'signup') setAuthMode('placement');
-  }, [authError, authStatus, hasOnboarded]);
+    if (recoveringPassword && initialPasswordRecovery) { setAuthMode('reset'); setErrorMessage(''); }
+    else if (authError) { setAuthMode('login'); setErrorMessage(authError); }
+    else if (authStatus === 'authenticated' && !hasOnboarded && !recoveringPassword && !initialPasswordRecovery && new URLSearchParams(window.location.search).get('auth') !== 'signup') setAuthMode('placement');
+  }, [authError, authStatus, hasOnboarded, recoveringPassword]);
   const handleSocialSignIn = async (provider: 'google' | 'facebook') => {
     if (submitting) return;
     setSubmitting(true); setSocialProvider(provider); setErrorMessage(''); setSuccessMessage('');
@@ -320,6 +321,11 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       return;
     }
 
+    const destination = new URL(window.location.href);
+    if (destination.searchParams.get('auth') === 'signup') {
+      destination.searchParams.delete('auth');
+      window.history.replaceState(window.history.state, '', destination.pathname + destination.search + destination.hash);
+    }
     setSuccessMessage('Welcome back! Resuming your placement test...');
     
     setTimeout(() => {
@@ -349,12 +355,41 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
     setErrorMessage('');
     setSubmitting(true);
-    await requestPasswordReset(email);
+    const result = await requestPasswordReset(email);
     setSubmitting(false);
+
+    if (!result.ok) {
+      setErrorMessage(result.error ?? 'Could not request a password reset. Try again.');
+      return;
+    }
 
     // Reported the same way whether or not the address exists, so this form
     // cannot be used to discover which emails are registered.
     setSuccessMessage('If that address has an account, a reset link is on its way.');
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    if (authStatus !== 'authenticated' || !recoveringPassword) {
+      setErrorMessage('This recovery link has expired. Request a new one from sign in.');
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage('Choose a password of at least 8 characters.');
+      return;
+    }
+    setSubmitting(true);
+    const result = await updatePassword(password);
+    setSubmitting(false);
+    if (!result.ok) {
+      setErrorMessage(result.error ?? 'Could not update your password. Try again.');
+      return;
+    }
+    setPassword('');
+    const destination = new URL(window.location.href);
+    destination.searchParams.delete('recovery');
+    window.location.replace(destination.pathname + destination.search + destination.hash);
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -367,12 +402,8 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       return;
     }
 
-    // Derived from the display name when the learner has not chosen one. The
-    // database sanitises and de-duplicates it regardless of what arrives.
-    const handle = (username.trim() || fullName.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')).slice(0, 24);
-
     setSubmitting(true);
-    const result = await signUp({ email, password, username: handle, displayName: fullName });
+    const result = await signUp({ email, password, displayName: fullName });
     setSubmitting(false);
 
     if (!result.ok) {
@@ -715,9 +746,12 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
    */
   // Placement requires a verified Supabase session, including after session expiry.
   const requiresRegistration = authMode === 'placement' && authStatus !== 'authenticated';
-  if (authMode === 'login' || authMode === 'register' || requiresRegistration) {
+  if (authMode === 'login' || authMode === 'register' || authMode === 'reset' || requiresRegistration) {
     const isLogin = authMode === 'login';
-    const canSubmit = email.trim().length > 0 && password.length > 0 && (isLogin || fullName.trim().length > 0);
+    const isReset = authMode === 'reset';
+    const canSubmit = isReset
+      ? password.length >= 8 && authStatus === 'authenticated' && recoveringPassword
+      : email.trim().length > 0 && password.length > 0 && (isLogin || fullName.trim().length > 0);
 
     return (
       /*
@@ -762,24 +796,25 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         <div className="cq-auth-form-wrap">
           <AnimatePresence mode="wait" initial={false}>
             <m.form
-              key={isLogin ? 'auth-login' : 'auth-register'}
-              onSubmit={isLogin ? handleLoginSubmit : handleRegisterSubmit}
+              key={isReset ? 'auth-reset' : isLogin ? 'auth-login' : 'auth-register'}
+              onSubmit={isReset ? handleResetPassword : isLogin ? handleLoginSubmit : handleRegisterSubmit}
               initial={{ opacity: 0, y: travel.sm }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -travel.xs, transition: { duration: duration.instant, ease: ease.exit } }}
               transition={spring.smooth}
               className="cq-auth-form w-full"
             >
-              <p className="type-eyebrow text-accent-text">{isLogin ? 'Sign in' : 'Create account'}</p>
+              <p className="type-eyebrow text-accent-text">{isReset ? 'Password recovery' : isLogin ? 'Sign in' : 'Create account'}</p>
               <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
-                {isLogin ? 'Welcome back' : 'Start measuring'}
+                {isReset ? 'Choose a new password' : isLogin ? 'Welcome back' : 'Start measuring'}
               </h1>
               <p className="type-body mt-2.5 text-content-subtle">
-                {isLogin
+                {isReset ? 'Enter a new password to secure your account.' : isLogin
                   ? 'Sign in to keep your streak, skill map and contest history.'
                   : 'One account, and the placement test result stays with you.'}
               </p>
 
+              {!isReset && <>
               <div className="mt-7.5 grid gap-3" aria-label="Social sign-in">
                 <button type="button" className="cx-btn cx-btn-secondary cx-btn-block py-3" disabled={submitting || authStatus === 'unavailable'} onClick={() => void handleSocialSignIn('google')}>
                   <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.23c1.89-1.74 2.99-4.3 2.99-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.41l-3.23-2.51c-.9.6-2.05.97-3.38.97-2.6 0-4.81-1.76-5.6-4.13H3.06v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 13.92a6 6 0 0 1 0-3.84V7.49H3.06a10 10 0 0 0 0 9.02l3.34-2.59Z"/><path fill="#EA4335" d="M12 5.95c1.47 0 2.79.51 3.83 1.5l2.87-2.87A9.64 9.64 0 0 0 12 2a10 10 0 0 0-8.94 5.49l3.34 2.59C7.19 7.71 9.4 5.95 12 5.95Z"/></svg>
@@ -792,8 +827,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 <p className="text-xs text-content-subtle text-center">One secure sign-in for new and returning learners.</p>
               </div>
               <div className="my-5 flex items-center gap-3 text-xs text-content-subtle"><span className="h-px flex-1 bg-line"/>or use your email<span className="h-px flex-1 bg-line"/></div>
+              </>}
               <div className="space-y-4.5">
-                {!isLogin && (
+                {!isLogin && !isReset && (
                   <div>
                     <label className="cx-label" htmlFor="auth-name">Display name</label>
                     <input
@@ -809,7 +845,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                   </div>
                 )}
 
-                <div>
+                {!isReset && <div>
                   <label className="cx-label" htmlFor="auth-email">Email</label>
                   <input
                     id="auth-email"
@@ -821,11 +857,11 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                     onChange={(e) => setEmail(e.target.value)}
                     className="cx-input"
                   />
-                </div>
+                </div>}
 
                 <div>
                   <div className="flex items-baseline justify-between gap-3">
-                    <label className="cx-label mb-0" htmlFor="auth-password">Password</label>
+                    <label className="cx-label mb-0" htmlFor="auth-password">{isReset ? 'New password' : 'Password'}</label>
                     {isLogin && (
                       <button
                         type="button"
@@ -897,10 +933,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 disabled={submitting}
                 className={`cx-btn cx-btn-block mt-6 py-3.5 text-[17px] ${canSubmit ? 'cx-btn-fill' : 'cx-btn-inert'}`}
               >
-                {submitting ? 'Working…' : isLogin ? 'Sign in' : 'Create account'}
+                {submitting ? 'Working…' : isReset ? 'Update password' : isLogin ? 'Sign in' : 'Create account'}
               </button>
 
-              <p className="type-body mt-6.5 text-content-subtle">
+              {!isReset && <p className="type-body mt-6.5 text-content-subtle">
                 {isLogin ? 'No account yet?' : 'Already registered?'}
                 <button
                   type="button"
@@ -909,7 +945,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
                 >
                   {isLogin ? 'Create one' : 'Sign in'}
                 </button>
-              </p>
+              </p>}
 
               <button
                 type="button"

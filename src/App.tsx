@@ -109,7 +109,11 @@ function LearningApp() {
   const handleLogout = async () => {
     // Revokes the refresh token server-side, so signing out actually ends the
     // session rather than only hiding it from this tab.
-    await signOut();
+    const result = await signOut();
+    if (!result.ok) {
+      setReminderNotice(result.error ?? 'Could not sign out. Please try again.');
+      return;
+    }
 
     // Clear the local caches from the pre-database build. Progress now lives in
     // Postgres, so nothing of value is lost, but stale copies would otherwise
@@ -306,7 +310,8 @@ function LearningApp() {
 
   if (authStatus === 'loading') return <main className="min-h-screen flex items-center justify-center bg-surface text-content"><p role="status">Opening your learning space…</p></main>;
   const registrationRequested = new URLSearchParams(window.location.search).get('auth') === 'signup';
-  if (registrationRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
+  const recoveryRequested = new URLSearchParams(window.location.search).get('recovery') === '1';
+  if ((registrationRequested && !isLoggedIn) || recoveryRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
