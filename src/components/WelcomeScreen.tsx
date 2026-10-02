@@ -421,7 +421,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       return;
     }
     setResendCountdown(60);
-    setSuccessMessage('A new confirmation link has been requested. Check your inbox.');
+    setSuccessMessage('If this address is still waiting for confirmation, a new link is on its way. Already registered? Sign in or reset your password.');
   };
 
   /**
@@ -681,9 +681,9 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-accent-text"><Mail size={27} aria-hidden="true" /></div>
           <p className="type-eyebrow text-accent-text">Verify your email</p>
           <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
-          <p className="type-body mt-3 text-content-subtle">Open the confirmation link we sent to <strong className="text-content break-all">{confirmationEmail}</strong>. You can return to this browser afterward.</p>
+          <p className="type-body mt-3 text-content-subtle">If this address needs confirmation, look for a link at <strong className="text-content break-all">{confirmationEmail}</strong>. You can return to this browser afterward.</p>
           <div className="mt-7 border-y border-line py-5 text-[13.5px] leading-[1.7] text-content-subtle">
-            <p>It may take a minute to arrive. Check your spam folder if you don't see it.</p>
+            <p>It may take a minute to arrive. Check your spam folder. If you've used this address before, your account may already be verified. Sign in instead, or use “Forgot?” on the sign-in screen to reset your password.</p>
           </div>
           {errorMessage && <p role="alert" className="mt-5 flex items-start gap-2 text-[13.5px] text-accent-text"><AlertTriangle size={16} className="shrink-0 mt-1" />{errorMessage}</p>}
           {successMessage && <p role="status" className="mt-5 flex items-start gap-2 text-[13.5px] text-proof"><CheckCircle2 size={16} className="shrink-0 mt-1" />{successMessage}</p>}
