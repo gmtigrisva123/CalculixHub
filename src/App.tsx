@@ -22,6 +22,7 @@ import PullToRefresh from './components/PullToRefresh';
 import { NAV_ITEMS, type TabKey } from './lib/navigation';
 import Dashboard from './components/Dashboard';
 import Learn from './components/Learn';
+const ExamArchive = lazy(() => import('./components/ExamArchive'));
 import Arena from './components/Arena';
 import Leaderboard from './components/Leaderboard';
 import Inbox from './components/Inbox';
@@ -315,10 +316,10 @@ function LearningApp() {
         name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
         points={userStats.points} streak={userStats.streak} online={online}
         pendingGrades={pendingGrades} onLogout={handleLogout}>
-        {catalogError&&<p role="alert" className="arena-notice">{catalogError}</p>}
-        {learner.error&&<div role="alert" className="arena-notice">{learner.error}</div>}
-        {ranking.error&&<div role="alert" className="arena-notice">{ranking.error}</div>}
-        {!isLoggedIn&&<p className="arena-note">Guest practice is not saved. Sign in to track your progress across devices.</p>}
+        {activeTab !== 'archive' && catalogError && <p role="alert" className="arena-notice">{catalogError}</p>}
+        {activeTab !== 'archive' && learner.error && <div role="alert" className="arena-notice">{learner.error}</div>}
+        {activeTab !== 'archive' && ranking.error && <div role="alert" className="arena-notice">{ranking.error}</div>}
+        {!isLoggedIn && <p className="arena-note">{activeTab === 'archive' ? 'Guest exam progress saves on this device. Sign in to sync across devices.' : 'Guest practice is not saved. Sign in to track your progress across devices.'}</p>}
         <PullToRefresh onRefresh={handleRefresh}>
           <TabTransition tabKey={activeTab}>
           {activeTab === 'dashboard' && (
@@ -343,6 +344,8 @@ function LearningApp() {
               onOpenTutor={openTutor}
             />
           )}
+
+          {activeTab === 'archive' && <Suspense fallback={<p role="status">Opening the exam archive…</p>}><ExamArchive userId={isLoggedIn ? profile?.id ?? null : null} /></Suspense>}
 
           {activeTab === 'compete' && <Arena />}
           {activeTab === 'leaderboard' && <Leaderboard rows={ranking.data} loading={ranking.loading} error={ranking.error} onRefresh={ranking.reload} currentUserId={profile?.id ?? null} currentRank={userStats.rank} currentPoints={userStats.points} currentSolved={userStats.completedCount} onPractice={() => { if (isLoggedIn) selectTab('learn'); else window.location.assign('/?auth=signup'); }} />}

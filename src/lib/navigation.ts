@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Brain,
   Calendar,
+  LibraryBig,
   FlaskConical,
   MessageSquare,
   Settings,
@@ -19,6 +20,7 @@ import {
 export type TabKey =
   | 'dashboard'
   | 'learn'
+  | 'archive'
   | 'compete'
   | 'leaderboard'
   | 'progress'
@@ -54,6 +56,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: Trophy, inTabBar: true },
   { key: 'learn', label: 'Learn', shortLabel: 'Learn', icon: Brain, inTabBar: true },
+  { key: 'archive', label: 'Exam Archive', shortLabel: 'Exams', icon: LibraryBig, inTabBar: false },
   { key: 'compete', label: 'Arena', shortLabel: 'Arena', icon: Calendar, inTabBar: true },
   { key: 'leaderboard', label: 'Leaderboard', shortLabel: 'Ranks', icon: Trophy, inTabBar: false },
   { key: 'progress', label: 'Progress', shortLabel: 'Stats', icon: TrendingUp, inTabBar: true },
