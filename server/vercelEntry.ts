@@ -1,4 +1,4 @@
-import { buildApp } from '../server/app';
+import { buildApp } from './app';
 
 /**
  * Vercel's Web Handler entry point for the shared API router.
