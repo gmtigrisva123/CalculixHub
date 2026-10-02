@@ -46,6 +46,7 @@ import {
   formatDifficulty,
 } from '../domain/skillGraph';
 import { useAuth } from '../context/AuthContext';
+import { initialEmailConfirmation } from '../services/socialAuth';
 
 interface WelcomeScreenProps {
   onLoginSuccess: (name: string, level: Level) => void;
@@ -152,9 +153,12 @@ const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOr
 
 
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
-  const { signIn, signUp, signInWithSocial, authError, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
+  const { signIn, signUp, resendConfirmation, signInWithSocial, authError, requestPasswordReset, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'placement'>(() => new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing');
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'verify' | 'placement'>(() => {
+    if (initialEmailConfirmation) return 'login';
+    return new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing';
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -163,8 +167,15 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   // click cannot fire two sign-ups for the same address.
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState(initialEmailConfirmation ? 'Your email has been confirmed. Sign in to continue.' : '');
   const [socialProvider, setSocialProvider] = useState<'google' | 'facebook' | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = window.setTimeout(() => setResendCountdown(seconds => seconds - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCountdown]);
   useEffect(() => {
     if (authError) { setAuthMode('login'); setErrorMessage(authError); }
     else if (authStatus === 'authenticated' && !hasOnboarded && new URLSearchParams(window.location.search).get('auth') !== 'signup') setAuthMode('placement');
@@ -299,6 +310,12 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     setSubmitting(false);
 
     if (!result.ok) {
+      if (result.needsEmailConfirmation) {
+        setConfirmationEmail(email.trim());
+        setPassword('');
+        setAuthMode('verify');
+        return;
+      }
       setErrorMessage(result.error ?? 'Could not sign you in.');
       return;
     }
@@ -364,8 +381,10 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     }
 
     if (result.needsEmailConfirmation) {
-      setSuccessMessage('Account created. Check your email to confirm the address, then sign in.');
-      setAuthMode('login');
+      setConfirmationEmail(email.trim());
+      setPassword('');
+      setResendCountdown(60);
+      setAuthMode('verify');
       return;
     }
 
@@ -388,6 +407,21 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       setItemStartedAt(Date.now());
       setSuccessMessage('');
     }, 1500);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!confirmationEmail || submitting || resendCountdown > 0) return;
+    setSubmitting(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+    const result = await resendConfirmation(confirmationEmail);
+    setSubmitting(false);
+    if (!result.ok) {
+      setErrorMessage(result.error ?? 'Could not send another confirmation email.');
+      return;
+    }
+    setResendCountdown(60);
+    setSuccessMessage('A new confirmation link has been requested. Check your inbox.');
   };
 
   /**
@@ -626,6 +660,43 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
   if (authMode === 'landing') {
     return renderLandingPage();
+  }
+
+  if (authMode === 'verify') {
+    return <div className="quiet-calculix cq-auth">
+      <div className="cq-auth-story">
+        <div className="cq-auth-wash" aria-hidden="true" />
+        <div className="cq-auth-brand relative flex items-center gap-3">
+          <span className="cq-symbol" aria-hidden="true"><Mail className="w-5 h-5" /></span>
+          <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
+        </div>
+        <div className="cq-auth-story-copy relative max-w-[40ch]">
+          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">One quick check, then you're in.</h2>
+          <p className="type-lead mt-4.5 text-stone-400">Confirm that this email belongs to you before your first sign in.</p>
+        </div>
+        <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">Your next question is waiting.</p>
+      </div>
+      <div className="cq-auth-form-wrap">
+        <div className="cq-auth-form w-full" aria-live="polite">
+          <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-accent-text"><Mail size={27} aria-hidden="true" /></div>
+          <p className="type-eyebrow text-accent-text">Verify your email</p>
+          <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
+          <p className="type-body mt-3 text-content-subtle">Open the confirmation link we sent to <strong className="text-content break-all">{confirmationEmail}</strong>. You can return to this browser afterward.</p>
+          <div className="mt-7 border-y border-line py-5 text-[13.5px] leading-[1.7] text-content-subtle">
+            <p>It may take a minute to arrive. Check your spam folder if you don't see it.</p>
+          </div>
+          {errorMessage && <p role="alert" className="mt-5 flex items-start gap-2 text-[13.5px] text-accent-text"><AlertTriangle size={16} className="shrink-0 mt-1" />{errorMessage}</p>}
+          {successMessage && <p role="status" className="mt-5 flex items-start gap-2 text-[13.5px] text-proof"><CheckCircle2 size={16} className="shrink-0 mt-1" />{successMessage}</p>}
+          <button type="button" className="cx-btn cx-btn-fill cx-btn-block mt-7 py-3.5" onClick={() => void handleResendConfirmation()} disabled={submitting || resendCountdown > 0}>
+            {submitting ? 'Sending…' : resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend confirmation email'}
+          </button>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px]">
+            <button type="button" className="text-accent-text hover:underline underline-offset-3" onClick={() => { setAuthMode('login'); setErrorMessage(''); setSuccessMessage(''); }}>Back to sign in</button>
+            <button type="button" className="text-content-subtle hover:text-content hover:underline underline-offset-3" onClick={() => { setAuthMode('register'); setErrorMessage(''); setSuccessMessage(''); }}>Use a different email</button>
+          </div>
+        </div>
+      </div>
+    </div>;
   }
 
   /*
