@@ -691,7 +691,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
             {submitting ? 'Sending…' : resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend confirmation email'}
           </button>
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px]">
-            <button type="button" className="text-accent-text hover:underline underline-offset-3" onClick={() => { setAuthMode('login'); setErrorMessage(''); setSuccessMessage(''); }}>Back to sign in</button>
+            <button type="button" className="text-accent-text hover:underline underline-offset-3" onClick={() => { setEmail(confirmationEmail); setAuthMode('login'); setErrorMessage(''); setSuccessMessage(''); }}>Sign in instead</button>
             <button type="button" className="text-content-subtle hover:text-content hover:underline underline-offset-3" onClick={() => { setAuthMode('register'); setErrorMessage(''); setSuccessMessage(''); }}>Use a different email</button>
           </div>
         </div>
