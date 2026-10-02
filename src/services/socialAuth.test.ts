@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { safeAuthorizationUrl, socialCallbackError, socialRedirect } from './socialAuth';
+import { emailConfirmationRedirect, safeAuthorizationUrl, socialCallbackError, socialRedirect } from './socialAuth';
 
 describe('social sign-in boundaries', () => {
   it('returns to this deployment, including localhost and a subpath', () => {
@@ -10,6 +10,10 @@ describe('social sign-in boundaries', () => {
     for (const path of ['//evil.example','https://evil.example/','javascript:alert(1)']) {
       expect(()=>socialRedirect('https://calculixhub.com',path)).toThrow();
     }
+  });
+  it('returns email confirmation to a distinct first-party callback', () => {
+    expect(emailConfirmationRedirect('https://www.calculixhub.com')).toBe('https://www.calculixhub.com/?auth=confirm');
+    expect(() => emailConfirmationRedirect('https://www.calculixhub.com', '//evil.example')).toThrow();
   });
   it('does not reflect untrusted provider error descriptions', () => {
     expect(socialCallbackError('https://calculixhub.com/?error=access_denied&error_description=SECRET')).toContain('not completed');
