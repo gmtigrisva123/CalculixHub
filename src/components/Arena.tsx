@@ -23,13 +23,14 @@ export default function Arena() {
  const [busy,setBusy]=useState(false);
  const lock=useRef(false);
  const [error,setError]=useState('');
+ const [catalogError,setCatalogError]=useState(false);
  const [loaded,setLoaded]=useState(false);
  const [clock,setClock]=useState(Date.now());
  const serverOffset=useRef(0);
  const [finishConfirm,setFinishConfirm]=useState(false);
  const catalog=async()=>{
-  try { const response=await apiFetch('/api/arenas'); const data=await readArenaResponse<ArenaInfo[]>(response,'The match board is temporarily unavailable. Please try Refresh.');setArenas(data);setError(''); }
-  catch(e){setError(e instanceof Error?e.message:'Could not connect.');}finally{setLoaded(true);}
+  try { const response=await apiFetch('/api/arenas'); const data=await readArenaResponse<ArenaInfo[]>(response,'The match board is temporarily unavailable. Please try Refresh.');setArenas(data);setCatalogError(false);setError(''); }
+  catch(e){setCatalogError(true);setError(e instanceof Error?e.message:'Could not connect.');}finally{setLoaded(true);}
  };
  useEffect(()=>{void catalog();const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer);},[]);
  useEffect(()=>{setView(null);setAnswer('');},[user?.id]);
@@ -82,8 +83,8 @@ export default function Arena() {
      </m.svg>
      <div className="arena-orbit-title"><span>CALCULIX</span><strong>Meet your<br/>next idea.</strong><small>Register · Enter · Think · Finish</small></div>
     </div>
-    <div className="arena-program"><div className="arena-section-label">THE MATCH BOARD <span>{error?'Connection unavailable':arenas.length+' scheduled'}</span></div>
-     {!loaded?<p role="status">Loading the match board…</p>:!arenas.length?<div className="arena-empty"><Flag size={28}/><h2>{error?'The board is unavailable.':'A quiet arena, for now.'}</h2><p>{error?'Use Refresh to reconnect after setup is complete.':'The next match will appear here when an administrator publishes it.'}</p></div>:arenas.map(a=>{
+    <div className="arena-program"><div className="arena-section-label">THE MATCH BOARD <span>{catalogError?'Connection unavailable':arenas.length+' scheduled'}</span></div>
+     {!loaded?<p role="status">Loading the match board…</p>:!arenas.length?<div className="arena-empty"><Flag size={28}/><h2>{catalogError?'The board is unavailable.':'A quiet arena, for now.'}</h2><p>{catalogError?'Use Refresh to reconnect after setup is complete.':'The next match will appear here when an administrator publishes it.'}</p></div>:arenas.map(a=>{
       const status=a.status==='closed'||clock>=Date.parse(a.ends_at)?'Finished':clock<Date.parse(a.starts_at)?'Upcoming':'Live now';
       return <article className="arena-match" key={a.id}><div><span className={'arena-status '+(status==='Live now'?'is-live':'')}>{status}</span><h2>{a.title}</h2><p>{a.description}</p><small>{new Date(a.starts_at).toLocaleString()} · {a.duration_minutes} minutes · {a.question_count} questions</small></div><div className="arena-match-actions">{status!=='Finished'&&<button className="arena-primary" disabled={busy||!user} onClick={()=>void action(a.id,'register')}>Take a seat <ArrowUpRight size={16}/></button>}<button className="arena-quiet" disabled={busy||!user} onClick={()=>void action(a.id,'view')}>{status==='Finished'?'View my match':'Resume match'}</button>{status==='Finished'&&<small className="arena-action-hint">For participants who joined this match</small>}</div></article>;
      })}
