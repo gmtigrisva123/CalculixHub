@@ -401,7 +401,7 @@ var DOCUMENT_CSP = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self'",
   "upgrade-insecure-requests"
 ].join("; ");
 function securityHeaders(kind, options) {
@@ -411,7 +411,7 @@ function securityHeaders(kind, options) {
     // response as script if it looks close enough.
     "x-content-type-options": "nosniff",
     // Legacy clickjacking defence for browsers predating frame-ancestors.
-    "x-frame-options": "DENY",
+    "x-frame-options": kind === "api" ? "DENY" : "SAMEORIGIN",
     // Never leak the full URL -- which can carry problem identifiers and
     // navigation state -- to third-party hosts.
     "referrer-policy": "strict-origin-when-cross-origin",

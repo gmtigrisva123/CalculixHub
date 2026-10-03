@@ -118,7 +118,7 @@ export default function ExamArchive({ userId }: { userId: string | null }) {
         <div className="exam-archive-card-top"><span>{collection.family}</span><span>{count} questions</span></div>
         <h2>{collection.title}</h2>
         <p>{collection.description}</p>
-        {state && <div className="exam-archive-card-progress"><span>{completed ? `Finished · ${archiveScore(collection, state.answers)}/${count} correct` : `${done}/${count} answered`}</span><span>{Math.round(done / count * 100)}%</span><div className="exam-archive-track"><span style={{ width: `${done / count * 100}%` }} /></div></div>}
+        <div className="exam-archive-card-progress"><span>{completed ? `Finished · ${archiveScore(collection, state.answers)}/${count} correct` : `${done}/${count} answered`}</span><span>{Math.round(done / count * 100)}%</span><div className="exam-archive-track" role="progressbar" aria-label={`${collection.title} questions answered`} aria-valuenow={done} aria-valuemin={0} aria-valuemax={count}><span style={{ width: `${done / count * 100}%` }} /></div></div>
         <div className="exam-archive-card-actions">
           <button className="exam-archive-open" type="button" onClick={() => openCollection(collection)}>{completed ? 'View result' : done ? 'Continue paper' : 'Start paper'} <ArrowRight size={17} /></button>
           <button className="exam-archive-bookmark" type="button" aria-label={`${state?.saved ? 'Remove saved paper' : 'Save paper for later'}: ${collection.title}`} aria-pressed={Boolean(state?.saved)} onClick={() => {

@@ -36,7 +36,7 @@ export interface AuthResult {
   ok: boolean;
   /** Message safe to show a learner. Never carries a provider error verbatim. */
   error?: string;
-  /** True when sign-up succeeded but the address still needs confirming. */
+  /** Fallback for accounts created while the project's email confirmation setting was enabled. */
   needsEmailConfirmation?: boolean;
 }
 
@@ -210,7 +210,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           // The trigger creates the profile and resolves duplicate handles.
           data: { username: deriveSignupUsername(displayName, email), display_name: displayName.trim() },
-          emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL),
         },
       });
       if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };

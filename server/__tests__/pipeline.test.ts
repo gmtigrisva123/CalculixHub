@@ -11,11 +11,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { buildApp } from '../app';
 import { loadConfig, type AppConfig } from '../config';
 import { MemoryCounterStore } from '../counters';
 import type { ModelClient } from '../gemini';
 import { resetLiveStatsForTests } from '../routes/liveStats';
+import { securityHeaders } from '../security';
 
 const ORIGIN = 'https://calculixhub.example';
 
@@ -164,6 +166,19 @@ describe('origin policy', () => {
 });
 
 describe('security headers', () => {
+  it('allows only the same origin to embed the app document for the phone preview', () => {
+    const documentHeaders = securityHeaders('document', { isProduction: true });
+    expect(documentHeaders['content-security-policy']).toContain("frame-ancestors 'self'");
+    expect(documentHeaders['x-frame-options']).toBe('SAMEORIGIN');
+
+    const vercel = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
+    const deployedHeaders = vercel.headers[0].headers;
+    expect(deployedHeaders.find((header: { key: string }) => header.key === 'content-security-policy').value)
+      .toContain("frame-ancestors 'self'");
+    expect(deployedHeaders.find((header: { key: string }) => header.key === 'x-frame-options').value)
+      .toBe('SAMEORIGIN');
+  });
+
   it.each([
     ['a success', () => get('/api/problems'), 200],
     ['a validation failure', () => post('/api/chat', {}), 400],

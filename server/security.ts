@@ -43,8 +43,8 @@ const FONT_FILE_ORIGIN = 'https://fonts.gstatic.com';
  * - `style-src` does permit `'unsafe-inline'`, unavoidably: KaTeX emits inline
  *   `style` attributes in the markup it generates, and that markup is inserted
  *   as HTML by `MathText`.
- * - `frame-ancestors 'none'` prevents clickjacking, superseding the legacy
- *   `X-Frame-Options` header for browsers that support it.
+ * - `frame-ancestors 'self'` permits the same-origin iPhone preview while
+ *   still preventing other websites from embedding the application.
  *
  * `connect-src` is why this changed. It was a flat `'self'`, written when the
  * only host the bundle talked to was its own origin. Supabase changed that: the
@@ -82,7 +82,7 @@ const DOCUMENT_CSP = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self'",
   'upgrade-insecure-requests',
 ].join('; ');
 
@@ -103,7 +103,7 @@ export function securityHeaders(
     // response as script if it looks close enough.
     'x-content-type-options': 'nosniff',
     // Legacy clickjacking defence for browsers predating frame-ancestors.
-    'x-frame-options': 'DENY',
+    'x-frame-options': kind === 'api' ? 'DENY' : 'SAMEORIGIN',
     // Never leak the full URL -- which can carry problem identifiers and
     // navigation state -- to third-party hosts.
     'referrer-policy': 'strict-origin-when-cross-origin',
