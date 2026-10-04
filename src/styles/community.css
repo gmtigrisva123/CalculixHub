@@ -967,8 +967,7 @@
   letter-spacing: .01em;
   user-select: none;
 }
-:root[data-theme='dark'] .cm-avatar-guest { color: var(--ct-subtle); }
-.cm-avatar-initials {
+:root[data-theme='dark'] .cm-avatar-initials {
   background: hsl(var(--cm-hue) 28% 26%);
   color: hsl(var(--cm-hue) 50% 82%);
 }
