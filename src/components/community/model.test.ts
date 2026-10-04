@@ -8,9 +8,14 @@ import {
   postAge,
   reactionSentence,
   shareLink,
+  activeMention,
+  completeMention,
+  holdBackFresh,
+  newestCreatedAt,
+  segmentMentions,
   shiftReaction,
-  splitMention,
   threadComments,
+  typingSentence,
   topReactions,
   totalReactions,
 } from './model';
@@ -122,9 +127,57 @@ describe('share links and mentions', () => {
     expect(isUuid('../etc')).toBe(false);
   });
 
-  it('splits a leading mention from the rest of a reply', () => {
-    expect(splitMention('@ada_l nice proof')).toEqual({ mention: 'ada_l', rest: ' nice proof' });
-    expect(splitMention('email me@x.com')).toEqual({ mention: null, rest: 'email me@x.com' });
-    expect(splitMention('@a')).toEqual({ mention: 'a', rest: '' });
+  it('finds mentions anywhere, but not in formulas or email addresses', () => {
+    expect(segmentMentions('@ada_l nice proof')).toEqual([{ type: 'mention', value: 'ada_l' }, { type: 'text', value: ' nice proof' }]);
+    expect(segmentMentions('Thanks @bob and @Eve_N!')).toEqual([
+      { type: 'text', value: 'Thanks ' },
+      { type: 'mention', value: 'bob' },
+      { type: 'text', value: ' and ' },
+      { type: 'mention', value: 'Eve_N' },
+      { type: 'text', value: '!' },
+    ]);
+    expect(segmentMentions('mail me@x.com, $a@b$ and $$x @y$$')).toEqual([{ type: 'text', value: 'mail me@x.com, $a@b$ and $$x @y$$' }]);
+    expect(segmentMentions('\\begin{align}@z\\end{align} @ok')).toEqual([
+      { type: 'text', value: '\\begin{align}@z\\end{align} ' },
+      { type: 'mention', value: 'ok' },
+    ]);
+  });
+});
+
+describe('typing a mention', () => {
+  it('knows when the caret is in an @query', () => {
+    expect(activeMention('hi @ad', 6)).toEqual({ start: 3, query: 'ad' });
+    expect(activeMention('@', 1)).toEqual({ start: 0, query: '' });
+    expect(activeMention('me@ad', 5)).toBeNull();
+    expect(activeMention('hi @ad done', 11)).toBeNull();
+  });
+
+  it('completes the mention and leaves the caret after it', () => {
+    expect(completeMention('hi @ad', 6, 'ada_l')).toEqual({ next: 'hi @ada_l ', caret: 10 });
+    expect(completeMention('hi @ad there', 6, 'ada_l')).toEqual({ next: 'hi @ada_l there', caret: 10 });
+    expect(completeMention('no mention', 3, 'x')).toEqual({ next: 'no mention', caret: 3 });
+  });
+});
+
+describe('live feed', () => {
+  it('names who is typing', () => {
+    expect(typingSentence([])).toBe('');
+    expect(typingSentence(['Ada'])).toBe('Ada is writing a comment…');
+    expect(typingSentence(['Ada', 'Bob'])).toBe('Ada and Bob are writing comments…');
+    expect(typingSentence(['Ada', 'Bob', 'Eve'])).toBe('Ada and 2 others are writing comments…');
+  });
+
+  it('holds back other people’s new posts until the viewer asks for them', () => {
+    const posts = [
+      { id: 'mine', created_at: '2026-10-04T10:05:00Z', author_id: 'me' },
+      { id: 'new', created_at: '2026-10-04T10:04:00Z', author_id: 'ada' },
+      { id: 'old', created_at: '2026-10-04T10:00:00Z', author_id: 'bob' },
+    ];
+    const { visible, fresh } = holdBackFresh(posts, '2026-10-04T10:00:00Z', 'me');
+    expect(visible.map((post) => post.id)).toEqual(['mine', 'old']);
+    expect(fresh.map((post) => post.id)).toEqual(['new']);
+    expect(holdBackFresh(posts, null, 'me').fresh).toEqual([]);
+    expect(newestCreatedAt(posts)).toBe('2026-10-04T10:05:00Z');
+    expect(newestCreatedAt([])).toBeNull();
   });
 });

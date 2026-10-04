@@ -59,14 +59,35 @@ export function describeNotification(notification: NotificationWithActor): strin
     case 'follow':
       return `${who} started following you`;
     case 'post_like':
-      return `${who} liked your post`;
+      return `${who} reacted to your post`;
     case 'comment_like':
-      return `${who} liked your comment`;
+      return `${who} reacted to your comment`;
     case 'post_comment':
-      return `${who} replied to your post`;
+      return `${who} commented on your post`;
+    case 'comment_reply':
+      return `${who} replied to your comment`;
+    case 'mention':
+      return notification.entity_type === 'comment' ? `${who} mentioned you in a comment` : `${who} mentioned you in a post`;
+    case 'post_share':
+      return `${who} shared your post`;
     case 'message':
       return `${who} sent you a message`;
     case 'system':
       return notification.body ?? 'Update from CalculixHub';
   }
+}
+
+/**
+ * Where a notification leads inside the app, as a query string the app reads
+ * on load -- or null for notifications with nowhere to go.
+ */
+export function notificationLink(notification: Pick<NotificationWithActor, 'type' | 'entity_type' | 'entity_id' | 'post_id' | 'comment_id'>): string | null {
+  const post = notification.post_id ?? (notification.entity_type === 'post' ? notification.entity_id : null);
+  if (post) {
+    const params = new URLSearchParams({ tab: 'community', post });
+    if (notification.comment_id) params.set('comment', notification.comment_id);
+    return `?${params.toString()}`;
+  }
+  if (notification.type === 'message') return '?tab=inbox';
+  return null;
 }

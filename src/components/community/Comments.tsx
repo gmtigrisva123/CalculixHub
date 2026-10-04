@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * The comment section under a post: comment bubbles, one level of threaded
- * replies, reactions, inline editing and removal, and the composer.
+ * replies, reactions, inline editing and removal, image replies, @mentions,
+ * a live "is writing a comment" line, and the composer.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { ArrowUpDown, Check, ChevronDown, Copy, Link2, MoreHorizontal, Pencil, SendHorizontal, Share2, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, Copy, ImagePlus, Link2, MoreHorizontal, Pencil, SendHorizontal, Share2, Trash2 } from 'lucide-react';
 import type { AuthorSummary, CommentWithAuthor, PostWithAuthor, Reaction, ReactionCounts } from '../../services/database.types';
 import {
   COMMENT_MAX_LENGTH,
@@ -19,7 +20,8 @@ import {
   useComments,
   type FeedSchema,
 } from '../../services/data/feed';
-import MathText from '../MathText';
+import { MAX_COMMENT_IMAGES } from '../../services/data/media';
+import { useTyping } from '../../services/data/live';
 import { duration, ease, spring } from '../../lib/motion';
 import {
   COMMENT_SORTS,
@@ -29,12 +31,15 @@ import {
   fullTimestamp,
   shareLink,
   shiftReaction,
-  splitMention,
   threadComments,
   totalReactions,
+  typingSentence,
   type CommentSort,
 } from './model';
+import { AttachmentTray, MediaGrid, imageFiles, useAttachments } from './Media';
+import { useMentions, type MentionPerson } from './Mentions';
 import { ReactButton, ReactionStack } from './Reactions';
+import RichText from './RichText';
 import { AutoTextarea, Avatar, ConfirmDialog, Menu, canNativeShare, copyText, nativeShare, useNow, useToast, type MenuEntry } from './ui';
 
 const FIRST_PAGE = 5;
@@ -53,16 +58,30 @@ export interface CommentsProps {
   onOpenReactors: (target: 'comment', id: string, counts: ReactionCounts | undefined) => void;
   /** A comment was added or removed, so the post's comment count moved. */
   onCountChange: () => void;
+  /** People worth suggesting for an @mention, beyond those already in the thread. */
+  mentionCandidates: MentionPerson[];
+  onOpenMedia: (paths: string[], index: number) => void;
 }
 
 /** Enter sends on a keyboard; on a touch screen Enter is a new line and the button sends. */
 const enterSends = () => typeof window !== 'undefined' && !window.matchMedia?.('(pointer: coarse)').matches;
 
-export default function Comments({ post, viewer, schema: feedSchema, focusSignal, focusCommentId, onOpenReactors, onCountChange }: CommentsProps) {
+export default function Comments({
+  post,
+  viewer,
+  schema: feedSchema,
+  focusSignal,
+  focusCommentId,
+  onOpenReactors,
+  onCountChange,
+  mentionCandidates,
+  onOpenMedia,
+}: CommentsProps) {
   const viewerId = viewer?.id ?? null;
   const feed = useComments(post.id, viewerId);
   const schema = feed.schema ?? feedSchema;
   const toast = useToast();
+  const typing = useTyping(post.id, viewer);
 
   const [sort, setSort] = useState<CommentSort>('relevant');
   const [visible, setVisible] = useState(FIRST_PAGE);
@@ -92,6 +111,15 @@ export default function Comments({ post, viewer, schema: feedSchema, focusSignal
   );
 
   const threads = useMemo(() => threadComments(comments, sort), [comments, sort]);
+
+  // The people already in this conversation come first in @mention suggestions.
+  const candidates = useMemo(() => {
+    const people = new Map<string, MentionPerson>();
+    for (const person of [post.author, ...comments.map((comment) => comment.author), ...mentionCandidates]) {
+      if (person?.username && !people.has(person.id)) people.set(person.id, person);
+    }
+    return [...people.values()];
+  }, [post.author, comments, mentionCandidates]);
 
   // Focus the composer when the post's Comment button is pressed again.
   useEffect(() => {
@@ -123,13 +151,14 @@ export default function Comments({ post, viewer, schema: feedSchema, focusSignal
     if (!result.ok) toast(result.error, 'error');
   };
 
-  const submit = async (body: string, parentId: string | null): Promise<boolean> => {
+  const submit = async (body: string, parentId: string | null, images: string[]): Promise<boolean> => {
     if (!viewerId) return false;
-    const result = await createComment({ postId: post.id, authorId: viewerId, body, parentId, schema });
+    const result = await createComment({ postId: post.id, authorId: viewerId, body, parentId, schema, images });
     if (!result.ok) {
       toast(result.error, 'error');
       return false;
     }
+    typing.stop();
     if (parentId) setExpanded((set) => new Set(set).add(parentId));
     await feed.reload();
     onCountChange();
@@ -233,6 +262,7 @@ export default function Comments({ post, viewer, schema: feedSchema, focusSignal
                   onDelete={() => setConfirm(comment)}
                   onSaved={() => void feed.reload()}
                   onOpenReactors={() => onOpenReactors('comment', comment.id, comment.reactions)}
+                  onOpenMedia={onOpenMedia}
                 />
 
                 {(replies.length > 0 || replyTo?.threadId === comment.id) && (
@@ -260,6 +290,7 @@ export default function Comments({ post, viewer, schema: feedSchema, focusSignal
                             onDelete={() => setConfirm(reply)}
                             onSaved={() => void feed.reload()}
                             onOpenReactors={() => onOpenReactors('comment', reply.id, reply.reactions)}
+                            onOpenMedia={onOpenMedia}
                           />
                         </li>
                       ))}
@@ -272,7 +303,10 @@ export default function Comments({ post, viewer, schema: feedSchema, focusSignal
                           autoFocus
                           initial={replyTo.mention}
                           placeholder={`Reply to ${authorName(comment.author)}…`}
-                          onSubmit={(body) => submit(body, comment.id)}
+                          allowImages={schema === 'social'}
+                          candidates={candidates}
+                          onTyping={typing.announce}
+                          onSubmit={(body, images) => submit(body, comment.id, images)}
                           onCancel={() => setReplyTo(null)}
                         />
                       </li>
@@ -291,12 +325,34 @@ export default function Comments({ post, viewer, schema: feedSchema, focusSignal
         </button>
       )}
 
+      <AnimatePresence>
+        {typing.typers.length > 0 && (
+          <m.p
+            className="cm-typing"
+            role="status"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0, transition: spring.snappy }}
+            exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
+          >
+            <span className="cm-typing-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            {typingSentence(typing.typers.map((typer) => typer.name))}
+          </m.p>
+        )}
+      </AnimatePresence>
+
       {viewer ? (
         <CommentComposer
           ref={composer}
           viewer={viewer}
           placeholder={threads.length === 0 ? 'Be the first to comment…' : 'Write a comment…'}
-          onSubmit={(body) => submit(body, null)}
+          allowImages={schema === 'social'}
+          candidates={candidates}
+          onTyping={typing.announce}
+          onSubmit={(body, images) => submit(body, null, images)}
         />
       ) : (
         <p className="cm-comments-empty">Sign in to join the conversation.</p>
@@ -335,6 +391,7 @@ function CommentItem({
   onDelete,
   onSaved,
   onOpenReactors,
+  onOpenMedia,
 }: {
   comment: CommentWithAuthor;
   post: PostWithAuthor;
@@ -348,6 +405,7 @@ function CommentItem({
   onDelete: () => void;
   onSaved: () => void;
   onOpenReactors: () => void;
+  onOpenMedia: (paths: string[], index: number) => void;
 }) {
   const now = useNow();
   const toast = useToast();
@@ -356,7 +414,7 @@ function CommentItem({
   const [busy, setBusy] = useState(false);
   const own = viewerId === comment.author_id;
   const total = totalReactions(comment.reactions);
-  const { mention, rest } = splitMention(comment.body);
+  const images = comment.images ?? [];
 
   const save = async () => {
     if (busy) return;
@@ -465,10 +523,11 @@ function CommentItem({
             <div className={`cm-bubble ${total > 0 ? 'has-reactions' : ''}`}>
               <strong className="cm-bubble-name">{authorName(comment.author)}</strong>
               {comment.author_id === post.author_id && <span className="cm-author-badge">Author</span>}
-              <div className="cm-bubble-text">
-                {mention && <span className="cm-mention">@{mention}</span>}
-                <MathText text={rest} />
-              </div>
+              {comment.body.trim() && (
+                <div className="cm-bubble-text">
+                  <RichText text={comment.body} />
+                </div>
+              )}
               {total > 0 && (
                 <button type="button" className="cm-bubble-reactions" onClick={onOpenReactors} aria-label={`${total} reactions. See who reacted`}>
                   <ReactionStack counts={comment.reactions} size={16} />
@@ -479,6 +538,12 @@ function CommentItem({
             <Menu label="Comment options" items={items} buttonClassName="cm-icon-button cm-comment-menu">
               <MoreHorizontal size={18} aria-hidden="true" />
             </Menu>
+          </div>
+        )}
+
+        {!editing && images.length > 0 && (
+          <div className="cm-comment-media">
+            <MediaGrid paths={images} label={authorName(comment.author)} compact onOpen={(index) => onOpenMedia(images, index)} />
           </div>
         )}
 
@@ -511,18 +576,24 @@ interface ComposerProps {
   initial?: string;
   compact?: boolean;
   autoFocus?: boolean;
-  onSubmit: (body: string) => Promise<boolean>;
+  allowImages?: boolean;
+  candidates: MentionPerson[];
+  onTyping?: () => void;
+  onSubmit: (body: string, images: string[]) => Promise<boolean>;
   onCancel?: () => void;
 }
 
-/** "Write a comment…": a pill that grows with its text, Enter to send. */
+/** "Write a comment…": a pill that grows with its text, Enter to send, one image allowed. */
 const CommentComposer = React.forwardRef<HTMLTextAreaElement, ComposerProps>(function CommentComposer(
-  { viewer, placeholder, initial = '', compact = false, autoFocus = false, onSubmit, onCancel },
+  { viewer, placeholder, initial = '', compact = false, autoFocus = false, allowImages = false, candidates, onTyping, onSubmit, onCancel },
   forwarded,
 ) {
   const [body, setBody] = useState(initial);
   const [busy, setBusy] = useState(false);
   const field = useRef<HTMLTextAreaElement | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const attachments = useAttachments(viewer.id, MAX_COMMENT_IMAGES);
+  const mentions = useMentions({ value: body, setValue: setBody, field, candidates, selfId: viewer.id, placement: 'above' });
 
   const setRefs = (element: HTMLTextAreaElement | null) => {
     field.current = element;
@@ -551,13 +622,21 @@ const CommentComposer = React.forwardRef<HTMLTextAreaElement, ComposerProps>(fun
     return () => element.removeEventListener('cm-prefill', onPrefill);
   }, []);
 
+  // A reply box closed with an image still attached should not leave the file behind.
+  const discard = useRef(attachments.discard);
+  discard.current = attachments.discard;
+  useEffect(() => () => discard.current(), []);
+
+  const ready = (body.trim() || attachments.paths.length > 0) && !attachments.uploading;
+
   const send = async () => {
-    if (busy || !body.trim()) return;
+    if (busy || !ready) return;
     setBusy(true);
-    const sent = await onSubmit(body);
+    const sent = await onSubmit(body, attachments.paths);
     setBusy(false);
     if (sent) {
       setBody('');
+      attachments.reset();
       onCancel?.();
     }
   };
@@ -571,30 +650,71 @@ const CommentComposer = React.forwardRef<HTMLTextAreaElement, ComposerProps>(fun
       }}
     >
       <Avatar author={viewer} size={compact ? 28 : 34} />
-      <div className="cm-composer-field">
-        <AutoTextarea
-          ref={setRefs}
-          className="cm-comment-input"
-          value={body}
-          placeholder={placeholder}
-          aria-label={placeholder.replace(/…$/, '')}
-          maxLength={COMMENT_MAX_LENGTH}
-          maxHeight={200}
-          disabled={busy}
-          onChange={(event) => setBody(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && enterSends()) {
-              event.preventDefault();
-              void send();
-            } else if (event.key === 'Escape' && onCancel) {
-              event.stopPropagation();
-              onCancel();
-            }
-          }}
-        />
-        <button type="submit" className="cm-send" aria-label="Send comment" disabled={busy || !body.trim()}>
-          <SendHorizontal size={18} aria-hidden="true" />
-        </button>
+      <div className="cm-composer-body">
+        <div className="cm-composer-field">
+          <AutoTextarea
+            ref={setRefs}
+            className="cm-comment-input"
+            value={body}
+            placeholder={placeholder}
+            aria-label={placeholder.replace(/…$/, '')}
+            maxLength={COMMENT_MAX_LENGTH}
+            maxHeight={200}
+            disabled={busy}
+            {...mentions.inputProps}
+            onChange={(event) => {
+              setBody(event.target.value);
+              mentions.track(event.target);
+              if (event.target.value.trim()) onTyping?.();
+            }}
+            onPaste={(event) => {
+              const files = allowImages ? imageFiles(event.clipboardData?.items) : [];
+              if (files.length > 0) {
+                event.preventDefault();
+                attachments.add(files);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (mentions.onKeyDown(event)) return;
+              if (event.key === 'Enter' && !event.shiftKey && enterSends()) {
+                event.preventDefault();
+                void send();
+              } else if (event.key === 'Escape' && onCancel) {
+                event.stopPropagation();
+                onCancel();
+              }
+            }}
+          />
+          {allowImages && (
+            <>
+              <button
+                type="button"
+                className="cm-composer-tool"
+                aria-label="Attach an image"
+                title="Attach an image"
+                disabled={busy || attachments.full}
+                onClick={() => picker.current?.click()}
+              >
+                <ImagePlus size={18} aria-hidden="true" />
+              </button>
+              <input
+                ref={picker}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                hidden
+                onChange={(event) => {
+                  attachments.add(imageFiles(event.target.files));
+                  event.target.value = '';
+                }}
+              />
+            </>
+          )}
+          <button type="submit" className="cm-send" aria-label="Send comment" disabled={busy || !ready}>
+            <SendHorizontal size={18} aria-hidden="true" />
+          </button>
+          {mentions.menu}
+        </div>
+        <AttachmentTray items={attachments.items} onRemove={attachments.remove} compact />
       </div>
       {(body.length > COMMENT_MAX_LENGTH * 0.8 || compact) && (
         <p className="cm-composer-hint">

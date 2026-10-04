@@ -60,12 +60,12 @@ const AUTHOR_COLUMNS = 'id, username, display_name, avatar_url, level';
 const POST_AUTHOR = `author:profiles!posts_author_id_fkey (${AUTHOR_COLUMNS})`;
 const POST_BASE = 'id, author_id, problem_id, community_id, body, like_count, comment_count, deleted_at, created_at, updated_at';
 const POST_COLUMNS = `${POST_BASE}, ${POST_AUTHOR}`;
-const SOCIAL_POST_COLUMNS = `${POST_BASE}, edited_at, shared_post_id, share_count, ${POST_AUTHOR}`;
-const SHARED_POST_COLUMNS = `id, author_id, problem_id, body, deleted_at, created_at, ${POST_AUTHOR}`;
+const SOCIAL_POST_COLUMNS = `${POST_BASE}, edited_at, shared_post_id, share_count, images, ${POST_AUTHOR}`;
+const SHARED_POST_COLUMNS = `id, author_id, problem_id, body, deleted_at, created_at, images, ${POST_AUTHOR}`;
 const COMMENT_AUTHOR = `author:profiles!comments_author_id_fkey (${AUTHOR_COLUMNS})`;
 const COMMENT_BASE = 'id, post_id, author_id, body, like_count, deleted_at, created_at';
 const COMMENT_COLUMNS = `${COMMENT_BASE}, ${COMMENT_AUTHOR}`;
-const SOCIAL_COMMENT_COLUMNS = `${COMMENT_BASE}, parent_id, edited_at, ${COMMENT_AUTHOR}`;
+const SOCIAL_COMMENT_COLUMNS = `${COMMENT_BASE}, parent_id, edited_at, images, ${COMMENT_AUTHOR}`;
 
 /**
  * Codes for a column, table, view, relationship or function that does not
@@ -102,8 +102,10 @@ let schemaProbe: Promise<FeedSchema> | null = null;
 /**
  * Whether the community migration has been applied, asked once per session.
  *
- * A transient failure is not cached, so the next load asks again instead of
- * pinning the session to the older feature set.
+ * It probes the newest column the migration adds, so a database still on an
+ * earlier draft of it reads as "not applied" rather than as a feed that fails
+ * on every query. A transient failure is not cached, so the next load asks
+ * again instead of pinning the session to the older feature set.
  */
 export function detectFeedSchema(): Promise<FeedSchema> {
   const client = supabase;
@@ -111,7 +113,7 @@ export function detectFeedSchema(): Promise<FeedSchema> {
 
   if (!schemaProbe) {
     schemaProbe = (async () => {
-      const { error } = await client.from('posts').select('share_count').limit(1);
+      const { error } = await client.from('posts').select('share_count, images').limit(1);
       if (!error) return 'social';
       if (error.code && MISSING_SCHEMA.has(error.code)) return 'legacy';
       schemaProbe = null;
@@ -414,11 +416,14 @@ export async function createPost(input: {
   problemId?: string | null;
   communityId?: string | null;
   sharedPostId?: string | null;
+  /** Storage paths of images already uploaded to the author's folder. */
+  images?: string[];
 }): Promise<MutationResult> {
   if (!supabase) return { ok: false, error: 'The community is unavailable in this build.' };
 
   const body = input.body.trim();
-  if (!body && !input.sharedPostId) return { ok: false, error: 'Write something first.' };
+  const images = input.images ?? [];
+  if (!body && !input.sharedPostId && images.length === 0) return { ok: false, error: 'Write something first.' };
   if (body.length > POST_MAX_LENGTH) return { ok: false, error: `That post is too long (${POST_MAX_LENGTH} characters maximum).` };
 
   const { error } = await supabase.from('posts').insert({
@@ -427,6 +432,7 @@ export async function createPost(input: {
     problem_id: input.problemId ?? null,
     community_id: input.communityId ?? null,
     ...(input.sharedPostId ? { shared_post_id: input.sharedPostId } : {}),
+    ...(images.length > 0 ? { images } : {}),
   });
 
   return error ? { ok: false, error: describeError(error) } : { ok: true };
@@ -442,15 +448,18 @@ export async function updatePost(input: {
   problemId?: string | null;
   /** A share may be edited down to no words at all, as it was posted. */
   isShare?: boolean;
+  /** The full new set of images; omitted to leave them as they are. */
+  images?: string[];
 }): Promise<MutationResult> {
   if (!supabase) return { ok: false, error: 'Unavailable in this build.' };
 
   const body = input.body.trim();
-  if (!body && !input.isShare) return { ok: false, error: 'Write something first.' };
+  if (!body && !input.isShare && !input.images?.length) return { ok: false, error: 'Write something first.' };
   if (body.length > POST_MAX_LENGTH) return { ok: false, error: `That post is too long (${POST_MAX_LENGTH} characters maximum).` };
 
-  const patch: { body: string; problem_id?: string | null } = { body };
+  const patch: { body: string; problem_id?: string | null; images?: string[] } = { body };
   if (input.problemId !== undefined) patch.problem_id = input.problemId;
+  if (input.images !== undefined) patch.images = input.images;
 
   const { data, error } = await supabase.from('posts').update(patch).eq('id', input.postId).select('id');
   if (error) return { ok: false, error: describeError(error) };
@@ -562,11 +571,13 @@ export async function createComment(input: {
   body: string;
   parentId?: string | null;
   schema?: FeedSchema | null;
+  images?: string[];
 }): Promise<MutationResult> {
   if (!supabase) return { ok: false, error: 'The community is unavailable in this build.' };
 
   const body = input.body.trim();
-  if (!body) return { ok: false, error: 'Write something first.' };
+  const images = input.schema === 'social' ? input.images ?? [] : [];
+  if (!body && images.length === 0) return { ok: false, error: 'Write something first.' };
   if (body.length > COMMENT_MAX_LENGTH) return { ok: false, error: `That comment is too long (${COMMENT_MAX_LENGTH} characters maximum).` };
 
   const { error } = await supabase.from('comments').insert({
@@ -574,6 +585,7 @@ export async function createComment(input: {
     author_id: input.authorId,
     body,
     ...(input.parentId && input.schema === 'social' ? { parent_id: input.parentId } : {}),
+    ...(images.length > 0 ? { images } : {}),
   });
 
   return error ? { ok: false, error: describeError(error) } : { ok: true };

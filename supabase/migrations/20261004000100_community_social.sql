@@ -10,11 +10,13 @@ begin;
 --   * shares, which are posts that quote another post
 --   * one level of threaded replies under a comment
 --   * the author of a post may remove comments left on it
+--   * images on posts and comments, stored in the `community-media` bucket
+--   * notifications for replies, @mentions, shares and comment reactions
 --
 -- No existing policy is replaced. The new permissions are an update policy on
 -- each reaction table -- PostgreSQL ORs permissive policies together, so the
--- originals keep their exact meaning -- and one narrow function for removing
--- a comment.
+-- originals keep their exact meaning -- one narrow function for removing a
+-- comment, and upload rights confined to each learner's own storage folder.
 
 -- ---------------------------------------------------------------------------
 -- Columns
@@ -41,15 +43,44 @@ alter table public.comments add column if not exists parent_id uuid references p
 -- the only possibility before this migration.
 alter table public.comments add column if not exists removed_by uuid references public.profiles(id) on delete set null;
 
+-- Attached images, as paths inside the `community-media` storage bucket rather
+-- than URLs, so a change of storage host does not strand every post. Each path
+-- must sit in the author's own folder: the upload policy below already confines
+-- writes there, and this keeps a post from claiming someone else's file.
+alter table public.posts add column if not exists images text[] not null default '{}';
+alter table public.comments add column if not exists images text[] not null default '{}';
+
 alter table public.post_likes add column if not exists reaction text not null default 'like'
   check (reaction in ('like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'));
 alter table public.comment_likes add column if not exists reaction text not null default 'like'
   check (reaction in ('like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'));
 
--- A share may go out without words of its own; every other post still needs a body.
+create or replace function public.valid_media_paths(paths text[], owner uuid, max_count integer)
+returns boolean
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  select cardinality(paths) <= max_count
+    and not exists (
+      select 1 from unnest(paths) as path
+      where path !~ ('^' || owner::text || '/[A-Za-z0-9][A-Za-z0-9._-]{0,120}$')
+    );
+$$;
+
+alter table public.posts drop constraint if exists posts_images_check;
+alter table public.posts add constraint posts_images_check check (public.valid_media_paths(images, author_id, 4));
+alter table public.comments drop constraint if exists comments_images_check;
+alter table public.comments add constraint comments_images_check check (public.valid_media_paths(images, author_id, 1));
+
+-- A share may go out without words of its own, and a post or comment may be
+-- just a picture -- a photo of handwritten working. Anything else needs words.
 alter table public.posts drop constraint if exists posts_body_check;
 alter table public.posts add constraint posts_body_check
-  check (length(body) <= 5000 and (shared_post_id is not null or length(trim(body)) >= 1));
+  check (length(body) <= 5000 and (shared_post_id is not null or length(trim(body)) >= 1 or cardinality(images) > 0));
+alter table public.comments drop constraint if exists comments_body_check;
+alter table public.comments add constraint comments_body_check
+  check (length(body) <= 2000 and (length(trim(body)) >= 1 or cardinality(images) > 0));
 
 create index if not exists posts_shared_idx on public.posts (shared_post_id) where shared_post_id is not null;
 create index if not exists comments_parent_idx on public.comments (parent_id, created_at) where parent_id is not null;
@@ -186,6 +217,7 @@ begin
 
   if auth.uid() is distinct from old.author_id then
     new.body := old.body;
+    new.images := old.images;
   end if;
 
   if old.deleted_at is null and new.deleted_at is not null then
@@ -366,6 +398,236 @@ create policy comment_likes_update_own
   on public.comment_likes for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- Notifications for replies, mentions, shares and comment reactions
+-- ---------------------------------------------------------------------------
+
+-- Where a notification leads. `entity_id` names what it is about (a comment, a
+-- share); these say where to open it, so the inbox can link straight to the
+-- comment without a lookup per row.
+alter table public.notifications add column if not exists post_id uuid;
+alter table public.notifications add column if not exists comment_id uuid;
+
+alter table public.notifications drop constraint if exists notifications_type_check;
+alter table public.notifications add constraint notifications_type_check check (type in (
+  'follow', 'post_like', 'comment_like', 'post_comment', 'message', 'system',
+  'comment_reply', 'mention', 'post_share'
+));
+
+-- Same rules as emit_notification -- nobody is told about their own action,
+-- and the dedupe index collapses repeats -- plus the two location columns.
+create or replace function public.emit_community_notification(
+  recipient uuid,
+  actor uuid,
+  notification_type text,
+  entity_kind text,
+  entity uuid,
+  post uuid,
+  comment uuid,
+  message text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if recipient is null or recipient = actor then
+    return;
+  end if;
+
+  insert into public.notifications (user_id, actor_id, type, entity_type, entity_id, post_id, comment_id, body)
+  values (recipient, actor, notification_type, entity_kind, entity, post, comment, message)
+  on conflict do nothing;
+end;
+$$;
+
+-- Learners named with @username in `body` and not already named in `previous`,
+-- so an edit notifies only the people it adds. Capped, so one post cannot be
+-- used to page the whole community.
+create or replace function public.mentioned_users(body text, previous text default null)
+returns table (user_id uuid)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  with named as (
+    select distinct lower(m[1]) as handle
+    from regexp_matches(coalesce(body, ''), '(?:^|[^A-Za-z0-9_@])@([A-Za-z0-9][A-Za-z0-9_]{1,22}[A-Za-z0-9])', 'g') as m
+  ),
+  earlier as (
+    select distinct lower(m[1]) as handle
+    from regexp_matches(coalesce(previous, ''), '(?:^|[^A-Za-z0-9_@])@([A-Za-z0-9][A-Za-z0-9_]{1,22}[A-Za-z0-9])', 'g') as m
+  )
+  select p.id
+  from public.profiles p
+  join named n on lower(p.username) = n.handle
+  where n.handle not in (select handle from earlier)
+  limit 10;
+$$;
+
+create or replace function public.notify_community_comment()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  parent_author uuid;
+  recipient uuid;
+  community uuid;
+  snippet text := nullif(left(new.body, 140), '');
+begin
+  if new.deleted_at is not null then
+    return null;
+  end if;
+
+  select community_id into community from public.posts where id = new.post_id;
+
+  if tg_op = 'INSERT' and new.parent_id is not null then
+    select author_id into parent_author from public.comments where id = new.parent_id;
+    perform public.emit_community_notification(parent_author, new.author_id, 'comment_reply', 'comment', new.id, new.post_id, new.id, snippet);
+  end if;
+
+  -- The person replied to already hears about the reply; a mention of them in
+  -- it would only say the same thing twice.
+  for recipient in
+    select m.user_id from public.mentioned_users(new.body, case when tg_op = 'UPDATE' then old.body end) m
+  loop
+    -- Naming someone outside a private community does not show them its posts.
+    if recipient is distinct from parent_author and (community is null or public.is_community_member(community, recipient)) then
+      perform public.emit_community_notification(recipient, new.author_id, 'mention', 'comment', new.id, new.post_id, new.id, snippet);
+    end if;
+  end loop;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists comments_notify_community on public.comments;
+create trigger comments_notify_community
+  after insert on public.comments
+  for each row execute function public.notify_community_comment();
+
+drop trigger if exists comments_notify_community_edit on public.comments;
+create trigger comments_notify_community_edit
+  after update of body on public.comments
+  for each row when (old.body is distinct from new.body)
+  execute function public.notify_community_comment();
+
+create or replace function public.notify_community_post()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  original_author uuid;
+  recipient uuid;
+  snippet text := nullif(left(new.body, 140), '');
+begin
+  if new.deleted_at is not null then
+    return null;
+  end if;
+
+  if tg_op = 'INSERT' and new.shared_post_id is not null then
+    select author_id into original_author from public.posts where id = new.shared_post_id;
+    perform public.emit_community_notification(original_author, new.author_id, 'post_share', 'post', new.id, new.id, null, snippet);
+  end if;
+
+  for recipient in
+    select m.user_id from public.mentioned_users(new.body, case when tg_op = 'UPDATE' then old.body end) m
+  loop
+    if new.community_id is null or public.is_community_member(new.community_id, recipient) then
+      perform public.emit_community_notification(recipient, new.author_id, 'mention', 'post', new.id, new.id, null, snippet);
+    end if;
+  end loop;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists posts_notify_community on public.posts;
+create trigger posts_notify_community
+  after insert on public.posts
+  for each row execute function public.notify_community_post();
+
+drop trigger if exists posts_notify_community_edit on public.posts;
+create trigger posts_notify_community_edit
+  after update of body on public.posts
+  for each row when (old.body is distinct from new.body)
+  execute function public.notify_community_post();
+
+create or replace function public.notify_comment_like()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  comment_author uuid;
+  comment_post uuid;
+begin
+  select author_id, post_id into comment_author, comment_post from public.comments where id = new.comment_id;
+  perform public.emit_community_notification(comment_author, new.user_id, 'comment_like', 'comment', new.comment_id, comment_post, new.comment_id);
+  return null;
+end;
+$$;
+
+drop trigger if exists comment_likes_notify on public.comment_likes;
+create trigger comment_likes_notify
+  after insert on public.comment_likes
+  for each row execute function public.notify_comment_like();
+
+-- These helpers write notifications as anyone, so only triggers may call them.
+-- In the public schema a SECURITY DEFINER function is otherwise reachable as an
+-- RPC; emit_notification from the core migration was, which let any client
+-- write a notification "from" any learner to any other.
+revoke execute on function public.emit_notification(uuid, uuid, text, text, uuid, text) from public, anon, authenticated;
+revoke execute on function public.emit_community_notification(uuid, uuid, text, text, uuid, uuid, uuid, text) from public, anon, authenticated;
+revoke execute on function public.mentioned_users(text, text) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Image storage
+-- ---------------------------------------------------------------------------
+
+-- Public reads, because posts are public: an image URL is no more private than
+-- the post that shows it. Writes and deletes are confined to the uploader's own
+-- folder, `<user id>/...`. Skipped where Supabase Storage is absent, as in a
+-- bare Postgres, where the rest of this migration must still apply.
+do $$
+begin
+  if to_regclass('storage.buckets') is null or to_regclass('storage.objects') is null then
+    return;
+  end if;
+
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('community-media', 'community-media', true, 5242880, array['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+  on conflict (id) do update
+    set public = excluded.public,
+        file_size_limit = excluded.file_size_limit,
+        allowed_mime_types = excluded.allowed_mime_types;
+
+  execute 'drop policy if exists community_media_insert_own on storage.objects';
+  execute $policy$
+    create policy community_media_insert_own on storage.objects for insert to authenticated
+    with check (bucket_id = 'community-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  $policy$;
+
+  execute 'drop policy if exists community_media_select_own on storage.objects';
+  execute $policy$
+    create policy community_media_select_own on storage.objects for select to authenticated
+    using (bucket_id = 'community-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  $policy$;
+
+  execute 'drop policy if exists community_media_delete_own on storage.objects';
+  execute $policy$
+    create policy community_media_delete_own on storage.objects for delete to authenticated
+    using (bucket_id = 'community-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  $policy$;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- Reaction summaries

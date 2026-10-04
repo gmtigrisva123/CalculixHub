@@ -17,13 +17,17 @@ import {
   MoreHorizontal,
   Pencil,
   Repeat2,
+  Send,
   Share2,
   SquarePen,
   Trash2,
 } from 'lucide-react';
 import type { AuthorSummary, PostWithAuthor, Reaction, ReactionCounts } from '../../services/database.types';
 import type { FeedSchema } from '../../services/data/feed';
+import type { PresentPerson } from '../../services/data/live';
 import Comments from './Comments';
+import { MediaGrid } from './Media';
+import type { MentionPerson } from './Mentions';
 import { ExpandableBody, SharedEmbed, isLargeText } from './PostBody';
 import { ReactButton, ReactionStack } from './Reactions';
 import { authorName, fullTimestamp, plural, postAge, reactionSentence, totalReactions } from './model';
@@ -44,6 +48,8 @@ export interface PostActions {
   openReactors: (target: 'post' | 'comment', id: string, counts: ReactionCounts | undefined) => void;
   toggleComments: (post: PostWithAuthor) => void;
   focusComposer: (post: PostWithAuthor) => void;
+  sendInMessages: (post: PostWithAuthor) => void;
+  openMedia: (paths: string[], index: number) => void;
   /** Re-read the post after its comments change, for the comment count. */
   refresh: (post: PostWithAuthor) => void;
 }
@@ -57,6 +63,8 @@ export default function PostCard({
   composerSignal,
   focusCommentId,
   highlighted,
+  viewers,
+  mentionCandidates,
   actions,
 }: {
   post: PostWithAuthor;
@@ -67,6 +75,9 @@ export default function PostCard({
   composerSignal: number;
   focusCommentId: string | null;
   highlighted: boolean;
+  /** Other people with this post's comments open right now. */
+  viewers: PresentPerson[];
+  mentionCandidates: MentionPerson[];
   actions: PostActions;
 }) {
   const now = useNow();
@@ -77,6 +88,7 @@ export default function PostCard({
   const total = totalReactions(post.reactions);
   const shares = post.share_count ?? 0;
   const title = problemTitle(post.problem_id);
+  const images = post.images ?? [];
 
   const menu: MenuEntry[] = [
     ...(own
@@ -104,6 +116,9 @@ export default function PostCard({
           { key: 'thoughts', label: 'Share to feed', description: 'Add your own thoughts first.', icon: SquarePen, onSelect: () => actions.shareWithThoughts(post) },
           { key: 'sep', separator: true as const },
         ]
+      : []),
+    ...(viewerId
+      ? [{ key: 'message', label: 'Send in Messages', description: 'Share it privately with another learner.', icon: Send, onSelect: () => actions.sendInMessages(post) }]
       : []),
     { key: 'link', label: 'Copy link', description: 'Paste it into a chat or an email.', icon: Link2, onSelect: () => actions.copyLink(post) },
     ...(canNativeShare() ? [{ key: 'device', label: 'Share via…', description: 'Messages, mail and other apps.', icon: Share2, onSelect: () => actions.shareVia(post) }] : []),
@@ -150,15 +165,26 @@ export default function PostCard({
         </button>
       )}
 
-      <ExpandableBody text={post.body} large={!isShare && isLargeText(post.body)} className="cm-post-body" />
+      <ExpandableBody text={post.body} large={!isShare && images.length === 0 && isLargeText(post.body)} className="cm-post-body" />
 
-      {isShare && (
-        <div className="cm-post-shared">
-          <SharedEmbed original={post.shared_post} problemTitle={problemTitle(post.shared_post?.problem_id)} onOpen={actions.openOriginal} />
+      {images.length > 0 && (
+        <div className="cm-post-media">
+          <MediaGrid paths={images} label={authorName(post.author)} onOpen={(index) => actions.openMedia(images, index)} />
         </div>
       )}
 
-      {(total > 0 || post.comment_count > 0 || shares > 0) && (
+      {isShare && (
+        <div className="cm-post-shared">
+          <SharedEmbed
+            original={post.shared_post}
+            problemTitle={problemTitle(post.shared_post?.problem_id)}
+            onOpen={actions.openOriginal}
+            onOpenMedia={actions.openMedia}
+          />
+        </div>
+      )}
+
+      {(total > 0 || post.comment_count > 0 || shares > 0 || viewers.length > 0) && (
         <div className="cm-post-stats">
           {total > 0 ? (
             <button
@@ -174,6 +200,18 @@ export default function PostCard({
             <span />
           )}
           <span className="cm-stat-links">
+            {viewers.length > 0 && (
+              <span className="cm-viewing" title={`${viewers.map((person) => person.name).join(', ')} ${viewers.length === 1 ? 'is' : 'are'} reading the comments`}>
+                <span className="cm-live-dot" aria-hidden="true" />
+                <span className="cm-viewing-faces" aria-hidden="true">
+                  {viewers.slice(0, 3).map((person) => (
+                    <Avatar key={person.id} author={{ id: person.id, display_name: person.name, username: person.username, avatar_url: person.avatar_url }} size={18} />
+                  ))}
+                </span>
+                <span className="sr-only">{viewers.length === 1 ? `${viewers[0]!.name} is` : `${viewers.length} people are`} reading the comments now</span>
+                <span aria-hidden="true">{viewers.length} viewing</span>
+              </span>
+            )}
             {post.comment_count > 0 && (
               <button type="button" className="cm-stat-link" onClick={() => actions.toggleComments(post)} aria-expanded={commentsOpen}>
                 {plural(post.comment_count, 'comment')}
@@ -205,6 +243,8 @@ export default function PostCard({
           focusCommentId={focusCommentId}
           onOpenReactors={actions.openReactors}
           onCountChange={() => actions.refresh(post)}
+          mentionCandidates={mentionCandidates}
+          onOpenMedia={actions.openMedia}
         />
       )}
     </article>

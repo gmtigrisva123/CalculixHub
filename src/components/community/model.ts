@@ -213,9 +213,87 @@ export function shareLink(postId: string, commentId?: string | null, base: strin
   return url.toString();
 }
 
-/** A leading `@username` in a reply, split off so it can be shown as a mention. */
-export function splitMention(body: string): { mention: string | null; rest: string } {
-  const match = /^@([A-Za-z0-9](?:[A-Za-z0-9_]*[A-Za-z0-9])?)(?=\s|$)/.exec(body);
-  if (!match) return { mention: null, rest: body };
-  return { mention: match[1]!, rest: body.slice(match[0].length) };
+// Math is matched first, so an `@` inside a formula is never read as a mention.
+const MATH = String.raw`\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$|\\begin\{(?<env>[a-z*]+)\}[\s\S]+?\\end\{\k<env>\}`;
+const MENTION = String.raw`(?<![A-Za-z0-9_@.])@([A-Za-z0-9](?:[A-Za-z0-9_]{0,22}[A-Za-z0-9])?)(?![A-Za-z0-9_])`;
+
+export type RichSegment = { type: 'text'; value: string } | { type: 'mention'; value: string };
+
+/**
+ * Split text into plain runs and `@username` mentions. Formulas stay inside
+ * the plain runs whole, for MathText to render; an email address is not a
+ * mention.
+ */
+export function segmentMentions(text: string): RichSegment[] {
+  const pattern = new RegExp(`(${MATH})|${MENTION}`, 'g');
+  const segments: RichSegment[] = [];
+  let plain = '';
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const handle = match[3];
+    if (handle === undefined) continue; // a formula: leave it in the plain run
+    plain += text.slice(last, match.index);
+    if (plain) segments.push({ type: 'text', value: plain });
+    plain = '';
+    segments.push({ type: 'mention', value: handle });
+    last = match.index + match[0].length;
+  }
+  plain += text.slice(last);
+  if (plain) segments.push({ type: 'text', value: plain });
+  return segments;
+}
+
+/**
+ * The `@query` being typed at the caret, if any: where it starts and what has
+ * been typed after the `@` so far.
+ */
+export function activeMention(value: string, caret: number): { start: number; query: string } | null {
+  const before = value.slice(0, caret);
+  const match = /(^|[^A-Za-z0-9_@.])@([A-Za-z0-9_]{0,24})$/.exec(before);
+  if (!match) return null;
+  return { start: caret - match[2]!.length - 1, query: match[2]! };
+}
+
+/** Replace the `@query` at the caret with a finished mention and a space. */
+export function completeMention(value: string, caret: number, username: string): { next: string; caret: number } {
+  const active = activeMention(value, caret);
+  if (!active) return { next: value, caret };
+  const insert = `@${username} `;
+  const after = value.slice(caret).replace(/^[A-Za-z0-9_]+/, '');
+  const next = value.slice(0, active.start) + insert + after.replace(/^ /, '');
+  return { next, caret: active.start + insert.length };
+}
+
+/** "Ada is writing a comment…", "Ada and Bob are…", "Ada and 2 others are…". */
+export function typingSentence(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return `${names[0]} is writing a comment…`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are writing comments…`;
+  return `${names[0]} and ${names.length - 1} others are writing comments…`;
+}
+
+/**
+ * Hold back posts that arrived since the viewer last looked, so a busy feed
+ * does not shuffle under their thumb. The viewer's own posts always show.
+ * `cutoff` is the newest `created_at` the viewer has acknowledged.
+ */
+export function holdBackFresh<T extends { created_at: string; author_id: string }>(
+  posts: T[],
+  cutoff: string | null,
+  viewerId: string | null,
+): { visible: T[]; fresh: T[] } {
+  if (!cutoff) return { visible: posts, fresh: [] };
+  const visible: T[] = [];
+  const fresh: T[] = [];
+  for (const post of posts) {
+    if (post.created_at > cutoff && post.author_id !== viewerId) fresh.push(post);
+    else visible.push(post);
+  }
+  return { visible, fresh };
+}
+
+/** The newest `created_at` in a page, or null for an empty one. */
+export function newestCreatedAt(posts: Array<{ created_at: string }>): string | null {
+  return posts.reduce<string | null>((newest, post) => (!newest || post.created_at > newest ? post.created_at : newest), null);
 }

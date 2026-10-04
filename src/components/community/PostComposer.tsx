@@ -8,14 +8,17 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { Bold, Code2, Eye, EyeOff, Hash, Sigma, SquareSigma } from 'lucide-react';
+import { Bold, Code2, Eye, EyeOff, Hash, ImagePlus, Sigma, SquareSigma } from 'lucide-react';
 import type { Problem } from '../../../shared/types';
 import type { AuthorSummary, SharedPost } from '../../services/database.types';
 import { POST_MAX_LENGTH, type MutationResult } from '../../services/data/feed';
-import MathText from '../MathText';
+import { MAX_POST_IMAGES } from '../../services/data/media';
 import { duration, ease } from '../../lib/motion';
+import { AttachmentTray, imageFiles, useAttachments } from './Media';
+import { useMentions, type MentionPerson } from './Mentions';
 import { authorName, firstName } from './model';
 import { SharedEmbed, isLargeText } from './PostBody';
+import RichText from './RichText';
 import { AutoTextarea, Avatar, Dialog, insertAtCaret } from './ui';
 
 /** The keyboard shortcut, named for the keyboard in front of the learner. Nothing on touch. */
@@ -49,6 +52,9 @@ export default function PostComposer({
   sharing = false,
   placeholder,
   initialPreview = false,
+  initialImages = [],
+  allowImages = false,
+  mentionCandidates = [],
   onSubmit,
   onClose,
 }: {
@@ -64,7 +70,12 @@ export default function PostComposer({
   placeholder?: string;
   /** Open with the rendered preview showing, for a post that is mostly math. */
   initialPreview?: boolean;
-  onSubmit: (body: string, problemId: string | null) => Promise<MutationResult>;
+  /** The images of a post being edited. */
+  initialImages?: string[];
+  /** Whether the database can store images yet. */
+  allowImages?: boolean;
+  mentionCandidates?: MentionPerson[];
+  onSubmit: (body: string, problemId: string | null, images: string[]) => Promise<MutationResult>;
   onClose: () => void;
 }) {
   const [body, setBody] = useState(initialBody);
@@ -73,29 +84,45 @@ export default function PostComposer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [discarding, setDiscarding] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const attachments = useAttachments(author?.id ?? null, MAX_POST_IMAGES, initialImages);
+  const mentions = useMentions({ value: body, setValue: setBody, field, candidates: mentionCandidates, selfId: author?.id ?? null });
 
   const sortedProblems = useMemo(() => [...problems].sort((a, b) => a.title.localeCompare(b.title)), [problems]);
-  const dirty = body !== initialBody || problemId !== (initialProblemId ?? '');
+  const imagesChanged = attachments.items.length !== initialImages.length || attachments.paths.some((path, index) => path !== initialImages[index]);
+  const dirty = body !== initialBody || problemId !== (initialProblemId ?? '') || imagesChanged;
   const isShare = mode === 'share' || sharing;
-  const empty = !body.trim() && !isShare;
+  const empty = !body.trim() && !isShare && attachments.paths.length === 0;
   const remaining = POST_MAX_LENGTH - body.length;
   const hasMarkup = /\$|\\\(|\\\[|\*\*|`|\\begin/.test(body);
 
+  const close = () => {
+    attachments.discard();
+    onClose();
+  };
+
   const requestClose = () => {
     if (busy) return;
-    if (dirty && body.trim()) setDiscarding(true);
-    else onClose();
+    if (dirty && (body.trim() || attachments.items.length > 0)) setDiscarding(true);
+    else close();
   };
 
   const submit = async () => {
-    if (busy || empty || remaining < 0) return;
+    if (busy || empty || remaining < 0 || attachments.uploading) return;
     setBusy(true);
     setError('');
-    const result = await onSubmit(body, problemId || null);
+    const result = await onSubmit(body, problemId || null, attachments.paths);
     setBusy(false);
-    if (result.ok) onClose();
-    else setError(result.error);
+    if (result.ok) {
+      attachments.reset();
+      onClose();
+    } else setError(result.error);
+  };
+
+  const attach = (files: File[]) => {
+    if (allowImages && files.length > 0) attachments.add(files);
   };
 
   const wrap = (before: string, after: string, placeholderText: string) => {
@@ -109,7 +136,28 @@ export default function PostComposer({
 
   return (
     <Dialog title={TITLES[mode]} onClose={discarding ? () => setDiscarding(false) : requestClose} size="md" className="cm-composer-dialog">
-      <div className="cm-dialog-body">
+      <div
+        className={`cm-dialog-body ${dragging ? 'is-dragging' : ''}`}
+        onDragOver={(event) => {
+          if (!allowImages || !event.dataTransfer.types.includes('Files')) return;
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={(event) => {
+          if (!allowImages) return;
+          event.preventDefault();
+          setDragging(false);
+          attach(imageFiles(event.dataTransfer.files));
+        }}
+      >
+        {dragging && (
+          <div className="cm-drop-hint" aria-hidden="true">
+            <ImagePlus size={28} /> Drop images to attach
+          </div>
+        )}
         <div className="cm-composer-author">
           <Avatar author={author} size={42} />
           <div>
@@ -129,6 +177,7 @@ export default function PostComposer({
           </div>
         </div>
 
+        <div className="cm-composer-text-wrap">
         <AutoTextarea
           ref={field}
           data-autofocus
@@ -137,14 +186,30 @@ export default function PostComposer({
           placeholder={placeholder ?? (isShare ? 'Say something about this…' : `What’s on your mind, ${firstName(author)}?`)}
           aria-label={TITLES[mode]}
           maxHeight={360}
-          onChange={(event) => setBody(event.target.value)}
+          {...mentions.inputProps}
+          onChange={(event) => {
+            setBody(event.target.value);
+            mentions.track(event.target);
+          }}
+          onPaste={(event) => {
+            const files = allowImages ? imageFiles(event.clipboardData?.items) : [];
+            if (files.length > 0) {
+              event.preventDefault();
+              attach(files);
+            }
+          }}
           onKeyDown={(event) => {
+            if (mentions.onKeyDown(event)) return;
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
               event.preventDefault();
               void submit();
             }
           }}
         />
+        {mentions.menu}
+        </div>
+
+        <AttachmentTray items={attachments.items} onRemove={attachments.remove} />
 
         <AnimatePresence initial={false}>
           {preview && body.trim() && (
@@ -156,7 +221,7 @@ export default function PostComposer({
             >
               <span className="cm-preview-label">Preview</span>
               <div className="cm-body">
-                <MathText text={body} />
+                <RichText text={body} />
               </div>
             </m.div>
           )}
@@ -167,6 +232,31 @@ export default function PostComposer({
         <div className="cm-toolbox" role="toolbar" aria-label="Formatting">
           <span className="cm-toolbox-label">Add to your post</span>
           <div>
+            {allowImages && (
+              <>
+                <button
+                  type="button"
+                  className="cm-icon-button is-photo"
+                  title={attachments.full ? `Up to ${MAX_POST_IMAGES} images` : 'Photo — or paste or drop an image'}
+                  aria-label="Attach images"
+                  disabled={attachments.full}
+                  onClick={() => picker.current?.click()}
+                >
+                  <ImagePlus size={19} aria-hidden="true" />
+                </button>
+                <input
+                  ref={picker}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  multiple
+                  hidden
+                  onChange={(event) => {
+                    attach(imageFiles(event.target.files));
+                    event.target.value = '';
+                  }}
+                />
+              </>
+            )}
             <button type="button" className="cm-icon-button" title="Inline math  $x^2$" aria-label="Insert inline math" onClick={() => wrap('$', '$', 'x^2')}>
               <Sigma size={19} aria-hidden="true" />
             </button>
@@ -203,8 +293,13 @@ export default function PostComposer({
         <span className={`cm-counter ${remaining < 0 ? 'is-over' : remaining < 300 ? 'is-near' : ''}`} aria-live="polite">
           {remaining < 300 ? `${remaining} characters left` : submitHint(SUBMIT[mode][0])}
         </span>
-        <button type="button" className="cm-button is-primary is-wide" onClick={() => void submit()} disabled={busy || empty || remaining < 0 || (mode === 'edit' && !dirty)}>
-          {busy ? SUBMIT[mode][1] : SUBMIT[mode][0]}
+        <button
+          type="button"
+          className="cm-button is-primary is-wide"
+          onClick={() => void submit()}
+          disabled={busy || empty || remaining < 0 || attachments.uploading || (mode === 'edit' && !dirty)}
+        >
+          {busy ? SUBMIT[mode][1] : attachments.uploading ? 'Uploading images…' : SUBMIT[mode][0]}
         </button>
       </footer>
 
@@ -225,7 +320,7 @@ export default function PostComposer({
                 <button type="button" className="cm-button is-quiet" onClick={() => setDiscarding(false)} autoFocus>
                   Keep editing
                 </button>
-                <button type="button" className="cm-button is-danger" onClick={onClose}>
+                <button type="button" className="cm-button is-danger" onClick={close}>
                   Discard
                 </button>
               </div>

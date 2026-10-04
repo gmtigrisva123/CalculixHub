@@ -15,6 +15,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import {
+  ArrowUp,
   Bookmark,
   CircleHelp,
   Hash,
@@ -42,12 +43,16 @@ import {
   type FeedView,
   type MutationResult,
 } from '../services/data/feed';
+import { useCommunityPresence, type PresentPerson } from '../services/data/live';
 import { duration, ease, spring, staggerDelay } from '../lib/motion';
+import { Lightbox } from './community/Media';
+import type { MentionPerson } from './community/Mentions';
 import PostCard, { type PostActions } from './community/PostCard';
 import PostComposer from './community/PostComposer';
 import { ReactorsDialog } from './community/Reactions';
+import SendDialog from './community/SendDialog';
 import { FormattingTips, ProblemFilter, TopContributors } from './community/Sidebar';
-import { authorName, firstName, isUuid, shareLink, shiftReaction } from './community/model';
+import { authorName, firstName, holdBackFresh, isUuid, newestCreatedAt, shareLink, shiftReaction } from './community/model';
 import { Avatar, ConfirmDialog, Dialog, NowContext, ToastProvider, copyText, nativeShare, useTicker, useToast } from './community/ui';
 import '../styles/community.css';
 
@@ -128,6 +133,17 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
   const [focus, setFocus] = useState<LinkTarget | null>(readLinkTarget);
   const [focusComment, setFocusComment] = useState<LinkTarget | null>(null);
   const [linked, setLinked] = useState<PostWithAuthor | null>(null);
+  const [watching, setWatching] = useState<string | null>(null);
+  const [sendTarget, setSendTarget] = useState<PostWithAuthor | null>(null);
+  const [lightbox, setLightbox] = useState<{ paths: string[]; index: number } | null>(null);
+  const [baseline, setBaseline] = useState<{ key: string; cutoff: string | null } | null>(null);
+
+  const present = useCommunityPresence(viewer, watching);
+  const viewersByPost = useMemo(() => {
+    const map = new Map<string, PresentPerson[]>();
+    for (const person of present) if (person.post) map.set(person.post, [...(map.get(person.post) ?? []), person]);
+    return map;
+  }, [present]);
 
   const inFlight = useRef(new Set<string>());
   const latest = useRef({ posts: feed.data, linked });
@@ -166,6 +182,29 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
   );
 
   const posts = useMemo(() => feed.data.map(withOverride), [feed.data, withOverride]);
+
+  // New posts from other people wait behind a "new posts" pill instead of
+  // pushing the feed down while it is being read. The baseline is the newest
+  // post on screen when this feed (problem, tab, account) first loaded.
+  const feedKey = `${problemFilter}:${view}:${viewerId ?? 'guest'}`;
+  useEffect(() => {
+    if (feed.loading || baseline?.key === feedKey) return;
+    setBaseline({ key: feedKey, cutoff: newestCreatedAt(feed.data) ?? new Date().toISOString() });
+  }, [feed.loading, feed.data, feedKey, baseline?.key]);
+  const { visible, fresh } = holdBackFresh(posts, baseline?.key === feedKey ? baseline.cutoff : null, viewerId);
+  const showFresh = () => {
+    setBaseline({ key: feedKey, cutoff: newestCreatedAt(feed.data) });
+    feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Everyone around the feed, for @mention suggestions and "Send in Messages".
+  const people = useMemo(() => {
+    const map = new Map<string, MentionPerson>();
+    for (const person of present) map.set(person.id, { id: person.id, username: person.username, display_name: person.name, avatar_url: person.avatar_url });
+    for (const post of feed.data) if (post.author && !map.has(post.author.id)) map.set(post.author.id, post.author);
+    if (viewerId) map.delete(viewerId);
+    return [...map.values()].filter((person) => person.username);
+  }, [present, feed.data, viewerId]);
   const linkedPost = linked && !feed.data.some((post) => post.id === linked.id) ? withOverride(linked) : null;
 
   // Thread counts and contributors come from the unfiltered feed, and are kept
@@ -198,6 +237,7 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
     if (target.commentId) {
       setOpenComments((set) => new Set(set).add(target.postId));
       setFocusComment(target);
+      setWatching(target.postId);
     }
     setHighlight(target.postId);
     window.setTimeout(() => document.getElementById(`post-${target.postId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
@@ -326,18 +366,26 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
       else setFocus({ postId, commentId: null });
     },
     openReactors: (target, id, counts) => setReactors({ target, id, counts }),
-    toggleComments: (post) =>
+    toggleComments: (post) => {
+      const opening = !openComments.has(post.id);
       setOpenComments((set) => {
         const next = new Set(set);
         if (next.has(post.id)) next.delete(post.id);
         else next.add(post.id);
         return next;
-      }),
+      });
+      setWatching((current) => (opening ? post.id : current === post.id ? null : current));
+    },
     refresh: (post) => void Promise.all([feed.reload(), refreshLinked(post.id)]),
     focusComposer: (post) => {
       setOpenComments((set) => new Set(set).add(post.id));
       setComposerSignals((signals) => ({ ...signals, [post.id]: (signals[post.id] ?? 0) + 1 }));
+      setWatching(post.id);
     },
+    sendInMessages: (post) => {
+      if (signedIn('send posts')) setSendTarget(post);
+    },
+    openMedia: (paths, index) => setLightbox({ paths, index }),
   };
 
   const openCreate = (options: { placeholder?: string; preview?: boolean } = {}) => {
@@ -348,12 +396,18 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
     setComposer({ mode: 'create', ...options });
   };
 
-  const submitComposer = async (body: string, problemId: string | null): Promise<MutationResult> => {
+  const submitComposer = async (body: string, problemId: string | null, images: string[]): Promise<MutationResult> => {
     if (!composer || !viewer) return { ok: false, error: 'Sign in to post.' };
 
     let result: MutationResult;
     if (composer.mode === 'edit') {
-      result = await updatePost({ postId: composer.post.id, body, problemId, isShare: Boolean(composer.post.shared_post_id) });
+      result = await updatePost({
+        postId: composer.post.id,
+        body,
+        problemId,
+        isShare: Boolean(composer.post.shared_post_id),
+        ...(schema === 'social' ? { images } : {}),
+      });
       if (result.ok) toast('Post updated');
       await refreshLinked(composer.post.id);
     } else {
@@ -362,6 +416,7 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
         body,
         problemId,
         sharedPostId: composer.mode === 'share' ? composer.original.id : null,
+        images,
       });
       if (result.ok) {
         toast(composer.mode === 'share' ? 'Shared to the community feed' : 'Your post is live');
@@ -398,6 +453,8 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
       composerSignal={composerSignals[post.id] ?? 0}
       focusCommentId={focusComment?.postId === post.id ? focusComment.commentId : null}
       highlighted={highlight === post.id}
+      viewers={viewersByPost.get(post.id) ?? []}
+      mentionCandidates={people}
       actions={actions}
     />
   );
@@ -415,6 +472,25 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
             <MessageSquare size={26} aria-hidden="true" /> Community Solutions
           </h1>
           <p className="cm-lede">Share approaches, ask for a nudge, and react to each other&rsquo;s solutions.</p>
+          <AnimatePresence>
+            {present.length > 0 && (
+              <m.p
+                className="cm-online"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0, transition: spring.snappy }}
+                exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
+                title={present.map((person) => person.name).join(', ')}
+              >
+                <span className="cm-live-dot" aria-hidden="true" />
+                <span className="cm-online-faces" aria-hidden="true">
+                  {present.slice(0, 5).map((person) => (
+                    <Avatar key={person.id} author={{ id: person.id, display_name: person.name, username: person.username, avatar_url: person.avatar_url }} size={24} />
+                  ))}
+                </span>
+                {present.length === 1 ? `${present[0]!.name} is here now` : `${present.length} learners are here now`}
+              </m.p>
+            )}
+          </AnimatePresence>
         </header>
 
         <div className="cm-layout">
@@ -531,7 +607,7 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
               </div>
             )}
 
-            {!initialLoading && !feed.error && posts.length === 0 && (
+            {!initialLoading && !feed.error && visible.length === 0 && (
               <div className="cm-card cm-empty">
                 <span className="cm-empty-icon">{view === 'saved' ? <Bookmark size={26} aria-hidden="true" /> : <MessageCircle size={26} aria-hidden="true" />}</span>
                 <h2>{view === 'saved' ? 'Nothing saved yet' : view === 'mine' ? 'You haven’t posted yet' : selectedTitle ? 'No discussions of this problem yet' : 'No discussions yet'}</h2>
@@ -548,9 +624,30 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
               </div>
             )}
 
+            <AnimatePresence>
+              {fresh.length > 0 && (
+                <m.div
+                  className="cm-fresh-wrap"
+                  initial={{ opacity: 0, y: -12, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+                  exit={{ opacity: 0, y: -8, transition: { duration: duration.fast, ease: ease.exit } }}
+                >
+                  <button type="button" className="cm-fresh" onClick={showFresh}>
+                    <ArrowUp size={16} aria-hidden="true" />
+                    <span className="cm-fresh-faces" aria-hidden="true">
+                      {[...new Map(fresh.map((post) => [post.author_id, post.author])).values()].slice(0, 3).map((author, index) => (
+                        <Avatar key={author?.id ?? index} author={author} size={22} />
+                      ))}
+                    </span>
+                    {fresh.length === 1 ? '1 new post' : `${fresh.length} new posts`}
+                  </button>
+                </m.div>
+              )}
+            </AnimatePresence>
+
             <div className="cm-post-list">
               <AnimatePresence initial={false} mode="popLayout">
-                {posts.map((post, index) => (
+                {visible.map((post, index) => (
                   <m.div
                     key={post.id}
                     layout="position"
@@ -564,7 +661,7 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
               </AnimatePresence>
             </div>
 
-            {posts.length > 0 && (
+            {visible.length > 0 && (
               <div className="cm-feed-end">
                 {hasMore ? (
                   <button
@@ -618,6 +715,9 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
               sharing={composer.mode === 'share' || (composer.mode === 'edit' && Boolean(composer.post.shared_post_id))}
               placeholder={composer.mode === 'create' ? composer.placeholder : undefined}
               initialPreview={composer.mode === 'create' && Boolean(composer.preview)}
+              initialImages={composer.mode === 'edit' ? composer.post.images ?? [] : []}
+              allowImages={schema === 'social'}
+              mentionCandidates={people}
               onSubmit={submitComposer}
               onClose={() => setComposer(null)}
             />
@@ -640,6 +740,22 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
         <AnimatePresence>
           {reactors && <ReactorsDialog key="reactors" target={reactors.target} id={reactors.id} counts={reactors.counts} schema={schema} onClose={() => setReactors(null)} />}
         </AnimatePresence>
+
+        <AnimatePresence>
+          {sendTarget && viewer && (
+            <SendDialog
+              key="send"
+              post={sendTarget}
+              original={originalOf(sendTarget)}
+              viewer={viewer}
+              suggestions={people}
+              problemTitle={problemTitle(originalOf(sendTarget).problem_id)}
+              onClose={() => setSendTarget(null)}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>{lightbox && <Lightbox key="lightbox" paths={lightbox.paths} start={lightbox.index} onClose={() => setLightbox(null)} />}</AnimatePresence>
 
         <AnimatePresence>
           {filterOpen && (

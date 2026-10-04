@@ -9,7 +9,8 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { EyeOff } from 'lucide-react';
 import type { SharedPost } from '../../services/database.types';
-import MathText from '../MathText';
+import { MediaGrid } from './Media';
+import RichText from './RichText';
 import { authorName, fullTimestamp, postAge } from './model';
 import { Avatar, useNow } from './ui';
 
@@ -73,7 +74,7 @@ export function ExpandableBody({
         className={`cm-body ${large ? 'is-large' : ''} ${expanded ? '' : 'is-clamped'} ${overflowing && !expanded ? 'is-overflowing' : ''}`}
         style={expanded ? undefined : ({ '--cm-lines': lines, maxHeight: cut ?? undefined } as React.CSSProperties)}
       >
-        <MathText text={text} />
+        <RichText text={text} />
       </div>
       {overflowing && !expanded && (
         <button type="button" className="cm-see-more" onClick={() => setExpanded(true)}>
@@ -93,11 +94,13 @@ export function SharedEmbed({
   original,
   problemTitle,
   onOpen,
+  onOpenMedia,
 }: {
   /** Null when the original is gone or hidden from this viewer. */
   original: SharedPost | null | undefined;
   problemTitle?: string | null;
   onOpen?: (id: string) => void;
+  onOpenMedia?: (paths: string[], index: number) => void;
 }) {
   const now = useNow();
 
@@ -147,6 +150,16 @@ export function SharedEmbed({
         <div className="cm-shared-head">{head}</div>
       )}
       <ExpandableBody text={original.body} lines={5} className="cm-shared-body" />
+      {(original.images?.length ?? 0) > 0 && (
+        <div className="cm-shared-media">
+          <MediaGrid
+            paths={original.images!}
+            label={authorName(original.author)}
+            compact
+            onOpen={(index) => (onOpenMedia ? onOpenMedia(original.images!, index) : onOpen?.(original.id))}
+          />
+        </div>
+      )}
     </div>
   );
 }

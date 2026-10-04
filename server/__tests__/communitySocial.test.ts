@@ -270,6 +270,113 @@ describe('removing comments', () => {
   });
 });
 
+describe('images', () => {
+  it('accepts up to four images from the author’s own folder, and a post that is only a picture', async () => {
+    const paths = [1, 2, 3, 4].map((n) => `${ada}/proof-${n}.webp`);
+    const [row] = await db.asUser<{ id: string }>(ada, `insert into public.posts (author_id, body, images) values ($1, '', $2) returning id`, [ada, paths]);
+    const [stored] = await db.query<{ images: string[] }>('select images from public.posts where id = $1', [row!.id]);
+    expect(stored!.images).toEqual(paths);
+  });
+
+  it('refuses a fifth image, a file in someone else’s folder, or a path that climbs out of it', async () => {
+    const five = [1, 2, 3, 4, 5].map((n) => `${ada}/p${n}.png`);
+    await expect(db.asUser(ada, `insert into public.posts (author_id, body, images) values ($1, 'x', $2)`, [ada, five])).rejects.toThrow(/check constraint/i);
+    await expect(db.asUser(ada, `insert into public.posts (author_id, body, images) values ($1, 'x', $2)`, [ada, [`${bob}/theirs.png`]])).rejects.toThrow(/check constraint/i);
+    await expect(db.asUser(ada, `insert into public.posts (author_id, body, images) values ($1, 'x', $2)`, [ada, [`${ada}/../${bob}/x.png`]])).rejects.toThrow(/check constraint/i);
+  });
+
+  it('lets a comment carry one image, with or without words', async () => {
+    const id = await post(ada, 'Picture replies');
+    const [c] = await db.asUser<{ id: string }>(bob, `insert into public.comments (post_id, author_id, body, images) values ($1, $2, '', $3) returning id`, [id, bob, [`${bob}/working.jpg`]]);
+    expect(c!.id).toBeTruthy();
+    await expect(
+      db.asUser(bob, `insert into public.comments (post_id, author_id, body, images) values ($1, $2, 'two', $3)`, [id, bob, [`${bob}/a.jpg`, `${bob}/b.jpg`]]),
+    ).rejects.toThrow(/check constraint/i);
+    await expect(db.asUser(bob, `insert into public.comments (post_id, author_id, body) values ($1, $2, '  ')`, [id, bob])).rejects.toThrow(/check constraint/i);
+  });
+
+  it('never lets the post author swap the images on someone else’s comment', async () => {
+    const id = await post(ada, 'Moderated pictures');
+    const [c] = await db.asUser<{ id: string }>(bob, `insert into public.comments (post_id, author_id, body, images) values ($1, $2, 'mine', $3) returning id`, [id, bob, [`${bob}/mine.png`]]);
+    await db.asUser(ada, 'select public.remove_comment($1)', [c!.id]);
+    const [row] = await db.query<{ images: string[] }>('select images from public.comments where id = $1', [c!.id]);
+    expect(row!.images).toEqual([`${bob}/mine.png`]);
+  });
+});
+
+describe('community notifications', () => {
+  const inbox = (user: string, type: string) =>
+    db.query<{ actor_id: string; entity_type: string; entity_id: string; post_id: string; comment_id: string | null; body: string | null }>(
+      'select actor_id, entity_type, entity_id, post_id, comment_id, body from public.notifications where user_id = $1 and type = $2 order by created_at',
+      [user, type],
+    );
+
+  it('tells a comment’s author about a reply, linking to the reply', async () => {
+    const id = await post(ada, 'Reply notifications');
+    const top = await comment(bob, id, 'First thought');
+    const reply = await comment(eve, id, 'A reply', top);
+    const rows = (await inbox(bob, 'comment_reply')).filter((row) => row.comment_id === reply);
+    expect(rows).toEqual([{ actor_id: eve, entity_type: 'comment', entity_id: reply, post_id: id, comment_id: reply, body: 'A reply' }]);
+  });
+
+  it('tells people they were @mentioned, once, and only for mentions an edit adds', async () => {
+    const id = await post(ada, 'Hey @feed_bob, look at this');
+    expect((await inbox(bob, 'mention')).filter((row) => row.post_id === id)).toHaveLength(1);
+
+    await db.asUser(ada, `update public.posts set body = 'Hey @feed_bob and @FEED_EVE, look' where id = $1`, [id]);
+    expect((await inbox(bob, 'mention')).filter((row) => row.post_id === id)).toHaveLength(1);
+    expect((await inbox(eve, 'mention')).filter((row) => row.post_id === id)).toHaveLength(1);
+
+    const c = await comment(eve, id, 'Agreed @feed_ada! (not mail@feed_bob.com)');
+    expect((await inbox(ada, 'mention')).filter((row) => row.comment_id === c)).toHaveLength(1);
+    expect((await inbox(bob, 'mention')).filter((row) => row.comment_id === c)).toHaveLength(0);
+  });
+
+  it('does not tell someone about mentioning themselves, nor double up on a reply', async () => {
+    const id = await post(ada, 'Self mention');
+    const top = await comment(bob, id, 'Top');
+    const reply = await comment(eve, id, '@feed_bob replying to you', top);
+    expect((await inbox(bob, 'mention')).filter((row) => row.comment_id === reply)).toHaveLength(0);
+    expect((await inbox(bob, 'comment_reply')).filter((row) => row.comment_id === reply)).toHaveLength(1);
+
+    const own = await post(eve, 'Note to self @feed_eve');
+    expect((await inbox(eve, 'mention')).filter((row) => row.post_id === own)).toHaveLength(0);
+  });
+
+  it('tells the original author about a share, and a comment’s author about a reaction', async () => {
+    const original = await post(ada, 'Share notifications');
+    const share = await post(bob, '', { shared: original });
+    expect((await inbox(ada, 'post_share')).filter((row) => row.entity_id === share)).toEqual([
+      { actor_id: bob, entity_type: 'post', entity_id: share, post_id: share, comment_id: null, body: null },
+    ]);
+
+    const c = await comment(ada, original, 'React to me');
+    await db.asUser(eve, `insert into public.comment_likes (comment_id, user_id, reaction) values ($1, $2, 'love')`, [c, eve]);
+    expect((await inbox(ada, 'comment_like')).filter((row) => row.comment_id === c)).toHaveLength(1);
+  });
+
+  it('does not hand a private community’s words to someone outside it', async () => {
+    const [community] = await db.asUser<{ id: string }>(ada, `insert into public.communities (slug, name, is_private, created_by) values ('feed-secret', 'Secret', true, $1) returning id`, [ada]);
+    await db.asUser(ada, 'insert into public.community_members (community_id, user_id, role) values ($1, $2, $3)', [community!.id, ada, 'owner']);
+    const secret = await post(ada, 'Members only, @feed_eve', { community: community!.id });
+    expect((await inbox(eve, 'mention')).filter((row) => row.post_id === secret)).toHaveLength(0);
+
+    await db.asUser(eve, 'insert into public.community_members (community_id, user_id) values ($1, $2)', [community!.id, eve]);
+    const shared = await post(ada, 'Now you are in, @feed_eve', { community: community!.id });
+    expect((await inbox(eve, 'mention')).filter((row) => row.post_id === shared)).toHaveLength(1);
+  });
+
+  it('cannot be forged through the trigger helpers', async () => {
+    await expect(
+      db.asUser(eve, `select public.emit_notification($1, $2, 'system', null, null, 'forged')`, [ada, bob]),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(
+      db.asUser(eve, `select public.emit_community_notification($1, $2, 'mention', 'post', gen_random_uuid(), null, null, 'forged')`, [ada, bob]),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(db.asUser(eve, `select * from public.mentioned_users('@feed_ada')`)).rejects.toThrow(/permission denied/i);
+  });
+});
+
 describe('SQL Editor setup', () => {
   const setup = () => readFileSync(new URL('../../supabase/community-social-setup.sql', import.meta.url), 'utf8');
   const migration = () => readFileSync(new URL('../../supabase/migrations/20261004000100_community_social.sql', import.meta.url), 'utf8');

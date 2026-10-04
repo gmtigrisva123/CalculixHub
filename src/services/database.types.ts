@@ -88,6 +88,8 @@ export interface PostRow {
   edited_at?: string | null;
   shared_post_id?: string | null;
   share_count?: number;
+  /** Storage paths in the `community-media` bucket. */
+  images?: string[];
 }
 
 export interface CommentRow {
@@ -100,6 +102,7 @@ export interface CommentRow {
   created_at: string;
   parent_id?: string | null;
   edited_at?: string | null;
+  images?: string[];
 }
 
 export type NotificationType =
@@ -108,7 +111,10 @@ export type NotificationType =
   | 'comment_like'
   | 'post_comment'
   | 'message'
-  | 'system';
+  | 'system'
+  | 'comment_reply'
+  | 'mention'
+  | 'post_share';
 
 export interface NotificationRow {
   id: string;
@@ -120,6 +126,9 @@ export interface NotificationRow {
   body: string | null;
   read_at: string | null;
   created_at: string;
+  /** Where a community notification opens: the post, and the comment within it. */
+  post_id?: string | null;
+  comment_id?: string | null;
 }
 
 export interface MessageRow {
@@ -145,7 +154,7 @@ export type AuthorSummary = Pick<ProfileRow, 'id' | 'username' | 'display_name' 
 export type ReactionCounts = Partial<Record<Reaction, number>>;
 
 /** The original a share points at, as the share renders it. */
-export type SharedPost = Pick<PostRow, 'id' | 'author_id' | 'problem_id' | 'body' | 'deleted_at' | 'created_at'> & {
+export type SharedPost = Pick<PostRow, 'id' | 'author_id' | 'problem_id' | 'body' | 'deleted_at' | 'created_at' | 'images'> & {
   author: AuthorSummary | null;
 };
 
