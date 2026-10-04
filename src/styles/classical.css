@@ -154,6 +154,16 @@
     box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.16);
   }
 
+  /* Editorial numerals for KPI-style readouts — a stat's headline value, not its label. */
+  .cx-stat-value {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+
   .cx-tint-algebra { --cx-tint: color-mix(in srgb, var(--hu-amber-500) 8%, transparent); border-color: color-mix(in srgb, var(--hu-amber-500) 34%, transparent); }
   .cx-tint-geometry { --cx-tint: color-mix(in srgb, var(--pf) 7%, transparent); border-color: color-mix(in srgb, var(--pf) 34%, transparent); }
   .cx-tint-combinatorics { --cx-tint: color-mix(in srgb, var(--hu-violet-500) 6%, transparent); border-color: color-mix(in srgb, var(--hu-violet-500) 32%, transparent); }

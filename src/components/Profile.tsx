@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { m } from 'motion/react';
-import { LogOut, Trophy, Award, User, ShieldCheck, Calendar, MapPin } from 'lucide-react';
+import { LogOut, Trophy, Award, User, ShieldCheck, Calendar, MapPin, Sparkles } from 'lucide-react';
 import { UserStats, Problem } from '../../shared/types';
 import { getRankForPoints, nextRankFor } from '../lib/topics';
 import { spring } from '../lib/motion';
@@ -50,7 +50,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           whileTap={{ scale: 0.95 }}
           className="cx-btn cx-btn-secondary px-4 py-2 rounded-xl text-xs flex items-center gap-2 border border-line hover:bg-surface-sunken"
         >
-          <LogOut className="w-4 h-4 text-rose-500" /> Log Out
+          <LogOut className="w-4 h-4 text-rose-500" /> Sign out
         </m.button>
       </div>
 
@@ -58,7 +58,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
         <div className="cx-glass-panel p-5 space-y-2">
           <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Rank Tier</span>
-          <span className="block font-serif text-2xl font-bold text-content">{rank.name}</span>
+          <span className="block cx-stat-value text-3xl text-content">{rank.name}</span>
           <span className="block text-xs font-mono text-content-subtle">
             {nextTier ? `${nextTier.minPoints - userStats.points} pts to ${nextTier.name}` : 'Top Rank Reached'}
           </span>
@@ -66,7 +66,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
         <div className="cx-glass-panel p-5 space-y-2">
           <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Total Points</span>
-          <span className="block font-serif text-2xl font-bold text-indigo-500">
+          <span className="block cx-stat-value text-3xl text-indigo-500">
             <AnimatedNumber value={userStats.points} />
           </span>
           <span className="block text-xs font-mono text-content-subtle">Earned via solves &amp; contests</span>
@@ -74,7 +74,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
         <div className="cx-glass-panel p-5 space-y-2">
           <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Placement Tier</span>
-          <span className="block font-serif text-2xl font-bold text-content">{userStats.level || 'Unplaced'}</span>
+          <span className="block cx-stat-value text-3xl text-content">{userStats.level || 'Unplaced'}</span>
           <span className="block text-xs font-mono text-content-subtle">
             {userStats.level ? 'Set by placement assessment' : 'Placement assessment required'}
           </span>
@@ -82,7 +82,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
         <div className="cx-glass-panel p-5 space-y-2">
           <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Problems Solved</span>
-          <span className="block font-serif text-2xl font-bold text-emerald-500">
+          <span className="block cx-stat-value text-3xl text-emerald-500">
             <AnimatedNumber value={solvedQuestions.length} />
           </span>
           <span className="block text-xs font-mono text-content-subtle">From your saved practice</span>
@@ -134,20 +134,34 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             <StaggerItem
               key={b.id}
               index={index}
-              className={`p-5 rounded-2xl border transition-all ${
+              className={`relative overflow-hidden p-5 rounded-2xl border transition-all duration-300 ${
                 b.unlocked
-                  ? 'cx-glass-panel border-amber-500/40 bg-amber-500/10'
+                  ? 'cx-glass-panel border-amber-500/50 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent shadow-[0_10px_30px_-10px_rgba(245,158,11,0.4)] hover:border-amber-500/70 hover:shadow-[0_14px_38px_-8px_rgba(245,158,11,0.55)]'
                   : 'border-dashed border-line bg-surface-sunken/30 opacity-60'
               }`}
             >
-              <span className="text-2xl block">{b.icon}</span>
-              <h4 className="font-bold text-content text-base mt-3">{b.title}</h4>
-              <p className="text-xs text-content-muted leading-relaxed mt-1 font-mono">{b.desc}</p>
+              {b.unlocked && (
+                <span
+                  className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-50 blur-2xl"
+                  style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.85), transparent 70%)' }}
+                  aria-hidden="true"
+                />
+              )}
               <span
-                className={`cx-tag text-[9px] mt-3 inline-block font-mono font-bold ${
-                  b.unlocked ? 'cx-tag-accent' : 'cx-tag-neutral'
+                className={`relative flex h-12 w-12 items-center justify-center rounded-xl text-2xl ${
+                  b.unlocked ? 'border-2 border-amber-400/60 bg-gradient-to-tr from-amber-500/30 to-amber-300/10 shadow-md shadow-amber-500/30' : ''
                 }`}
               >
+                {b.icon}
+              </span>
+              <h4 className="relative font-bold text-content text-base mt-3">{b.title}</h4>
+              <p className="relative text-xs text-content-muted leading-relaxed mt-1 font-mono">{b.desc}</p>
+              <span
+                className={`cx-tag relative text-[9px] mt-3 inline-flex items-center gap-1 font-mono font-bold ${
+                  b.unlocked ? 'border-amber-500/40 text-amber-600 dark:text-amber-300' : 'cx-tag-neutral'
+                }`}
+              >
+                {b.unlocked && <Sparkles className="h-2.5 w-2.5" />}
                 {b.unlocked ? 'Unlocked' : 'Locked'}
               </span>
             </StaggerItem>
