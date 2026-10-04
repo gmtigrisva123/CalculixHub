@@ -16,7 +16,7 @@ import { MAX_POST_IMAGES } from '../../services/data/media';
 import { duration, ease } from '../../lib/motion';
 import { AttachmentTray, imageFiles, useAttachments } from './Media';
 import { useMentions, type MentionPerson } from './Mentions';
-import { authorName, firstName } from './model';
+import { authorName, disambiguateTitles, firstName } from './model';
 import { SharedEmbed, isLargeText } from './PostBody';
 import RichText from './RichText';
 import { AutoTextarea, Avatar, Dialog, insertAtCaret } from './ui';
@@ -90,7 +90,11 @@ export default function PostComposer({
   const attachments = useAttachments(author?.id ?? null, MAX_POST_IMAGES, initialImages);
   const mentions = useMentions({ value: body, setValue: setBody, field, candidates: mentionCandidates, selfId: author?.id ?? null });
 
-  const sortedProblems = useMemo(() => [...problems].sort((a, b) => a.title.localeCompare(b.title)), [problems]);
+  const problemTitles = useMemo(() => disambiguateTitles(problems), [problems]);
+  const sortedProblems = useMemo(
+    () => [...problems].sort((a, b) => (problemTitles.get(a.id) ?? a.title).localeCompare(problemTitles.get(b.id) ?? b.title)),
+    [problems, problemTitles],
+  );
   const imagesChanged = attachments.items.length !== initialImages.length || attachments.paths.some((path, index) => path !== initialImages[index]);
   const dirty = body !== initialBody || problemId !== (initialProblemId ?? '') || imagesChanged;
   const isShare = mode === 'share' || sharing;
@@ -169,7 +173,7 @@ export default function PostComposer({
                 <option value="">Open conversation</option>
                 {sortedProblems.map((problem) => (
                   <option key={problem.id} value={problem.id}>
-                    {problem.title}
+                    {problemTitles.get(problem.id) ?? problem.title}
                   </option>
                 ))}
               </select>

@@ -3,6 +3,7 @@ import type { CommentWithAuthor } from '../../services/database.types';
 import {
   compactAge,
   compactCount,
+  disambiguateTitles,
   initials,
   isUuid,
   postAge,
@@ -179,5 +180,19 @@ describe('live feed', () => {
     expect(holdBackFresh(posts, null, 'me').fresh).toEqual([]);
     expect(newestCreatedAt(posts)).toBe('2026-10-04T10:05:00Z');
     expect(newestCreatedAt([])).toBeNull();
+  });
+});
+
+describe('disambiguating problem titles', () => {
+  it('tags only the titles that collide across levels, leaving unique ones alone', () => {
+    const problems = [
+      { id: '1', title: 'A circle in disguise', level: 'Foundation' },
+      { id: '2', title: 'A circle in disguise', level: 'Advanced' },
+      { id: '3', title: 'The lonely triangle', level: 'Foundation' },
+    ];
+    const titles = disambiguateTitles(problems);
+    expect(titles.get('1')).toBe('A circle in disguise (Foundation)');
+    expect(titles.get('2')).toBe('A circle in disguise (Advanced)');
+    expect(titles.get('3')).toBe('The lonely triangle');
   });
 });

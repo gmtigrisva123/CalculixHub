@@ -52,7 +52,7 @@ import PostComposer from './community/PostComposer';
 import { ReactorsDialog } from './community/Reactions';
 import SendDialog from './community/SendDialog';
 import { FormattingTips, ProblemFilter, TopContributors } from './community/Sidebar';
-import { authorName, firstName, holdBackFresh, isUuid, newestCreatedAt, shareLink, shiftReaction } from './community/model';
+import { authorName, disambiguateTitles, firstName, holdBackFresh, isUuid, newestCreatedAt, shareLink, shiftReaction } from './community/model';
 import { Avatar, ConfirmDialog, Dialog, NowContext, ToastProvider, copyText, nativeShare, useTicker, useToast } from './community/ui';
 import '../styles/community.css';
 
@@ -150,7 +150,7 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
   latest.current = { posts: feed.data, linked };
   const feedTop = useRef<HTMLDivElement>(null);
 
-  const titles = useMemo(() => new Map(problems.map((problem) => [problem.id, problem.title])), [problems]);
+  const titles = useMemo(() => disambiguateTitles(problems), [problems]);
   const problemTitle = useCallback((id: string | null | undefined) => (id ? titles.get(id) ?? null : null), [titles]);
 
   // A shared link is read once; drop it from the address bar so coming back

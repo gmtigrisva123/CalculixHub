@@ -10,7 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { Award, Hash, Layers, Search, Sigma } from 'lucide-react';
 import type { Problem } from '../../../shared/types';
 import type { AuthorSummary } from '../../services/database.types';
-import { authorName, plural } from './model';
+import { authorName, disambiguateTitles, plural } from './model';
 import { Avatar } from './ui';
 
 /**
@@ -31,6 +31,7 @@ export function ProblemFilter({
   autoFocus?: boolean;
 }) {
   const [query, setQuery] = useState('');
+  const titles = useMemo(() => disambiguateTitles(problems), [problems]);
   const matching = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     return problems
@@ -68,7 +69,7 @@ export function ProblemFilter({
               <span className="cm-problem-icon">
                 <Hash size={16} aria-hidden="true" />
               </span>
-              <span className="cm-problem-name">{problem.title}</span>
+              <span className="cm-problem-name">{titles.get(problem.id) ?? problem.title}</span>
               {(counts.get(problem.id) ?? 0) > 0 && <span className="cm-problem-count">{counts.get(problem.id)}</span>}
             </button>
           </li>

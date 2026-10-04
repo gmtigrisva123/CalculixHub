@@ -297,3 +297,15 @@ export function holdBackFresh<T extends { created_at: string; author_id: string 
 export function newestCreatedAt(posts: Array<{ created_at: string }>): string | null {
   return posts.reduce<string | null>((newest, post) => (!newest || post.created_at > newest ? post.created_at : newest), null);
 }
+
+/**
+ * Problem titles are only unique within a level, not across the whole
+ * catalog — e.g. "A circle in disguise" exists at both Foundation and
+ * Advanced. Appends the level only to the titles that actually collide, so
+ * the common case stays as plain as before.
+ */
+export function disambiguateTitles<T extends { id: string; title: string; level: string }>(problems: T[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const problem of problems) counts.set(problem.title, (counts.get(problem.title) ?? 0) + 1);
+  return new Map(problems.map((problem) => [problem.id, (counts.get(problem.title) ?? 0) > 1 ? `${problem.title} (${problem.level})` : problem.title]));
+}
