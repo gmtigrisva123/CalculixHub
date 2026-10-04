@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bell, ArrowLeft, ArrowUpRight, BookOpen, Check, ChevronRight, Command, Flame, Menu, Search, Smartphone, Sparkles, X } from 'lucide-react';
+import { Bell, ArrowUpRight, BookOpen, Check, ChevronRight, Command, Flame, Menu, Search, Smartphone, Sparkles, X } from 'lucide-react';
 import { NAV_ITEMS, TAB_BAR_ITEMS, type TabKey } from '../lib/navigation';
 import ThemeToggle from './ThemeToggle';
 import { useAuth } from '../context/AuthContext';
@@ -15,11 +15,10 @@ type Props = {
   streak: number;
   online: boolean;
   pendingGrades: number;
-  onLogout: () => void;
   children: ReactNode;
 };
 
-export default function WorkspaceShell({ activeTab, onSelect, name, points, streak, online, pendingGrades, onLogout, children }: Props) {
+export default function WorkspaceShell({ activeTab, onSelect, name, points, streak, online, pendingGrades, children }: Props) {
   const {user}=useAuth();
   const notices=useNotifications(user?.id??null);
   const [connection,setConnection]=useState('Connecting');
@@ -76,7 +75,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
         <p className="workspace-nav-label">PERSONAL</p>
         <nav>{secondary.map(({ key, label, icon: Icon }) => <button key={key} className="workspace-nav-item" aria-current={activeTab === key ? 'page' : undefined} onClick={() => navigate(key)}><Icon size={19} /><span>{label}</span></button>)}</nav>
         <a className="workspace-pocket" href="/?preview=ios"><span><Smartphone size={22} /><ArrowUpRight size={17} /></span><strong>A question for the way.</strong><p>A little space to learn, wherever you are.</p><small>Try the iPhone prototype <ChevronRight size={13} /></small></a>
-        <div className="workspace-sidebar-bottom"><button className="workspace-user" onClick={() => navigate('profile')}><span className="workspace-avatar">{name.slice(0, 2).toUpperCase()}</span><span><strong>{name}</strong><small>Your learning journey</small></span><ChevronRight size={16} /></button><button className="workspace-exit" onClick={onLogout}><ArrowLeft size={14} /> Back to welcome</button></div>
+        <div className="workspace-sidebar-bottom"><button className="workspace-user" onClick={() => navigate('profile')}><span className="workspace-avatar">{name.slice(0, 2).toUpperCase()}</span><span><strong>{name}</strong><small>Your learning journey</small></span><ChevronRight size={16} /></button></div>
       </aside>
       {mobileMenu && <button className="workspace-menu-backdrop" aria-label="Close navigation" onClick={() => setMobileMenu(false)} />}
       <div className="workspace-body">

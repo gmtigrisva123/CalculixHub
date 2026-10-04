@@ -99,7 +99,6 @@ button:not(:disabled), a, summary, select { cursor: pointer; }
 .workspace-user strong { font-size: 11px; display: block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-user small { display: block; font-size: 9px; margin-top: 3px; color: var(--ct-subtle); }
 .workspace-user > svg { margin-left: auto; color: var(--ct-subtle); }
-.workspace-exit { display: flex; gap: 8px; margin: 15px 0 0 8px; align-items: center; font-size: 10px; color: var(--ct-subtle); }
 .workspace-body { min-width: 0; flex: 1; }
 .workspace-topbar { height: 80px; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; gap: 20px; border-bottom: 1px solid var(--ln); background: var(--sf-raised); }
 .workspace-breadcrumb { display: flex; align-items: center; gap: 12px; font-size: 11px; white-space: nowrap; }
@@ -188,7 +187,6 @@ body { font-family:'DM Sans','Geist',sans-serif; }
 .workspace-pocket small { font-size:11px; }
 .workspace-user strong { font-size:14px; }
 .workspace-user small { font-size:12px; }
-.workspace-exit { font-size:12px; }
 .workspace-breadcrumb { font-size:14px; }
 .workspace-search { font-size:13px; }
 .workspace-streak { font-size:13px; }

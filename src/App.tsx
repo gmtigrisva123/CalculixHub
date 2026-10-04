@@ -320,7 +320,7 @@ function LearningApp() {
       <WorkspaceShell activeTab={activeTab} onSelect={selectTab}
         name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
         points={userStats.points} streak={userStats.streak} online={online}
-        pendingGrades={pendingGrades} onLogout={handleLogout}>
+        pendingGrades={pendingGrades}>
         {activeTab !== 'archive' && catalogError && <p role="alert" className="arena-notice">{catalogError}</p>}
         {activeTab !== 'archive' && learner.error && <div role="alert" className="arena-notice">{learner.error}</div>}
         {activeTab !== 'archive' && ranking.error && <div role="alert" className="arena-notice">{ranking.error}</div>}
