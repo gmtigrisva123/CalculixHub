@@ -11,3 +11,14 @@ Verification uses PostgreSQL/PGlite: first application; repeated application wit
 Reference: [PostgreSQL error codes](https://www.postgresql.org/docs/15/errcodes-appendix.html), [CREATE POLICY](https://www.postgresql.org/docs/17/sql-createpolicy.html).
 
 After Admin/Arena setup, run `supabase/realtime-setup.sql` to enable the current application’s progress snapshot, private direct conversations, learner preferences and realtime invalidations. This file is also transactional and safe to rerun. See `docs/realtime-audit.md` for data sources and verification limits.
+
+Then run `supabase/community-social-setup.sql` to turn Community Solutions into a full social feed:
+
+- reactions (like, love, care, haha, wow, sad, angry) on posts and comments, and "Edited" labels stamped by the database;
+- sharing a post to the feed, one level of threaded replies, and letting a post's author remove comments on it;
+- images on posts (up to 4) and comments (1), in a public `community-media` Storage bucket where each learner may write only to their own folder (5 MB per file, PNG/JPEG/WebP/GIF);
+- notifications for replies, @mentions, shares and comment reactions, each linking to the exact post or comment.
+
+It also closes a hole in the core notifications setup: `emit_notification` was callable as an RPC, which let any client write a notification "from" anyone to anyone. Only database triggers can call it now.
+
+The file is transactional, safe to rerun and preserves existing posts, comments and likes (existing likes become "like" reactions). It adds columns, triggers, two views, a few functions, the bucket and its policies, without redefining anything from the core files, so rerunning `core-setup.sql` afterwards does not undo it. Until it is applied, the Community screen keeps working with likes, flat comments, saving, editing and deleting, and simply does not offer the features that need the new columns. Live presence ("here now", "viewing") and "is writing a comment" use Realtime Presence and Broadcast, which need no SQL.

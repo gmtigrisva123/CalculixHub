@@ -67,6 +67,8 @@ export interface LeaderboardRow {
   accuracy_pct: number | null;
 }
 
+export type Reaction = 'like' | 'love' | 'care' | 'haha' | 'wow' | 'sad' | 'angry';
+
 export interface PostRow {
   id: string;
   author_id: string;
@@ -78,6 +80,16 @@ export interface PostRow {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * The columns below arrive with `20261004000100_community_social.sql`. They
+   * are optional because the client keeps working against a database that has
+   * not had that migration applied yet.
+   */
+  edited_at?: string | null;
+  shared_post_id?: string | null;
+  share_count?: number;
+  /** Storage paths in the `community-media` bucket. */
+  images?: string[];
 }
 
 export interface CommentRow {
@@ -88,6 +100,9 @@ export interface CommentRow {
   like_count: number;
   deleted_at: string | null;
   created_at: string;
+  parent_id?: string | null;
+  edited_at?: string | null;
+  images?: string[];
 }
 
 export type NotificationType =
@@ -96,7 +111,10 @@ export type NotificationType =
   | 'comment_like'
   | 'post_comment'
   | 'message'
-  | 'system';
+  | 'system'
+  | 'comment_reply'
+  | 'mention'
+  | 'post_share';
 
 export interface NotificationRow {
   id: string;
@@ -108,6 +126,9 @@ export interface NotificationRow {
   body: string | null;
   read_at: string | null;
   created_at: string;
+  /** Where a community notification opens: the post, and the comment within it. */
+  post_id?: string | null;
+  comment_id?: string | null;
 }
 
 export interface MessageRow {
@@ -127,16 +148,36 @@ export interface ConversationRow {
   created_at: string;
 }
 
+export type AuthorSummary = Pick<ProfileRow, 'id' | 'username' | 'display_name' | 'avatar_url' | 'level'>;
+
+/** How many of each reaction something has received. Missing keys are zero. */
+export type ReactionCounts = Partial<Record<Reaction, number>>;
+
+/** The original a share points at, as the share renders it. */
+export type SharedPost = Pick<PostRow, 'id' | 'author_id' | 'problem_id' | 'body' | 'deleted_at' | 'created_at' | 'images'> & {
+  author: AuthorSummary | null;
+};
+
 /** A post joined with its author, which is how every feed renders one. */
 export interface PostWithAuthor extends PostRow {
-  author: Pick<ProfileRow, 'id' | 'username' | 'display_name' | 'avatar_url' | 'level'> | null;
+  author: AuthorSummary | null;
   /** Whether the signed-in learner has liked this post. Absent when anonymous. */
   viewer_has_liked?: boolean;
   viewer_has_saved?: boolean;
+  /** The signed-in learner's reaction, or null. Absent when anonymous. */
+  viewer_reaction?: Reaction | null;
+  reactions?: ReactionCounts;
+  /**
+   * The original, when this post is a share. Null when the original is gone or
+   * hidden from this viewer -- the feed renders that as unavailable.
+   */
+  shared_post?: SharedPost | null;
 }
 
 export interface CommentWithAuthor extends CommentRow {
-  author: Pick<ProfileRow, 'id' | 'username' | 'display_name' | 'avatar_url' | 'level'> | null;
+  author: AuthorSummary | null;
+  viewer_reaction?: Reaction | null;
+  reactions?: ReactionCounts;
 }
 
 export interface NotificationWithActor extends NotificationRow {
