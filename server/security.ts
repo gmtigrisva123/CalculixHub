@@ -39,7 +39,9 @@ const FONT_FILE_ORIGIN = 'https://fonts.gstatic.com';
  * - `script-src 'self'` with no `'unsafe-inline'`. This is the directive that
  *   actually stops cross-site scripting, so it is kept absolute. It holds only
  *   because `vite.config.ts` disables the module-preload polyfill, which would
- *   otherwise emit an inline bootstrap script into `index.html`.
+ *   otherwise emit an inline bootstrap script into `index.html`. The one inline
+ *   script the document does carry, the theme bootstrap that has to run before
+ *   first paint, is allowed by its hash; see `THEME_BOOT_SCRIPT_HASH`.
  * - `style-src` does permit `'unsafe-inline'`, unavoidably: KaTeX emits inline
  *   `style` attributes in the markup it generates, and that markup is inserted
  *   as HTML by `MathText`.
@@ -67,9 +69,20 @@ const FONT_FILE_ORIGIN = 'https://fonts.gstatic.com';
  * rather than none at all. What it keeps: it still cannot beacon learner data to
  * an arbitrary host, which is the property this directive was protecting.
  */
+/**
+ * SHA-256 of the inline theme bootstrap in `index.html`.
+ *
+ * Without it the policy refused that script, so the theme was only applied once
+ * React mounted: a white flash on every load for anyone on the night theme. A
+ * hash admits exactly that script and nothing injected beside it. The guarantee
+ * test recomputes it from `index.html`, so editing the script without updating
+ * this fails CI instead of silently reintroducing the flash.
+ */
+export const THEME_BOOT_SCRIPT_HASH = "'sha256-0JDUOjcviM78444oEyhjy7t1FfZ1igvew/Ayd8B/BQU='";
+
 const DOCUMENT_CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  `script-src 'self' ${THEME_BOOT_SCRIPT_HASH}`,
   `style-src 'self' 'unsafe-inline' ${FONT_CSS_ORIGIN}`,
   "img-src 'self' data:",
   `font-src 'self' data: ${FONT_FILE_ORIGIN}`,

@@ -386,9 +386,10 @@ async function checkRateLimit(store, clientKey2, routeClass, policy) {
 var API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 var FONT_CSS_ORIGIN = "https://fonts.googleapis.com";
 var FONT_FILE_ORIGIN = "https://fonts.gstatic.com";
+var THEME_BOOT_SCRIPT_HASH = "'sha256-0JDUOjcviM78444oEyhjy7t1FfZ1igvew/Ayd8B/BQU='";
 var DOCUMENT_CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  `script-src 'self' ${THEME_BOOT_SCRIPT_HASH}`,
   `style-src 'self' 'unsafe-inline' ${FONT_CSS_ORIGIN}`,
   "img-src 'self' data:",
   `font-src 'self' data: ${FONT_FILE_ORIGIN}`,

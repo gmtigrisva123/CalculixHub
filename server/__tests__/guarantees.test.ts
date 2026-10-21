@@ -7,6 +7,7 @@
  * decide a grade, and that untrusted text never enters the instruction channel.
  */
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../app';
@@ -229,6 +230,20 @@ describe('the document policy has one source of truth', () => {
     for (const [key, value] of Object.entries(expected)) {
       expect(declared[key], `vercel.json is missing or has drifted on "${key}"`).toBe(value);
     }
+  });
+
+  it('admits every inline script in index.html by hash, and nothing broader', () => {
+    const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+    const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]!);
+    expect(inline.length, 'index.html carries the theme bootstrap inline').toBeGreaterThan(0);
+
+    const policy = securityHeaders('document', { isProduction: true })['content-security-policy']!;
+    for (const script of inline) {
+      const hash = `'sha256-${createHash('sha256').update(script).digest('base64')}'`;
+      expect(policy, 'an inline script in index.html changed without its CSP hash').toContain(hash);
+    }
+    expect(policy).not.toContain("'unsafe-inline' 'self'");
+    expect(policy.split('; ').find((d) => d.startsWith('script-src'))).not.toContain('unsafe-inline');
   });
 });
 
