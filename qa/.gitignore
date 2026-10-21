@@ -1,0 +1,3 @@
+node_modules/
+# Identities (with passwords), screenshots, logs and reports from a run.
+out/
