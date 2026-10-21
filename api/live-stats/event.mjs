@@ -1671,6 +1671,14 @@ function adminRoutes() {
     if (setupError) return json({ error: "Apply the Admin/Arena database migration to enable administration." }, { status: 503 });
     const { data: member } = await client.from("admin_members").select("user_id").eq("user_id", user.id).maybeSingle();
     const { action, code, payload } = parsed.data;
+    const { data: qaRows } = await client.rpc("qa_account_ids");
+    const qaIds = new Set(Array.isArray(qaRows) ? qaRows : []);
+    const isQa = qaIds.has(user.id);
+    const sameCohort = (owner) => qaIds.has(owner ?? "") === isQa;
+    const arenaInCohort = async (id) => {
+      const { data } = await client.from("arenas").select("created_by").eq("id", id).maybeSingle();
+      return Boolean(data) && sameCohort(data.created_by);
+    };
     if (action === "unlock") {
       const key = user.id + ":" + ctx.clientKey;
       const failed = attempts.get(key);
@@ -1687,13 +1695,14 @@ function adminRoutes() {
       return json({ token: mintAdminSession(user.id, settings.version, secret), expiresIn: 1800, codeEnabled: settings.code_enabled });
     }
     if (!member || !validAdminSession(ctx.request.headers.get("x-admin-session") ?? "", user.id, settings.version, secret)) return json({ error: "Admin session expired or revoked. Unlock again." }, { status: 403 });
+    if (isQa && ["set-code", "remove-code", "revoke-sessions", "save-problem", "archive-problem"].includes(action)) return json({ error: "This account cannot change that setting." }, { status: 403 });
     const audit = async (target) => {
       await client.from("admin_audit").insert({ user_id: user.id, action, target });
     };
     if (action === "state") {
       const [arenas, catalog, auditLog, members] = await Promise.all([client.from("arenas").select("*").order("created_at", { ascending: false }), client.from("problem_catalog").select("*"), client.from("admin_audit").select("*").order("created_at", { ascending: false }).limit(50), client.from("admin_members").select("*")]);
       if (arenas.error || catalog.error || auditLog.error || members.error) return json({ error: "Could not load the admin workspace." }, { status: 503 });
-      return json({ arenas: arenas.data, catalog: catalog.data, audit: auditLog.data, members: members.data, bank: problems.filter((p) => !p.proOnly), codeEnabled: settings.code_enabled });
+      return json({ arenas: arenas.data.filter((a) => sameCohort(a.created_by)), catalog: catalog.data, audit: auditLog.data.filter((a) => sameCohort(a.user_id)), members: members.data.filter((m) => sameCohort(m.user_id)), bank: problems.filter((p) => !p.proOnly), codeEnabled: settings.code_enabled });
     }
     if (action === "set-code" || action === "remove-code" || action === "revoke-sessions") {
       if (action === "set-code" && (!code || code.length < 12)) return json({ error: "Choose a code of at least 12 characters." }, { status: 400 });
@@ -1707,6 +1716,7 @@ function adminRoutes() {
       const input = z3.object({ id: z3.string().uuid().optional(), arena: arenaSchema }).safeParse(payload);
       if (!input.success) return json({ error: "Check dates, duration, question IDs and numeric answers." }, { status: 400 });
       if (input.data.id) {
+        if (!await arenaInCohort(input.data.id)) return json({ error: "Arena could not be saved." }, { status: 404 });
         const { data: entries } = await client.from("arena_entries").select("user_id").eq("arena_id", input.data.id).not("started_at", "is", null).limit(1);
         if (entries?.length) return json({ error: "A started arena cannot be edited. Close it or duplicate it." }, { status: 409 });
       }
@@ -1718,6 +1728,7 @@ function adminRoutes() {
     if (action === "close-arena" || action === "delete-arena") {
       const input = z3.object({ id: z3.string().uuid(), confirmation: z3.string().optional() }).safeParse(payload);
       if (!input.success || action === "delete-arena" && input.data.confirmation !== "DELETE") return json({ error: "Confirm deletion with DELETE." }, { status: 400 });
+      if (!await arenaInCohort(input.data.id)) return json({ error: "Arena action failed." }, { status: 404 });
       const result = action === "delete-arena" ? await client.from("arenas").delete().eq("id", input.data.id) : await client.from("arenas").update({ status: "closed" }).eq("id", input.data.id);
       if (result.error) return json({ error: "Arena action failed." }, { status: 503 });
       await audit(input.data.id);
@@ -1740,13 +1751,14 @@ function adminRoutes() {
       return json({ ok: true });
     }
     if (action === "users") {
-      const { data, error } = await client.auth.admin.listUsers({ page: 1, perPage: 100 });
+      const { data, error } = await client.auth.admin.listUsers({ page: 1, perPage: 1e3 });
       if (error) return json({ error: "User directory unavailable." }, { status: 503 });
-      return json({ users: data.users.map((u) => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in_at: u.last_sign_in_at, banned_until: u.banned_until })) });
+      return json({ users: data.users.filter((u) => sameCohort(u.id)).slice(0, 100).map((u) => ({ id: u.id, email: u.email, created_at: u.created_at, last_sign_in_at: u.last_sign_in_at, banned_until: u.banned_until })) });
     }
     if (action === "suspend-user" || action === "restore-user") {
       const input = z3.object({ id: z3.string().uuid() }).safeParse(payload);
       if (!input.success || input.data.id === user.id) return json({ error: "You cannot suspend your own account." }, { status: 400 });
+      if (!sameCohort(input.data.id)) return json({ error: "User moderation failed." }, { status: 404 });
       const { error } = await client.auth.admin.updateUserById(input.data.id, { ban_duration: action === "suspend-user" ? "168h" : "none" });
       if (error) return json({ error: "User moderation failed." }, { status: 503 });
       await audit(input.data.id);
@@ -1755,6 +1767,7 @@ function adminRoutes() {
     if (action === "results") {
       const input = z3.object({ id: z3.string().uuid() }).safeParse(payload);
       if (!input.success) return json({ error: "Invalid arena ID." }, { status: 400 });
+      if (!await arenaInCohort(input.data.id)) return json({ error: "Results unavailable." }, { status: 404 });
       const { data, error } = await client.from("arena_entries").select("*").eq("arena_id", input.data.id);
       return error ? json({ error: "Results unavailable." }, { status: 503 }) : json({ entries: data });
     }
@@ -1769,8 +1782,10 @@ function arenaRoutes() {
   return [
     { method: "GET", path: "/api/arenas", routeClass: "read", handler: async (ctx) => {
       if (!ctx.config.supabaseUrl || !ctx.config.supabaseAnonKey) return json({ error: "Database is not configured." }, { status: 503 });
-      const client = createClient6(ctx.config.supabaseUrl, ctx.config.supabaseAnonKey, { auth: { persistSession: false } });
-      const { data, error } = await client.rpc("arena_catalog");
+      const authorization = ctx.request.headers.get("authorization");
+      const catalog = (headers) => createClient6(ctx.config.supabaseUrl, ctx.config.supabaseAnonKey, { auth: { persistSession: false }, ...headers ? { global: { headers } } : {} }).rpc("arena_catalog");
+      let { data, error } = await catalog(authorization ? { Authorization: authorization } : void 0);
+      if (error && authorization) ({ data, error } = await catalog());
       return error ? json({ error: "Arena database setup is required. Apply the Admin/Arena migration." }, { status: 503 }) : json(data);
     } },
     { method: "POST", path: "/api/arena/action", routeClass: "read", handler: async (ctx) => {

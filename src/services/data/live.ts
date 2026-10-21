@@ -57,6 +57,20 @@ export function flattenPresence(state: PresenceState, selfId: string | null): Pr
 }
 
 /**
+ * The presence room for the viewer's cohort.
+ *
+ * Presence relays between clients without touching a table, so row-level
+ * security cannot keep the QA cohort (see the qa_cohort migration) apart from
+ * learners here; a room of its own does. Guests, learners, and any project
+ * without that migration share the public room.
+ */
+async function presenceRoom(signedIn: boolean): Promise<string> {
+  if (!signedIn || !supabase) return 'community:presence';
+  const { data, error } = await supabase.rpc('viewer_cohort');
+  return !error && data === 'qa' ? 'community:presence:qa' : 'community:presence';
+}
+
+/**
  * Everyone with the Community feed open right now, and which post's comments
  * each of them is reading. Guests see who is here but are not announced.
  */
@@ -85,24 +99,32 @@ export function useCommunityPresence(viewer: AuthorSummary | null, viewingPostId
     if (!client) return;
 
     const key = viewer?.id ?? `guest-${crypto.randomUUID()}`;
-    const room = client.channel('community:presence', { config: { presence: { key } } });
-    channel.current = room;
+    let room: RealtimeChannel | null = null;
+    let cancelled = false;
     joined.current = false;
 
-    room
-      .on('presence', { event: 'sync' }, () => setPeople(flattenPresence(room.presenceState() as PresenceState, viewer?.id ?? null)))
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          joined.current = true;
-          announce();
-        }
-      });
+    void presenceRoom(Boolean(viewer)).then((name) => {
+      if (cancelled) return;
+      const joining = client.channel(name, { config: { presence: { key } } });
+      room = joining;
+      channel.current = joining;
+
+      joining
+        .on('presence', { event: 'sync' }, () => setPeople(flattenPresence(joining.presenceState() as PresenceState, viewer?.id ?? null)))
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            joined.current = true;
+            announce();
+          }
+        });
+    });
 
     return () => {
+      cancelled = true;
       joined.current = false;
       channel.current = null;
       setPeople([]);
-      void client.removeChannel(room);
+      if (room) void client.removeChannel(room);
     };
   }, [viewer?.id, announce]);
 
