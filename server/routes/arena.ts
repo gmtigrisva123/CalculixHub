@@ -8,8 +8,12 @@ export function arenaRoutes(): RouteDefinition[] {
   return [
     { method: 'GET', path: '/api/arenas', routeClass: 'read', handler: async ctx => {
       if (!ctx.config.supabaseUrl || !ctx.config.supabaseAnonKey) return json({ error: 'Database is not configured.' }, { status: 503 });
-      const client = createClient(ctx.config.supabaseUrl, ctx.config.supabaseAnonKey, { auth: { persistSession: false } });
-      const { data, error } = await client.rpc('arena_catalog');
+      // The caller's token, when present, decides which cohort's arenas are
+      // listed. A token the database rejects falls back to the public list.
+      const authorization = ctx.request.headers.get('authorization');
+      const catalog = (headers?: Record<string, string>) => createClient(ctx.config.supabaseUrl!, ctx.config.supabaseAnonKey!, { auth: { persistSession: false }, ...(headers ? { global: { headers } } : {}) }).rpc('arena_catalog');
+      let { data, error } = await catalog(authorization ? { Authorization: authorization } : undefined);
+      if (error && authorization) ({ data, error } = await catalog());
       return error ? json({ error: 'Arena database setup is required. Apply the Admin/Arena migration.' }, { status: 503 }) : json(data);
     } },
     { method: 'POST', path: '/api/arena/action', routeClass: 'read', handler: async ctx => {
