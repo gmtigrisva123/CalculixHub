@@ -108,6 +108,33 @@ describe('community seed', () => {
     expect(await seedCounts()).toEqual(before);
   }, 60_000);
 
+  it('brings the wording of an earlier seed up to date without marking it edited', async () => {
+    const [post] = await db.query<{ id: string; body: string }>('select id, body from public.posts order by created_at limit 1');
+    const [comment] = await db.query<{ id: string; body: string }>('select id, body from public.comments order by created_at limit 1');
+    await db.exec(`
+      alter table public.posts disable trigger posts_guard_update;
+      alter table public.comments disable trigger comments_guard_update;
+      update public.posts set body = 'Old wording' where id = '${post!.id}';
+      update public.comments set body = 'Old wording' where id = '${comment!.id}';
+      alter table public.posts enable trigger posts_guard_update;
+      alter table public.comments enable trigger comments_guard_update;
+    `);
+    const before = await seedCounts();
+
+    await db.exec(file('supabase/community-seed.sql'));
+
+    const [postAfter] = await db.query<{ body: string; edited_at: string | null }>('select body, edited_at from public.posts where id = $1', [post!.id]);
+    const [commentAfter] = await db.query<{ body: string; edited_at: string | null }>('select body, edited_at from public.comments where id = $1', [comment!.id]);
+    expect(postAfter).toEqual({ body: post!.body, edited_at: null });
+    expect(commentAfter).toEqual({ body: comment!.body, edited_at: null });
+    expect(await seedCounts()).toEqual(before);
+
+    const disabled = await db.query<{ tgname: string }>(
+      `select tgname from pg_trigger where tgrelid in ('public.posts'::regclass, 'public.comments'::regclass) and not tgisinternal and tgenabled = 'D'`,
+    );
+    expect(disabled).toEqual([]);
+  }, 60_000);
+
   it('refuses to run when a learner already holds one of its usernames', async () => {
     const fresh = await createTestDatabase();
     try {
