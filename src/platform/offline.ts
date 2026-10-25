@@ -6,7 +6,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../services/apiBase';
+import { apiFetch, apiUrl } from '../services/apiBase';
+import { createConnectivityMonitor, reachNetwork } from './connectivity';
 import { compareAnswer } from '../../shared/gradeAnswer';
 
 const QUEUE_KEY = 'calculix_pending_grades';
@@ -23,25 +24,42 @@ export interface QueuedGrade {
 /**
  * Tracks connectivity.
  *
- * navigator.onLine is the only synchronous signal available, and it is
- * famously optimistic: it reports true for a connected interface even when that
- * interface reaches nothing. It is accurate about the transition that matters
- * here -- going offline -- so it drives the banner, while the grading queue
- * additionally treats any failed request as evidence of being offline.
+ * The browser's online/offline signal is wrong in both directions, so it only
+ * prompts a real check; see connectivity.ts. The app starts out online and is
+ * declared offline only after a request has actually failed.
  */
 export function useOnlineStatus(): boolean {
-  const [online, setOnline] = useState(() => navigator.onLine);
+  const [online, setOnline] = useState(true);
 
   useEffect(() => {
-    const goOnline = () => setOnline(true);
-    const goOffline = () => setOnline(false);
+    const monitor = createConnectivityMonitor(
+      {
+        probe: () => reachNetwork(apiUrl('/manifest.webmanifest')),
+        browserOnline: () => navigator.onLine,
+        setTimer: (callback, ms) => window.setTimeout(callback, ms),
+        clearTimer: (handle) => window.clearTimeout(handle as number),
+      },
+      setOnline,
+    );
 
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
+    const suspect = () => monitor.suspect();
+    const recheck = () => monitor.recheck();
+    const visible = () => {
+      if (document.visibilityState === 'visible') monitor.recheck();
+    };
+
+    window.addEventListener('offline', suspect);
+    window.addEventListener('online', recheck);
+    window.addEventListener('focus', recheck);
+    document.addEventListener('visibilitychange', visible);
+    monitor.start();
 
     return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('offline', suspect);
+      window.removeEventListener('online', recheck);
+      window.removeEventListener('focus', recheck);
+      document.removeEventListener('visibilitychange', visible);
+      monitor.dispose();
     };
   }, []);
 
