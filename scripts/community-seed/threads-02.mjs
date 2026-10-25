@@ -34,7 +34,7 @@ Three tiny CRTs.`],
       ['thao_vy_le', 230, r`Fun variant: with $n \equiv 3^n \pmod 7$ the cycle of $3^n$ has length 6, so the period becomes lcm(7, 6) = 42.`],
       ['chloe_tanaka', 280, r`@bao_nguyen_17 your split-by-mod-3 trick should be pinned somewhere 📌`],
       ['bao_nguyen_17', 290, r`haha thanks! it's just CRT in small pieces`, 12],
-      ['kofi_mensah_m', 320, r`Did the Foundation one with the 3-case split, took 4 minutes. Thanks Bảo and Ananya for asking!`],
+      ['kofi_mensah_m', 320, r`Did the Foundation one with the 3-case split, took 4 minutes. Thanks Bao and Ananya for asking!`],
     ],
   },
   {
@@ -140,8 +140,8 @@ I understand the formula, but how do I factor 121500 fast? I did trial division 
       ['omar_haddad_x', 110, r`Even exponents only: $a \in \{0,2\}$, $b \in \{0,2,4\}$, $c \in \{0,2\}$, so $2 \cdot 3 \cdot 2 = 12$.`, 7],
       ['maya_goldberg', 118, r`oh nice, same trick with fewer choices`, 7],
       ['sam_whitaker', 150, r`Advanced version: $9720 = 972 \times 10 = 4 \cdot 243 \cdot 10 = 2^3 3^5 5$, so $4 \cdot 6 \cdot 2 = 48$.`],
-      ['quang_huy_do', 200, r`Em hiểu rồi! So $360 = 2^3 3^2 5$ has $4 \cdot 3 \cdot 2 = 24$ divisors. Correct?`],
-      ['bao_nguyen_17', 207, r`Chuẩn! 24 ✅`, 11],
+      ['quang_huy_do', 200, r`I get it now! So $360 = 2^3 3^2 5$ has $4 \cdot 3 \cdot 2 = 24$ divisors. Correct?`],
+      ['bao_nguyen_17', 207, r`Spot on! 24 ✅`, 11],
       ['noah_fischer_b', 260, r`Fun one: which number below 100 has the most divisors? I think it's a tie between 60, 72, 84, 90 and 96, with 12 each.`],
       ['kofi_mensah_m', 270, r`that's a fun fact, checking all five now`, 13],
       ['gabriel_santos3', 300, r`Bookmarking "peel off powers of 10 first". Most contest numbers are built that way.`],
@@ -222,8 +222,8 @@ I split it into 6 equilateral triangles, each $\frac{\sqrt3}{4}\cdot64 = 16\sqrt
       ['sofia_marques_mt', 150, r`Advanced version with side 12: $6 \cdot 144/4 = 216$ ✅`],
       ['yuki_morimoto', 170, r`Shortcut: area $/\sqrt3$ for side $s$ is $\frac32 s^2$. So $96 = 1.5 \cdot 64$ and $216 = 1.5 \cdot 144$.`],
       ['linh_ngoc_tran', 200, r`this thread made hexagons not scary anymore 😌`],
-      ['quang_huy_do', 230, r`Cạnh 6 thì area $/\sqrt3 = 54$ phải không ạ? (side 6 → 54?)`],
-      ['gia_han_tran', 236, r`Đúng rồi, 54 ✅`, 11],
+      ['quang_huy_do', 230, r`So with side 6, area $/\sqrt3 = 54$, right?`],
+      ['gia_han_tran', 236, r`Exactly, 54 ✅`, 11],
       ['ethan_caldwell9', 280, r`Hexagon + inscribed circle shows up a lot on AMC 10: the radius is the apothem, $\frac{\sqrt3}{2}s$.`],
     ],
   },
@@ -234,7 +234,7 @@ I split it into 6 equilateral triangles, each $\frac{\sqrt3}{4}\cdot64 = 16\sqrt
     ago: 205,
     body: r`Two clocks, one residue: $x \equiv 1 \pmod 5$ and $x \equiv 7 \pmod{11}$.
 
-Em liệt kê 1, 6, 11, 16, ... until 51, which is 7 mod 11. Listing works, but is there a faster way when the numbers are bigger?`,
+I listed 1, 6, 11, 16, ... until 51, which is 7 mod 11. Listing works, but is there a faster way when the numbers are bigger?`,
     comments: [
       ['bao_nguyen_17', 6, r`Substitute: $x = 5k + 1$, so $5k + 1 \equiv 7 \pmod{11}$, i.e. $5k \equiv 6$. The inverse of 5 mod 11 is 9 (since $45 \equiv 1$), so $k \equiv 54 \equiv 10$ and $x = 51$ ✅`],
       ['quang_huy_do', 12, r`inverse of 5 mod 11, how do I find that fast?`, 0],
@@ -249,7 +249,7 @@ Em liệt kê 1, 6, 11, 16, ... until 51, which is 7 mod 11. Listing works, but 
       ['omar_haddad_x', 190, r`Classic word-problem version: count the eggs in a basket by 5s and 1 is left, by 11s and 7 are left. How many eggs? 51 🥚`],
       ['duc_anh_pham', 210, r`For three or more congruences, solve two at a time: combine them into one congruence mod the product, then combine that with the next.`],
       ['kofi_mensah_m', 240, r`the egg problem made me laugh, saving 😂`, 10],
-      ['quang_huy_do', 260, r`Cảm ơn mọi người! I did the Advanced one with Linh's method in 1 minute.`],
+      ['quang_huy_do', 260, r`Thanks everyone! I did the Advanced one with Linh's method in 1 minute.`],
     ],
   },
   {

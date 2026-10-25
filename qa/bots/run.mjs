@@ -126,8 +126,6 @@ async function runBot(person, browser) {
     }
   };
 
-  const lang = person.language === 'vi' ? 'vi' : 'en';
-
   try {
     await step('landing', async () => {
       const response = await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 45_000 });
@@ -241,7 +239,7 @@ async function runBot(person, browser) {
       const box = page.getByRole('textbox', { name: 'Create post' });
       await box.waitFor();
       await box.click();
-      await page.keyboard.type(pick(POSTS[lang]), { delay: 8 });
+      await page.keyboard.type(pick(POSTS), { delay: 8 });
       await page.getByRole('button', { name: 'Post', exact: true }).click();
       await box.waitFor({ state: 'hidden', timeout: 15_000 });
       await settle(page, 800);
@@ -262,7 +260,7 @@ async function runBot(person, browser) {
       const input = page.getByRole('textbox', { name: /Write a comment|Be the first to comment/ }).first();
       await input.waitFor({ timeout: 10_000 });
       await input.click();
-      await page.keyboard.type(pick(COMMENTS[lang]), { delay: 8 });
+      await page.keyboard.type(pick(COMMENTS), { delay: 8 });
       await page.getByRole('button', { name: 'Send comment' }).first().click();
       await settle(page, 900);
       return `of ${total} posts`;

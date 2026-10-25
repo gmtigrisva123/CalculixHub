@@ -248,7 +248,7 @@ function slugFor(name, locale, order, f, taken) {
   const parts = name.split(/\s+/).map(fold).filter(Boolean);
   let base;
   if (order === 'native' || parts.length === 0) base = `${locale.toLowerCase().split('_')[0]}${f.number.int({ min: 10, max: 99 })}`;
-  else if (order === 'family-first') base = `${parts.slice(1).join('')}.${parts[0]}`; // Khánh Vân Lâm -> khanhvan.lam
+  else if (order === 'family-first') base = `${parts.slice(1).join('')}.${parts[0]}`; // Lam Khanh Van -> khanhvan.lam
   else base = `${parts[0]}.${fold(name.split(/\s+/).pop().split('-')[0])}`; // Parisian-Satterfield -> parisian
   let slug = base;
   while (taken.has(slug)) slug = `${base}${f.number.int({ min: 2, max: 99 })}`;
@@ -292,7 +292,8 @@ function main() {
       password: password(f),
       locale,
       country,
-      language: locale === 'VI' ? 'vi' : 'en',
+      // The whole site is in English, so every persona writes in English.
+      language: 'en',
       device,
       role: focus === 'admin' ? f.helpers.arrayElement(['Secondary-school maths teacher who runs the school maths club', 'Olympiad coach organising weekly practice matches', 'University teaching assistant running a problem-solving seminar']) : f.helpers.arrayElement(ROLES),
       level: focus === 'admin' ? f.helpers.arrayElement(['Advanced', 'Olympiad']) : f.helpers.arrayElement(LEVELS),
@@ -322,7 +323,7 @@ function main() {
     const values = {
       ...person,
       baseUrl: BASE_URL,
-      languageName: person.language === 'vi' ? 'Vietnamese' : 'English',
+      languageName: 'English',
       traits: person.traits.join('; '),
       focusTitle: focus.title,
       focusTasks: focus.tasks.join('\n'),
