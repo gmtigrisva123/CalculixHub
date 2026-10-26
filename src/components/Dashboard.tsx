@@ -1,33 +1,173 @@
-import { ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronRight, Clock3, Flame, Sparkles, Target, Trophy, TrendingUp } from 'lucide-react';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R4 V5 */
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { m, useReducedMotion } from 'motion/react';
+import { MoonStar, Sun, Sunrise, Sunset } from 'lucide-react';
 import type { UserStats, WeeklyChallenge, Contest, Topic, Level } from '../../shared/types';
-import { TOPIC_META } from '../lib/topics';
 import { getLastNDateKeys } from '../domain/streak';
+import { ease, spring } from '../lib/motion';
 import '../styles/dashboard-refresh.css';
-import { useSurfaceReveal } from '../hooks/useSurfaceReveal';
+import DashboardHero from './dashboard/DashboardHero';
+import Instruments from './dashboard/Instruments';
+import TopicTiles from './dashboard/TopicTiles';
+import MomentumChart from './dashboard/MomentumChart';
+import ProofTile from './dashboard/ProofTile';
+import NextAdventure from './dashboard/NextAdventure';
+import { activeDays, dailyPoints, greeting, pointsCurve, weekTotal } from './dashboard/dashboardModel';
 
 interface DashboardProps { userStats: UserStats; weeklyChallenges: WeeklyChallenge[]; contests: Contest[]; onNavigateToTab: (tab: string, arg?: { topic?: Topic; level?: Level }) => void; onJoinChallenge: (id: string) => void; onJoinContest: (id: string) => void; onRewardPoints?: (pts: number) => void; }
-const DESCRIPTIONS: Record<Topic, string> = { Algebra: 'Make the patterns click', Geometry: 'See a different angle', Combinatorics: 'Count the possibilities', 'Number Theory': 'Discover what adds up' };
+
+const QUOTE = 'Mathematics is the art of giving the same name to different things.';
+
+/**
+ * The workspace home.
+ *
+ * Presentation only: every figure is read from the props exactly as before,
+ * and every action calls the same handler with the same arguments. What
+ * changed is how it looks and moves -- a night stage with a drawing machine,
+ * instruments that draw their own numbers, and four topic medallions that keep
+ * a small proof running. All of it stops on the hero's pause control, off
+ * screen, in a hidden tab, and under reduced motion.
+ */
 export default function Dashboard({ userStats: stats, weeklyChallenges, contests, onNavigateToTab: navigate, onJoinChallenge, onJoinContest }: DashboardProps) {
-  const surfaceRef = useSurfaceReveal('.dr-hero, .dr-daily, .dr-metrics article, .dr-topic, .dr-activity, .dr-next');
+  const still = Boolean(useReducedMotion());
+  const [paused, setPaused] = useState(false);
+  const togglePause = useCallback(() => setPaused((value) => !value), []);
+  const rootRef = useSpotlight<HTMLDivElement>();
+
   const days = getLastNDateKeys(7);
   const timeline = stats.learningTimeline || [];
-  const daily = days.map(date => { const index = timeline.findIndex(item => item.date === date); const points = index < 0 ? 0 : Math.max(0, timeline[index].points - (index > 0 ? timeline[index - 1].points : 0)); return { date, points }; });
-  const maxPoints = Math.max(25, ...daily.map(day => day.points));
-  const weekPoints = daily.reduce((sum, day) => sum + day.points, 0);
-  const topics = Object.keys(TOPIC_META) as Topic[];
-  return <div className="dashboard-refresh" ref={surfaceRef}>
-    <div className="dr-welcome"><div><p className="dr-eyebrow">YOUR LEARNING SPACE</p><h1>A little time <span>to understand.</span></h1><p>Pick something interesting. Take it at your own pace.</p></div><span className="dr-date">{new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })}</span></div>
-    <div className="dr-top-grid"><section className="dr-hero"><div className="dr-hero-copy"><span className="dr-hero-label"><span/> WHERE WOULD YOU LIKE TO BEGIN?</span><h2>One question.<br /><span>Your own way through.</span></h2><p>No need to rush the answer.<br />Give yourself a little room to work it out.</p><button onClick={() => navigate('learn')}>Open my practice <ArrowUpRight size={17}/></button></div><div className="dr-working-note" aria-hidden="true"><span>a different approach</span><strong>(x + y)²</strong><i>= x² + 2xy + y²</i><svg viewBox="0 0 180 35"><path d="M10 23Q75 7 165 16" fill="none" stroke="currentColor"/></svg><small>Start with what you know.</small></div></section>
-    <section className="dr-daily"><div className="dr-card-title"><span><Sparkles size={15}/> SOMETHING TO THINK ABOUT</span><span>Today</span></div><div className="dr-daily-formula" aria-hidden="true">x² + y²<span>✳</span></div><h3>Look for the simpler step.</h3><p>A fresh perspective starts with a little practice. Take a few minutes for your mind.</p><button onClick={() => navigate('learn', {topic:'Algebra'})}>Explore algebra <ArrowRight size={15}/></button></section></div>
-    <section className="dr-metrics" aria-label="Your learning statistics">{[
-      {label:'Learning points', value:stats.points.toLocaleString(), note:'One discovery at a time', icon:Trophy, color:'green'},
-      {label:'Problems solved', value:stats.completedCount, note:'Ideas made your own', icon:CheckCircle2, color:'blue'},
-      {label:'Answer accuracy', value:stats.completedCount ? `${stats.accuracy}%` : '—', note:stats.completedCount ? 'Keep refining your thinking' : 'Solve a problem to get started', icon:Target, color:'peach'},
-      {label:'Learning streak', value:`${stats.streak} ${stats.streak === 1 ? 'day' : 'days'}`, note:'Little habits. Lasting growth.', icon:Flame, color:'purple'},
-    ].map(({label,value,note,icon:Icon,color}) => <article key={label}><div><span>{label}</span><span className={`dr-metric-icon ${color}`}><Icon size={15}/></span></div><strong>{value}</strong><p>{note}</p></article>)}</section>
-    <section className="dr-explore"><div className="dr-section-heading"><div><h2>Follow your curiosity</h2><p>Four different ways to see the world.</p></div><button onClick={() => navigate('learn')}>Explore all <ArrowUpRight size={14}/></button></div><div className="dr-topic-grid">{topics.map((topic,i) => {const Icon=TOPIC_META[topic].icon;const mastery=Math.max(0,Math.min(100,stats.skills[topic] || 0));return <button key={topic} className={`dr-topic dr-topic-${i}`} onClick={() => navigate('learn',{topic})}><div><span className="dr-topic-icon"><Icon size={24} strokeWidth={1.5}/></span><ArrowUpRight size={15}/></div><h3>{topic}</h3><p>{DESCRIPTIONS[topic]}</p><div className="dr-mastery-label"><span>{mastery ? 'Your growing confidence' : 'A new world to explore'}</span><strong>{mastery}%</strong></div><div className="dr-mastery-track"><span style={{width:`${mastery}%`}}/></div></button>;})}</div></section>
-    <div className="dr-bottom-grid"><section className="dr-activity"><div className="dr-section-heading"><div><h2>A little better, every day</h2><p>Your learning momentum this week.</p></div><span className="dr-week-label">Last 7 days <ChevronRight size={12}/></span></div><div className="dr-chart-head"><strong>{weekPoints}<span> points this week</span></strong><button onClick={() => navigate('progress')}>See my progress <ArrowUpRight size={13}/></button></div><div className="dr-chart" aria-label="Points earned in the past seven days">{daily.map((day,i) => <div key={day.date}><div className="dr-chart-bar-track"><span className={i === 6 ? 'is-today' : ''} style={{height:`${Math.max(day.points ? 5 : 2,day.points/maxPoints*100)}%`}}><small>{day.points}</small></span></div><span>{new Date(`${day.date}T12:00:00`).toLocaleDateString('en-US',{weekday:'short'})}</span></div>)}</div><p className="dr-chart-caption"><span/> {weekPoints ? 'Every point is a little more understanding.' : 'Your first solved problem will bring this chart to life.'}</p></section>
-    <section className="dr-next"><div className="dr-section-heading"><div><h2>Your next adventure</h2><p>A little friendly challenge.</p></div><Trophy size={18}/></div>{weeklyChallenges.slice(0,2).map(challenge => <article className="dr-challenge" key={challenge.id}><div><span className="dr-challenge-icon"><Sparkles size={17}/></span><span><h3>{challenge.title}</h3><p>{challenge.points} points · Weekly challenge</p></span></div><button disabled={challenge.completed} onClick={() => onJoinChallenge(challenge.id)}>{challenge.completed ? <><Check size={12}/> Joined</> : <>Join <ArrowUpRight size={12}/></>}</button></article>)}{contests.filter(c => c.status !== 'past').slice(0,1).map(contest => <article className="dr-challenge" key={contest.id}><div><span className="dr-challenge-icon"><Trophy size={17}/></span><span><h3>{contest.title}</h3><p>{contest.problemCount} problems · {contest.duration}</p></span></div><button disabled={contest.joined} onClick={() => onJoinContest(contest.id)}>{contest.joined ? 'Joined' : 'Join'}<ArrowUpRight size={12}/></button></article>)}{!weeklyChallenges.length && !contests.filter(c => c.status !== 'past').length && <div className="dr-challenge-empty"><Trophy size={29}/><h3>Set your own pace.</h3><p>While the next challenge takes shape, there’s a whole library to explore.</p><button onClick={() => navigate('learn')}>Choose a challenge <ArrowRight size={14}/></button></div>}<a className="dr-pocket-link" href="/?preview=ios"><span>Have a minute? Try a focus sprint.</span><ArrowUpRight size={15}/></a></section></div>
-    <div className="dr-closing"><span>“Mathematics is the art of giving the same name to different things.”</span><small>HENRI POINCARÉ</small><span aria-hidden="true">✳</span></div>
-  </div>;
+  const daily = dailyPoints(timeline, days);
+  const weekPoints = weekTotal(daily);
+  const practised = activeDays(timeline, days);
+  const week = days.map((date, i) => ({
+    date,
+    label: new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' }),
+    active: practised[i],
+    today: i === days.length - 1,
+  }));
+
+  const now = new Date();
+  const hour = now.getHours();
+  const GreetingIcon = hour < 5 ? MoonStar : hour < 12 ? Sunrise : hour < 18 ? Sun : Sunset;
+  const intro = (delay: number) => ({
+    initial: still ? (false as const) : { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { ...spring.smooth, delay },
+  });
+
+  return (
+    <div className="dh" ref={rootRef} data-dh-paused={paused || undefined}>
+      <header className="dh-head">
+        <m.p className="dh-greeting" {...intro(0)}>
+          <GreetingIcon size={15} aria-hidden="true" />
+          <span>{greeting(hour)}</span>
+          <span className="dh-greeting-dot" aria-hidden="true" />
+          <span>{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+        </m.p>
+        <m.h1 className="dh-title" {...intro(0.04)}>
+          A little time{' '}
+          <span className="dh-title-accent">
+            to understand.
+            <svg className="dh-title-underline" viewBox="0 0 300 16" preserveAspectRatio="none" aria-hidden="true">
+              <m.path
+                d="M3 11 C 70 3, 170 2, 297 8"
+                initial={still ? false : { pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ delay: 0.55, duration: 0.8, ease: ease.standard }}
+              />
+            </svg>
+          </span>
+        </m.h1>
+        <m.p className="dh-sub" {...intro(0.1)}>
+          Pick something interesting. Take it at your own pace.
+        </m.p>
+      </header>
+
+      <DashboardHero still={still} paused={paused} onTogglePause={togglePause} onBegin={() => navigate('learn')} />
+
+      <Instruments
+        points={stats.points}
+        weekPoints={weekPoints}
+        curve={pointsCurve(timeline)}
+        solved={stats.completedCount}
+        accuracy={stats.accuracy}
+        streak={stats.streak}
+        week={week}
+        still={still}
+      />
+
+      <TopicTiles skills={stats.skills} still={still} paused={paused} navigate={navigate} />
+
+      <div className="dh-bento">
+        <MomentumChart daily={daily} weekPoints={weekPoints} still={still} onProgress={() => navigate('progress')} />
+        <NextAdventure
+          weeklyChallenges={weeklyChallenges}
+          contests={contests}
+          onJoinChallenge={onJoinChallenge}
+          onJoinContest={onJoinContest}
+          navigate={navigate}
+          still={still}
+        />
+        <ProofTile still={still} paused={paused} navigate={navigate} />
+      </div>
+
+      <figure className="dh-quote">
+        <blockquote>
+          <p>
+            <span aria-hidden="true">“</span>
+            {QUOTE.split(' ').map((word, i) => (
+              <Fragment key={`${word}-${i}`}>
+                {i > 0 && ' '}
+                <m.span
+                  className="dh-quote-word"
+                  initial={still ? false : { opacity: 0, y: 8, filter: 'blur(6px)' }}
+                  whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  viewport={{ once: true, amount: 0.6 }}
+                  transition={{ duration: 0.55, delay: i * 0.045, ease: ease.standard }}
+                >
+                  {word}
+                </m.span>
+              </Fragment>
+            ))}
+            <span aria-hidden="true">”</span>
+          </p>
+        </blockquote>
+        <figcaption>Henri Poincaré</figcaption>
+      </figure>
+    </div>
+  );
+}
+
+/**
+ * Lets the card under a fine pointer catch the light where the pointer is.
+ *
+ * One listener on the dashboard rather than one per card, coalesced to a frame,
+ * and only where hover exists at all.
+ */
+function useSpotlight<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root || !window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) return;
+    let frame = 0;
+    let last: PointerEvent | null = null;
+    const apply = () => {
+      frame = 0;
+      const card = (last?.target as Element | null)?.closest?.('.dh-card') as HTMLElement | null;
+      if (!last || !card || !root.contains(card)) return;
+      const box = card.getBoundingClientRect();
+      card.style.setProperty('--dh-mx', `${last.clientX - box.left}px`);
+      card.style.setProperty('--dh-my', `${last.clientY - box.top}px`);
+    };
+    const onMove = (event: PointerEvent) => {
+      last = event;
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+    root.addEventListener('pointermove', onMove);
+    return () => {
+      root.removeEventListener('pointermove', onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return ref;
 }

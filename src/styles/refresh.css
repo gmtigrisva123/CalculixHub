@@ -200,10 +200,4 @@ body { font-family:'DM Sans','Geist',sans-serif; }
   .workspace-breadcrumb { font-size:15px; }
   .workspace-footer { font-size:12px; }
 }
-.dr-welcome h1,.dr-hero h2,.dr-section-heading h2 { font-family:'Manrope','Geist',sans-serif; }
-.dr-welcome h1 span { color:#8098a0; }.dr-hero { background:#e5edef; color:#304d59; border:1px solid #dbe4e5; border-radius:13px; }.dr-hero h2 span { color:#4f7483; }.dr-hero p { color:#6c828a; }.dr-hero-label { color:#738990; }.dr-hero-label > span { background:#66899a; }.dr-hero button { background:#426c7b; color:#faf9f4; border-radius:6px; }
-.dr-working-note { position:absolute; right:18px; top:45px; width:170px; color:#7f969e; transform:rotate(-5deg); text-align:center; }.dr-working-note > span { font-size:10px; font-family:Georgia,serif; font-style:italic; }.dr-working-note strong { font-size:31px; font-family:'Newsreader',Georgia,serif; font-weight:400; display:block; margin-top:23px; }.dr-working-note i { display:block; font-family:'Newsreader',Georgia,serif; font-style:normal; font-size:19px; margin-top:5px; }.dr-working-note svg { width:100%; color:#b38c7b; }.dr-working-note small { display:block; font-size:9px; }
-.dr-daily { background:#eeece4; border-color:#e1ded2; border-radius:13px; color:#5a6055; }.dr-daily-formula { color:#999b8c; }.dr-daily-formula > span { display:none; }.dr-card-title { color:#858d81; }.dr-daily p { color:#7d8378; }.dr-daily button { border-color:#dddccf; }.dr-metrics article,.dr-topic,.dr-activity,.dr-next { border-radius:12px; }.dr-closing > span:last-child { display:none; }.dr-topic:hover { box-shadow:none; transform:translateY(-2px); }.dr-mastery-track > span { background:#8faab1; }.dr-chart-bar-track > span { background:#b9cdd0; }.dr-chart-bar-track > span.is-today { background:#7699a5; }
 .prototype-loading { min-height:100dvh; display:grid; place-items:center; font-family:'DM Sans','Geist',sans-serif; color:var(--ct-muted); }
-@media(max-width:1150px) { .dr-working-note { opacity:.5; right:-18px; width:150px; } }
-@media(max-width:767px) { .dr-working-note { opacity:.3; right:-19px; top:54px; width:135px; } }
