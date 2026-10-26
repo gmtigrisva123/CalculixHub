@@ -1,4 +1,4 @@
-import { EXAM_COLLECTIONS } from '../../domain/examArchive';
+import { isArchivePaperId } from '../../domain/examArchive';
 import { supabase } from '../supabase';
 
 export type ArchiveProgress = {
@@ -11,7 +11,6 @@ export type ArchiveProgress = {
 
 export type ArchiveProgressMap = Record<string, ArchiveProgress>;
 
-const validIds = new Set(EXAM_COLLECTIONS.map(collection => collection.id));
 const pending = new Map<string, Promise<void>>();
 
 function safeAnswers(value: unknown): Record<string, string> {
@@ -33,7 +32,7 @@ export function readArchiveProgress(userId: string | null): ArchiveProgressMap {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     const result: ArchiveProgressMap = {};
     for (const [id, value] of Object.entries(parsed)) {
-      if (!validIds.has(id) || !value || typeof value !== 'object') continue;
+      if (!isArchivePaperId(id) || !value || typeof value !== 'object') continue;
       result[id] = {
         saved: Boolean(value.saved),
         answers: safeAnswers(value.answers),
@@ -58,7 +57,7 @@ export async function loadAccountArchiveProgress(userId: string): Promise<Archiv
   if (error) throw error;
   const result: ArchiveProgressMap = {};
   for (const row of data ?? []) {
-    if (!validIds.has(row.collection_id)) continue;
+    if (!isArchivePaperId(row.collection_id)) continue;
     result[row.collection_id] = {
       saved: Boolean(row.saved),
       answers: safeAnswers(row.answers),

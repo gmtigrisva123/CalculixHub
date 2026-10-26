@@ -1,0 +1,478 @@
+/* Hallmark · macrostructure: floodlit stage → ticket board → rule strip (bespoke, inside the workspace system)
+ * genre: playful · tone: competitive, warm, alive · anchor hue: steel blue (refresh.css --ac)
+ * display: Manrope · body: DM Sans · notation: Newsreader
+ * Previous: a static orbit diagram beside a plain list. Current: a living stadium, ticket-cut matches, rules that act themselves out.
+ * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · contrast: pass (40–41) · mobile: pass (34, 49, 50–57)
+ * Scope: the Arena lobby only. Everything is namespaced `al-`; arena-admin.css, which the Admin workspace shares, is untouched.
+ */
+
+/* --------------------------------------------------------------------------
+ * Tokens
+ * ------------------------------------------------------------------------ */
+
+.arena-space {
+  --al-display: 'Manrope', 'Geist', sans-serif;
+  --al-math: 'Newsreader', Georgia, serif;
+  --al-ease: cubic-bezier(.32, .72, 0, 1);
+
+  /* The stage is a floodlit night arena in both themes. ArenaStage reads these. */
+  --al-stage-top: #284350;
+  --al-stage-bottom: #172730;
+  --al-stage-edge: #36525d;
+  --al-stage-ink: #f4f1e8;
+  --al-stage-muted: #a9bcc1;
+  --al-stage-glow: #afcbd3;
+  --al-stage-pencil: #f0a283;
+  --al-stage-flood: #fff3d6;
+  --al-stage-spark: #fffaf0;
+  --al-stage-sign: #0c171c;
+  --al-stage-live: #ff9f7f;
+  --al-stage-alg: #e1ad66;
+  --al-stage-geo: #4fb8a8;
+  --al-stage-com: #a98cf8;
+  --al-stage-num: #4dbdf0;
+  --al-stage-veil: rgb(255 255 255 / .06);
+  --al-stage-veil-strong: rgb(255 255 255 / .1);
+  --al-stage-rule: rgb(255 255 255 / .13);
+  --al-stage-grid: rgb(255 255 255 / .035);
+  --al-stage-shade: rgb(6 14 18 / .3);
+  --al-stage-bloom: rgb(175 203 211 / .17);
+  --al-stage-live-veil: rgb(255 159 127 / .14);
+  --al-stage-drop: 0 44px 80px -50px rgb(17 34 42 / .75);
+
+  /* The four domains on paper, for crests and ticket accents. Each clears 4.5:1 on the ticket. */
+  --al-alg: #8f5f17;
+  --al-geo: #1f7f6e;
+  --al-com: #6d48cc;
+  --al-num: #18779f;
+  --al-live: #a83f24;
+  --al-hit: var(--pf);
+  --al-shimmer: rgb(255 255 255 / .65);
+}
+
+:root[data-theme='dark'] .arena-space {
+  --al-stage-top: #19303a;
+  --al-stage-bottom: #0e181d;
+  --al-stage-edge: #2c434c;
+  --al-stage-drop: 0 44px 80px -50px rgb(0 0 0 / .9);
+  --al-alg: #e1ad66;
+  --al-geo: #4fb8a8;
+  --al-com: #a98cf8;
+  --al-num: #4dbdf0;
+  --al-live: #f39575;
+  --al-shimmer: rgb(255 255 255 / .07);
+}
+
+/* --------------------------------------------------------------------------
+ * Hero: the floodlit stage
+ * ------------------------------------------------------------------------ */
+
+.al-hero {
+  container: al-hero / inline-size;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0 0 28px;
+  border: 1px solid var(--al-stage-edge);
+  border-radius: 28px;
+  color: var(--al-stage-ink);
+  background:
+    radial-gradient(65% 80% at 76% 44%, var(--al-stage-bloom), transparent 72%),
+    linear-gradient(155deg, var(--al-stage-top), var(--al-stage-bottom) 72%);
+  box-shadow: var(--al-stage-drop);
+}
+.al-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(var(--al-stage-grid) 1px, transparent 1px), linear-gradient(90deg, var(--al-stage-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(120% 100% at 70% 40%, #000 30%, transparent 82%);
+  mask-image: radial-gradient(120% 100% at 70% 40%, #000 30%, transparent 82%);
+}
+.al-hero :focus-visible { outline-color: var(--al-stage-glow); }
+.al-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  grid-template-areas: 'copy stage' 'foot stage';
+  grid-template-rows: auto 1fr;
+  min-height: 548px;
+}
+.al-hero-copy { grid-area: copy; min-width: 0; padding: 40px 0 8px 44px; }
+.al-hero-foot { grid-area: foot; display: grid; align-content: end; gap: 28px; min-width: 0; padding: 20px 0 36px 44px; }
+
+.al-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 14px 8px 12px;
+  border: 1px solid var(--al-stage-rule);
+  border-radius: 999px;
+  background: var(--al-stage-veil);
+  color: var(--al-stage-glow);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: .16em;
+  white-space: nowrap;
+}
+.al-brand svg { flex-shrink: 0; }
+
+.al-title {
+  min-width: 0;
+  margin: 24px 0 16px;
+  font-family: var(--al-display);
+  font-size: clamp(2.2rem, 5cqi, 4.1rem);
+  font-weight: 650;
+  line-height: 1.04;
+  letter-spacing: -.05em;
+  color: var(--al-stage-ink);
+  overflow-wrap: anywhere;
+}
+.al-title-line { display: block; }
+.al-title-accent { position: relative; width: fit-content; max-width: 100%; padding-bottom: .1em; color: var(--al-stage-glow); }
+.al-word { display: inline-block; overflow: hidden; vertical-align: top; margin-bottom: -.12em; padding: 0 .03em .12em; }
+.al-word > span { display: inline-block; }
+.al-underline { position: absolute; left: 0; bottom: -.08em; width: 100%; height: .3em; overflow: visible; }
+.al-underline path { fill: none; stroke: var(--al-stage-pencil); stroke-width: 2; stroke-linecap: round; }
+.al-lead { max-width: 46ch; margin: 0; font-size: clamp(15px, 1.7cqi, 18px); line-height: 1.6; color: var(--al-stage-muted); text-wrap: pretty; }
+
+/* The stage itself */
+.al-stage { grid-area: stage; position: relative; min-width: 0; min-height: 440px; }
+.al-stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+.al-stage-caption { position: absolute; left: 24px; bottom: 16px; z-index: 1; display: grid; gap: 4px; max-width: calc(100% - 192px); margin: 0; pointer-events: none; }
+.al-stage-caption span { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--al-stage-muted); }
+.al-stage-caption strong { display: block; overflow: hidden; font-family: var(--al-math); font-size: 15.5px; font-weight: 500; line-height: 1.3; color: var(--al-stage-ink); text-overflow: ellipsis; white-space: nowrap; }
+.al-stage-controls { position: absolute; right: 20px; bottom: 16px; z-index: 1; display: flex; align-items: center; gap: 12px; }
+.al-stage-hint { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--al-stage-muted); white-space: nowrap; animation: al-breathe 4s var(--al-ease) infinite; }
+.al-stage-pause {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--al-stage-rule);
+  border-radius: 50%;
+  background: var(--al-stage-shade);
+  color: var(--al-stage-ink);
+  cursor: pointer;
+  transition: background-color .2s, border-color .2s, transform .16s;
+}
+.al-stage-pause[aria-pressed='true'] { border-color: var(--al-stage-glow); color: var(--al-stage-glow); }
+.al-stage-pause:active { transform: scale(.92); }
+
+/* What is on next: straight on the stage, no card of its own */
+.al-next { display: grid; gap: 16px; max-width: 480px; padding-top: 24px; border-top: 1px solid var(--al-stage-rule); }
+.al-next-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.al-next-head strong { min-width: 0; font-family: var(--al-display); font-size: 17px; font-weight: 650; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.al-pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: var(--al-stage-veil-strong); color: var(--al-stage-glow); font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.al-next.is-live .al-pill { background: var(--al-stage-live-veil); color: var(--al-stage-live); }
+.al-next-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 20px; }
+.al-next-label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--al-stage-muted); }
+.al-count { display: flex; gap: 8px; }
+.al-count-unit { display: grid; justify-items: center; gap: 4px; min-width: 56px; padding: 8px; border: 1px solid var(--al-stage-rule); border-radius: 12px; background: var(--al-stage-shade); }
+.al-count-digits { display: flex; font-family: var(--al-display); font-size: clamp(24px, 2.9cqi, 31px); font-weight: 650; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.al-digit { position: relative; display: inline-block; width: .64em; height: 1.08em; overflow: hidden; }
+.al-digit > span { position: absolute; inset: 0; display: grid; place-items: center; }
+.al-count-unit small { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--al-stage-muted); }
+.al-next-find {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--al-stage-rule);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--al-stage-ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color .2s, border-color .2s, transform .16s;
+}
+.al-next-find:active { transform: scale(.97); }
+.al-next.is-quiet { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 16px; }
+.al-next.is-quiet > svg { margin-top: 2px; color: var(--al-stage-glow); }
+.al-next.is-quiet strong { display: block; font-family: var(--al-display); font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+.al-next.is-quiet p { margin: 4px 0 0; font-size: 14px; line-height: 1.55; color: var(--al-stage-muted); }
+.al-next.is-waiting { gap: 12px; }
+
+.al-dot { position: relative; display: inline-block; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.al-dot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: currentColor; animation: al-ping 1.8s var(--al-ease) infinite; }
+
+/* Register · Enter · Think · Finish */
+.al-journey { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 480px; margin: 0; padding: 0; list-style: none; }
+.al-journey::before,
+.al-journey::after { content: ''; position: absolute; top: 15.5px; left: 12.5%; right: 12.5%; height: 1px; }
+.al-journey::before { background: var(--al-stage-rule); }
+.al-journey::after { background: linear-gradient(90deg, transparent, var(--al-stage-glow)); transform-origin: left; animation: al-rail 5.4s linear infinite; }
+.al-journey li { position: relative; z-index: 1; display: grid; justify-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--al-stage-muted); }
+.al-journey-icon { position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--al-stage-rule); border-radius: 50%; background: var(--al-stage-bottom); color: var(--al-stage-glow); animation: al-step 5.4s var(--al-ease) infinite; animation-delay: calc(var(--i) * 1.44s); }
+.al-journey-icon::after { content: ''; position: absolute; inset: -5px; border: 1px solid var(--al-stage-glow); border-radius: 50%; opacity: 0; animation: al-halo 5.4s var(--al-ease) infinite; animation-delay: inherit; }
+
+/* The LED band */
+.al-ticker {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--al-stage-rule);
+  background: var(--al-stage-shade);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.al-ticker-track { display: flex; width: max-content; animation: al-marquee var(--al-ticker-time, 60s) linear infinite; }
+.al-ticker:hover .al-ticker-track { animation-play-state: paused; }
+.al-ticker-item { display: inline-flex; align-items: center; gap: 12px; padding: 12px 0 12px 24px; font-size: 11.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--al-stage-muted); white-space: nowrap; }
+.al-ticker-status { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.al-ticker-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.al-ticker-status.is-live { color: var(--al-stage-live); }
+.al-ticker-status.is-upcoming { color: var(--al-stage-glow); }
+.al-ticker-status.is-finished { color: var(--al-stage-ink); }
+.al-ticker-mark { margin-left: 16px; font-family: var(--al-math); font-size: 16px; letter-spacing: 0; text-transform: none; color: var(--al-stage-glow); opacity: .75; }
+
+/* --------------------------------------------------------------------------
+ * The match board
+ * ------------------------------------------------------------------------ */
+
+.al-board { container: al-board / inline-size; margin-top: 52px; }
+.al-board-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--ln); }
+.al-board-head h2 { min-width: 0; margin: 0; font-family: var(--al-display); font-size: clamp(26px, 3vw, 34px); font-weight: 650; line-height: 1.1; letter-spacing: -.04em; color: var(--ct); overflow-wrap: anywhere; }
+.al-board-count { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font-size: 13.5px; color: var(--ct-muted); }
+.al-board-count::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ac); }
+.al-refresh svg { transition: transform .6s var(--al-ease); }
+.al-refresh:active:not(:disabled) svg { transform: rotate(-200deg); transition-duration: .3s; }
+.al-board-list { display: grid; gap: 16px; }
+
+/* A match, cut like a ticket */
+.al-ticket {
+  --al-hue: var(--al-geo);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 152px minmax(0, 1fr);
+  border: 1px solid var(--ln);
+  border-radius: 22px;
+  background: var(--sf-raised);
+  transition: border-color .3s;
+}
+/* The ticket lights up in its own hue under the pointer; it is not a link, so it does not lift. */
+.al-ticket::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(380px circle at var(--al-mx, 50%) var(--al-my, 50%), color-mix(in srgb, var(--al-hue) 11%, transparent), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s;
+}
+.al-ticket:focus { outline: none; }
+.al-ticket:focus-visible { outline: 2px solid var(--al-hue); outline-offset: 4px; }
+.al-ticket.is-found { animation: al-found 1.6s var(--al-ease); }
+
+.al-ticket-stub { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; padding: 24px 20px 20px 24px; border-right: 1.5px dashed var(--ln-strong); }
+.al-ticket-stub::before,
+.al-ticket-stub::after { content: ''; position: absolute; right: -10.5px; width: 19px; height: 19px; border: 1px solid var(--ln); border-radius: 50%; background: var(--sf); transition: border-color .3s; }
+.al-ticket-stub::before { top: -10px; clip-path: inset(50% -2px -2px -2px); }
+.al-ticket-stub::after { bottom: -10px; clip-path: inset(-2px -2px 50% -2px); }
+.al-stub-month { font-size: 11.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--al-hue); }
+.al-stub-day { font-family: var(--al-display); font-size: 46px; font-weight: 650; line-height: .95; letter-spacing: -.05em; color: var(--ct); }
+.al-stub-time { font-size: 12.5px; color: var(--ct-muted); white-space: nowrap; }
+.al-crest { width: 72px; height: 72px; margin-top: auto; padding-top: 16px; overflow: visible; color: var(--al-hue); transition: transform 1.2s var(--al-ease); }
+.al-crest circle { fill: color-mix(in srgb, var(--al-hue) 7%, transparent); stroke: color-mix(in srgb, var(--al-hue) 28%, transparent); stroke-width: 1; }
+.al-crest path { fill: none; stroke: currentColor; stroke-width: 1.15; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; animation: al-draw 2.4s var(--al-ease) .2s backwards; }
+.al-ticket.is-live .al-crest { animation: al-spin 32s linear infinite; }
+
+.al-ticket-body { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 28px; min-width: 0; padding: 24px 24px 24px 32px; }
+.al-ticket-info { display: grid; flex: 1 1 320px; gap: 8px; min-width: 0; }
+.al-ticket-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.al-ticket .al-status { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; background: var(--sf-sunken); color: var(--ct-muted); font-size: 11px; font-weight: 700; line-height: 1.35; letter-spacing: .1em; text-transform: uppercase; }
+.al-ticket.is-live .al-status { background: color-mix(in srgb, var(--al-live) 12%, transparent); color: var(--al-live); }
+.al-ticket.is-upcoming .al-status { background: color-mix(in srgb, var(--al-hue) 12%, transparent); color: color-mix(in srgb, var(--al-hue) 72%, var(--ct)); }
+.al-ticket-clock { font-size: 13px; font-weight: 650; color: var(--ct); font-variant-numeric: tabular-nums; }
+.al-ticket h3 { min-width: 0; margin: 4px 0 0; font-family: var(--al-display); font-size: clamp(21px, 2.3vw, 27px); font-weight: 650; line-height: 1.18; letter-spacing: -.035em; color: var(--ct); overflow-wrap: anywhere; }
+.al-ticket-desc { max-width: 62ch; margin: 0; font-size: 15px; line-height: 1.6; color: var(--ct-muted); }
+.al-ticket-meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ct-muted); }
+.al-ticket-meta li { display: inline-flex; align-items: center; gap: 8px; }
+.al-ticket-meta svg { color: var(--al-hue); }
+.al-ticket .arena-match-actions { flex: 0 1 auto; align-items: center; margin-top: 0; }
+.al-ticket .arena-action-hint { max-width: 200px; }
+.al-ticket-progress { position: absolute; left: 24px; right: 24px; bottom: -1px; height: 3px; overflow: hidden; border-radius: 3px; background: color-mix(in srgb, var(--al-live) 14%, transparent); }
+.al-ticket-progress > span { display: block; height: 100%; background: linear-gradient(90deg, color-mix(in srgb, var(--al-live) 40%, transparent), var(--al-live)); transform-origin: left; transition: transform 1s linear; }
+
+/* Loading and empty */
+.al-ticket-ghost { pointer-events: none; }
+.al-ticket-ghost .al-ticket-stub { gap: 12px; }
+.al-ticket-ghost .al-ticket-info { gap: 12px; }
+.al-skel { position: relative; display: block; width: 100%; height: 12px; overflow: hidden; border-radius: 6px; background: var(--sf-sunken); }
+.al-skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--al-shimmer), transparent); animation: al-shimmer 1.5s var(--al-ease) infinite; }
+.al-skel.is-short { width: 40%; }
+.al-skel.is-tall { width: 62%; height: 32px; }
+.al-skel.is-title { width: 55%; height: 24px; }
+.al-skel.is-wide { width: 80%; }
+.al-next .al-skel { background: var(--al-stage-veil-strong); }
+.al-next .al-skel::after { background: linear-gradient(90deg, transparent, var(--al-stage-veil-strong), transparent); }
+
+.al-empty { display: grid; justify-items: center; gap: 8px; padding: 36px 20px 44px; border: 1px dashed var(--ln-strong); border-radius: 22px; background: var(--sf-raised); text-align: center; }
+.al-empty-art { width: 180px; height: auto; margin-bottom: 8px; overflow: visible; color: var(--ac); }
+.al-empty-rim { fill: none; stroke: var(--ln-strong); stroke-width: 1.2; }
+.al-empty-field { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-dasharray: 5 8; opacity: .6; transform-box: fill-box; transform-origin: center; animation: al-spin 26s linear infinite; }
+.al-empty-seat { fill: currentColor; opacity: .3; transform-box: fill-box; transform-origin: center; animation: al-seat 3.6s var(--al-ease) infinite; animation-delay: calc(var(--i) * .2s); }
+.al-empty-flag { fill: none; stroke: var(--al-live); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.al-empty.is-offline .al-empty-art { color: var(--ct-subtle); }
+.al-empty.is-offline .al-empty-flag { stroke: var(--ct-subtle); }
+.al-empty.is-offline .al-empty-field,
+.al-empty.is-offline .al-empty-seat { animation: none; }
+.al-empty h3 { min-width: 0; margin: 0; font-family: var(--al-display); font-size: 24px; font-weight: 650; letter-spacing: -.03em; color: var(--ct); overflow-wrap: anywhere; }
+.al-empty p { max-width: 46ch; margin: 0; color: var(--ct-muted); }
+
+/* --------------------------------------------------------------------------
+ * The house rules: one strip, three segments, each drawing beside its words
+ * ------------------------------------------------------------------------ */
+
+.al-rules { container: al-rules / inline-size; margin-top: 52px; }
+.al-rules-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--ln); border-radius: 22px; background: var(--sf-raised); }
+.al-rule { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 16px; min-width: 0; padding: 24px; }
+.al-rule + .al-rule { border-left: 1px solid var(--ln); }
+.al-rule-art { display: flex; align-items: center; height: 44px; margin-top: 4px; color: var(--ac); }
+.al-rule h3 { min-width: 0; margin: 0 0 4px; font-family: var(--al-display); font-size: 17px; font-weight: 650; line-height: 1.3; letter-spacing: -.02em; color: var(--ct); overflow-wrap: anywhere; }
+.al-rule p { margin: 0; font-size: 14.5px; line-height: 1.6; color: var(--ct-muted); }
+.al-art { width: auto; height: 100%; overflow: visible; }
+
+.al-pip-ring { fill: var(--sf); stroke: var(--ln-strong); stroke-width: 1.5; }
+.al-pip-mark { fill: none; stroke: var(--ct-subtle); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; transform-box: fill-box; transform-origin: center; animation: al-miss 6s var(--al-ease) infinite both; }
+.al-pip-1 .al-pip-mark { animation-delay: .8s; }
+.al-pip-2 .al-pip-mark { stroke: var(--al-hit); stroke-width: 2.7; animation-name: al-mark; animation-delay: 1.6s; }
+.al-pip-2 .al-pip-ring { fill: color-mix(in srgb, var(--al-hit) 12%, var(--sf)); stroke: var(--al-hit); animation: al-ring 6s var(--al-ease) 1.6s infinite both; }
+.al-pip-points { fill: var(--al-hit); font-size: 11px; font-weight: 700; text-anchor: middle; animation: al-points 6s var(--al-ease) 1.6s infinite both; }
+
+.al-clock-face { fill: var(--sf); stroke: var(--ln-strong); stroke-width: 1.5; }
+.al-clock-sweep { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: .25; transform: rotate(-90deg); transform-origin: 32px 32px; animation: al-sweep 6s linear infinite; }
+.al-clock-ticks line { stroke: var(--ct-subtle); stroke-width: 1.2; }
+.al-clock-hand { stroke: var(--ct); stroke-width: 2; stroke-linecap: round; transform: rotate(270deg); transform-origin: 32px 32px; animation: al-turn 6s linear infinite; }
+.al-clock-hub { fill: var(--ct); }
+.al-sync { stroke: var(--ln-strong); stroke-width: 1.5; stroke-dasharray: 2 4; }
+.al-sync-dot { fill: currentColor; animation: al-sync 2s var(--al-ease) infinite; }
+.al-server rect { fill: var(--sf); stroke: var(--ln-strong); stroke-width: 1.5; }
+.al-server-led { fill: var(--al-hit); animation: al-breathe 2s var(--al-ease) infinite; }
+.al-server-led.is-late { animation-delay: 1s; }
+
+.al-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: al-rise 6s var(--al-ease) infinite both; }
+.al-bar-1 { fill: currentColor; animation-delay: .25s; }
+.al-bar-2 { fill: color-mix(in srgb, currentColor 55%, var(--sf-raised)); }
+.al-bar-3 { fill: color-mix(in srgb, currentColor 32%, var(--sf-raised)); animation-delay: .5s; }
+.al-podium-star { fill: var(--al-alg); transform-box: fill-box; transform-origin: center; animation: al-star 6s var(--al-ease) .25s infinite both; }
+.al-podium-floor { stroke: var(--ln-strong); stroke-width: 1.5; stroke-linecap: round; }
+
+/* --------------------------------------------------------------------------
+ * Hover, only where there is a pointer to hover with. One effect per element.
+ * ------------------------------------------------------------------------ */
+
+@media (hover: hover) and (pointer: fine) {
+  .al-stage-pause:hover { background: var(--al-stage-veil-strong); }
+  .al-next-find:hover { border-color: var(--al-stage-glow); background: var(--al-stage-veil); }
+  .al-ticket:hover { border-color: color-mix(in srgb, var(--al-hue) 45%, var(--ln)); }
+  .al-ticket:hover::before { opacity: 1; }
+  .al-ticket:hover .al-ticket-stub::before,
+  .al-ticket:hover .al-ticket-stub::after { border-color: color-mix(in srgb, var(--al-hue) 45%, var(--ln)); }
+  .al-ticket:hover .al-crest { transform: rotate(40deg); }
+}
+
+/* --------------------------------------------------------------------------
+ * Motion
+ * ------------------------------------------------------------------------ */
+
+@keyframes al-ping { from { transform: scale(1); opacity: .55; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes al-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes al-marquee { to { transform: translate3d(-50%, 0, 0); } }
+@keyframes al-rail { 0% { transform: scaleX(0); opacity: 1; } 80% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes al-step { 0%, 22%, 100% { transform: scale(1); } 6% { transform: scale(1.16); } }
+@keyframes al-halo { 0%, 100% { transform: scale(.85); opacity: 0; } 6% { transform: scale(1); opacity: .9; } 24% { transform: scale(1.35); opacity: 0; } }
+@keyframes al-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes al-spin { to { transform: rotate(360deg); } }
+@keyframes al-found { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--al-hue) 0%, transparent); } 18% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--al-hue) 32%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
+@keyframes al-shimmer { to { transform: translateX(100%); } }
+@keyframes al-seat { 0%, 32%, 100% { opacity: .3; transform: translateY(0); } 12% { opacity: 1; transform: translateY(-3px); } }
+@keyframes al-miss { 0% { opacity: 0; transform: scale(.3); } 5% { opacity: 1; transform: scale(1.15); } 7% { transform: translateX(-2px); } 9% { transform: translateX(2px); } 11%, 72% { opacity: 1; transform: none; } 80%, 100% { opacity: 0; transform: scale(.8); } }
+@keyframes al-mark { 0% { opacity: 0; transform: scale(.3); } 6% { opacity: 1; transform: scale(1.2); } 11%, 72% { opacity: 1; transform: none; } 80%, 100% { opacity: 0; transform: scale(.8); } }
+@keyframes al-ring { 0%, 3%, 80%, 100% { fill: var(--sf); stroke: var(--ln-strong); } 8%, 72% { fill: color-mix(in srgb, var(--al-hit) 12%, var(--sf)); stroke: var(--al-hit); } }
+@keyframes al-points { 0%, 4% { opacity: 0; transform: translateY(8px); } 12%, 60% { opacity: 1; transform: none; } 72%, 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes al-sweep { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes al-turn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes al-sync { 0% { transform: translateX(0); opacity: 0; } 15%, 80% { opacity: 1; } 100% { transform: translateX(-36px); opacity: 0; } }
+@keyframes al-rise { 0% { transform: scaleY(0); } 14%, 78% { transform: scaleY(1); } 90%, 100% { transform: scaleY(0); } }
+@keyframes al-star { 0%, 12% { transform: scale(0) rotate(-40deg); opacity: 0; } 20% { transform: scale(1.25) rotate(8deg); opacity: 1; } 26%, 76% { transform: none; opacity: 1; } 86%, 100% { transform: scale(0); opacity: 0; } }
+
+/* The stage's pause button stops every loop in the lobby, not only the canvas. */
+.arena-space[data-arena-paused] :is(.al-hero, .al-board, .al-rules) *,
+.arena-space[data-arena-paused] :is(.al-hero, .al-board, .al-rules) *::before,
+.arena-space[data-arena-paused] :is(.al-hero, .al-board, .al-rules) *::after { animation-play-state: paused !important; }
+
+/* Reduced motion: arena-admin.css already stops every animation in .arena-space.
+   Each drawing's resting style is its finished state, so nothing is left half-drawn. */
+@media (prefers-reduced-motion: reduce) {
+  .al-next-find:active, .al-stage-pause:active, .al-ticket:hover .al-crest { transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+ * Layout: the hero, board and rules answer to their own width, not the
+ * window's, because the workspace sidebar decides how much room there is.
+ * ------------------------------------------------------------------------ */
+
+@container al-hero (max-width: 820px) {
+  .al-hero-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'copy' 'stage' 'foot'; grid-template-rows: auto; min-height: 0; }
+  .al-hero-copy { padding: 32px 28px 0; }
+  .al-title { font-size: clamp(2.1rem, 8.2cqi, 3.5rem); }
+  .al-stage { min-height: 0; aspect-ratio: 16 / 11; max-height: 460px; }
+  .al-hero-foot { padding: 0 28px 28px; }
+  .al-next, .al-journey { max-width: none; }
+}
+
+@container al-hero (max-width: 480px) {
+  .al-hero-copy { padding: 24px 20px 0; }
+  .al-brand { padding: 4px 12px; font-size: 10.5px; letter-spacing: .14em; }
+  .al-title { margin: 20px 0 16px; font-size: clamp(1.9rem, 10.4cqi, 2.6rem); }
+  .al-stage { aspect-ratio: 1 / .9; }
+  .al-stage-caption { left: 16px; bottom: 12px; max-width: calc(100% - 72px); }
+  .al-stage-caption strong { white-space: normal; font-size: 14px; text-wrap: balance; }
+  .al-stage-hint { display: none; }
+  .al-stage-controls { right: 16px; bottom: 12px; }
+  .al-hero-foot { gap: 24px; padding: 0 20px 24px; }
+  .al-count { width: 100%; }
+  .al-count-unit { flex: 1; min-width: 0; }
+  .al-next-row > div:first-child { flex: 1 1 100%; }
+  .al-next-find { flex: 1 1 100%; justify-content: center; }
+  .al-journey li { font-size: 11.5px; }
+}
+
+@container al-board (max-width: 560px) {
+  .al-ticket { grid-template-columns: minmax(0, 1fr); }
+  .al-ticket-stub { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 16px 84px 16px 20px; border-right: 0; border-bottom: 1.5px dashed var(--ln-strong); }
+  .al-ticket-stub::before { top: auto; right: auto; left: -10px; bottom: -10.5px; clip-path: inset(-2px -2px -2px 50%); }
+  .al-ticket-stub::after { right: -10px; bottom: -10.5px; clip-path: inset(-2px 50% -2px -2px); }
+  .al-stub-day { order: -1; font-size: 32px; }
+  .al-stub-time { flex-basis: 100%; }
+  .al-crest { position: absolute; top: 50%; right: 16px; width: 52px; height: 52px; margin: -26px 0 0; padding: 0; }
+  .al-ticket-body { padding: 20px 20px 24px; }
+  .al-ticket-progress { left: 20px; right: 20px; }
+}
+
+@container al-rules (max-width: 1000px) {
+  .al-rules-strip { grid-template-columns: minmax(0, 1fr); }
+  .al-rule { gap: 24px; }
+  .al-rule + .al-rule { border-top: 1px solid var(--ln); border-left: 0; }
+}
+
+@container al-rules (max-width: 400px) {
+  .al-rule { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 20px; }
+  .al-rule-art { height: 44px; margin-top: 0; }
+}
+
+@media (max-width: 600px) {
+  .al-hero { margin-bottom: 20px; border-radius: 22px; }
+  .al-board, .al-rules { margin-top: 40px; }
+}

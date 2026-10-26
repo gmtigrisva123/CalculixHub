@@ -1,6 +1,6 @@
-/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V5 */
+/* Hallmark · pre-emit critique: P5 H4 E4 S5 R3 V5 */
 import { useEffect, useRef, useState } from 'react';
-import { m, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
 import { ArrowUpRight, Clock, Flag, RefreshCw, Swords, Trophy } from 'lucide-react';
 import type { Arena as ArenaInfo, ArenaView } from '../../shared/arena';
 import { apiFetch } from '../services/apiBase';
@@ -9,6 +9,11 @@ import MathText from './MathText';
 import NumericAnswerGrid from './NumericAnswerGrid';
 import GeometryDiagram from './GeometryDiagram';
 import '../styles/arena-admin.css';
+import '../styles/arena-lobby.css';
+import ArenaHero from './arena/ArenaHero';
+import ArenaRules from './arena/ArenaRules';
+import MatchTicket, { BoardEmpty, TicketSkeleton } from './arena/MatchTicket';
+import { matchStatus } from './arena/lobbyModel';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { readArenaResponse } from '../services/arenaResponse';
 
@@ -70,27 +75,19 @@ export default function Arena() {
  const viewEnded=Boolean(view&&(clock>=Date.parse(view.arena.ends_at)||arenas.some(a=>a.id===view.arena.id&&a.status==='closed')));
  const choose=(index:number)=>{setSelected(index);setAnswer('');setError('');};
  return <section className="arena-space" aria-busy={busy}>
-  <header className="arena-heading"><div><p className="arena-kicker"><Swords size={15}/> THE MATHEMATICS ARENA</p><h1>{view?view.arena.title:'Good minds. Great matches.'}</h1><p>{view?view.arena.description:'Find your rhythm. Take a seat. Let the ideas do the competing.'}</p></div><button className="arena-quiet" onClick={()=>{setView(null);void catalog();}} disabled={busy}><RefreshCw size={16}/>{view?'All arenas':'Refresh'}</button></header>
+  {view?<header className="arena-heading"><div><p className="arena-kicker"><Swords size={15}/> THE MATHEMATICS ARENA</p><h1>{view.arena.title}</h1><p>{view.arena.description}</p></div><button className="arena-quiet" onClick={()=>{setView(null);void catalog();}} disabled={busy}><RefreshCw size={16}/>All arenas</button></header>
+   :<ArenaHero arenas={arenas} clock={clock} loaded={loaded} catalogError={catalogError} still={Boolean(reduce)}/>}
   {error && <div className="arena-notice" role="alert">{error}</div>}
   {!user && <div className="arena-note">You can browse the schedule. <a href="/?auth=signup">Sign in or create an account</a> to register and save your match.</div>}
   {!view ? <>
-   <div className="arena-lobby">
-    <div className="arena-orbit" aria-label="Arena journey: register, enter, think, finish">
-     <m.svg viewBox="0 0 520 390" initial={reduce?false:{opacity:0}} animate={{opacity:1}} aria-hidden="true">
-      <ellipse cx="260" cy="195" rx="211" ry="137"/><ellipse cx="260" cy="195" rx="163" ry="105"/><ellipse cx="260" cy="195" rx="113" ry="73"/>
-      <path d="M49 195H471M260 58V332M98 105L422 285M98 285L422 105"/>
-      {[[49,195],[260,58],[471,195],[260,332]].map(([x,y],i)=><m.circle key={i} cx={x} cy={y} r="7" initial={reduce?false:{scale:0}} animate={{scale:1}} transition={{delay:i*.1,duration:.3}}/>)}
-     </m.svg>
-     <div className="arena-orbit-title"><span>CALCULIX</span><strong>Meet your<br/>next idea.</strong><small>Register · Enter · Think · Finish</small></div>
-    </div>
-    <div className="arena-program"><div className="arena-section-label">THE MATCH BOARD <span>{catalogError?'Connection unavailable':arenas.length+' scheduled'}</span></div>
-     {!loaded?<p role="status">Loading the match board…</p>:!arenas.length?<div className="arena-empty"><Flag size={28}/><h2>{catalogError?'The board is unavailable.':'A quiet arena, for now.'}</h2><p>{catalogError?'Use Refresh to reconnect after setup is complete.':'The next match will appear here when an administrator publishes it.'}</p></div>:arenas.map(a=>{
-      const status=a.status==='closed'||clock>=Date.parse(a.ends_at)?'Finished':clock<Date.parse(a.starts_at)?'Upcoming':'Live now';
-      return <article className="arena-match" key={a.id}><div><span className={'arena-status '+(status==='Live now'?'is-live':'')}>{status}</span><h2>{a.title}</h2><p>{a.description}</p><small>{new Date(a.starts_at).toLocaleString()} · {a.duration_minutes} minutes · {a.question_count} questions</small></div><div className="arena-match-actions">{status!=='Finished'&&<button className="arena-primary" disabled={busy||!user} onClick={()=>void action(a.id,'register')}>Take a seat <ArrowUpRight size={16}/></button>}<button className="arena-quiet" disabled={busy||!user} onClick={()=>void action(a.id,'view')}>{status==='Finished'?'View my match':'Resume match'}</button>{status==='Finished'&&<small className="arena-action-hint">For participants who joined this match</small>}</div></article>;
-     })}
-    </div>
-   </div>
-   <footer className="arena-principles"><p><strong>Three attempts.</strong> A correct answer earns the question’s points. Three misses close it.</p><p><strong>Your pace, measured fairly.</strong> The timer is enforced on the server. IRT uses your first response only.</p><p><strong>Real people. Real results.</strong> Rankings contain finished, saved matches.</p></footer>
+   <section className="al-board" aria-labelledby="arena-board-title">
+    <div className="al-board-head"><div><h2 id="arena-board-title">The match board</h2><p className="al-board-count">{!loaded?'Checking the schedule…':catalogError?'Connection unavailable':arenas.length+' scheduled'}</p></div><button className="arena-quiet al-refresh" onClick={()=>{setView(null);void catalog();}} disabled={busy}><RefreshCw size={16}/>Refresh</button></div>
+    {!loaded?<div className="al-board-list" role="status"><span className="sr-only">Loading matches…</span><TicketSkeleton/><TicketSkeleton/></div>:!arenas.length?<BoardEmpty catalogError={catalogError}/>:<div className="al-board-list">{arenas.map(a=>{
+      const status=matchStatus(a,clock);
+      return <MatchTicket key={a.id} arena={a} status={status} clock={clock}>{status!=='Finished'&&<button className="arena-primary" disabled={busy||!user} onClick={()=>void action(a.id,'register')}>Take a seat <ArrowUpRight size={16}/></button>}<button className="arena-quiet" disabled={busy||!user} onClick={()=>void action(a.id,'view')}>{status==='Finished'?'View my match':'Resume match'}</button>{status==='Finished'&&<small className="arena-action-hint">For participants who joined this match</small>}</MatchTicket>;
+     })}</div>}
+   </section>
+   <ArenaRules/>
   </> : !view.entry.started_at ? <div className="arena-waiting"><div className="arena-seat">{viewEnded?<Flag size={42}/>:<Swords size={42}/>}</div>{viewEnded?<><p className="arena-kicker">MATCH ENDED</p><h2>This match has finished.</h2><p>You reserved a seat but did not start before the match closed. No score was recorded.</p><button className="arena-quiet" onClick={()=>setView(null)}>Back to the match board</button></>:<><p className="arena-kicker">YOUR SEAT IS RESERVED</p><h2>A little calm before the challenge.</h2><p>The match opens {new Date(view.arena.starts_at).toLocaleString()}. Once you enter, your {view.arena.duration_minutes}-minute clock starts. Answers are saved as you go.</p><button className="arena-primary" disabled={busy||clock<Date.parse(view.arena.starts_at)} onClick={()=>void action(view.arena.id,'start')}>Enter the arena <ArrowUpRight size={17}/></button></>}</div> : <>
    <div className="arena-scoreline"><span><Clock size={18}/>{finished?'Match complete':Math.floor(remaining/60)+':'+String(remaining%60).padStart(2,'0')}</span><span><Trophy size={18}/>{view.entry.score} points</span><span>IRT θ {view.entry.theta.toFixed(2)} · uncertainty {view.entry.sem.toFixed(2)}</span></div>
    <div className="arena-rounds" aria-label="Question navigator">{view.questions.map((q,i)=><button key={q.id} className={selected===i?'is-current':''} aria-current={selected===i?'step':undefined} onClick={()=>choose(i)}><span>{String(i+1).padStart(2,'0')}</span><small>{view.entry.answers[q.id]?.correct?'Solved':view.entry.answers[q.id]?.finished?'Closed':'Open'}</small></button>)}</div>

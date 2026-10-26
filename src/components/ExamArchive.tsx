@@ -1,24 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, Check, RotateCcw } from 'lucide-react';
-import MathText from './MathText';
-import { EXAM_COLLECTIONS, archiveScore, isArchiveAnswerCorrect, type ExamCollection } from '../domain/examArchive';
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V5 */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { m, useReducedMotion } from 'motion/react';
+import { RotateCcw } from 'lucide-react';
+import {
+  ARCHIVE_PAPERS, findArchivePaper, loadArchivePaper,
+  type ArchiveFamily, type ArchivePaper, type ArchiveQuestion,
+} from '../domain/examArchive';
 import {
   emptyArchiveProgress, loadAccountArchiveProgress, queueAccountArchiveSave,
   readArchiveProgress, writeArchiveProgress, type ArchiveProgress, type ArchiveProgressMap,
 } from '../services/data/examArchiveProgress';
+import { duration, ease } from '../lib/motion';
+import ArchiveHero from './examArchive/ArchiveHero';
+import PaperLibrary from './examArchive/PaperLibrary';
+import PaperSession from './examArchive/PaperSession';
+import PaperResult from './examArchive/PaperResult';
+import { papersInProgress, type SortOrder, type StatusFilter } from './examArchive/archiveModel';
 import '../styles/exam-archive.css';
 
-type Family = 'All' | ExamCollection['family'];
 type SaveState = 'ready' | 'saving' | 'synced' | 'local' | 'failed';
 
 export default function ExamArchive({ userId }: { userId: string | null }) {
   const [progress, setProgress] = useState<ArchiveProgressMap>(() => readArchiveProgress(userId));
   const progressRef = useRef(progress);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [family, setFamily] = useState<Family>('All');
-  const [savedOnly, setSavedOnly] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('ready');
-  const questionHeading = useRef<HTMLHeadingElement>(null);
+  const [family, setFamily] = useState<ArchiveFamily | 'All'>('All');
+  const [status, setStatus] = useState<StatusFilter>('all');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortOrder>('newest');
+  const [paper, setPaper] = useState<{ id: string; questions: ArchiveQuestion[] } | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [undo, setUndo] = useState<{ id: string; snapshot: ArchiveProgress } | null>(null);
+  const reduce = Boolean(useReducedMotion());
+  const rootRef = useRef<HTMLElement>(null);
+  const libraryHeading = useRef<HTMLHeadingElement>(null);
+  const viewHeading = useRef<HTMLHeadingElement>(null);
+  const returnTo = useRef<{ id: string; scroll: number; opener: HTMLElement | null } | null>(null);
 
   useEffect(() => {
     const local = readArchiveProgress(userId);
@@ -56,11 +75,11 @@ export default function ExamArchive({ userId }: { userId: string | null }) {
     return () => { live = false; window.removeEventListener('online', online); };
   }, [userId]);
 
-  const update = (collectionId: string, change: (previous: ArchiveProgress) => ArchiveProgress) => {
-    const previous = progressRef.current[collectionId] ?? emptyArchiveProgress();
+  const update = (paperId: string, change: (previous: ArchiveProgress) => ArchiveProgress) => {
+    const previous = progressRef.current[paperId] ?? emptyArchiveProgress();
     const nextTimestamp = new Date(Math.max(Date.now(), Date.parse(previous.updatedAt) + 1)).toISOString();
     const nextRecord = { ...change(previous), updatedAt: nextTimestamp };
-    const next = { ...progressRef.current, [collectionId]: nextRecord };
+    const next = { ...progressRef.current, [paperId]: nextRecord };
     progressRef.current = next;
     setProgress(next);
     if (!writeArchiveProgress(userId, next)) {
@@ -69,103 +88,135 @@ export default function ExamArchive({ userId }: { userId: string | null }) {
     }
     if (!userId) { setSaveState('local'); return; }
     setSaveState('saving');
-    void queueAccountArchiveSave(userId, collectionId, nextRecord).then(() => {
-      if (progressRef.current[collectionId]?.updatedAt === nextRecord.updatedAt) setSaveState('synced');
+    void queueAccountArchiveSave(userId, paperId, nextRecord).then(() => {
+      if (progressRef.current[paperId]?.updatedAt === nextRecord.updatedAt) setSaveState('synced');
     }).catch(() => setSaveState('local'));
   };
 
-  const active = EXAM_COLLECTIONS.find(collection => collection.id === activeId);
+  const active = findArchivePaper(activeId);
   const activeProgress = active ? progress[active.id] : undefined;
-  const index = active ? Math.min(Math.max(activeProgress?.currentIndex ?? 0, 0), active.questions.length - 1) : 0;
-  const question = active?.questions[index];
-  const answered = active ? active.questions.filter(item => (activeProgress?.answers[item.id] ?? '').trim() !== '').length : 0;
-  const visible = EXAM_COLLECTIONS.filter(collection =>
-    (family === 'All' || family === collection.family) && (!savedOnly || progress[collection.id]?.saved));
+  const questions = paper && paper.id === activeId ? paper.questions : null;
+  const index = activeProgress?.currentIndex ?? 0;
+  const completed = Boolean(activeProgress?.completedAt);
+  const resume = useMemo(() => papersInProgress(ARCHIVE_PAPERS, progress, 1)[0], [progress]);
 
-  useEffect(() => { if (active) questionHeading.current?.focus(); }, [activeId, index, Boolean(activeProgress?.completedAt)]);
+  // Papers load on demand; a hover or focus on a plate has usually fetched it already.
+  useEffect(() => {
+    if (!activeId) return;
+    let live = true;
+    setLoadError(false);
+    loadArchivePaper(activeId).then(
+      loaded => { if (live) setPaper({ id: activeId, questions: loaded }); },
+      () => { if (live) setLoadError(true); },
+    );
+    return () => { live = false; };
+  }, [activeId, attempt]);
 
-  const openCollection = (collection: ExamCollection) => {
-    if (!progressRef.current[collection.id]) update(collection.id, previous => previous);
-    else if (!progressRef.current[collection.id].saved) update(collection.id, previous => ({ ...previous, saved: true }));
-    setActiveId(collection.id);
+  // Each new problem, result or paper hands focus to its heading, and brings the sheet into view.
+  useEffect(() => {
+    const heading = viewHeading.current;
+    if (!active || !questions || !heading) return;
+    heading.focus({ preventScroll: true });
+    const top = rootRef.current?.getBoundingClientRect().top ?? 0;
+    if (top < -40) rootRef.current?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+  }, [activeId, index, completed, Boolean(questions)]);
+
+  useEffect(() => {
+    if (!undo) return;
+    const timer = window.setTimeout(() => setUndo(null), 12000);
+    return () => window.clearTimeout(timer);
+  }, [undo]);
+
+  const openPaper = (target: ArchivePaper, at?: number) => {
+    returnTo.current = { id: target.id, scroll: window.scrollY, opener: document.activeElement instanceof HTMLElement ? document.activeElement : null };
+    const record = progressRef.current[target.id];
+    if (!record) update(target.id, previous => ({ ...previous, currentIndex: at ?? 0 }));
+    else if (!record.saved || (at !== undefined && at !== record.currentIndex)) {
+      update(target.id, previous => ({ ...previous, saved: true, currentIndex: at ?? previous.currentIndex }));
+    }
+    setUndo(null);
+    setActiveId(target.id);
+    requestAnimationFrame(() => rootRef.current?.scrollIntoView({ block: 'start' }));
   };
+
+  const leavePaper = () => {
+    const back = returnTo.current;
+    setActiveId(null);
+    setUndo(null);
+    requestAnimationFrame(() => {
+      if (back) window.scrollTo({ top: back.scroll });
+      // Focus goes back to whatever opened the paper (a plate, the sky's card, Continue), else its plate.
+      const opener = back?.opener;
+      const plate = back ? document.querySelector<HTMLElement>(`[data-paper="${back.id}"]`) : null;
+      const target = opener?.isConnected && opener.offsetParent ? opener : plate?.offsetParent ? plate : libraryHeading.current;
+      target?.focus({ preventScroll: true });
+    });
+  };
+
+  const toggleSave = (target: ArchivePaper) => {
+    const saved = Boolean(progressRef.current[target.id]?.saved);
+    update(target.id, previous => ({ ...previous, saved: !saved }));
+  };
+
+  const browse = () => {
+    libraryHeading.current?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+    libraryHeading.current?.focus({ preventScroll: true });
+  };
+
+  const retry = () => {
+    if (!active) return;
+    const snapshot = progressRef.current[active.id];
+    update(active.id, previous => ({ ...previous, answers: {}, currentIndex: 0, completedAt: null, saved: true }));
+    if (snapshot) setUndo({ id: active.id, snapshot });
+  };
+
+  const restore = () => {
+    if (!undo) return;
+    const { id, snapshot } = undo;
+    update(id, () => ({ ...snapshot }));
+    setUndo(null);
+  };
+
+  // Stable handlers, so the memoised plates re-render only when their own paper changes.
+  const handlers = useRef({ openPaper, toggleSave });
+  handlers.current = { openPaper, toggleSave };
+  const onOpen = useCallback((target: ArchivePaper) => handlers.current.openPaper(target), []);
+  const onOpenAt = useCallback((target: ArchivePaper, at: number) => handlers.current.openPaper(target, at), []);
+  const onToggleSave = useCallback((target: ArchivePaper) => handlers.current.toggleSave(target), []);
+  const onPrefetch = useCallback((target: ArchivePaper) => { void loadArchivePaper(target.id).catch(() => undefined); }, []);
 
   const saveLabel = saveState === 'failed' ? 'Could not save on this device' :
     saveState === 'saving' ? 'Saving…' : saveState === 'synced' ? 'Saved to your account' :
       saveState === 'local' ? (userId ? 'Saved here · account sync pending' : 'Saved on this device') :
-        'Your answers save as you go';
+        'Your work saves as you go';
 
-  if (!active || !question) return <section className="exam-archive" aria-label="International exam archive">
-    <header className="exam-archive-header">
-      <span className="exam-archive-eyebrow">International exam archive</span>
-      <h1>Choose a paper. Pick up where you left off.</h1>
-      <p>Work through one question at a time. Your answers and place in each paper save automatically.</p>
-    </header>
-    <div className="exam-archive-controls" aria-label="Filter exam papers">
-      <div className="exam-archive-families">{(['All', 'AMC 12', 'AIME', 'USAMO', 'IMO'] as Family[]).map(value =>
-        <button key={value} type="button" aria-pressed={family === value} onClick={() => setFamily(value)}>{value}</button>)}</div>
-      <button className="exam-archive-saved-filter" type="button" aria-pressed={savedOnly} onClick={() => setSavedOnly(!savedOnly)}>
-        <Bookmark size={16} /> Saved for later
-      </button>
+  return <section className="xa" ref={rootRef} aria-label="Exam archive">
+    <div className="xa-home" hidden={Boolean(active)}>
+      <ArchiveHero papers={ARCHIVE_PAPERS} progress={progress} family={family} onFamily={setFamily}
+        onBrowse={browse} onOpenAt={onOpenAt} resume={resume} still={reduce} />
+      <PaperLibrary ref={libraryHeading} papers={ARCHIVE_PAPERS} progress={progress}
+        family={family} onFamily={setFamily} status={status} onStatus={setStatus} query={query} onQuery={setQuery}
+        sort={sort} onSort={setSort} saveLabel={saveLabel} onOpen={onOpen} onToggleSave={onToggleSave} onPrefetch={onPrefetch} reduce={reduce} />
     </div>
-    <p className="exam-archive-save-state" role="status">{saveLabel}</p>
-    <div className="exam-archive-grid">{visible.map(collection => {
-      const state = progress[collection.id];
-      const count = collection.questions.length;
-      const completed = state?.completedAt != null;
-      const done = collection.questions.filter(item => (state?.answers[item.id] ?? '').trim() !== '').length;
-      return <article className="exam-archive-card" key={collection.id}>
-        <div className="exam-archive-card-top"><span>{collection.family}</span><span>{count} questions</span></div>
-        <h2>{collection.title}</h2>
-        <p>{collection.description}</p>
-        <div className="exam-archive-card-progress"><span>{completed ? `Finished · ${archiveScore(collection, state.answers)}/${count} correct` : `${done}/${count} answered`}</span><span>{Math.round(done / count * 100)}%</span><div className="exam-archive-track" role="progressbar" aria-label={`${collection.title} questions answered`} aria-valuenow={done} aria-valuemin={0} aria-valuemax={count}><span style={{ width: `${done / count * 100}%` }} /></div></div>
-        <div className="exam-archive-card-actions">
-          <button className="exam-archive-open" type="button" onClick={() => openCollection(collection)}>{completed ? 'View result' : done ? 'Continue paper' : 'Start paper'} <ArrowRight size={17} /></button>
-          <button className="exam-archive-bookmark" type="button" aria-label={`${state?.saved ? 'Remove saved paper' : 'Save paper for later'}: ${collection.title}`} aria-pressed={Boolean(state?.saved)} onClick={() => {
-            const saved = Boolean(progressRef.current[collection.id]?.saved);
-            update(collection.id, previous => ({ ...previous, saved: !saved }));
-          }}>{state?.saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}</button>
+
+    {active && <m.div key={active.id} className="xa-view" initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: duration.slow, ease: ease.standard }}>
+      {undo?.id === active.id && <p className="xa-undo" role="status">
+        Your answers were cleared for a fresh start.
+        <button type="button" onClick={restore}><RotateCcw size={15} aria-hidden="true" />Undo</button>
+      </p>}
+      {loadError
+        ? <div className="xa-loading" role="alert">
+          <p>{active.title} could not be opened. Check your connection and try again.</p>
+          <div><button type="button" className="xa-btn is-ink" onClick={() => setAttempt(value => value + 1)}>Try again</button>
+            <button type="button" className="xa-btn is-quiet" onClick={leavePaper}>All papers</button></div>
         </div>
-      </article>;
-    })}</div>
-    {!visible.length && <p className="exam-archive-empty">No saved papers in this view yet.</p>}
-    <p className="exam-archive-footnote">Papers include problems that work without missing diagrams. USAMO and IMO groups contain selected result questions adapted for answers you can check here.</p>
-  </section>;
-
-  if (activeProgress?.completedAt) {
-    const score = archiveScore(active, activeProgress.answers);
-    return <section className="exam-archive exam-archive-session">
-      <button className="exam-archive-back" type="button" onClick={() => setActiveId(null)}><ArrowLeft size={17} /> All papers</button>
-      <div className="exam-archive-result">
-        <span className="exam-archive-eyebrow">Paper complete · {active.title}</span>
-        <h1 ref={questionHeading} tabIndex={-1}>{score} of {active.questions.length} correct</h1>
-        <p>Your answers are saved. You can review the paper or start a fresh attempt.</p>
-        <div className="exam-archive-result-actions"><button type="button" onClick={() => update(active.id, previous => ({ ...previous, answers: {}, currentIndex: 0, completedAt: null, saved: true }))}><RotateCcw size={16} /> Try again</button><button type="button" onClick={() => setActiveId(null)}>Back to archive</button></div>
-        <div className="exam-archive-review">{active.questions.map((item, position) => <details key={item.id}>
-          <summary><span>Question {position + 1}</span><strong>{isArchiveAnswerCorrect(item, activeProgress.answers[item.id]) ? 'Correct' : 'Incorrect or unanswered'}</strong></summary>
-          <p><MathText text={item.prompt} /></p>
-          <p>Your answer: {activeProgress.answers[item.id] === undefined || activeProgress.answers[item.id] === '' ? 'No answer' : item.kind === 'choice' ? <MathText text={item.options?.[Number(activeProgress.answers[item.id])] ?? 'No answer'} /> : activeProgress.answers[item.id]}</p>
-          <p>Correct answer: {item.kind === 'choice' ? <MathText text={item.options?.[item.answerIndex ?? 0] ?? ''} /> : item.answer}</p>
-        </details>)}</div>
-      </div>
-    </section>;
-  }
-
-  const answer = activeProgress?.answers[question.id] ?? '';
-  const saveAnswer = (value: string) => update(active.id, previous => ({ ...previous, saved: true, answers: { ...previous.answers, [question.id]: value } }));
-  const move = (nextIndex: number) => update(active.id, previous => ({ ...previous, currentIndex: Math.max(0, Math.min(nextIndex, active.questions.length - 1)) }));
-  return <section className="exam-archive exam-archive-session">
-    <div className="exam-archive-session-top"><button className="exam-archive-back" type="button" onClick={() => setActiveId(null)}><ArrowLeft size={17} /> Save & leave</button><span role="status">{saveLabel}</span></div>
-    <div className="exam-archive-paper">
-      <header><span className="exam-archive-eyebrow">{active.title}</span><h1 ref={questionHeading} tabIndex={-1}>Question {index + 1} <span>of {active.questions.length}</span></h1><p>Original problem {question.number} · {answered} answered</p></header>
-      <div className="exam-archive-track" role="progressbar" aria-label="Questions answered" aria-valuenow={answered} aria-valuemin={0} aria-valuemax={active.questions.length}><span style={{ width: `${answered / active.questions.length * 100}%` }} /></div>
-      <div className="exam-archive-prompt"><MathText text={question.prompt} /></div>
-      {question.kind === 'choice' ? <fieldset className="exam-archive-options"><legend className="sr-only">Choose one answer</legend>{question.options?.map((option, optionIndex) => <label key={optionIndex} className={answer === String(optionIndex) ? 'is-selected' : ''}>
-        <input type="radio" name={`archive-${question.id}`} checked={answer === String(optionIndex)} onChange={() => saveAnswer(String(optionIndex))} />
-        <span className="exam-archive-option-letter">{String.fromCharCode(65 + optionIndex)}</span><MathText text={option} />{answer === String(optionIndex) && <Check size={18} />}
-      </label>)}</fieldset> : <div className="exam-archive-numeric"><label htmlFor="exam-archive-answer">Your answer</label><input id="exam-archive-answer" type="text" inputMode="numeric" pattern="[0-9]{1,3}" maxLength={3} autoComplete="off" value={answer} onChange={event => saveAnswer(event.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="000–999" /><p>Enter a whole number from 0 to 999.</p></div>}
-      <nav className="exam-archive-step-controls" aria-label="Paper navigation"><button type="button" disabled={index === 0} onClick={() => move(index - 1)}><ArrowLeft size={17} /> Previous</button>{index === active.questions.length - 1 ? <button className="exam-archive-primary" type="button" onClick={() => update(active.id, previous => ({ ...previous, completedAt: new Date().toISOString() }))}>Finish paper <Check size={17} /></button> : <button className="exam-archive-primary" type="button" onClick={() => move(index + 1)}>Next question <ArrowRight size={17} /></button>}</nav>
-    </div>
-    <div className="exam-archive-paper-footer"><span>Answers are checked when you finish.</span><a href={question.sourceUrl ?? active.sourceUrl} target="_blank" rel="noreferrer">Dataset source ↗</a></div>
+        : !questions
+          ? <div className="xa-loading" role="status"><span className="xa-pulse" aria-hidden="true" />Opening {active.title}…</div>
+          : completed && activeProgress
+            ? <PaperResult paper={active} questions={questions} progress={activeProgress} headingRef={viewHeading} onRetry={retry} onLeave={leavePaper} />
+            : <PaperSession paper={active} questions={questions} progress={activeProgress} saveLabel={saveLabel} signedIn={Boolean(userId)}
+              still={reduce} headingRef={viewHeading} onUpdate={change => update(active.id, change)} onLeave={leavePaper} />}
+    </m.div>}
   </section>;
 }
