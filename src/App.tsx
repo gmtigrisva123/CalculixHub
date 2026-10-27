@@ -90,12 +90,12 @@ function LearningApp() {
    * which is what stops a refresh flashing the landing page at a signed-in
    * learner before the session is rehydrated.
    */
-  const { status: authStatus, authError, profile, signOut, hasOnboarded } = useAuth();
+  const { status: authStatus, authError, profile, signOut, hasOnboarded, confirmedElsewhere } = useAuth();
   const isLoggedIn = authStatus === 'authenticated';
 
   const [guestAllowed, setGuestAllowed] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.has('home') || params.has('auth') || params.has('error') || window.location.hash.includes('error=')) return false;
+    if (params.has('home') || params.has('auth') || params.has('code') || params.has('error') || window.location.hash.includes('error=')) return false;
     return new URLSearchParams(window.location.search).get('demo') === '1' || localStorage.getItem('calculix_guest_access') === 'true';
   });
 
@@ -311,7 +311,7 @@ function LearningApp() {
   if (authStatus === 'loading') return <main className="min-h-screen flex items-center justify-center bg-surface text-content"><p role="status">Opening your learning space…</p></main>;
   const registrationRequested = new URLSearchParams(window.location.search).get('auth') === 'signup';
   const recoveryRequested = new URLSearchParams(window.location.search).get('recovery') === '1';
-  if ((registrationRequested && !isLoggedIn) || recoveryRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
+  if (confirmedElsewhere || (registrationRequested && !isLoggedIn) || recoveryRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
