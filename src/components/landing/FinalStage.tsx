@@ -56,18 +56,15 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
           <div className="lx-final-letter">
             <Eyebrow>A note before you begin</Eyebrow>
             <SplitText as="h2" id="lx-final-title" className="lx-h2" text={'You’re allowed\nto *not know yet.*'} />
-            <Rise as="p" className="lx-lead">To cross something out. To try a smaller example. To put a problem down and come back to it.</Rise>
-            <Rise as="p" className="lx-lead" delay={0.06}>
-              We built CalculixHub for that part of learning: the working-it-out part. A place to sit with a question, follow an idea, and gradually make it your own.
-            </Rise>
-            <Rise as="p" className="lx-final-signoff" delay={0.12}>Bring a little patience. We’ll bring the questions.</Rise>
+            <Rise as="p" className="lx-lead">Cross things out. Try a smaller case. Come back tomorrow.</Rise>
+            <Rise as="p" className="lx-final-signoff" delay={0.08}>Bring a little patience. We’ll bring the questions.</Rise>
           </div>
 
           <div className="lx-final-paths">
             <PathCard
               note="Follow your curiosity"
               title="Explore a problem"
-              copy="Browse competition mathematics. Choose an idea, try an approach, and work through the solution."
+              copy="Pick one and give it a go."
               action="Open practice"
               href="/?auth=signup&tab=learn"
               delay={0}
@@ -75,7 +72,7 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
             <PathCard
               note="Find your starting point"
               title="Discover your level"
-              copy="Create your free account, then begin adaptive placement. Each answer helps find practice that fits."
+              copy="A quiz that adapts as you answer."
               action="Create a free account"
               onClick={onRegister}
               featured

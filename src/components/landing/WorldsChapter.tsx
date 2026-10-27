@@ -1,6 +1,6 @@
 /**
- * "Four worlds": the four domains, one idea each, and one particle cloud that
- * becomes each domain's form as its idea is read.
+ * "Four worlds": the four topics, one card each, and one particle cloud that
+ * becomes each topic's form as its card is read.
  *
  * The visual is sticky — beside the text on a wide screen, behind it on a
  * narrow one — and the scroll position through the four articles drives a
@@ -41,10 +41,10 @@ export default function WorldsChapter() {
     <section className="lx-worlds" id="worlds" aria-labelledby="lx-worlds-title">
       <div className="lx-worlds-stage" data-tone="ink">
         <header className="lx-worlds-head lx-wrap">
-          <Eyebrow index="04">Four worlds</Eyebrow>
+          <Eyebrow index="04">Topics</Eyebrow>
           <SplitText as="h2" id="lx-worlds-title" className="lx-h2" text={'Four worlds.\n*One way of thinking.*'} />
           <Rise as="p" className="lx-lead" delay={0.1}>
-            Competition mathematics lives in four domains. Each has an idea worth following a little further — and a shape you can watch it take.
+            Four kinds of contest problems. Scroll to watch each one take shape.
           </Rise>
           <Rise as="ol" className="lx-worlds-index" delay={0.18}>
             {WORLD_IDEAS.map((idea, index) => (
@@ -110,47 +110,20 @@ export default function WorldsChapter() {
 }
 
 function WorldArticle({ idea, index }: { idea: WorldIdea; index: number }) {
-  const [open, setOpen] = useState(false);
   const id = `world-${index + 1}`;
   return (
     <article className="lx-world" id={id} aria-labelledby={`${id}-title`} data-world={index + 1}>
       <Rise className="lx-world-card" y={50} amount={0.35} blur={false}>
         <div className="lx-world-meta">
           <span className="lx-world-symbol" aria-hidden="true">{idea.symbol}</span>
-          <span>{String(index + 1).padStart(2, '0')} / 04 · {idea.topic}</span>
+          <span>{String(index + 1).padStart(2, '0')} / 04</span>
         </div>
-        <h3 id={`${id}-title`} className="lx-world-title">{idea.title}</h3>
-        <div className="lx-theorem">
-          <div className="lx-theorem-head">
-            <span>{idea.theorem}</span>
-            <span>{idea.level}</span>
-          </div>
+        <h3 id={`${id}-title`} className="lx-world-title">{idea.topic}</h3>
+        <p className="lx-world-line">{idea.line}</p>
+        <figure className="lx-theorem">
+          <figcaption className="lx-theorem-head">{idea.name}</figcaption>
           <MathText className="lx-theorem-formula" text={idea.formula} />
-          <p className="lx-theorem-condition"><MathText text={idea.condition} /></p>
-        </div>
-        <p className="lx-world-thought">{idea.thought}</p>
-        <div className="lx-world-prompt">
-          <span className="lx-world-prompt-label">Something to think about</span>
-          <p><MathText text={idea.question} /></p>
-        </div>
-        <button type="button" className="lx-reveal" aria-expanded={open} aria-controls={`${id}-insight`} onClick={() => setOpen(value => !value)}>
-          <span>{open ? 'Put the idea away' : 'A way into the idea'}</span>
-          <span className="lx-reveal-sign" aria-hidden="true" />
-        </button>
-        <AnimatePresence initial={false}>
-          {open && (
-            <m.div
-              id={`${id}-insight`}
-              className="lx-world-insight"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ height: { duration: 0.55, ease: GLIDE }, opacity: { duration: 0.3 } }}
-            >
-              <p><MathText text={idea.insight} /></p>
-            </m.div>
-          )}
-        </AnimatePresence>
+        </figure>
         <a className="lx-link" href={`/?auth=signup&tab=learn&topic=${encodeURIComponent(idea.topic)}`}>
           Explore {idea.topic.toLowerCase()} <Arrow direction="right" size={15} />
         </a>

@@ -21,6 +21,7 @@ import {
   probCorrect,
   recommendedSource,
   selectNextItem,
+  TARGET_SEM,
   tierForTheta,
   type IRTItem,
   type ItemSource,
@@ -105,19 +106,14 @@ export const TIER_BANDS: readonly { tier: Tier; from: number; to: number }[] = [
   { tier: 'Olympiad', from: 1.2, to: 4 },
 ];
 
-/** Why the run stopped, in a reader's words. */
-export function stopSentence(run: EngineRun): string {
-  const last = run.steps[run.steps.length - 1];
-  switch (run.decision.reason) {
-    case 'precision':
-      return `Stopped after ${run.steps.length - 1} answers: the margin of error reached ±${last.sem.toFixed(2)}.`;
-    case 'classification':
-      return `Stopped after ${run.steps.length - 1} answers: ${Math.round(run.decision.confidence * 100)}% sure of the tier.`;
-    case 'limited-information':
-      return `Stopped after ${run.steps.length - 1} answers: no remaining item would sharpen the estimate.`;
-    case 'bank-exhausted':
-      return `Stopped after ${run.steps.length - 1} answers: every placement item has been used.`;
-    default:
-      return `Still gathering evidence after ${run.steps.length - 1} answers.`;
-  }
+/**
+ * How sure the engine is after a step, from 0 at the prior to 1 when it is sure
+ * enough to stop, for the page's "How sure" meter. This run stops on precision,
+ * so the meter is the margin of error closing from the prior's towards the
+ * stopping target; the final step of a finished run always reads as full.
+ */
+export function certainty(run: EngineRun, index: number): number {
+  if (index === run.steps.length - 1 && run.decision.stop) return 1;
+  const prior = run.steps[0].sem;
+  return Math.max(0, Math.min(1, (prior - run.steps[index].sem) / (prior - TARGET_SEM)));
 }

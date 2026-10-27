@@ -33,35 +33,35 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
   const { scrollYProgress } = useScroll({ target: stackRef, offset: ['start start', 'end end'] });
   const steps: Step[] = [
     {
-      label: 'Find your starting point',
-      title: 'A path that listens.',
-      copy: 'Adaptive placement chooses each question from your answers so far. Watch the estimate take shape, then begin at a level that suits you.',
-      action: 'Sign up to find my level',
+      label: 'Find your level',
+      title: 'Start in the right place.',
+      copy: 'A quiz that adapts to every answer you give.',
+      action: 'Find my level',
       tone: 'paper',
       visual: <PlacementVisual />,
     },
     {
-      label: 'Learn through a real attempt',
-      title: 'Give the idea a chance.',
-      copy: 'Work through competition problems. Submit an answer, rethink a step, and compare your approach with the worked solution when it opens.',
-      action: 'Explore Learn',
+      label: 'Practise',
+      title: 'Learn by doing.',
+      copy: 'Try a problem, take a hint, then read the full solution.',
+      action: 'Start practising',
       href: '/?auth=signup&tab=learn',
       tone: 'mist',
       visual: <LearnVisual />,
     },
     {
-      label: 'Put your thinking into play',
-      title: 'Meet a different challenge.',
-      copy: 'Arena runs competitions scheduled by an administrator. A live event starts with real participants and a timer the server keeps.',
-      action: 'Explore Arena',
+      label: 'Compete',
+      title: 'Race the clock.',
+      copy: 'Live, timed contests against other students.',
+      action: 'See the Arena',
       href: '/?auth=signup&tab=compete',
       tone: 'ink',
       visual: <ArenaVisual />,
     },
     {
-      label: 'Think out loud',
-      title: 'Ask for a nudge, not an answer.',
-      copy: 'The tutor answers with a guiding question rather than the solution, and the community keeps good ideas in conversation. Gemini explanations use your own API key.',
+      label: 'Get help',
+      title: 'A nudge, not the answer.',
+      copy: 'Stuck? The tutor asks the question that gets you moving again.',
       action: 'Visit the community',
       href: '/?auth=signup&tab=community',
       tone: 'cream',
@@ -74,12 +74,9 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
           <div>
-            <Eyebrow index="06">The workspace</Eyebrow>
-            <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'A mathematics workspace.\n*With room for your thinking.*'} />
+            <Eyebrow index="06">What’s inside</Eyebrow>
+            <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'Practise, compete,\n*get unstuck.*'} />
           </div>
-          <Rise as="p" className="lx-lead" delay={0.1}>
-            For the student working towards a competition, the curious problem-solver, and anyone who wants the step behind the answer.
-          </Rise>
         </header>
         <div className="lx-stack" ref={stackRef}>
           {steps.map((step, index) => (
@@ -152,8 +149,7 @@ function PlacementVisual() {
   return (
     <div className="lx-vis lx-vis-placement" ref={ref}>
       <div className="lx-vis-readout">
-        <span>θ <b className="lx-tabular">{step.theta.toFixed(2)}</b></span>
-        <span>± <b className="lx-tabular">{step.sem.toFixed(2)}</b></span>
+        <span>{index ? <>Question <b className="lx-tabular">{index}</b></> : 'Before the first answer'}</span>
         <span className="lx-vis-pill">{step.tier}</span>
       </div>
       <svg viewBox="0 0 360 214">
@@ -172,7 +168,7 @@ function PlacementVisual() {
           />
         ))}
       </svg>
-      <span className="lx-vis-caption">Question {index} of a real placement replay</span>
+      <span className="lx-vis-caption">Each answer narrows it down.</span>
     </div>
   );
 }
@@ -186,7 +182,7 @@ function LearnVisual() {
   return (
     <div className="lx-vis lx-vis-learn" ref={ref}>
       <div className="lx-sheet-card">
-        <span className="lx-sheet-tag">Algebra · a glimpse of the thinking</span>
+        <span className="lx-sheet-tag">Algebra</span>
         <MathText className="lx-sheet-question" text="If $x+y+z=0$, why does $x^3+y^3+z^3=3xyz$?" />
         <m.p
           className="lx-sheet-pencil"
@@ -248,9 +244,9 @@ function ArenaVisual() {
 
 const CHAT = [
   { who: 'learner', text: 'I’m stuck on the two chords.' },
-  { who: 'tutor', text: 'Where does the perpendicular from the centre meet each chord?' },
-  { who: 'learner', text: 'At its midpoint… so O sits at −6 along one and −10 along the other.' },
-  { who: 'tutor', text: 'Exactly. What does that give you for O’s coordinates?' },
+  { who: 'tutor', text: 'What do you know about where two chords cross?' },
+  { who: 'learner', text: 'PA × PB = PC × PD?' },
+  { who: 'tutor', text: 'Exactly. Now, where could the centre be?' },
 ] as const;
 
 function TutorVisual() {

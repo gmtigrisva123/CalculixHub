@@ -25,8 +25,8 @@ export const ARCHIVE_FIGURES = {
   firstYear: 1959,
   lastYear: 2026,
   families: [
-    { family: 'AMC 12', papers: 27, problems: 580, format: 'Five choices, one right', contests: ['AMC 12A', 'AMC 12B'] },
-    { family: 'AIME', papers: 39, problems: 550, format: 'Integer answers, 000 to 999', contests: ['AIME', 'AIME I', 'AIME II'] },
+    { family: 'AMC 12', papers: 27, problems: 580, format: 'Multiple choice', contests: ['AMC 12A', 'AMC 12B'] },
+    { family: 'AIME', papers: 39, problems: 550, format: 'Answers 0 to 999', contests: ['AIME', 'AIME I', 'AIME II'] },
     { family: 'USAMO', papers: 96, problems: 540, format: 'Written proofs', contests: ['USAMO', 'USAJMO', 'USA TST', 'USA TSTST'] },
     { family: 'IMO', papers: 71, problems: 525, format: 'Written proofs', contests: ['IMO', 'IMO Shortlist'] },
   ] satisfies ArchiveFamilyFigure[],

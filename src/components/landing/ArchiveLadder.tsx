@@ -35,11 +35,11 @@ export default function ArchiveLadder() {
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
           <div>
-            <Eyebrow index="05">The archive</Eyebrow>
+            <Eyebrow index="05">Past papers</Eyebrow>
             <SplitText as="h2" id="lx-archive-title" className="lx-h2" text={'Every past paper,\n*from AMC to IMO.*'} />
           </div>
           <Rise as="p" className="lx-lead" delay={0.1}>
-            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} problems from {ARCHIVE_FIGURES.papers} papers, {ARCHIVE_FIGURES.firstYear} to {ARCHIVE_FIGURES.lastYear}. Sit a past paper as a session or wander through it problem by problem — every one with its source cited.
+            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} real problems from {ARCHIVE_FIGURES.papers} past exams. Take a whole paper, or one problem at a time.
           </Rise>
         </header>
       </div>
@@ -66,7 +66,7 @@ export default function ArchiveLadder() {
       </div>
 
       <div className="lx-wrap">
-        <ol className="lx-ladder" aria-label="The four banks, in order of difficulty">
+        <ol className="lx-ladder" aria-label="The archive, from easier contests to harder ones">
           {ARCHIVE_FIGURES.families.map((entry, index) => (
             <m.li
               key={entry.family}
@@ -93,10 +93,9 @@ export default function ArchiveLadder() {
                   variants={{ hidden: { opacity: 0, y: 16 }, shown: { opacity: 1, y: 0, transition: { duration: 0.8, ease: GLIDE, delay: 0.35 + 0.12 * index } } }}
                 >
                   <strong><CountUp value={entry.problems} delay={0.3 + 0.12 * index} /></strong>
-                  <span>problems · {entry.papers} papers</span>
+                  <span>problems</span>
                 </m.div>
               </div>
-              <p className="lx-ladder-contests">{entry.contests.join(' · ')}</p>
             </m.li>
           ))}
           <li className="lx-ladder-axis" aria-hidden="true">
@@ -109,7 +108,7 @@ export default function ArchiveLadder() {
 
         <div className="lx-archive-foot">
           <Rise as="p" className="lx-archive-note">
-            Multiple choice and AIME answers are checked as you go. Proof problems come with reference solutions, so you can mark your own work: solved, partly, or stuck.
+            Answers are checked instantly. Proofs come with full solutions.
           </Rise>
           <Rise delay={0.08}>
             <Magnetic>

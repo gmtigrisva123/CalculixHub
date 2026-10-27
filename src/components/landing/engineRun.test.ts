@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ITEM_BANK } from '../../domain/itemBank';
 import { estimateAbility, evaluatePlacement, TARGET_SEM, type ResponseRecord } from '../../domain/irt';
-import { ENGINE_RUN, SIMULATED_LEARNER, TIER_BANDS, simulatePlacement, stopSentence } from './engineRun';
+import { ENGINE_RUN, SIMULATED_LEARNER, TIER_BANDS, certainty, simulatePlacement } from './engineRun';
 
 describe('the landing page placement replay', () => {
   it('is deterministic, so every visitor watches the same placement', () => {
@@ -41,7 +41,16 @@ describe('the landing page placement replay', () => {
     expect(ENGINE_RUN.steps.length - 1).toBeLessThanOrEqual(SIMULATED_LEARNER.maxItems);
     // The estimate lands within two margins of error of the learner's true ability.
     expect(Math.abs(last.theta - SIMULATED_LEARNER.theta)).toBeLessThan(2 * last.sem);
-    expect(stopSentence(ENGINE_RUN)).toMatch(/^Stopped after \d+ answers/);
+  });
+
+  it('fills the "How sure" meter from empty at the prior to full when it stops', () => {
+    const sure = ENGINE_RUN.steps.map((_, index) => certainty(ENGINE_RUN, index));
+    expect(sure[0]).toBe(0);
+    expect(sure[sure.length - 1]).toBe(1);
+    for (const value of sure) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
   });
 
   it('covers the whole ability scale with its tier bands', () => {

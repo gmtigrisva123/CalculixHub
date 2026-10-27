@@ -72,11 +72,11 @@ export default function ChordPlayground() {
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
           <div>
-            <Eyebrow index="03">Try one now</Eyebrow>
+            <Eyebrow index="03">Try one</Eyebrow>
             <SplitText as="h2" id="lx-play-title" className="lx-h2" text={'Two chords.\n*One hidden radius.*'} />
           </div>
           <Rise as="p" className="lx-lead" delay={0.1}>
-            An original AIME-style problem, written for this page. No timer and no marks: just a figure you can move until the idea gives itself away.
+            No timer, no score. Move the picture until you see it.
           </Rise>
         </header>
 
@@ -101,7 +101,7 @@ export default function ChordPlayground() {
                     maxLength={3}
                     autoComplete="off"
                     value={answer}
-                    placeholder="An integer, 0 to 999"
+                    placeholder="0 to 999"
                     onChange={event => { setAnswer(event.target.value.replace(/[^0-9]/g, '')); setChecked(false); }}
                     aria-describedby="lx-answer-feedback"
                   />
@@ -122,8 +122,8 @@ export default function ChordPlayground() {
                         transition={{ duration: 0.35, ease: GLIDE }}
                       >
                         {right
-                          ? <><TickMark /> Exactly: 289. Now compare your route with the reasoning below.</>
-                          : 'Not quite. Try locating the centre from the midpoints of the two chords.'}
+                          ? <><TickMark /> Right: 289. Compare with the solution below.</>
+                          : 'Not quite. Hint: find the centre from the midpoints of the chords.'}
                       </m.p>
                     )}
                   </AnimatePresence>
@@ -131,7 +131,7 @@ export default function ChordPlayground() {
               </form>
 
               <button type="button" className="lx-reveal" aria-expanded={revealed} aria-controls="lx-chord-solution" onClick={() => setRevealed(open => !open)}>
-                <span>{revealed ? 'Put the reasoning away' : 'Explore the reasoning'}</span>
+                <span>{revealed ? 'Hide the solution' : 'Show the solution'}</span>
                 <span className="lx-reveal-sign" aria-hidden="true" />
               </button>
               <AnimatePresence initial={false}>
@@ -260,7 +260,7 @@ export default function ChordPlayground() {
                 </div>
               </div>
               <p className="lx-chord-note">
-                {moved ? 'The lengths change; their product never does. That constant is the power of P.' : 'Drag C around the circle, or use the slider. Reset returns to the problem’s figure.'}
+                {moved ? 'The lengths change. Their product never does.' : 'Drag C, or use the slider.'}
               </p>
             </div>
           </div>

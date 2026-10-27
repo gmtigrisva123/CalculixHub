@@ -19,10 +19,10 @@ import { scrollToTarget, setScrollLocked } from './smoothScroll';
 
 /** The chapters worth a jump, numbered as the page numbers them. */
 export const NAV_LINKS = [
-  { id: 'engine', label: 'The engine', chapter: '02' },
+  { id: 'engine', label: 'How it works', chapter: '02' },
   { id: 'playground', label: 'Try one', chapter: '03' },
-  { id: 'worlds', label: 'Four worlds', chapter: '04' },
-  { id: 'archive', label: 'Archive', chapter: '05' },
+  { id: 'worlds', label: 'Topics', chapter: '04' },
+  { id: 'archive', label: 'Past papers', chapter: '05' },
   { id: 'plans', label: 'Plans', chapter: '07' },
 ] as const;
 

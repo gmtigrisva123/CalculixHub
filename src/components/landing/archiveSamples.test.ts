@@ -38,8 +38,6 @@ describe('mathematics quoted on the landing page', () => {
 
   it('renders every formula without a KaTeX error', () => {
     for (const sample of ARCHIVE_SAMPLES) expect(mathErrors(sample.prompt), sample.id).toEqual([]);
-    for (const idea of WORLD_IDEAS) {
-      for (const text of [idea.formula, idea.condition, idea.insight, idea.question]) expect(mathErrors(text), idea.topic).toEqual([]);
-    }
+    for (const idea of WORLD_IDEAS) expect(mathErrors(idea.formula), idea.topic).toEqual([]);
   });
 });
