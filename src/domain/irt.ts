@@ -169,6 +169,16 @@ function posteriorWeights(responses: ResponseRecord[]): number[] {
   return weights.map(value => value / total);
 }
 
+/**
+ * The posterior over the ability scale, for drawing: the quadrature nodes and
+ * the normalised weights every estimate above is taken from. The landing page
+ * plots this curve directly, so the picture of "the estimate sharpening" is the
+ * estimator's own state rather than an illustration of it.
+ */
+export function posteriorCurve(responses: ResponseRecord[]): { theta: number[]; weight: number[] } {
+  return { theta: QUAD_NODES.slice(), weight: posteriorWeights(responses) };
+}
+
 /** Expected reduction in posterior variance, averaging both possible answers. */
 export function expectedVarianceReduction(item: IRTItem, weights: number[]): number {
   const mean = weights.reduce((sum, w, i) => sum + w * QUAD_NODES[i], 0);

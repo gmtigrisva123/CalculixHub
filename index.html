@@ -37,16 +37,19 @@
       hosts before the stylesheet URL is even known — fonts.gstatic.com is where
       the font binaries live and it is crossorigin, hence the separate hint.
 
-      Cormorant Garamond is requested at 300/400/500/600 and no heavier. This
-      system avoids bold: interface headings cap at semibold and display sizes
-      set *lighter*, at the 300 and 400 cuts. Both faces carry their italic,
-      because italic — not weight — is how emphasis is marked here.
+      Geist, Newsreader and Geist Mono are requested as weight *ranges*, which
+      Google serves as one variable file per style instead of a file per cut.
+      The landing page sets its display type at in-between weights (Geist at
+      560, say) and Newsreader's optical-size axis lets the same family draw a
+      hairline-contrast italic at 140px and a sturdy one at 16px. Newsreader
+      keeps its italic because italic, not weight, is how emphasis is marked;
+      Geist Mono is the voice of numbers and instrument readouts.
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;1,400&family=Geist:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,300..500&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap"
     />
 
     <!--

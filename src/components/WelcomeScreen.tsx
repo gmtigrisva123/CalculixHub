@@ -47,6 +47,8 @@ import {
 } from '../domain/skillGraph';
 import { useAuth } from '../context/AuthContext';
 import { initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback } from '../services/socialAuth';
+// The paper-and-ink ground the sign-in, sign-up and placement screens stand on.
+import '../styles/landing-refresh.css';
 
 interface WelcomeScreenProps {
   onLoginSuccess: (name: string, level: Level) => void;
