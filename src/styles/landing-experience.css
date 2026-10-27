@@ -642,6 +642,7 @@
 
 .lx-hero-lead {
   max-width: 31em;
+  text-wrap: balance;
   font-size: clamp(16.5px, 1.25vw, 20px);
   line-height: 1.6;
   color: var(--lx-on-night-body);
@@ -780,68 +781,53 @@
   box-shadow: 0 -30px 60px -30px oklch(10% 0.03 230 / 0.45);
 }
 .lx-manifesto { padding: var(--lx-section) 0 calc(var(--lx-section) * 1.05); }
-.lx-manifesto-head { margin-bottom: clamp(36px, 6vh, 64px); }
-.lx-manifesto-text {
-  max-width: 19em;
-  font-size: clamp(30px, 4.35vw, 72px);
-  font-weight: 480;
-  line-height: 1.1;
-  letter-spacing: -0.042em;
+.lx-manifesto-head { margin-bottom: clamp(28px, 5vh, 56px); }
+
+/* The idea: three short lines, set as large as the sheet allows. */
+.lx-idea {
+  font-size: clamp(56px, 10.4vw, 176px);
+  font-weight: 520;
+  line-height: 0.98;
+  letter-spacing: -0.062em;
   color: var(--lx-ink);
 }
-.lx-lit { display: inline; }
-.lx-lit-em {
+.lx-idea-line { display: block; white-space: nowrap; }
+/* On a wide sheet the lines step down to the right, so the eye travels with the idea. */
+@media (min-width: 761px) {
+  .lx-idea-line:nth-child(2) { padding-left: 1.3em; }
+  .lx-idea-line:nth-child(3) { padding-left: 2.6em; }
+}
+.lx-lit { display: inline-block; }
+.lx-idea-easy { font-weight: 300; letter-spacing: -0.05em; }
+.lx-idea-hard { font-weight: 700; transform-origin: 50% 100%; }
+.lx-idea-right {
+  position: relative;
+  padding-right: 0.06em;
   font-family: var(--lx-serif);
   font-style: italic;
   font-weight: 400;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
   color: var(--lx-accent);
 }
-.lx-glyph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5em;
-  height: 0.86em;
-  margin: 0 0.06em;
-  vertical-align: -0.06em;
-  border-radius: 999px;
-  background: var(--lx-paper-shade);
-  box-shadow: 0 0 0 1px var(--lx-rule-faint) inset;
+.lx-idea-underline {
+  position: absolute;
+  left: 0.02em;
+  right: 0.14em;
+  bottom: 0.02em;
+  height: 0.13em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 20' preserveAspectRatio='none'%3E%3Cpath d='M3 13C60 5 150 3 297 9' fill='none' stroke='%23dc9a34' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
 }
-.lx-glyph svg { width: 72%; height: 72%; }
-.lx-glyph-dice { color: var(--lx-pencil); }
-.lx-glyph-bell { color: var(--lx-accent); }
-
-.lx-proofs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(20px, 3vw, 48px);
-  margin-top: clamp(64px, 10vh, 120px);
-  padding-top: 28px;
+.lx-idea-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px 40px;
+  margin-top: clamp(56px, 9vh, 112px);
+  padding-top: 26px;
   border-top: 1px solid var(--lx-rule);
 }
-.lx-proof strong {
-  display: block;
-  font-size: clamp(40px, 4.4vw, 68px);
-  font-weight: 500;
-  letter-spacing: -0.05em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.lx-proof figcaption {
-  margin-top: 14px;
-  max-width: 24em;
-  font-size: 15.5px;
-  line-height: 1.55;
-  color: var(--lx-muted);
-}
-@media (max-width: 760px) {
-  .lx-proofs { grid-template-columns: 1fr; gap: 26px; }
-  .lx-proof { display: grid; grid-template-columns: 132px minmax(0, 1fr); align-items: baseline; gap: 14px; }
-  .lx-proof strong { font-size: 40px; }
-  .lx-proof figcaption { margin-top: 0; }
-}
+.lx-idea-sub { max-width: 28em; font-size: clamp(18px, 1.5vw, 22px); line-height: 1.5; color: var(--lx-body); }
 
 /* ------------------------------------------------------------------------
  * The engine
@@ -958,17 +944,33 @@
 }
 .lx-readouts {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.1fr) minmax(0, 1.5fr);
+  gap: 12px 32px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--lx-night-rule);
 }
 .lx-readouts > div { display: flex; flex-direction: column-reverse; gap: 6px; }
 .lx-readouts dt { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--lx-on-night-muted); }
-.lx-readouts dt i { font-family: var(--lx-serif); font-size: 1.35em; letter-spacing: 0; text-transform: none; }
 .lx-readouts dd { font-size: clamp(22px, 2.2vw, 34px); font-weight: 500; letter-spacing: -0.035em; line-height: 1; }
 .lx-readouts > div:nth-child(2) dd { color: var(--lx-brass); }
-.lx-readouts > div:nth-child(3) dd { color: var(--lx-cyan); }
+/* How sure: a meter with no number on it, filling as the curve narrows. */
+.lx-sure dd { display: flex; align-items: center; height: 1em; }
+.lx-sure-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: oklch(100% 0 0 / 0.1);
+}
+.lx-sure-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lx-cyan), oklch(90% 0.08 160));
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
 
 .lx-chart { flex: 1; width: 100%; min-height: 0; margin-top: 8px; overflow: visible; }
 .lx-band rect { fill: oklch(100% 0 0 / 0.015); transition: fill 0.6s ease; }
@@ -985,19 +987,17 @@
 }
 .lx-band[data-active] text { fill: var(--lx-cyan); }
 .lx-axis { stroke: oklch(100% 0 0 / 0.3); }
-.lx-tick line { stroke: oklch(100% 0 0 / 0.3); }
-.lx-tick text { font-family: var(--lx-mono); font-size: 12px; fill: oklch(100% 0 0 / 0.58); }
+.lx-axis-end { font-family: var(--lx-mono); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; fill: oklch(100% 0 0 / 0.5); }
 .lx-interval { fill: var(--lx-cyan); opacity: 0.32; }
 .lx-curve-glow { fill: none; stroke: var(--lx-cyan); stroke-width: 10; stroke-linejoin: round; opacity: 0.14; }
 .lx-curve-line { fill: none; stroke: var(--lx-cyan); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
 .lx-estimate line { stroke: var(--lx-brass); stroke-width: 1.4; stroke-dasharray: 4 4; }
 .lx-estimate circle { fill: var(--lx-brass); stroke: var(--lx-night-1); stroke-width: 3; }
-.lx-estimate text { font-family: var(--lx-mono); font-size: 15px; font-weight: 600; fill: var(--lx-brass); }
+.lx-estimate text { font-family: var(--lx-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.14em; fill: var(--lx-brass); }
 .lx-dot circle { fill: var(--dot); stroke: var(--dot); stroke-width: 1.6; }
 .lx-dot path { fill: none; stroke: var(--lx-night-1); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .lx-dot.is-miss circle { fill: var(--lx-night-1); }
 .lx-dot.is-miss path { stroke: var(--lx-coral); }
-.lx-rug-label { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; fill: oklch(100% 0 0 / 0.35); }
 
 .lx-ticker { position: relative; min-height: 26px; margin-top: 8px; overflow: hidden; }
 .lx-ticker p {
@@ -1055,13 +1055,13 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     padding: 86px 20px 20px;
-    row-gap: 10px;
+    row-gap: 18px;
   }
   .lx-engine-head { grid-row: 1; }
   .lx-engine-title { font-size: clamp(34px, 9vw, 52px); margin: 12px 0 0; }
   .lx-engine-note { display: none; }
   .lx-instrument { grid-column: 1; grid-row: 2; }
-  .lx-readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; padding-bottom: 14px; }
+  .lx-readouts { grid-template-columns: auto auto minmax(0, 1fr); gap: 10px 18px; padding-bottom: 14px; }
   .lx-readouts dd { font-size: 22px; }
   .lx-readouts dt { font-size: 10px; letter-spacing: 0.1em; }
   .lx-beats { grid-row: 3; margin: 0; align-self: end; }
@@ -1080,9 +1080,8 @@
   /* At phone width the chart is drawn at under half size: only the live tier keeps its label. */
   .lx-band text { font-size: 26px; opacity: 0; transition: opacity 0.4s ease, fill 0.5s ease; }
   .lx-band[data-active] text { opacity: 1; }
-  .lx-tick text { font-size: 20px; }
-  .lx-estimate text { font-size: 24px; }
-  .lx-rug-label { display: none; }
+  .lx-axis-end { font-size: 20px; }
+  .lx-estimate text { font-size: 22px; }
 }
 
 /* ------------------------------------------------------------------------
@@ -1457,32 +1456,25 @@
 .lx-world[data-world='3'] { --world-tone: var(--lx-w3-a); }
 .lx-world[data-world='4'] { --world-tone: var(--lx-w4-a); }
 .lx-world-title {
-  margin: 22px 0 26px;
+  margin: 26px 0 12px;
   font-family: var(--lx-serif);
-  font-size: clamp(38px, 3.8vw, 60px);
-  font-weight: 450;
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  font-size: clamp(46px, 4.6vw, 76px);
+  font-weight: 420;
+  line-height: 1;
+  letter-spacing: -0.04em;
 }
+.lx-world-line { max-width: 24em; font-size: clamp(17px, 1.3vw, 19px); line-height: 1.55; color: var(--lx-on-night-body); }
 .lx-theorem {
-  padding: 20px 22px 18px;
+  margin: 30px 0 26px;
+  padding: 18px 22px 14px;
   border-radius: 20px;
   background: oklch(100% 0 0 / 0.045);
   box-shadow: 0 0 0 1px var(--lx-night-rule) inset, 0 1px 0 oklch(100% 0 0 / 0.06) inset;
 }
-.lx-theorem-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-size: 13px; color: var(--lx-on-night-muted); }
-.lx-theorem-head span:first-child { color: var(--world-tone); font-weight: 520; }
-.lx-theorem-formula { display: block; padding: 10px 0 6px; font-size: clamp(17px, 1.45vw, 22px); color: var(--lx-on-night); }
+.lx-theorem-head { font-family: var(--lx-mono); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--world-tone); }
+.lx-theorem-formula { display: block; padding: 8px 0 4px; font-size: clamp(20px, 1.7vw, 26px); color: var(--lx-on-night); }
 .lx-theorem-formula > span { margin: 0.25em 0 !important; }
 .lx-theorem-formula .katex-display { margin: 0; }
-.lx-theorem-condition { padding-top: 12px; border-top: 1px solid var(--lx-night-rule); font-size: 14.5px; line-height: 1.6; color: var(--lx-on-night-muted); }
-.lx-world-thought { margin-top: 24px; font-size: 16.5px; line-height: 1.65; color: var(--lx-on-night-body); }
-.lx-world-prompt { margin: 24px 0 14px; padding: 4px 0 4px 18px; border-left: 2px solid var(--lx-brass); }
-.lx-world-prompt-label { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--lx-on-night-muted); }
-.lx-world-prompt p { margin-top: 8px; font-family: var(--lx-serif); font-size: clamp(20px, 1.6vw, 25px); line-height: 1.4; color: var(--lx-on-night); }
-.lx-world-insight { overflow: hidden; }
-.lx-world-insight p { padding: 4px 0 18px; font-size: 15.5px; line-height: 1.75; color: var(--lx-on-night-body); }
-.lx-world .lx-link { margin-top: 6px; }
 
 @media (max-width: 960px) {
   .lx-worlds-body { grid-template-columns: minmax(0, 1fr); }
@@ -1492,10 +1484,12 @@
   .lx-world-card {
     padding: 22px 20px 16px;
     border-radius: 24px;
-    background: oklch(17% 0.034 230 / 0.88);
+    /* Opaque: the field's labels pass behind the card as it scrolls, and must not show through. */
+    background: oklch(17% 0.034 230);
     box-shadow: 0 0 0 1px var(--lx-night-rule) inset, 0 30px 60px -30px oklch(5% 0.02 230 / 0.9);
   }
-  .lx-world-title { font-size: 34px; margin: 16px 0 18px; }
+  .lx-world-title { font-size: 40px; margin: 16px 0 8px; }
+  .lx-theorem { margin: 20px 0 16px; }
   .lx-worlds-hud { top: 88px; left: 20px; right: 20px; }
   .lx-worlds-steps li:not([data-active]) { display: none; }
   .lx-worlds-caption { top: 120px; bottom: auto; left: 20px; right: 20px; }
@@ -1585,7 +1579,6 @@
 }
 .lx-ladder-figure strong { display: block; font-size: clamp(30px, 3vw, 46px); font-weight: 500; letter-spacing: -0.05em; line-height: 1; }
 .lx-ladder-figure > span { display: block; margin-top: 6px; font-size: 13px; color: oklch(100% 0 0 / 0.75); }
-.lx-ladder-contests { padding-top: 14px; font-family: var(--lx-mono); font-size: 11.5px; letter-spacing: 0.06em; line-height: 1.6; color: var(--lx-muted); }
 .lx-ladder-axis {
   grid-column: 1 / -1;
   display: flex;
@@ -1816,16 +1809,24 @@
 .lx-plan.is-featured .lx-plan-status { color: var(--lx-brass); }
 .lx-plan-name { margin: 26px 0 10px; font-size: clamp(40px, 3.4vw, 56px); font-weight: 540; letter-spacing: -0.055em; line-height: 1; }
 .lx-plan-price { font-size: 17px; color: var(--lx-muted); }
-.lx-plan-price strong { font-size: 24px; font-weight: 520; letter-spacing: -0.03em; color: var(--lx-ink); }
-.lx-plan.is-featured .lx-plan-price { color: var(--lx-on-night-muted); }
-.lx-plan.is-featured .lx-plan-price strong { font-size: 40px; color: var(--lx-on-night); }
-.lx-plan-copy { margin: 16px 0 22px; font-size: 16px; line-height: 1.6; color: var(--lx-body); }
-.lx-plan.is-featured .lx-plan-copy { color: var(--lx-on-night-body); }
-.lx-plan-list { display: grid; gap: 10px; margin-bottom: 28px; font-size: 15px; color: var(--lx-on-night-body); }
+.lx-plan-price strong { font-size: 19px; font-weight: 520; letter-spacing: -0.02em; color: var(--lx-ink); }
+.lx-plan.is-featured .lx-plan-price strong { font-size: 40px; letter-spacing: -0.04em; color: var(--lx-on-night); }
+.lx-plan-list { display: grid; gap: 12px; margin: 24px 0 30px; font-size: 16px; color: var(--lx-body); }
+.lx-plan.is-featured .lx-plan-list { color: var(--lx-on-night-body); }
 .lx-plan-list li { display: flex; align-items: flex-start; gap: 10px; }
-.lx-check { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; color: var(--lx-cyan); }
+.lx-check { width: 17px; height: 17px; flex-shrink: 0; margin-top: 3px; color: var(--lx-cyan); }
+.lx-check.is-soon { color: var(--lx-muted); }
 .lx-plan-action { margin-top: auto; }
-.lx-plan-toggle { margin-top: auto; }
+.lx-plan-foot {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--lx-rule-faint);
+  font-family: var(--lx-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--lx-muted);
+}
 
 /* A light that follows the pointer, inside the card and along its edge. */
 .lx-spot::before {
@@ -1860,39 +1861,6 @@
   .lx-spot:hover::before,
   .lx-spot:hover::after { opacity: 1; }
 }
-
-.lx-plan-detail { overflow: hidden; }
-.lx-plan-detail > div {
-  margin-top: 16px;
-  padding: 20px 24px;
-  border-radius: 20px;
-  background: var(--lx-paper-shade);
-  box-shadow: inset 3px 0 0 var(--lx-accent);
-  font-size: 15.5px;
-  line-height: 1.65;
-}
-.lx-plan-detail p { margin-top: 6px; color: var(--lx-body); max-width: 60em; }
-
-.lx-compare { margin-top: clamp(48px, 7vh, 80px); }
-.lx-compare-scroll {
-  overflow-x: auto;
-  border-radius: var(--lx-stage-r);
-  background: var(--lx-paper-raised);
-  box-shadow: 0 0 0 1px oklch(24% 0.028 228 / 0.06) inset;
-  padding: clamp(20px, 2.6vw, 36px);
-}
-.lx-compare table { width: 100%; min-width: 680px; border-collapse: collapse; text-align: left; font-size: 15px; }
-.lx-compare caption { text-align: left; padding-bottom: 20px; font-size: clamp(22px, 2vw, 28px); font-weight: 520; letter-spacing: -0.035em; }
-.lx-compare th, .lx-compare td { padding: 16px 14px; border-bottom: 1px solid var(--lx-rule-faint); vertical-align: top; font-weight: 400; line-height: 1.5; }
-.lx-compare thead th { font-weight: 560; border-bottom-color: var(--lx-rule); }
-.lx-compare th:first-child { padding-left: 0; width: 34%; }
-.lx-compare small { display: block; margin-top: 3px; font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lx-muted); font-weight: 400; }
-.lx-compare td { color: var(--lx-body); }
-.lx-compare td[data-value='yes'] { color: var(--lx-ink); }
-.lx-compare td[data-value='no'] { color: var(--lx-muted); }
-.lx-compare td .lx-check { display: inline-block; vertical-align: -3px; margin: 0 6px 0 0; color: var(--lx-accent); }
-.lx-compare tbody tr:last-child > * { border-bottom: 0; }
-.lx-plan-disclaimer { margin-top: 18px; font-size: 14px; color: var(--lx-muted); }
 
 @media (max-width: 960px) {
   .lx-plan-grid { grid-template-columns: minmax(0, 1fr); }

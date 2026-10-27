@@ -3,55 +3,47 @@
  *
  * The section is tall and its stage is sticky, so the scroll position becomes
  * a playhead. Scrubbing through it steps a simulated learner through a real
- * placement (engineRun.ts): each answer drops onto the ability axis at the
- * item's difficulty, and the posterior curve — the engine's own state, not a
- * drawing of it — narrows and moves until the margin of error is small enough
- * for the engine to stop.
+ * placement (engineRun.ts): each answer drops onto the difficulty axis, and the
+ * curve — the engine's own state, not a drawing of it — narrows and moves until
+ * the engine is sure enough to stop.
  *
- * Between answers the curve eases from one posterior to the next. The playhead
- * moves every frame, so the curve, the estimate and the readouts are written
- * straight to the SVG and text nodes; React only re-renders when something
- * discrete changes (a new answer, a new beat of the story).
+ * The story is told without statistics. The reader sees how many questions have
+ * been asked, the level the engine would give now, and a meter of how sure it
+ * is; the curve and the "you" marker carry the rest.
+ *
+ * Between answers the curve eases from one state to the next. The playhead moves
+ * every frame, so the curve, the marker and the meter are written straight to
+ * the SVG and DOM nodes; React only re-renders when something discrete changes
+ * (a new answer, a new beat of the story).
  */
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import { ENGINE_RUN, TIER_BANDS, stopSentence, type EngineStep } from './engineRun';
+import { ENGINE_RUN, TIER_BANDS, certainty, type EngineStep } from './engineRun';
 import { Arrow, Eyebrow, GLIDE, Magnetic, SplitText } from './kit';
 
 const RUN = ENGINE_RUN;
 const ANSWERS = RUN.steps.length - 1;
+const SURE = RUN.steps.map((_, index) => certainty(RUN, index));
 
 // Chart geometry, in viewBox units.
 const W = 800;
 const PAD = 26;
 const BASE = 318;
 const CURVE_H = 236;
-const RUG = 398;
+const RUG = 380;
 const RUG_STEP = 16;
-const HEIGHT = 452;
+const HEIGHT = 440;
 const THETA_MIN = -3.4;
 const THETA_MAX = 3.4;
 const x = (theta: number) => PAD + ((theta - THETA_MIN) / (THETA_MAX - THETA_MIN)) * (W - 2 * PAD);
 const VISIBLE = RUN.grid.map((theta, index) => ({ theta, index })).filter(node => node.theta >= THETA_MIN - 1e-9 && node.theta <= THETA_MAX + 1e-9);
 
 const BEATS = [
-  {
-    title: 'It starts with an open mind.',
-    body: 'Before the first answer every level is plausible. The curve is wide on purpose: that is honest uncertainty, not a score.',
-  },
-  {
-    title: 'Each answer sharpens the picture.',
-    body: 'A right answer on a hard item lifts the estimate; a miss pulls it back. The curve tightens around whatever the evidence supports.',
-  },
-  {
-    title: 'It asks what it would learn most from.',
-    body: 'The next item is the one expected to shrink the uncertainty the most, taking the four domains in turn so no single topic decides your level.',
-  },
-  {
-    title: 'It knows when to stop.',
-    body: `${stopSentence(RUN)} No fixed length, and no question asked for the sake of it.`,
-  },
+  { title: 'It starts open-minded.', body: 'Before the first answer, any level is possible.' },
+  { title: 'Each answer narrows it down.', body: 'Right answers move the guess up. Misses move it down.' },
+  { title: 'Each question fits.', body: 'Not too easy, not too hard.' },
+  { title: 'It stops when it’s sure.', body: `This time, after ${ANSWERS} questions.` },
 ];
 
 /** Which beat of the story a playhead position belongs to. */
@@ -63,8 +55,6 @@ function beatAt(k: number) {
 }
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
-/** Two decimals, without the "-0.00" a value a hair below zero would print. */
-const fixed = (value: number) => (Math.abs(value) < 0.005 ? 0 : value).toFixed(2);
 
 /** Dots for answers at similar difficulty stack upwards instead of overlapping. */
 const RUG_LEVEL = RUN.steps.slice(1).map((step, index, all) =>
@@ -94,15 +84,14 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
   const glowRef = useRef<SVGPathElement>(null);
   const estimateRef = useRef<SVGGElement>(null);
   const intervalRef = useRef<SVGRectElement>(null);
-  const thetaRef = useRef<HTMLSpanElement>(null);
-  const semRef = useRef<HTMLSpanElement>(null);
   const markRef = useRef<SVGTextElement>(null);
   const tierRef = useRef<HTMLSpanElement>(null);
+  const sureRef = useRef<HTMLSpanElement>(null);
   const bandRefs = useRef<(SVGGElement | null)[]>([]);
   const frame = useRef(0);
 
   const draw = useCallback((progress: number) => {
-    // A short hold at either end: the prior gets a moment, and so does the result.
+    // A short hold at either end: the open start gets a moment, and so does the result.
     const k = Math.max(0, Math.min(ANSWERS, ((progress - 0.07) / 0.8) * ANSWERS));
     const from = Math.min(ANSWERS, Math.floor(k));
     const to = Math.min(ANSWERS, from + 1);
@@ -113,14 +102,13 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
     const mix = (p: number, q: number) => p + (q - p) * t;
 
     let line = '';
-    let area = '';
     for (const { theta, index } of VISIBLE) {
       const weight = mix(a.weights[index], b.weights[index]);
       const px = x(theta).toFixed(1);
       const py = (BASE - (weight / RUN.peak) * CURVE_H).toFixed(1);
       line += `${line ? 'L' : 'M'}${px} ${py}`;
     }
-    area = `${line}L${x(THETA_MAX).toFixed(1)} ${BASE}L${x(THETA_MIN).toFixed(1)} ${BASE}Z`;
+    const area = `${line}L${x(THETA_MAX).toFixed(1)} ${BASE}L${x(THETA_MIN).toFixed(1)} ${BASE}Z`;
     areaRef.current?.setAttribute('d', area);
     lineRef.current?.setAttribute('d', line);
     glowRef.current?.setAttribute('d', line);
@@ -138,16 +126,12 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
       estimateRef.current.querySelector('line')?.setAttribute('y1', top.toFixed(1));
       estimateRef.current.querySelector('circle')?.setAttribute('cy', top.toFixed(1));
     }
-    if (markRef.current) {
-      markRef.current.setAttribute('y', (top - 16).toFixed(1));
-      markRef.current.textContent = fixed(theta);
-    }
+    markRef.current?.setAttribute('y', (top - 18).toFixed(1));
     if (intervalRef.current) {
       intervalRef.current.setAttribute('x', x(theta - sem).toFixed(1));
       intervalRef.current.setAttribute('width', (x(theta + sem) - x(theta - sem)).toFixed(1));
     }
-    if (thetaRef.current) thetaRef.current.textContent = fixed(theta);
-    if (semRef.current) semRef.current.textContent = `±${fixed(sem)}`;
+    if (sureRef.current) sureRef.current.style.transform = `scaleX(${mix(SURE[from], SURE[to]).toFixed(3)})`;
     const tier = TIER_BANDS.find(band => theta >= band.from && theta < band.to) ?? TIER_BANDS[1];
     if (tierRef.current && tierRef.current.textContent !== tier.tier) tierRef.current.textContent = tier.tier;
     bandRefs.current.forEach((node, index) => node?.toggleAttribute('data-active', TIER_BANDS[index] === tier));
@@ -177,11 +161,9 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
         <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale, borderRadius: stageRadius }}>
           <div className="lx-engine-grid" aria-hidden="true" />
           <header className="lx-engine-head">
-            <Eyebrow index="02">The engine · live replay</Eyebrow>
+            <Eyebrow index="02">How it works</Eyebrow>
             <SplitText as="h2" id="lx-engine-title" className="lx-engine-title" text="Watch it find *your level.*" />
-            <p className="lx-engine-note">
-              A simulated learner answering the real placement items. Every curve below is computed by the same code that runs your placement.
-            </p>
+            <p className="lx-engine-note">Scroll to watch one student’s placement, answer by answer.</p>
           </header>
 
           <ol className="lx-beats" aria-label="How placement works">
@@ -198,13 +180,18 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
 
           <div className="lx-instrument">
             <dl className="lx-readouts">
-              <div><dt>Answers</dt><dd className="lx-tabular">{answered}</dd></div>
-              <div><dt>Estimate <i>θ</i></dt><dd className="lx-tabular"><span ref={thetaRef}>0.00</span></dd></div>
-              <div><dt>Margin</dt><dd className="lx-tabular"><span ref={semRef}>±1.00</span></dd></div>
-              <div><dt>Tier</dt><dd><span ref={tierRef}>Intermediate</span></dd></div>
+              <div><dt>Questions</dt><dd className="lx-tabular">{answered}</dd></div>
+              <div><dt>Level</dt><dd><span ref={tierRef}>Intermediate</span></dd></div>
+              <div className="lx-sure">
+                <dt>How sure</dt>
+                <dd>
+                  <span className="lx-sure-track" aria-hidden="true"><span ref={sureRef} className="lx-sure-fill" /></span>
+                  <span className="sr-only">{answered === ANSWERS ? 'Sure enough to stop' : 'Not sure yet'}</span>
+                </dd>
+              </div>
             </dl>
 
-            <svg className="lx-chart" viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`Ability estimate after each answer. ${stopSentence(RUN)} Placed at ${RUN.tier}.`}>
+            <svg className="lx-chart" viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
               <defs>
                 <linearGradient id="lx-curve-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" style={{ stopColor: 'var(--lx-cyan)', stopOpacity: 0.42 }} />
@@ -223,12 +210,6 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                 );
               })}
               <line className="lx-axis" x1={PAD} x2={W - PAD} y1={BASE} y2={BASE} />
-              {[-3, -2, -1, 0, 1, 2, 3].map(tick => (
-                <g key={tick} className="lx-tick">
-                  <line x1={x(tick)} x2={x(tick)} y1={BASE} y2={BASE + 6} />
-                  <text x={x(tick)} y={BASE + 22} textAnchor="middle">{tick > 0 ? `+${tick}` : tick}</text>
-                </g>
-              ))}
               <rect ref={intervalRef} className="lx-interval" y={BASE - 4} height={8} rx={4} x={x(-1)} width={x(1) - x(-1)} />
               <path ref={areaRef} className="lx-curve-area" fill="url(#lx-curve-fill)" />
               <path ref={glowRef} className="lx-curve-glow" />
@@ -236,7 +217,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
               <g ref={estimateRef} className="lx-estimate">
                 <line x1={0} x2={0} y1={100} y2={BASE} />
                 <circle cx={0} cy={100} r={5.5} />
-                <text ref={markRef} x={0} y={84} textAnchor="middle">0.00</text>
+                <text ref={markRef} x={0} y={82} textAnchor="middle">YOU</text>
               </g>
               <g className="lx-rug">
                 <AnimatePresence initial={false}>
@@ -257,7 +238,8 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                   ))}
                 </AnimatePresence>
               </g>
-              <text className="lx-rug-label" x={PAD} y={RUG + 4}>items</text>
+              <text className="lx-axis-end" x={PAD} y={BASE + 22}>easier</text>
+              <text className="lx-axis-end" x={W - PAD} y={BASE + 22} textAnchor="end">harder</text>
             </svg>
 
             <AnimatePresence>
@@ -269,7 +251,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                   exit={{ opacity: 0, y: 16, scale: 0.98 }}
                   transition={{ duration: 0.7, ease: GLIDE }}
                 >
-                  <span className="lx-verdict-label">Placed</span>
+                  <span className="lx-verdict-label">Level found</span>
                   <strong>{RUN.tier}</strong>
                   <span className="lx-verdict-copy">Start with {RUN.source} problems.</span>
                 </m.div>
@@ -278,7 +260,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
             <div className="lx-ticker" aria-live="polite">
               <AnimatePresence mode="popLayout" initial={false}>
                 <m.p
-                  key={latest ? latest.item!.id : 'prior'}
+                  key={latest ? latest.item!.id : 'start'}
                   initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
                   animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                   exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
@@ -288,17 +270,16 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                     <>
                       <span className="lx-ticker-q">Q{answered}</span>
                       <span className="lx-ticker-dot" style={{ background: DOMAIN_TONE[latest.item!.domain] }} aria-hidden="true" />
-                      <span>{latest.item!.source} · {latest.item!.domain} · {latest.item!.concept}</span>
-                      <span className={latest.correct ? 'lx-ticker-result is-right' : 'lx-ticker-result is-miss'}>{latest.correct ? 'answered correctly' : 'missed'}</span>
+                      <span>{latest.item!.source} {latest.item!.domain.toLowerCase()}</span>
+                      <span className={latest.correct ? 'lx-ticker-result is-right' : 'lx-ticker-result is-miss'}>{latest.correct ? 'Right' : 'Missed'}</span>
                     </>
                   ) : (
-                    <><span className="lx-ticker-q">Q0</span><span>The prior: a standard normal over the ability scale</span></>
+                    <><span className="lx-ticker-q">Q0</span><span>No answers yet</span></>
                   )}
                 </m.p>
               </AnimatePresence>
             </div>
           </div>
-
 
           <div className="lx-engine-cta">
             <Magnetic>
@@ -307,7 +288,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                 <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
               </button>
             </Magnetic>
-            <span className="lx-engine-cta-note">Free account · no fixed length</span>
+            <span className="lx-engine-cta-note">Free account</span>
           </div>
         </m.div>
       </div>

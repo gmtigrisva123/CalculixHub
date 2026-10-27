@@ -156,46 +156,40 @@ const grouped = (value: number) => Math.round(value).toLocaleString('en-US');
 
 interface CountUpProps {
   value: number;
-  format?: (value: number) => string;
-  duration?: number;
   delay?: number;
-  /** Where the count starts. */
-  from?: number;
   className?: string;
 }
 
 /**
  * The settled figure is what the markup holds, and what a screen reader hears:
- * the animated digits are hidden from assistive technology, and swapped for the
- * starting value only once script is running and motion is allowed.
+ * the animated digits are hidden from assistive technology, and swapped for
+ * zero only once script is running and motion is allowed.
  */
-export function CountUp({ value, format = grouped, duration = 1.9, delay = 0, from = 0, className }: CountUpProps) {
+export function CountUp({ value, delay = 0, className }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
   const inView = useInView(ref, { once: true, amount: 0.8 });
-  const formatRef = useRef(format);
-  formatRef.current = format;
 
   useLayoutEffect(() => {
-    if (!reduce && ref.current) ref.current.textContent = formatRef.current(from);
-  }, [reduce, from]);
+    if (!reduce && ref.current) ref.current.textContent = grouped(0);
+  }, [reduce]);
 
   useEffect(() => {
     if (reduce || !inView) return;
     const node = ref.current;
-    const controls = animate(from, value, {
-      duration,
+    const controls = animate(0, value, {
+      duration: 1.9,
       delay,
       ease: GLIDE,
-      onUpdate: latest => { if (node) node.textContent = formatRef.current(latest); },
+      onUpdate: latest => { if (node) node.textContent = grouped(latest); },
     });
     return () => controls.stop();
-  }, [inView, reduce, value, duration, delay, from]);
+  }, [inView, reduce, value, delay]);
 
   return (
     <span className={className}>
-      <span ref={ref} aria-hidden="true" className="lx-tabular">{format(value)}</span>
-      <span className="sr-only">{format(value)}</span>
+      <span ref={ref} aria-hidden="true" className="lx-tabular">{grouped(value)}</span>
+      <span className="sr-only">{grouped(value)}</span>
     </span>
   );
 }

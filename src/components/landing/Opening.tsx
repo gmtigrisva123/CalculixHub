@@ -8,15 +8,12 @@
  * and the hero leaves with it — it is never uncovered again, which is what lets
  * its render loop stop (the IntersectionObserver sees it go).
  *
- * The manifesto is the page's thesis, lit word by word as it is read: dim words
- * ahead of the reader, full ink behind. The figures under it are imported from
- * the engine itself, not typed in.
+ * The idea is the page's thesis in three short lines, lit word by word as they
+ * are read: dim words ahead of the reader, full ink behind.
  */
 
-import { forwardRef, lazy, Suspense, useRef, useState, type ReactNode } from 'react';
-import { m, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
-import { ITEM_BANK } from '../../domain/itemBank';
-import { TARGET_SEM } from '../../domain/irt';
+import { forwardRef, lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { ARCHIVE_FIGURES } from './archiveFigures';
 import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SplitText } from './kit';
 import { jumpTo } from './LandingNav';
@@ -74,8 +71,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
           </m.div>
           <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" delay={0.22} stagger={0.085} />
           <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 1.1, ease: GLIDE, delay: 0.75 }}>
-            A workspace for competition mathematics. Placement that measures what you know,{' '}
-            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} past problems from AMC to IMO, and solutions that explain the step behind the answer.
+            Real contest problems, matched to your level and explained step by step.
           </m.p>
           <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: GLIDE, delay: 0.92 }}>
             <Magnetic>
@@ -94,13 +90,12 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
         <m.div className="lx-hero-foot" style={{ opacity: copyOpacity }}>
           <m.dl className="lx-hero-stats" initial="hidden" animate="shown" variants={{ shown: { transition: { staggerChildren: 0.08, delayChildren: 1.05 } } }}>
             <HeroStat label="past problems"><CountUp value={ARCHIVE_FIGURES.problems} delay={1.1} /></HeroStat>
-            <HeroStat label="exam papers"><CountUp value={ARCHIVE_FIGURES.papers} delay={1.18} /></HeroStat>
+            <HeroStat label="real exams"><CountUp value={ARCHIVE_FIGURES.papers} delay={1.18} /></HeroStat>
             <HeroStat label="years of contests">{ARCHIVE_FIGURES.firstYear}<span className="lx-dash">–</span>{ARCHIVE_FIGURES.lastYear}</HeroStat>
-            <HeroStat label="domains"><CountUp value={4} delay={1.3} duration={1.2} /></HeroStat>
           </m.dl>
           <m.p className="lx-hero-caption" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2, delay: 1.6 }}>
             <span className="lx-live" aria-hidden="true" />
-            <span>Now drawing <em>the Möbius strip</em> · one side, one edge. Follow the warm line: it is the only edge there is.</span>
+            <span><em>A Möbius strip</em> · one side, one edge.</span>
           </m.p>
           <a className="lx-scroll-cue" href="#idea" onClick={event => jumpTo(event, 'idea')}>
             <span>Scroll</span>
@@ -123,62 +118,60 @@ function HeroStat({ label, children }: { label: string; children: ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-// Manifesto
+// The idea
 // ---------------------------------------------------------------------------
 
 /*
- * `*emphasis*` is set in Newsreader italic; ⟨dice⟩ and ⟨bell⟩ are small inline
- * drawings that light with the words around them.
+ * Three lines, lit word by word as they are read. The last word of each acts
+ * itself out as it lights: "easy" drifts up as if it weighed nothing, "hard"
+ * lands with a thud, and "right" is underlined.
  */
-const THESIS = 'Most practice apps *guess* ⟨dice⟩ — get one right and they hand you something harder. CalculixHub *measures*. ⟨bell⟩ Every answer sharpens an estimate of what you know, with its margin of error attached, and the next problem is the one that will tell it the most. When the estimate is sharp enough, it stops asking and starts teaching.';
-
-type Token = { kind: 'word'; text: string; em: boolean } | { kind: 'glyph'; name: 'dice' | 'bell' };
-
-function tokenize(source: string): Token[] {
-  let em = false;
-  return source.split(' ').filter(Boolean).map((raw): Token => {
-    if (raw === '⟨dice⟩' || raw === '⟨bell⟩') return { kind: 'glyph', name: raw === '⟨dice⟩' ? 'dice' : 'bell' };
-    const opens = raw.startsWith('*');
-    const closes = raw.replace(/[.,—]+$/, '').endsWith('*');
-    if (opens) em = true;
-    const token: Token = { kind: 'word', text: raw.replace(/\*/g, ''), em };
-    if (closes) em = false;
-    return token;
-  });
-}
-
-const TOKENS = tokenize(THESIS);
+type Role = 'easy' | 'hard' | 'right';
+const IDEA: { words: string[]; role: Role }[] = [
+  { words: ['Not', 'too', 'easy.'], role: 'easy' },
+  { words: ['Not', 'too', 'hard.'], role: 'hard' },
+  { words: ['Just', 'right.'], role: 'right' },
+];
+const IDEA_WORDS = IDEA.flatMap((line, row) => line.words.map((text, position) => ({
+  text,
+  row,
+  role: position === line.words.length - 1 ? line.role : undefined,
+})));
 
 const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
   const reduce = Boolean(useReducedMotion());
-  const textRef = useRef<HTMLParagraphElement>(null);
-  const { scrollYProgress } = useScroll({ target: textRef, offset: ['start 0.82', 'end 0.42'] });
-  const total = TOKENS.length;
+  const textRef = useRef<HTMLHeadingElement>(null);
+  const { scrollYProgress } = useScroll({ target: textRef, offset: ['start 0.85', 'end 0.5'] });
+  const total = IDEA_WORDS.length;
 
   return (
     <section ref={ref} className="lx-sheet lx-manifesto" id="idea" data-tone="paper" aria-labelledby="lx-idea-title">
       <div className="lx-wrap">
         <div className="lx-manifesto-head">
           <Eyebrow index="01">The idea</Eyebrow>
-          <h2 id="lx-idea-title" className="sr-only">Most practice apps guess. CalculixHub measures.</h2>
         </div>
-        <p ref={textRef} className="lx-manifesto-text">
-          {TOKENS.map((token, index) => (
-            <LitToken key={index} token={token} progress={scrollYProgress} still={reduce} range={[index / total, Math.min(1, (index + 2.5) / total)]} />
+        <h2 ref={textRef} id="lx-idea-title" className="lx-idea">
+          {IDEA.map((line, row) => (
+            <span key={line.role} className="lx-idea-line">
+              {IDEA_WORDS.map((word, index) => word.row === row && (
+                <IdeaWord
+                  key={index}
+                  text={word.text}
+                  role={word.role}
+                  progress={scrollYProgress}
+                  range={[index / total, Math.min(1, (index + 2) / total)]}
+                  still={reduce}
+                />
+              ))}
+            </span>
           ))}
-        </p>
-        <div className="lx-proofs">
-          <Rise as="figure" className="lx-proof" delay={0}>
-            <strong><CountUp value={ITEM_BANK.length} duration={1.4} /></strong>
-            <figcaption>placement items, each carrying its own difficulty and discrimination</figcaption>
-          </Rise>
-          <Rise as="figure" className="lx-proof" delay={0.08}>
-            <strong>±<CountUp value={TARGET_SEM} from={1} format={value => value.toFixed(2)} duration={1.6} /></strong>
-            <figcaption>the margin of error at which placement stops asking</figcaption>
-          </Rise>
-          <Rise as="figure" className="lx-proof" delay={0.16}>
-            <strong><CountUp value={4} duration={1.2} /></strong>
-            <figcaption>domains kept in balance, so no single topic decides your level</figcaption>
+        </h2>
+        <div className="lx-idea-foot">
+          <Rise as="p" className="lx-idea-sub">CalculixHub finds your level, then gives you problems that fit.</Rise>
+          <Rise delay={0.08}>
+            <a className="lx-link" href="#engine" onClick={event => jumpTo(event, 'engine')}>
+              See how it works <Arrow direction="down" size={15} />
+            </a>
           </Rise>
         </div>
       </div>
@@ -186,32 +179,48 @@ const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
   );
 });
 
-function LitToken({ token, progress, still, range }: { token: Token; progress: MotionValue<number>; still: boolean; range: [number, number] }) {
+interface IdeaWordProps {
+  text: string;
+  role?: Role;
+  progress: MotionValue<number>;
+  range: [number, number];
+  still: boolean;
+}
+
+function IdeaWord({ text, role, progress, range, still }: IdeaWordProps) {
   const opacity = useTransform(progress, range, [0.14, 1]);
-  const style = still ? undefined : { opacity };
-  if (token.kind === 'glyph') {
-    return <><m.span className={`lx-glyph lx-glyph-${token.name}`} style={style} aria-hidden="true">{token.name === 'dice' ? <DiceGlyph /> : <BellGlyph />}</m.span>{' '}</>;
-  }
-  return <><m.span className={token.em ? 'lx-lit lx-lit-em' : 'lx-lit'} style={style}>{token.text}</m.span>{' '}</>;
-}
+  // The acted-out words play once they are half lit, and rewind if the reader scrolls back.
+  const threshold = range[0] + (range[1] - range[0]) * 0.5;
+  const [lit, setLit] = useState(false);
+  useMotionValueEvent(progress, 'change', value => { if (role) setLit(value >= threshold); });
+  useLayoutEffect(() => { if (role) setLit(progress.get() >= threshold); }, [progress, role, threshold]);
 
-function DiceGlyph() {
+  if (!role) return <><m.span className="lx-lit" style={still ? undefined : { opacity }}>{text}</m.span>{' '}</>;
+  const on = lit || still;
+  const act = still ? {} : role === 'easy'
+    ? { animate: { y: on ? '-0.12em' : '0.06em' }, transition: { type: 'spring' as const, stiffness: 46, damping: 7, mass: 1.3 } }
+    : role === 'hard'
+      ? {
+          animate: on ? { y: '0em', scaleY: [1.08, 0.86, 1] } : { y: '-0.36em', scaleY: 1.08 },
+          transition: on
+            ? { y: { type: 'spring' as const, stiffness: 520, damping: 17, mass: 1.6 }, scaleY: { duration: 0.5, times: [0, 0.32, 1], ease: 'easeOut' as const } }
+            : { duration: 0.5, ease: GLIDE },
+        }
+      : {};
   return (
-    <svg viewBox="0 0 48 32" fill="none">
-      <rect x="6" y="5" width="22" height="22" rx="5" transform="rotate(-12 17 16)" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="13" cy="13" r="1.8" fill="currentColor" /><circle cx="18" cy="18.5" r="1.8" fill="currentColor" /><circle cx="22.5" cy="12" r="1.8" fill="currentColor" />
-      <path d="M33 22c3-6 6-9 11-10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="2 3.2" />
-    </svg>
-  );
-}
-
-function BellGlyph() {
-  return (
-    <svg viewBox="0 0 56 32" fill="none">
-      <path d="M3 27h50" stroke="currentColor" strokeWidth="1.3" opacity=".45" />
-      <path d="M4 27C14 27 18 4 28 4s14 23 24 23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M28 4v23" stroke="currentColor" strokeWidth="1.3" strokeDasharray="2 2.5" />
-      <path d="M20 30h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
+    <>
+      <m.span className={`lx-lit lx-idea-${role}`} style={still ? undefined : { opacity }} initial={false} {...act}>
+        {text}
+        {role === 'right' && (
+          <m.span
+            className="lx-idea-underline"
+            aria-hidden="true"
+            initial={false}
+            animate={{ clipPath: on ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)' }}
+            transition={{ duration: still ? 0 : 1, ease: GLIDE }}
+          />
+        )}
+      </m.span>{' '}
+    </>
   );
 }

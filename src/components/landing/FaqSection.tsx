@@ -1,5 +1,5 @@
 /**
- * "Answers": the questions a visitor asks before signing up, answered plainly.
+ * "FAQ": the questions a visitor asks before signing up, answered in a line or two.
  *
  * The heading stays put while the list scrolls past it. Each answer opens in
  * place — the height eases open while the text fades up — and the plus turns
@@ -11,12 +11,12 @@ import { AnimatePresence, m } from 'motion/react';
 import { Arrow, Eyebrow, GLIDE, Rise, SplitText } from './kit';
 
 const FAQS: [string, string][] = [
-  ['What is CalculixHub?', 'A mathematics workspace for competition practice. It brings adaptive placement, answer-based practice, worked solutions, an archive of past papers, community, and administrator-created Arena events into one place.'],
-  ['Do I need to be an Olympiad student?', 'No. Start with a problem that feels approachable, or let placement choose a starting point. The question bank spans AMC, AIME, USAMO and IMO-style levels.'],
-  ['What happens when I get stuck?', 'Begin with a hint: it gives you a direction without taking the discovery away. When you are ready, read the worked solution and compare it with your own approach. You can come back to a problem as often as you need.'],
-  ['When can I read a solution?', 'In Learn, a correct answer unlocks the solution. You can also choose the help option, or reach three incorrect attempts; those routes reveal the solution without awarding points for that question.'],
-  ['How does the AI explanation work?', 'You provide your own Gemini API key to enable explanations. Provider usage and charges belong to your provider account. A paid CalculixHub plan does not currently include AI credits.'],
-  ['Can I buy Pro or Max now?', 'No. Paid plans are in development, with pricing and final limits still to be confirmed. The comparison above describes the intended direction, not a subscription you can buy today.'],
+  ['What is CalculixHub?', 'A place to practise contest maths: find your level, solve real past problems, and learn from full solutions.'],
+  ['Do I need to be an Olympiad student?', 'No. The quiz finds a good starting point for you, from AMC up to IMO.'],
+  ['What if I get stuck?', 'Take a hint first. When you’re ready, read the full solution. You can come back to any problem.'],
+  ['When can I see a solution?', 'Once you solve it, after three wrong tries, or whenever you ask for help. Asking for help means no points for that problem.'],
+  ['How do the AI explanations work?', 'You add your own Gemini API key in Settings. Any usage is billed by Google, not by us.'],
+  ['Can I buy Pro or Max now?', 'Not yet. They’re still being built and have no price.'],
 ];
 
 export default function FaqSection() {
@@ -25,10 +25,9 @@ export default function FaqSection() {
     <section className="lx-faq" id="faq" data-tone="paper" aria-labelledby="lx-faq-title">
       <div className="lx-wrap lx-faq-grid">
         <header className="lx-faq-head">
-          <Eyebrow index="08">Answers</Eyebrow>
-          <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={'A few useful\n*answers.*'} />
-          <Rise as="p" className="lx-lead" delay={0.1}>Clear expectations make a better place to learn.</Rise>
-          <Rise delay={0.16}>
+          <Eyebrow index="08">FAQ</Eyebrow>
+          <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={'Questions,\n*answered.*'} />
+          <Rise delay={0.12}>
             <a className="lx-link" href="/?auth=signup&tab=community">Ask in the community <Arrow size={15} /></a>
           </Rise>
         </header>

@@ -63,7 +63,7 @@ export default function LandingFooter({ contentRef, onSignIn, onRegister }: Land
         <div className="lx-footer-bottom lx-wrap">
           <span>Made for the working-it-out part.</span>
           <button type="button" className="lx-top" onClick={() => scrollToTarget(0)}>
-            Back to the question <Arrow direction="up" size={13} />
+            Back to top <Arrow direction="up" size={13} />
           </button>
           <span>© {new Date().getFullYear()} CalculixHub</span>
         </div>
