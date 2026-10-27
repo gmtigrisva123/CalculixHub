@@ -28,7 +28,7 @@ import { isBackendConfigured, supabase } from '../services/supabase';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { deriveSignupUsername } from '../services/authInput';
 import type { Level, ProfileRow } from '../services/database.types';
-import { clearSocialCallback, emailConfirmationRedirect, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback, passwordRecoveryRedirect, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
+import { clearPendingSignup, clearSocialCallback, emailConfirmationRedirect, initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback, markPendingSignup, passwordRecoveryRedirect, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'unavailable';
 
@@ -47,6 +47,13 @@ interface AuthContextValue {
   user: User | null;
   profile: ProfileRow | null;
   recoveringPassword: boolean;
+  /**
+   * Set when this page was opened from a sign-up confirmation link on a device
+   * other than the one that signed up. The email is verified, but this device
+   * is deliberately left signed out so the learner finishes where they began.
+   */
+  confirmedElsewhere: { email: string | null } | null;
+  dismissConfirmedElsewhere(): void;
   /** True once placement is complete. Read from the profile, not from storage. */
   hasOnboarded: boolean;
 
@@ -103,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [recoveringPassword, setRecoveringPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(initialSocialCallback.error);
+  const [confirmedElsewhere, setConfirmedElsewhere] = useState<AuthContextValue['confirmedElsewhere']>(initialConfirmationElsewhere ? { email: null } : null);
   const socialInFlight = useRef(false);
 
   // Guards against a state update after unmount, and against an in-flight
@@ -133,11 +141,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * callback code. Later events cover refreshes and sign-out in another tab.
    */
   useEffect(() => {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
 
     let cancelled = false;
     let revision = 0;
     let pending: ReturnType<typeof setTimeout> | undefined;
+    // A confirmation link opened on another device signs that device in as a
+    // side effect of verifying the email. That session is dropped before it is
+    // ever applied, so the phone shows "verified" instead of the workspace.
+    let discardLinkSession = initialConfirmationElsewhere;
+    let discarding: Promise<void> | null = null;
 
     const apply = async (next: Session | null, currentRevision: number) => {
       if (cancelled || currentRevision !== revision) return;
@@ -154,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cancelled || currentRevision !== revision || activeUserId.current !== next.user.id) return;
         setProfile(loaded);
         setStatus('authenticated');
+        clearPendingSignup();
       } else {
         setProfile(null);
         setStatus('anonymous');
@@ -163,12 +178,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The client initializes itself. INITIAL_SESSION arrives after it has
     // exchanged an OAuth, email confirmation, or recovery URL code. Querying
     // Supabase inside this callback can deadlock its auth lock, so defer work.
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, next) => {
+    const { data: subscription } = client.auth.onAuthStateChange((event, next) => {
+      if (discardLinkSession) {
+        if (next) {
+          const email = next.user.email ?? null;
+          setConfirmedElsewhere({ email });
+          discarding ??= (async () => {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            try { await client.auth.signOut({ scope: 'local' }); } catch { /* the local session is cleared regardless */ }
+            discardLinkSession = false;
+          })();
+          next = null;
+        } else if (event === 'INITIAL_SESSION' && !discarding) {
+          // The code could not be exchanged here (its verifier lives in the
+          // browser that signed up), but the email was verified before Supabase
+          // redirected, so this is still a success.
+          discardLinkSession = false;
+        }
+        if (event === 'INITIAL_SESSION') clearSocialCallback();
+      }
       if (event === 'PASSWORD_RECOVERY') setRecoveringPassword(true);
       if (event === 'SIGNED_OUT') setRecoveringPassword(false);
       if (next && (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY')) setAuthError(null);
       if (event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY') {
-        if ((initialSocialCallback.returning || initialEmailConfirmation || initialPasswordRecovery) && !next) {
+        if ((initialSocialCallback.returning || initialEmailConfirmation || initialPasswordRecovery) && !next && !initialConfirmationElsewhere) {
           setAuthError(initialSocialCallback.error ?? 'Your sign-in link expired or could not be verified. Please start again in this browser.');
         }
         clearSocialCallback();
@@ -184,6 +217,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.subscription.unsubscribe();
     };
   }, [loadProfile]);
+
+  const dismissConfirmedElsewhere = useCallback(() => setConfirmedElsewhere(null), []);
 
   const refreshProfile = useCallback(async () => {
     const userId = activeUserId.current;
@@ -208,11 +243,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: emailConfirmationRedirect(window.location.origin, import.meta.env.BASE_URL),
           // The trigger creates the profile and resolves duplicate handles.
           data: { username: deriveSignupUsername(displayName, email), display_name: displayName.trim() },
         },
       });
       if (error) return { ok: false, error: friendlyAuthError(error.message, 'signUp') };
+      if (!data.session) markPendingSignup();
       return { ok: true, needsEmailConfirmation: !data.session };
     } catch {
       return { ok: false, error: 'Could not connect to sign-up. Check your connection and try again.' };
@@ -356,6 +393,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: session?.user ?? null,
       profile,
       recoveringPassword,
+      confirmedElsewhere,
+      dismissConfirmedElsewhere,
       hasOnboarded: Boolean(profile?.onboarded_at),
       signUp,
       resendConfirmation,
@@ -367,7 +406,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       refreshProfile,
     }),
-    [status, authError, session, profile, recoveringPassword, signUp, resendConfirmation, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
+    [status, authError, session, profile, recoveringPassword, confirmedElsewhere, dismissConfirmedElsewhere, signUp, resendConfirmation, signIn, signInWithSocial, signOut, requestPasswordReset, updatePassword, completeOnboarding, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
   ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
   Globe, Shield, TrendingUp, Users, Check, X, Download,
-  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare
+  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare, Monitor
 } from 'lucide-react';
 import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
@@ -46,7 +46,7 @@ import {
   formatDifficulty,
 } from '../domain/skillGraph';
 import { useAuth } from '../context/AuthContext';
-import { initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback } from '../services/socialAuth';
+import { initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback } from '../services/socialAuth';
 // The paper-and-ink ground the sign-in, sign-up and placement screens stand on.
 import '../styles/landing-refresh.css';
 
@@ -155,10 +155,11 @@ const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOr
 
 
 export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
-  const { signIn, signUp, resendConfirmation, signInWithSocial, authError, requestPasswordReset, updatePassword, recoveringPassword, completeOnboarding, status: authStatus, hasOnboarded } = useAuth();
+  const { signIn, signUp, resendConfirmation, signInWithSocial, authError, requestPasswordReset, updatePassword, recoveringPassword, completeOnboarding, status: authStatus, hasOnboarded, confirmedElsewhere, dismissConfirmedElsewhere } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'verify' | 'reset' | 'placement'>(() => {
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'verify' | 'confirmed' | 'reset' | 'placement'>(() => {
     if (initialPasswordRecovery) return 'reset';
+    if (initialConfirmationElsewhere) return 'confirmed';
     if (initialEmailConfirmation) return 'login';
     return new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing';
   });
@@ -173,6 +174,13 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
   const [socialProvider, setSocialProvider] = useState<'google' | 'facebook' | null>(null);
   const [confirmationEmail, setConfirmationEmail] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
+  /*
+   * Kept in memory only while "Check your inbox" is showing, so this tab can
+   * finish signing in by itself once the link is opened on another device.
+   * It never touches storage and is dropped as soon as the screen changes.
+   */
+  const pendingCredentials = useRef<{ email: string; password: string } | null>(null);
+  const [checkingConfirmation, setCheckingConfirmation] = useState(false);
   useEffect(() => {
     if (resendCountdown <= 0) return;
     const timer = window.setTimeout(() => setResendCountdown(seconds => seconds - 1), 1000);
@@ -315,6 +323,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
     if (!result.ok) {
       if (result.needsEmailConfirmation) {
         setConfirmationEmail(email.trim());
+        pendingCredentials.current = { email: email.trim(), password };
         setPassword('');
         setAuthMode('verify');
         return;
@@ -415,6 +424,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
 
     if (result.needsEmailConfirmation) {
       setConfirmationEmail(email.trim());
+      pendingCredentials.current = { email: email.trim(), password };
       setPassword('');
       setResendCountdown(60);
       setAuthMode('verify');
@@ -441,6 +451,66 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       setSuccessMessage('');
     }, 1500);
   };
+
+  /**
+   * Signs in with the credentials just entered, once the email is confirmed.
+   *
+   * Confirmation usually happens on a phone, which this tab cannot observe, so
+   * it checks when the learner comes back to it, every 20 seconds while it is
+   * open (well inside the sign-in rate limit), and on request. Background checks
+   * stay silent; only the button reports "not yet".
+   */
+  const continueAfterConfirmation = async (manual: boolean) => {
+    const credentials = pendingCredentials.current;
+    if (!credentials) {
+      if (manual) { setEmail(confirmationEmail); setAuthMode('login'); setErrorMessage(''); setSuccessMessage('Sign in to continue.'); }
+      return;
+    }
+    if (manual) { setCheckingConfirmation(true); setErrorMessage(''); setSuccessMessage(''); }
+    const result = await signIn(credentials);
+    if (manual) setCheckingConfirmation(false);
+    if (pendingCredentials.current !== credentials) return;
+
+    if (result.ok) {
+      pendingCredentials.current = null;
+      const destination = new URL(window.location.href);
+      if (destination.searchParams.get('auth') === 'signup') {
+        destination.searchParams.delete('auth');
+        window.history.replaceState(window.history.state, '', destination.pathname + destination.search + destination.hash);
+      }
+      setErrorMessage('');
+      setSuccessMessage('Email confirmed. Signing you in…');
+      return;
+    }
+    if (result.needsEmailConfirmation) {
+      if (manual) setErrorMessage("We haven't seen the confirmation yet. Open the link in the email (any device works), then try again.");
+      return;
+    }
+    // The password no longer matches, e.g. the address already had an account.
+    pendingCredentials.current = null;
+    if (manual) { setEmail(credentials.email); setAuthMode('login'); setSuccessMessage(''); setErrorMessage(result.error ?? 'Sign in to continue.'); }
+  };
+
+  useEffect(() => {
+    if (authMode !== 'verify') { pendingCredentials.current = null; return; }
+    if (!pendingCredentials.current) return;
+    let lastCheck = Date.now();
+    const startedAt = lastCheck;
+    const check = () => {
+      if (Date.now() - lastCheck < 5000 || Date.now() - startedAt > 30 * 60 * 1000) return;
+      lastCheck = Date.now();
+      void continueAfterConfirmation(false);
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') check(); }, 20000);
+    window.addEventListener('focus', check);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', check);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [authMode]);
 
   const handleResendConfirmation = async () => {
     if (!confirmationEmail || submitting || resendCountdown > 0) return;
@@ -714,18 +784,58 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-accent-text"><Mail size={27} aria-hidden="true" /></div>
           <p className="type-eyebrow text-accent-text">Verify your email</p>
           <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
-          <p className="type-body mt-3 text-content-subtle">If this address needs confirmation, look for a link at <strong className="text-content break-all">{confirmationEmail}</strong>. You can return to this browser afterward.</p>
+          <p className="type-body mt-3 text-content-subtle">If this address needs confirmation, look for a link at <strong className="text-content break-all">{confirmationEmail}</strong>. You can open it on any device, including your phone. This page continues by itself once you've confirmed.</p>
           <div className="mt-7 border-y border-line py-5 text-[13.5px] leading-[1.7] text-content-subtle">
             <p>It may take a minute to arrive. Check your spam folder. If you've used this address before, your account may already be verified. Sign in instead, or use “Forgot?” on the sign-in screen to reset your password.</p>
           </div>
           {errorMessage && <p role="alert" className="mt-5 flex items-start gap-2 text-[13.5px] text-accent-text"><AlertTriangle size={16} className="shrink-0 mt-1" />{errorMessage}</p>}
           {successMessage && <p role="status" className="mt-5 flex items-start gap-2 text-[13.5px] text-proof"><CheckCircle2 size={16} className="shrink-0 mt-1" />{successMessage}</p>}
-          <button type="button" className="cx-btn cx-btn-fill cx-btn-block mt-7 py-3.5" onClick={() => void handleResendConfirmation()} disabled={submitting || resendCountdown > 0}>
+          <button type="button" className="cx-btn cx-btn-fill cx-btn-block mt-7 py-3.5" onClick={() => void continueAfterConfirmation(true)} disabled={checkingConfirmation}>
+            {checkingConfirmation ? 'Checking…' : "I've confirmed my email"}
+          </button>
+          <button type="button" className="cx-btn cx-btn-secondary cx-btn-block mt-3 py-3.5" onClick={() => void handleResendConfirmation()} disabled={submitting || resendCountdown > 0}>
             {submitting ? 'Sending…' : resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend confirmation email'}
           </button>
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px]">
             <button type="button" className="text-accent-text hover:underline underline-offset-3" onClick={() => { setEmail(confirmationEmail); setAuthMode('login'); setErrorMessage(''); setSuccessMessage(''); }}>Sign in instead</button>
             <button type="button" className="text-content-subtle hover:text-content hover:underline underline-offset-3" onClick={() => { setAuthMode('register'); setErrorMessage(''); setSuccessMessage(''); }}>Use a different email</button>
+          </div>
+        </div>
+      </div>
+    </div>;
+  }
+
+  if (authMode === 'confirmed') {
+    const verifiedEmail = confirmedElsewhere?.email;
+    return <div className="quiet-calculix cq-auth">
+      <div className="cq-auth-story">
+        <div className="cq-auth-wash" aria-hidden="true" />
+        <div className="cq-auth-brand relative flex items-center gap-3">
+          <span className="cq-symbol" aria-hidden="true"><CheckCircle2 className="w-5 h-5" /></span>
+          <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
+        </div>
+        <div className="cq-auth-story-copy relative max-w-[40ch]">
+          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Verified. Your next step is on the other screen.</h2>
+          <p className="type-lead mt-4.5 text-stone-400">Your account is ready wherever you sign in.</p>
+        </div>
+        <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">Your next question is waiting.</p>
+      </div>
+      <div className="cq-auth-form-wrap">
+        <div className="cq-auth-form w-full" aria-live="polite">
+          <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-proof"><CheckCircle2 size={27} aria-hidden="true" /></div>
+          <p className="type-eyebrow text-proof">Email verified</p>
+          <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">You're all set</h1>
+          <p className="type-body mt-3 text-content-subtle">
+            {verifiedEmail ? <><strong className="text-content break-all">{verifiedEmail}</strong> is confirmed.</> : 'Your email is confirmed.'} Go back to the device where you created your account to continue.
+          </p>
+          <ol className="mt-7 border-y border-line py-5 space-y-3 text-[13.5px] leading-[1.6] text-content-subtle">
+            <li className="flex gap-3"><Monitor size={16} className="shrink-0 mt-0.5 text-accent-text" aria-hidden="true" /><span>Return to the CalculixHub tab on your computer. It signs you in by itself as soon as you switch back to it.</span></li>
+            <li className="flex gap-3"><Key size={16} className="shrink-0 mt-0.5 text-accent-text" aria-hidden="true" /><span>Closed that tab? Just sign in there with your email and password.</span></li>
+            <li className="flex gap-3"><ArrowRight size={16} className="shrink-0 mt-0.5 text-accent-text" aria-hidden="true" /><span>Your placement test starts right after.</span></li>
+          </ol>
+          <p className="mt-5 text-[13px] text-content-subtle">You can close this page.</p>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px]">
+            <button type="button" className="text-accent-text hover:underline underline-offset-3" onClick={() => { dismissConfirmedElsewhere(); setEmail(verifiedEmail ?? ''); setErrorMessage(''); setSuccessMessage(''); setAuthMode('login'); }}>Continue on this device instead</button>
           </div>
         </div>
       </div>
