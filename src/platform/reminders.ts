@@ -39,7 +39,9 @@ export function remindersEnabled(): boolean {
 }
 
 export function reminderHour(): number {
-  const stored = Number(localStorage.getItem(HOUR_KEY));
+  // Nothing stored reads as null, and Number(null) is 0 -- midnight, not the default.
+  const raw = localStorage.getItem(HOUR_KEY);
+  const stored = raw === null || raw.trim() === '' ? NaN : Number(raw);
   return Number.isInteger(stored) && stored >= 0 && stored <= 23 ? stored : DEFAULT_HOUR;
 }
 

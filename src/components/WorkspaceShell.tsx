@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Bell, ArrowUpRight, BookOpen, Check, ChevronRight, Command, Flame, Menu, Search, Smartphone, Sparkles, X } from 'lucide-react';
 import { NAV_ITEMS, TAB_BAR_ITEMS, type TabKey } from '../lib/navigation';
 import ThemeToggle from './ThemeToggle';
+import UserAvatar from './UserAvatar';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../services/data/notifications';
 import { useRealtimeSubscription } from '../services/data/realtime';
@@ -19,7 +20,7 @@ type Props = {
 };
 
 export default function WorkspaceShell({ activeTab, onSelect, name, points, streak, online, pendingGrades, children }: Props) {
-  const {user}=useAuth();
+  const {user,profile}=useAuth();
   const notices=useNotifications(user?.id??null);
   const [connection,setConnection]=useState('Connecting');
   useRealtimeSubscription({table:'realtime_signals',onStatus:status=>setConnection(status==='SUBSCRIBED'?'Live connection':status==='CHANNEL_ERROR'||status==='TIMED_OUT'?'Reconnecting':'Connecting')},()=>{});
@@ -75,13 +76,13 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
         <p className="workspace-nav-label">PERSONAL</p>
         <nav>{secondary.map(({ key, label, icon: Icon }) => <button key={key} className="workspace-nav-item" aria-current={activeTab === key ? 'page' : undefined} onClick={() => navigate(key)}><Icon size={19} /><span>{label}</span></button>)}</nav>
         <a className="workspace-pocket" href="/?preview=ios"><span><Smartphone size={22} /><ArrowUpRight size={17} /></span><strong>A question for the way.</strong><p>A little space to learn, wherever you are.</p><small>Try the iPhone prototype <ChevronRight size={13} /></small></a>
-        <div className="workspace-sidebar-bottom"><button className="workspace-user" onClick={() => navigate('profile')}><span className="workspace-avatar">{name.slice(0, 2).toUpperCase()}</span><span><strong>{name}</strong><small>Your learning journey</small></span><ChevronRight size={16} /></button></div>
+        <div className="workspace-sidebar-bottom"><button className="workspace-user" onClick={() => navigate('profile')}><span className="workspace-avatar"><UserAvatar src={profile?.avatar_url} /></span><span><strong>{name}</strong><small>Your learning journey</small></span><ChevronRight size={16} /></button></div>
       </aside>
       {mobileMenu && <button className="workspace-menu-backdrop" aria-label="Close navigation" onClick={() => setMobileMenu(false)} />}
       <div className="workspace-body">
         <header className="workspace-topbar">
           <div className="workspace-breadcrumb"><button className="workspace-mobile-menu" aria-label="Open navigation" aria-expanded={mobileMenu} onClick={() => setMobileMenu(true)}><Menu size={21} /></button><span className="workspace-breadcrumb-root">Workspace</span><ChevronRight size={14} /><strong>{selected?.label ?? 'Overview'}</strong></div>
-          <div className="workspace-tools"><button className="workspace-search" ref={searchTrigger} onClick={() => setSearchOpen(true)} aria-label="Search workspace"><Search size={16} /><span>Find your next step</span><kbd><Command size={11} /> K</kbd></button><span className="workspace-streak"><Flame size={17} /> {streak}<span> day{streak === 1 ? '' : 's'}</span></span><span className="workspace-live-state" role="status">{online?connection:'Offline'}</span><button className="workspace-inbox-button" onClick={()=>navigate('inbox')} aria-label={`Inbox: ${notices.unreadCount} unread notifications`}><Bell size={18}/>{notices.unreadCount>0&&<span>{notices.unreadCount}</span>}</button><ThemeToggle variant="bar" /><button className="workspace-avatar workspace-avatar-button" onClick={() => navigate('profile')} aria-label="Your profile">{name.slice(0, 1).toUpperCase()}</button></div>
+          <div className="workspace-tools"><button className="workspace-search" ref={searchTrigger} onClick={() => setSearchOpen(true)} aria-label="Search workspace"><Search size={16} /><span>Find your next step</span><kbd><Command size={11} /> K</kbd></button><span className="workspace-streak"><Flame size={17} /> {streak}<span> day{streak === 1 ? '' : 's'}</span></span><span className="workspace-live-state" role="status">{online?connection:'Offline'}</span><button className="workspace-inbox-button" onClick={()=>navigate('inbox')} aria-label={`Inbox: ${notices.unreadCount} unread notifications`}><Bell size={18}/>{notices.unreadCount>0&&<span>{notices.unreadCount}</span>}</button><ThemeToggle variant="bar" /><button className="workspace-avatar workspace-avatar-button" onClick={() => navigate('profile')} aria-label="Your profile"><UserAvatar src={profile?.avatar_url} /></button></div>
         </header>
         {!online && <div className="workspace-offline" role="status">You're offline. CalculixHub will reconnect on its own as soon as the connection is back.{pendingGrades > 0 ? ` ${pendingGrades} answers waiting to sync.` : ''}</div>}
         <main id="workspace-main" tabIndex={-1} className="workspace-content">{children}</main>

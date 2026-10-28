@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { LogOut, Trophy, Award, User, ShieldCheck, Calendar, MapPin, Sparkles } from 'lucide-react';
-import { UserStats, Problem } from '../../shared/types';
-import { getRankForPoints, nextRankFor } from '../lib/topics';
-import { spring } from '../lib/motion';
+import { Camera, Lock, LogOut, Sparkles } from 'lucide-react';
+import { UserStats, Problem, Topic } from '../../shared/types';
+import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
 import { AnimatedNumber, StaggerItem } from './motion';
 import { useAuth } from '../context/AuthContext';
-import { ACHIEVEMENTS, getUnlockedAchievementIds } from '../domain/achievements';
+import { ACHIEVEMENTS } from '../domain/achievements';
+import { ACCEPTED_IMAGE_TYPES } from '../services/data/media';
+import { clearAvatar, saveAvatar, type AvatarResult } from '../services/data/avatar';
+import UserAvatar from './UserAvatar';
+import '../styles/profile.css';
 
 interface ProfileProps {
   userStats: UserStats;
@@ -21,153 +24,329 @@ interface ProfileProps {
   onTriggerAlert?: (achievement: any) => void;
 }
 
-export default function Profile({ userStats, completedProblems, problems, onLogout, onTriggerAlert }: ProfileProps) {
+type Vars = CSSProperties & Record<`--${string}`, string | number>;
+
+const grouped = (value: number) => Math.round(value).toLocaleString();
+const dayOf = (date: string) => Date.parse(date.length === 10 ? `${date}T00:00:00Z` : date);
+const formatDay = (time: number, withYear = true) => new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined, timeZone: 'UTC' });
+
+/* --------------------------------------------------------------------------
+ * The skill rose: a Nightingale diagram with the learner at its origin
+ * ------------------------------------------------------------------------ */
+
+/* Each topic owns a quadrant on the diagonal, pointing at the corner its label sits in. */
+const PETALS: Array<{ topic: Topic; angle: number; corner: string }> = [
+  { topic: 'Algebra', angle: -135, corner: 'tl' },
+  { topic: 'Geometry', angle: -45, corner: 'tr' },
+  { topic: 'Combinatorics', angle: 45, corner: 'br' },
+  { topic: 'Number Theory', angle: 135, corner: 'bl' },
+];
+const CENTRE = 200, INNER = 60, OUTER = 146, HALF_SPAN = 39;
+const radiusFor = (mastery: number) => INNER + (OUTER - INNER) * Math.min(Math.max(mastery, 0), 100) / 100;
+const polar = (radius: number, degrees: number) => {
+  const angle = degrees * Math.PI / 180;
+  return `${(CENTRE + radius * Math.cos(angle)).toFixed(2)},${(CENTRE + radius * Math.sin(angle)).toFixed(2)}`;
+};
+const sector = (inner: number, outer: number, from: number, to: number) =>
+  `M${polar(outer, from)} A${outer},${outer} 0 0 1 ${polar(outer, to)} L${polar(inner, to)} A${inner},${inner} 0 0 0 ${polar(inner, from)} Z`;
+const arc = (radius: number, from: number, to: number) => `M${polar(radius, from)} A${radius},${radius} 0 0 1 ${polar(radius, to)}`;
+
+function SkillRose({ skills, face, onEditFace }: { skills: UserStats['skills']; face: React.ReactNode; onEditFace?: () => void }) {
+  const ranked = PETALS.map(({ topic }) => ({ topic, value: skills[topic] ?? 0 })).sort((a, b) => b.value - a.value);
+  const strongest = ranked[0], weakest = ranked[ranked.length - 1];
+  const summary = strongest.value <= 0 ? 'Solve a few problems and your topics will take shape here.'
+    : strongest.value === weakest.value ? `Even across all four topics at ${Math.round(strongest.value)}%.`
+    : <>Strongest in <b>{strongest.topic}</b>. {weakest.topic} has the most room to grow.</>;
+
+  return <figure className="pf-rose">
+    <div className="pf-rose-plot">
+      <svg viewBox="0 0 400 400" aria-hidden="true">
+        <defs>
+          <pattern id="pf-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
+          <radialGradient id="pf-petal-fill" cx={CENTRE} cy={CENTRE} r={OUTER} gradientUnits="userSpaceOnUse"><stop offset=".4" stopColor="#e6bd73" stopOpacity=".05" /><stop offset="1" stopColor="#e6bd73" stopOpacity=".4" /></radialGradient>
+        </defs>
+        <g className="pf-rose-grid">
+          {[25, 50, 75, 100].map(mark => <circle key={mark} cx={CENTRE} cy={CENTRE} r={radiusFor(mark)} />)}
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => <path key={angle} d={`M${polar(INNER, angle)} L${polar(OUTER + 14, angle)}`} />)}
+        </g>
+        {[25, 50, 75, 100].map(mark => <text key={mark} className="pf-rose-tick" x={CENTRE + 5} y={CENTRE - radiusFor(mark) - 4}>{mark}</text>)}
+        {PETALS.map(({ topic, angle }) => <path key={topic} className="pf-petal-track" d={sector(INNER, OUTER, angle - HALF_SPAN, angle + HALF_SPAN)} />)}
+        {PETALS.map(({ topic, angle }, index) => {
+          const value = skills[topic] ?? 0;
+          if (value <= 0) return null;
+          const reach = radiusFor(value);
+          return <g key={topic} className="pf-petal" style={{ '--i': index } as Vars}>
+            <path className="pf-petal-fill" d={sector(INNER, reach, angle - HALF_SPAN, angle + HALF_SPAN)} />
+            <path className="pf-petal-hatch" d={sector(INNER, reach, angle - HALF_SPAN, angle + HALF_SPAN)} />
+            <path className="pf-petal-cap" d={arc(reach, angle - HALF_SPAN, angle + HALF_SPAN)} />
+          </g>;
+        })}
+      </svg>
+      {onEditFace
+        ? <button type="button" className="pf-rose-face is-editable" onClick={onEditFace} aria-label="Change profile photo">{face}<span className="pf-face-badge" aria-hidden="true"><Camera size={15} strokeWidth={2.2} /></span></button>
+        : <div className="pf-rose-face">{face}</div>}
+      {PETALS.map(({ topic, corner }) => <p key={topic} className={`pf-rose-label is-${corner}`}><span>{topic}</span><strong>{Math.round(skills[topic] ?? 0)}<small>%</small></strong></p>)}
+    </div>
+    <figcaption>{summary}</figcaption>
+  </figure>;
+}
+
+/* --------------------------------------------------------------------------
+ * The tier ladder
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Four equal stages, each read linearly between its own thresholds. Elite has
+ * no ceiling, so for drawing it runs to half again its threshold.
+ */
+function ladderPosition(points: number) {
+  const edges = [...RANK_TIERS.map(tier => tier.minPoints), RANK_TIERS[RANK_TIERS.length - 1].minPoints * 1.5];
+  const stage = Math.max(0, RANK_TIERS.findIndex((_, index) => points < edges[index + 1]));
+  const last = RANK_TIERS.length - 1;
+  const index = points >= edges[last + 1] ? last : stage;
+  return (index + Math.min((points - edges[index]) / (edges[index + 1] - edges[index]), 1)) / RANK_TIERS.length;
+}
+
+/* --------------------------------------------------------------------------
+ * Cumulative points over active days
+ * ------------------------------------------------------------------------ */
+
+const niceStep = (max: number) => {
+  const raw = Math.max(max, 1) / 3;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  return ([1, 2, 2.5, 5, 10].find(unit => unit * power >= raw) ?? 10) * power;
+};
+
+function PointsCurve({ timeline }: { timeline: UserStats['learningTimeline'] }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [active, setActive] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const node = frame.current;
+    if (!node) return;
+    const measure = () => setWidth(node.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const days = timeline.map(day => ({ ...day, time: dayOf(day.date) })).filter(day => Number.isFinite(day.time));
+  if (!days.length) return <div className="pf-curve-frame pf-curve-empty" ref={frame}>
+    <svg viewBox="0 0 240 90" aria-hidden="true"><path d="M8,82 H60 V64 H112 V44 H164 V26 H232" /></svg>
+    <p>Your curve starts with your first saved answer.</p>
+  </div>;
+
+  const height = 230, top = 18, bottom = 30, left = 46, right = 14;
+  const step = niceStep(Math.max(...days.map(day => day.points)));
+  const ceiling = Math.max(step, Math.ceil(Math.max(...days.map(day => day.points)) / step) * step);
+  const ticks = Array.from({ length: Math.round(ceiling / step) + 1 }, (_, index) => index * step);
+  const first = days[0].time, last = days[days.length - 1].time;
+  const span = Math.max(last - first, 86_400_000);
+  const start = last === first ? first - span / 2 : first;
+  const x = (time: number) => left + (time - start) / span * Math.max(width - left - right, 1);
+  const y = (points: number) => top + (1 - points / ceiling) * (height - top - bottom);
+  const base = y(0);
+  /* A staircase, not a slope: the total holds flat between active days. */
+  const line = days.reduce((path, day, index) => index === 0 ? `M${x(day.time).toFixed(1)},${y(day.points).toFixed(1)}` : `${path} H${x(day.time).toFixed(1)} V${y(day.points).toFixed(1)}`, '');
+  const area = `${line} V${base} H${x(days[0].time).toFixed(1)} Z`;
+  const shown = active == null ? null : days[active];
+  const latest = days[days.length - 1];
+
+  const pick = (clientX: number) => {
+    const box = frame.current?.getBoundingClientRect();
+    if (!box) return;
+    const at = clientX - box.left;
+    let nearest = 0;
+    days.forEach((day, index) => { if (Math.abs(x(day.time) - at) < Math.abs(x(days[nearest].time) - at)) nearest = index; });
+    setActive(nearest);
+  };
+  const nudge = (delta: number) => setActive(current => Math.min(days.length - 1, Math.max(0, (current ?? days.length - 1) + delta)));
+
+  return <div className="pf-curve-frame" ref={frame}>
+    {width > 0 && <svg className="pf-curve" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" tabIndex={0}
+      aria-label={`Cumulative points: ${grouped(latest.points)} across ${days.length} active ${days.length === 1 ? 'day' : 'days'}, from ${formatDay(first)} to ${formatDay(last)}. Use the arrow keys to read each day.`}
+      onPointerMove={event => pick(event.clientX)} onPointerLeave={() => setActive(null)} onBlur={() => setActive(null)}
+      onKeyDown={event => { if (event.key === 'ArrowLeft') { event.preventDefault(); nudge(-1); } if (event.key === 'ArrowRight') { event.preventDefault(); nudge(1); } }}>
+      <defs><linearGradient id="pf-curve-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" className="pf-stop-top" /><stop offset="1" className="pf-stop-bottom" /></linearGradient></defs>
+      {ticks.map(tick => <g key={tick} className="pf-curve-tick"><line x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} /><text x={left - 10} y={y(tick) + 4}>{grouped(tick)}</text></g>)}
+      <path className="pf-curve-area" d={area} />
+      <path className="pf-curve-line" d={line} pathLength={1} />
+      <text className="pf-curve-date" x={x(first)} y={height - 8} textAnchor={last === first ? 'middle' : 'start'}>{formatDay(first)}</text>
+      {last !== first && <text className="pf-curve-date" x={x(last)} y={height - 8} textAnchor="end">{formatDay(last)}</text>}
+      {shown && <line className="pf-curve-cross" x1={x(shown.time)} x2={x(shown.time)} y1={top} y2={base} />}
+      <circle className="pf-curve-dot" cx={x((shown ?? latest).time)} cy={y((shown ?? latest).points)} r={5} />
+    </svg>}
+    {shown && width > 0 && <div className={`pf-curve-tip${x(shown.time) > width * 0.66 ? ' is-left' : ''}`} style={{ left: x(shown.time) }} aria-live="polite">
+      <span>{formatDay(shown.time)}</span>
+      <strong>{grouped(shown.points)} <small>pts</small></strong>
+      <em>{shown.accuracy}% accuracy so far</em>
+    </div>}
+  </div>;
+}
+
+/* --------------------------------------------------------------------------
+ * Changing the profile photo
+ * ------------------------------------------------------------------------ */
+
+/* Upload, remove or cancel, stacked the way Instagram's own photo menu is. */
+function PhotoDialog({ open, onClose, userId, current, onSaved }: { open: boolean; onClose: () => void; userId: string; current: string | null; onSaved: () => Promise<void> }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const node = dialog.current;
+    if (!node) return;
+    if (open && !node.open) {
+      setError(null);
+      node.showModal();
+    } else if (!open && node.open) node.close();
+  }, [open]);
+
+  const run = async (kind: 'upload' | 'remove', task: () => Promise<AvatarResult>) => {
+    setBusy(kind);
+    setError(null);
+    const result = await task();
+    if (result.ok) await onSaved();
+    setBusy(null);
+    if (result.ok) onClose();
+    else setError(result.error);
+  };
+  const dismiss = () => { if (!busy) onClose(); };
+
+  return <dialog ref={dialog} className="pf-photo-dialog" aria-labelledby="pf-photo-title" aria-busy={Boolean(busy)}
+    onCancel={event => { event.preventDefault(); dismiss(); }}
+    onClick={event => { if (event.target === dialog.current) dismiss(); }}>
+    <div className="pf-photo-head">
+      <span className={`pf-photo-preview${busy ? ' is-busy' : ''}`}><UserAvatar src={current} /></span>
+      <h2 id="pf-photo-title">Profile photo</h2>
+      <p>{current ? 'Shown on your profile, the leaderboard and in Community.' : 'Without a photo, everyone sees the default silhouette.'}</p>
+      {error && <p className="pf-photo-error" role="alert">{error}</p>}
+    </div>
+    <input ref={picker} type="file" accept={ACCEPTED_IMAGE_TYPES.join(',')} hidden
+      onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void run('upload', () => saveAvatar(userId, file, current)); }} />
+    <div className="pf-photo-actions">
+      <button type="button" className="is-primary" disabled={Boolean(busy)} onClick={() => picker.current?.click()}>{busy === 'upload' ? 'Uploading…' : current ? 'Upload a new photo' : 'Upload a photo'}</button>
+      {current && <button type="button" className="is-danger" disabled={Boolean(busy)} onClick={() => void run('remove', () => clearAvatar(userId, current))}>{busy === 'remove' ? 'Removing…' : 'Remove current photo'}</button>}
+      <button type="button" disabled={Boolean(busy)} onClick={onClose}>Cancel</button>
+    </div>
+  </dialog>;
+}
+
+/* --------------------------------------------------------------------------
+ * The page
+ * ------------------------------------------------------------------------ */
+
+export default function Profile({ userStats, completedProblems, problems, onLogout }: ProfileProps) {
   const solvedQuestions = problems.filter((p) => completedProblems.includes(p.id));
   const rank = getRankForPoints(userStats.points);
+  const nextTier = nextRankFor(userStats.points);
 
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
+  const [photoOpen, setPhotoOpen] = useState(false);
   const badges = ACHIEVEMENTS.map((a) => ({
     ...a,
     unlocked: Boolean(profile) && a.condition(userStats, solvedQuestions.length),
   }));
+  const unlockedCount = badges.filter((b) => b.unlocked).length;
 
   const displayName = profile?.display_name || profile?.username || 'Calculix Learner';
-  const nextTier = nextRankFor(userStats.points);
+  const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const hasAnswers = userStats.completedCount > 0 || userStats.accuracy > 0;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="border-b border-line pb-4 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">YOUR OWN LEARNING JOURNEY</p>
-          <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
-            <User className="w-6 h-6 text-indigo-500" /> {displayName}
-          </h1>
+    <div className="profile-page">
+      <header className="pf-hero">
+        <div className="pf-hero-top">
+          <p className="pf-eyebrow"><span aria-hidden="true" />Your own learning journey</p>
+          <m.button onClick={onLogout} whileTap={{ scale: 0.95 }} className="pf-signout"><LogOut size={15} aria-hidden="true" /> Sign out</m.button>
         </div>
 
-        <m.button
-          onClick={onLogout}
-          whileTap={{ scale: 0.95 }}
-          className="cx-btn cx-btn-secondary px-4 py-2 rounded-xl text-xs flex items-center gap-2 border border-line hover:bg-surface-sunken"
-        >
-          <LogOut className="w-4 h-4 text-rose-500" /> Sign out
-        </m.button>
+        <div className="pf-hero-body">
+          <div className="pf-identity">
+            <h1>{displayName}</h1>
+            <p className="pf-handle">
+              {profile?.username ? <span>@{profile.username}</span> : <span>No username yet</span>}
+              <span className="pf-level">{userStats.level || 'Unplaced'}</span>
+            </p>
+            {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
+            <ul className="pf-facts">
+              {memberSince && <li>Member since {memberSince}</li>}
+              {profile?.country && <li>{profile.country}</li>}
+              {profile && <li><b>{grouped(profile.follower_count)}</b> {profile.follower_count === 1 ? 'follower' : 'followers'} · <b>{grouped(profile.following_count)}</b> following</li>}
+            </ul>
+
+            <div className="pf-ladder" style={{ '--p': ladderPosition(userStats.points) } as Vars}>
+              <div className="pf-ladder-head">
+                <p><span className="pf-kicker">Rank tier</span><strong>{rank.name}</strong></p>
+                <span>{nextTier ? `${grouped(nextTier.minPoints - userStats.points)} pts to ${nextTier.name}` : 'Top tier reached'}</span>
+              </div>
+              <div className="pf-ladder-track" aria-hidden="true"><span className="pf-ladder-fill" /><span className="pf-ladder-marker"><b>{grouped(userStats.points)}</b></span></div>
+              <ol className="pf-ladder-stops">{RANK_TIERS.map(tier => <li key={tier.name} className={tier.name === rank.name ? 'is-current' : userStats.points >= tier.minPoints ? 'is-passed' : undefined}>
+                <span>{tier.name}</span><small>{grouped(tier.minPoints)}</small>
+              </li>)}</ol>
+            </div>
+          </div>
+
+          <SkillRose skills={userStats.skills} face={<UserAvatar src={profile?.avatar_url} />} onEditFace={profile ? () => setPhotoOpen(true) : undefined} />
+        </div>
+      </header>
+
+      <dl className="pf-readouts">
+        <div><dt>Total points</dt><dd className="is-accent"><AnimatedNumber value={userStats.points} format={grouped} /></dd><p>Earned via solves &amp; contests</p></div>
+        <div><dt>Problems solved</dt><dd><AnimatedNumber value={solvedQuestions.length} /></dd><p>From your saved practice</p></div>
+        <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} />%</span> : '—'}</dd><p>Across every saved answer</p></div>
+        <div><dt>Streak</dt><dd><AnimatedNumber value={userStats.streak} /><small>{userStats.streak === 1 ? 'day' : 'days'}</small></dd><p>Active days in a row</p></div>
+        <div><dt>Global rank</dt><dd>{userStats.rank > 0 ? <>#{grouped(userStats.rank)}</> : '—'}</dd><p>{userStats.rank > 0 ? 'On the leaderboard' : 'Starts with your first answer'}</p></div>
+        <div><dt>Placement tier</dt><dd className="is-word">{userStats.level || 'Unplaced'}</dd><p>{userStats.level ? 'Set by placement assessment' : 'Placement assessment required'}</p></div>
+      </dl>
+
+      <div className="pf-split">
+        <section className="pf-card pf-growth" aria-labelledby="pf-growth-title">
+          <div className="pf-card-head">
+            <div><p className="pf-kicker">{userStats.learningTimeline.length ? `Cumulative · ${userStats.learningTimeline.length} active ${userStats.learningTimeline.length === 1 ? 'day' : 'days'}` : 'Cumulative points'}</p><h2 id="pf-growth-title">Points, added up</h2></div>
+            <span className="pf-integral" aria-hidden="true">∫</span>
+          </div>
+          <PointsCurve timeline={userStats.learningTimeline} />
+        </section>
+
+        <section className="pf-card pf-account" aria-labelledby="pf-account-title">
+          <div className="pf-card-head"><div><p className="pf-kicker">Account</p><h2 id="pf-account-title">Identity &amp; details</h2></div></div>
+          <dl className="pf-ledger">
+            <div><dt>Profile photo</dt><dd>{profile
+              ? <button type="button" className="pf-photo-link" onClick={() => setPhotoOpen(true)}><span className="pf-photo-thumb"><UserAvatar src={profile.avatar_url} /></span>{profile.avatar_url ? 'Change' : 'Add a photo'}</button>
+              : 'Default'}</dd></div>
+            <div><dt>Display name</dt><dd>{displayName}</dd></div>
+            <div><dt>Username</dt><dd>{profile?.username ? `@${profile.username}` : 'Not set'}</dd></div>
+            <div><dt>Member since</dt><dd>{memberSince ?? 'Not available'}</dd></div>
+            <div><dt>Country</dt><dd>{profile?.country ?? 'Not set'}</dd></div>
+          </dl>
+        </section>
       </div>
 
-      {/* Stats Summary Bento Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
-        <div className="cx-glass-panel p-5 space-y-2">
-          <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Rank Tier</span>
-          <span className="block cx-stat-value text-3xl text-content">{rank.name}</span>
-          <span className="block text-xs font-mono text-content-subtle">
-            {nextTier ? `${nextTier.minPoints - userStats.points} pts to ${nextTier.name}` : 'Top Rank Reached'}
-          </span>
-        </div>
-
-        <div className="cx-glass-panel p-5 space-y-2">
-          <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Total Points</span>
-          <span className="block cx-stat-value text-3xl text-indigo-500">
-            <AnimatedNumber value={userStats.points} />
-          </span>
-          <span className="block text-xs font-mono text-content-subtle">Earned via solves &amp; contests</span>
-        </div>
-
-        <div className="cx-glass-panel p-5 space-y-2">
-          <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Placement Tier</span>
-          <span className="block cx-stat-value text-3xl text-content">{userStats.level || 'Unplaced'}</span>
-          <span className="block text-xs font-mono text-content-subtle">
-            {userStats.level ? 'Set by placement assessment' : 'Placement assessment required'}
-          </span>
-        </div>
-
-        <div className="cx-glass-panel p-5 space-y-2">
-          <span className="type-eyebrow text-xs text-content-subtle font-mono uppercase">Problems Solved</span>
-          <span className="block cx-stat-value text-3xl text-emerald-500">
-            <AnimatedNumber value={solvedQuestions.length} />
-          </span>
-          <span className="block text-xs font-mono text-content-subtle">From your saved practice</span>
-        </div>
-      </section>
-
-      {/* Account Info Details */}
-      <section className="cx-glass-panel p-6 space-y-4">
-        <h3 className="type-title text-base font-bold text-content flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-indigo-500" /> Account Identity &amp; Details
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-          <div className="p-3.5 rounded-xl border border-line bg-surface-sunken/30 space-y-1">
-            <span className="text-[10px] font-mono uppercase text-content-subtle block">Display Name</span>
-            <span className="text-xs font-semibold text-content block">{displayName}</span>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-line bg-surface-sunken/30 space-y-1">
-            <span className="text-[10px] font-mono uppercase text-content-subtle block">Username</span>
-            <span className="text-xs font-semibold text-content block">{profile?.username ? `@${profile.username}` : 'Not set'}</span>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-line bg-surface-sunken/30 space-y-1">
-            <span className="text-[10px] font-mono uppercase text-content-subtle block">Member Since</span>
-            <span className="text-xs font-semibold text-content block">{profile?.created_at ? profile.created_at.slice(0, 10) : 'Not available'}</span>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-line bg-surface-sunken/30 space-y-1">
-            <span className="text-[10px] font-mono uppercase text-content-subtle block">Country</span>
-            <span className="text-xs font-semibold text-content block">{profile?.country ?? 'Not set'}</span>
+      <section className="pf-medals" aria-labelledby="pf-medals-title">
+        <div className="pf-medals-head">
+          <div><p className="pf-kicker">Achievement badges</p><h2 id="pf-medals-title">Medals earned along the way</h2></div>
+          <div className="pf-medal-count">
+            <span><b>{unlockedCount}</b> of {badges.length} unlocked</span>
+            <ol aria-hidden="true">{badges.map(b => <li key={b.id} className={b.unlocked ? 'is-on' : undefined} />)}</ol>
           </div>
         </div>
-      </section>
-
-      {/* Achievements Showcase */}
-      <section className="space-y-4">
-        <div>
-          <h3 className="type-title text-xl font-bold text-content flex items-center gap-2">
-            <Award className="w-6 h-6 text-amber-500" /> Achievement Badges
-          </h3>
-          <p className="type-caption text-xs text-content-subtle mt-1 font-mono">
-            {badges.filter((b) => b.unlocked).length} of {badges.length} unlocked
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="pf-medal-grid">
           {badges.map((b, index) => (
-            <StaggerItem
-              key={b.id}
-              index={index}
-              className={`relative overflow-hidden p-5 rounded-2xl border transition-all duration-300 ${
-                b.unlocked
-                  ? 'cx-glass-panel border-amber-500/50 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent shadow-[0_10px_30px_-10px_rgba(245,158,11,0.4)] hover:border-amber-500/70 hover:shadow-[0_14px_38px_-8px_rgba(245,158,11,0.55)]'
-                  : 'border-dashed border-line bg-surface-sunken/30 opacity-60'
-              }`}
-            >
-              {b.unlocked && (
-                <span
-                  className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-50 blur-2xl"
-                  style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.85), transparent 70%)' }}
-                  aria-hidden="true"
-                />
-              )}
-              <span
-                className={`relative flex h-12 w-12 items-center justify-center rounded-xl text-2xl ${
-                  b.unlocked ? 'border-2 border-amber-400/60 bg-gradient-to-tr from-amber-500/30 to-amber-300/10 shadow-md shadow-amber-500/30' : ''
-                }`}
-              >
-                {b.icon}
-              </span>
-              <h4 className="relative font-bold text-content text-base mt-3">{b.title}</h4>
-              <p className="relative text-xs text-content-muted leading-relaxed mt-1 font-mono">{b.desc}</p>
-              <span
-                className={`cx-tag relative text-[9px] mt-3 inline-flex items-center gap-1 font-mono font-bold ${
-                  b.unlocked ? 'border-amber-500/40 text-amber-600 dark:text-amber-300' : 'cx-tag-neutral'
-                }`}
-              >
-                {b.unlocked && <Sparkles className="h-2.5 w-2.5" />}
-                {b.unlocked ? 'Unlocked' : 'Locked'}
-              </span>
+            <StaggerItem key={b.id} index={index} inView className={`pf-medal${b.unlocked ? ' is-unlocked' : ''}`}>
+              <span className="pf-coin" aria-hidden="true"><span className="pf-coin-face">{b.icon}</span></span>
+              <h3>{b.title}</h3>
+              <p>{b.desc}</p>
+              <span className="pf-medal-state">{b.unlocked ? <><Sparkles size={11} aria-hidden="true" /> Unlocked</> : <><Lock size={11} aria-hidden="true" /> Locked</>}</span>
             </StaggerItem>
           ))}
         </div>
       </section>
+
+      {profile && <PhotoDialog open={photoOpen} onClose={() => setPhotoOpen(false)} userId={profile.id} current={profile.avatar_url} onSaved={refreshProfile} />}
     </div>
   );
 }

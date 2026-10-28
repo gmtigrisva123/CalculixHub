@@ -26,10 +26,10 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, m } from 'motion/react';
-import { AlertCircle, CheckCircle2, UserRound, X, type LucideIcon } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X, type LucideIcon } from 'lucide-react';
 import type { AuthorSummary } from '../../services/database.types';
 import { duration, ease, scaleIn, spring } from '../../lib/motion';
-import { authorName, avatarHue, initials } from './model';
+import UserAvatar from '../UserAvatar';
 
 // ---------------------------------------------------------------------------
 // Clock
@@ -62,34 +62,10 @@ export function Avatar({
   size?: number;
   className?: string;
 }) {
-  const name = authorName(author);
-  const [broken, setBroken] = useState(false);
-  const style = {
-    width: size,
-    height: size,
-    fontSize: Math.max(10, Math.round(size * 0.38)),
-    '--cm-hue': avatarHue(author?.id ?? name),
-  } as React.CSSProperties;
-
-  // Signed out: a silhouette, not the initials of a placeholder name.
-  if (!author) {
-    return (
-      <span className={`cm-avatar cm-avatar-guest ${className}`} style={style} aria-hidden="true">
-        <UserRound size={Math.round(size * 0.55)} />
-      </span>
-    );
-  }
-
   // The name is always printed beside the avatar, so the image itself is
-  // decorative and is not announced a second time.
-  if (author.avatar_url && !broken) {
-    return <img src={author.avatar_url} alt="" className={`cm-avatar ${className}`} style={style} onError={() => setBroken(true)} />;
-  }
-  return (
-    <span className={`cm-avatar cm-avatar-initials ${className}`} style={style} aria-hidden="true">
-      {initials(name)}
-    </span>
-  );
+  // decorative and is not announced a second time. Without a photo -- or
+  // signed out -- it is the default silhouette.
+  return <UserAvatar src={author?.avatar_url} className={`cm-avatar ${className}`} style={{ width: size, height: size }} />;
 }
 
 // ---------------------------------------------------------------------------
