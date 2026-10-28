@@ -3,14 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { Lock, LogOut, Sparkles } from 'lucide-react';
+import { Camera, Lock, LogOut, Sparkles } from 'lucide-react';
 import { UserStats, Problem, Topic } from '../../shared/types';
 import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
 import { AnimatedNumber, StaggerItem } from './motion';
 import { useAuth } from '../context/AuthContext';
 import { ACHIEVEMENTS } from '../domain/achievements';
+import { ACCEPTED_IMAGE_TYPES } from '../services/data/media';
+import { clearAvatar, saveAvatar, type AvatarResult } from '../services/data/avatar';
+import UserAvatar from './UserAvatar';
 import '../styles/profile.css';
 
 interface ProfileProps {
@@ -24,7 +27,6 @@ interface ProfileProps {
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
 const grouped = (value: number) => Math.round(value).toLocaleString();
-const initialsOf = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(word => word[0] || '').join('').toUpperCase();
 const dayOf = (date: string) => Date.parse(date.length === 10 ? `${date}T00:00:00Z` : date);
 const formatDay = (time: number, withYear = true) => new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined, timeZone: 'UTC' });
 
@@ -49,7 +51,7 @@ const sector = (inner: number, outer: number, from: number, to: number) =>
   `M${polar(outer, from)} A${outer},${outer} 0 0 1 ${polar(outer, to)} L${polar(inner, to)} A${inner},${inner} 0 0 0 ${polar(inner, from)} Z`;
 const arc = (radius: number, from: number, to: number) => `M${polar(radius, from)} A${radius},${radius} 0 0 1 ${polar(radius, to)}`;
 
-function SkillRose({ skills, face }: { skills: UserStats['skills']; face: React.ReactNode }) {
+function SkillRose({ skills, face, onEditFace }: { skills: UserStats['skills']; face: React.ReactNode; onEditFace?: () => void }) {
   const ranked = PETALS.map(({ topic }) => ({ topic, value: skills[topic] ?? 0 })).sort((a, b) => b.value - a.value);
   const strongest = ranked[0], weakest = ranked[ranked.length - 1];
   const summary = strongest.value <= 0 ? 'Solve a few problems and your topics will take shape here.'
@@ -80,7 +82,9 @@ function SkillRose({ skills, face }: { skills: UserStats['skills']; face: React.
           </g>;
         })}
       </svg>
-      <div className="pf-rose-face">{face}</div>
+      {onEditFace
+        ? <button type="button" className="pf-rose-face is-editable" onClick={onEditFace} aria-label="Change profile photo">{face}<span className="pf-face-badge" aria-hidden="true"><Camera size={15} strokeWidth={2.2} /></span></button>
+        : <div className="pf-rose-face">{face}</div>}
       {PETALS.map(({ topic, corner }) => <p key={topic} className={`pf-rose-label is-${corner}`}><span>{topic}</span><strong>{Math.round(skills[topic] ?? 0)}<small>%</small></strong></p>)}
     </div>
     <figcaption>{summary}</figcaption>
@@ -182,6 +186,56 @@ function PointsCurve({ timeline }: { timeline: UserStats['learningTimeline'] }) 
 }
 
 /* --------------------------------------------------------------------------
+ * Changing the profile photo
+ * ------------------------------------------------------------------------ */
+
+/* Upload, remove or cancel, stacked the way Instagram's own photo menu is. */
+function PhotoDialog({ open, onClose, userId, current, onSaved }: { open: boolean; onClose: () => void; userId: string; current: string | null; onSaved: () => Promise<void> }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<'upload' | 'remove' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const node = dialog.current;
+    if (!node) return;
+    if (open && !node.open) {
+      setError(null);
+      node.showModal();
+    } else if (!open && node.open) node.close();
+  }, [open]);
+
+  const run = async (kind: 'upload' | 'remove', task: () => Promise<AvatarResult>) => {
+    setBusy(kind);
+    setError(null);
+    const result = await task();
+    if (result.ok) await onSaved();
+    setBusy(null);
+    if (result.ok) onClose();
+    else setError(result.error);
+  };
+  const dismiss = () => { if (!busy) onClose(); };
+
+  return <dialog ref={dialog} className="pf-photo-dialog" aria-labelledby="pf-photo-title" aria-busy={Boolean(busy)}
+    onCancel={event => { event.preventDefault(); dismiss(); }}
+    onClick={event => { if (event.target === dialog.current) dismiss(); }}>
+    <div className="pf-photo-head">
+      <span className={`pf-photo-preview${busy ? ' is-busy' : ''}`}><UserAvatar src={current} /></span>
+      <h2 id="pf-photo-title">Profile photo</h2>
+      <p>{current ? 'Shown on your profile, the leaderboard and in Community.' : 'Without a photo, everyone sees the default silhouette.'}</p>
+      {error && <p className="pf-photo-error" role="alert">{error}</p>}
+    </div>
+    <input ref={picker} type="file" accept={ACCEPTED_IMAGE_TYPES.join(',')} hidden
+      onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void run('upload', () => saveAvatar(userId, file, current)); }} />
+    <div className="pf-photo-actions">
+      <button type="button" className="is-primary" disabled={Boolean(busy)} onClick={() => picker.current?.click()}>{busy === 'upload' ? 'Uploading…' : current ? 'Upload a new photo' : 'Upload a photo'}</button>
+      {current && <button type="button" className="is-danger" disabled={Boolean(busy)} onClick={() => void run('remove', () => clearAvatar(userId, current))}>{busy === 'remove' ? 'Removing…' : 'Remove current photo'}</button>}
+      <button type="button" disabled={Boolean(busy)} onClick={onClose}>Cancel</button>
+    </div>
+  </dialog>;
+}
+
+/* --------------------------------------------------------------------------
  * The page
  * ------------------------------------------------------------------------ */
 
@@ -190,8 +244,8 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const rank = getRankForPoints(userStats.points);
   const nextTier = nextRankFor(userStats.points);
 
-  const { profile } = useAuth();
-  const [photoBroken, setPhotoBroken] = useState(false);
+  const { profile, refreshProfile } = useAuth();
+  const [photoOpen, setPhotoOpen] = useState(false);
   const badges = ACHIEVEMENTS.map((a) => ({
     ...a,
     unlocked: Boolean(profile) && a.condition(userStats, solvedQuestions.length),
@@ -201,9 +255,6 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const displayName = profile?.display_name || profile?.username || 'Calculix Learner';
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null;
   const hasAnswers = userStats.completedCount > 0 || userStats.accuracy > 0;
-  const face = profile?.avatar_url && !photoBroken
-    ? <img src={profile.avatar_url} alt="" onError={() => setPhotoBroken(true)} />
-    : <span>{initialsOf(displayName) || 'C'}</span>;
 
   return (
     <div className="profile-page">
@@ -239,7 +290,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             </div>
           </div>
 
-          <SkillRose skills={userStats.skills} face={face} />
+          <SkillRose skills={userStats.skills} face={<UserAvatar src={profile?.avatar_url} />} onEditFace={profile ? () => setPhotoOpen(true) : undefined} />
         </div>
       </header>
 
@@ -264,6 +315,9 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
         <section className="pf-card pf-account" aria-labelledby="pf-account-title">
           <div className="pf-card-head"><div><p className="pf-kicker">Account</p><h2 id="pf-account-title">Identity &amp; details</h2></div></div>
           <dl className="pf-ledger">
+            <div><dt>Profile photo</dt><dd>{profile
+              ? <button type="button" className="pf-photo-link" onClick={() => setPhotoOpen(true)}><span className="pf-photo-thumb"><UserAvatar src={profile.avatar_url} /></span>{profile.avatar_url ? 'Change' : 'Add a photo'}</button>
+              : 'Default'}</dd></div>
             <div><dt>Display name</dt><dd>{displayName}</dd></div>
             <div><dt>Username</dt><dd>{profile?.username ? `@${profile.username}` : 'Not set'}</dd></div>
             <div><dt>Member since</dt><dd>{memberSince ?? 'Not available'}</dd></div>
@@ -291,6 +345,8 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           ))}
         </div>
       </section>
+
+      {profile && <PhotoDialog open={photoOpen} onClose={() => setPhotoOpen(false)} userId={profile.id} current={profile.avatar_url} onSaved={refreshProfile} />}
     </div>
   );
 }

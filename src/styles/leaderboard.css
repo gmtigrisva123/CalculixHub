@@ -185,7 +185,7 @@
   animation-delay: calc(var(--i) * 140ms + 760ms);
   transition: bottom .8s var(--lb-ease), transform .35s var(--lb-ease);
 }
-.lb-medallion-face { width: 100%; height: 100%; font-size: calc(var(--m) * .3); box-shadow: inset 0 0 0 2px #00000026, inset 0 -8px 14px -8px #00000059; }
+.lb-medallion-face { width: 100%; height: 100%; }
 .lb-medal-rank {
   position: absolute;
   right: -3px;
@@ -331,8 +331,7 @@
 .lb-row:is(.lb-gold, .lb-silver, .lb-bronze) .lb-row-rank { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, var(--metal-hi), var(--metal) 58%, var(--metal-lo)); color: #1d150a; font-weight: 650; box-shadow: 0 4px 10px -4px var(--metal-lo), inset 0 1px 0 #ffffff80; }
 .lb-row.is-you .lb-row-rank { color: var(--lb-you); font-weight: 650; }
 .lb-row-person { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.lb-avatar { display: grid; flex: none; place-items: center; overflow: hidden; border-radius: 50%; background: linear-gradient(140deg, var(--a1), var(--a2)); color: var(--a-ink); font: 650 12px/1 var(--lb-sans); letter-spacing: .02em; box-shadow: inset 0 0 0 1px #ffffff47, inset 0 -6px 12px -6px #0000002e; }
-.lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.lb-avatar { display: block; flex: none; overflow: hidden; border-radius: 50%; }
 .lb-row-avatar { width: 40px; height: 40px; }
 .lb-row-identity { display: block; min-width: 0; }
 .lb-row-identity strong { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; }

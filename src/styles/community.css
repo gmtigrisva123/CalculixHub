@@ -961,18 +961,6 @@
   object-fit: cover;
   background: var(--cm-field);
 }
-.cm-avatar-guest { color: var(--ct-subtle); }
-.cm-avatar-initials {
-  background: hsl(var(--cm-hue) 42% 86%);
-  color: hsl(var(--cm-hue) 45% 26%);
-  font-weight: 700;
-  letter-spacing: .01em;
-  user-select: none;
-}
-:root[data-theme='dark'] .cm-avatar-initials {
-  background: hsl(var(--cm-hue) 28% 26%);
-  color: hsl(var(--cm-hue) 50% 82%);
-}
 
 /* --------------------------------------------------------------------------
  * Dialogs (portalled)

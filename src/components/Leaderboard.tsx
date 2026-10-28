@@ -3,6 +3,7 @@ import { m } from 'motion/react';
 import { ArrowRight, ArrowUpRight, Check, Flame, LocateFixed, RefreshCw, Search, Sparkles, Trophy } from 'lucide-react';
 import type { LeaderboardRow } from '../services/database.types';
 import { spring, staggerDelay } from '../lib/motion';
+import UserAvatar from './UserAvatar';
 import '../styles/leaderboard.css';
 
 interface Props {
@@ -20,7 +21,6 @@ interface Props {
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
 const nameOf = (row: LeaderboardRow) => row.display_name?.trim() || row.username;
-const initialsOf = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(word => word[0] || '').join('').toUpperCase();
 const ordinalOf = (n: number) => {
   const suffix = ['th', 'st', 'nd', 'rd'], tail = n % 100;
   return n + (suffix[(tail - 20) % 10] || suffix[tail] || suffix[0]);
@@ -30,32 +30,8 @@ const METALS = ['gold', 'silver', 'bronze'] as const;
 /* The tallest column fills this share of the plot; the rest is headroom for its medallion. */
 const HEADROOM = 0.78;
 
-/*
- * Monogram tints for learners without a photo, picked by a hash of the user id
- * so a learner keeps the same colour on every visit and in every list.
- */
-const TINTS = [
-  ['#f1d79f', '#c08d3e', '#2b1e08'],
-  ['#9fdccf', '#3f9b8c', '#0b2925'],
-  ['#c3cfe3', '#7086ab', '#121b2b'],
-  ['#efbf9f', '#b9714b', '#2d150a'],
-  ['#dcc2df', '#916795', '#24132a'],
-  ['#d3dfb0', '#7f9758', '#1d250f'],
-  ['#ecc0b8', '#ad6a60', '#2c1310'],
-  ['#e0dbd1', '#9b9387', '#24211c'],
-];
-const tintOf = (id: string) => {
-  let hash = 0;
-  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return TINTS[hash % TINTS.length];
-};
-
 function Avatar({ row, className }: { row: LeaderboardRow; className: string }) {
-  const [broken, setBroken] = useState(false);
-  const [from, to, ink] = tintOf(row.user_id);
-  return <span className={`lb-avatar ${className}`} style={{ '--a1': from, '--a2': to, '--a-ink': ink } as Vars} aria-hidden="true">
-    {row.avatar_url && !broken ? <img src={row.avatar_url} alt="" loading="lazy" onError={() => setBroken(true)} /> : initialsOf(nameOf(row))}
-  </span>;
+  return <span className={`lb-avatar ${className}`} aria-hidden="true"><UserAvatar src={row.avatar_url} /></span>;
 }
 
 /*

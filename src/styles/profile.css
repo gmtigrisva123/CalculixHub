@@ -171,8 +171,10 @@
   box-shadow: 0 0 0 7px var(--pf-night), 0 16px 40px -10px #e9c27a8c;
   animation: pf-pop .7s cubic-bezier(.34, 1.56, .64, 1) .1s both;
 }
-.pf-rose-face > * { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-.pf-rose-face > span { background: radial-gradient(circle at 32% 26%, #2a4652, #12232a 70%); color: var(--pf-chalk); font: 400 clamp(26px, 3vw, 38px)/1 var(--pf-serif); letter-spacing: -.02em; box-shadow: inset 0 0 0 1px #ffffff1a; }
+button.pf-rose-face { border: 0; cursor: pointer; }
+.pf-rose-face.is-editable::after { content: 'Change'; position: absolute; inset: 3px; display: grid; place-items: center; border-radius: 50%; background: #0b161bad; color: var(--pf-chalk); font: 600 11px/1 var(--pf-mono); letter-spacing: .12em; text-transform: uppercase; opacity: 0; transition: opacity .2s; }
+.pf-rose-face.is-editable:hover::after, .pf-rose-face.is-editable:focus-visible::after { opacity: 1; }
+.pf-face-badge { position: absolute; z-index: 1; right: 2%; bottom: 2%; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--pf-brass); color: #21180a; box-shadow: 0 0 0 4px var(--pf-night), 0 6px 14px -4px #00000080; }
 
 .pf-rose-label { position: absolute; display: grid; gap: 4px; margin: 0; animation: pf-fade-up .8s var(--pf-ease) both; animation-delay: .7s; }
 .pf-rose-label span { font-size: 12.5px; font-weight: 500; color: var(--pf-chalk-muted); }
@@ -238,6 +240,27 @@
 .pf-ledger dt { display: flex; flex: 1 0 auto; align-items: baseline; gap: 12px; font: 500 10.5px/1.2 var(--pf-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--pf-subtle); }
 .pf-ledger dt::after { content: ''; flex: 1; min-width: 12px; border-bottom: 1px dotted var(--pf-line-strong, var(--ln-strong)); translate: 0 -3px; }
 .pf-ledger dd { min-width: 0; margin: 0; text-align: right; font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.pf-photo-link { display: inline-flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border: 1px solid var(--pf-line); border-radius: 999px; color: var(--pf-tone); font-size: 13px; font-weight: 650; cursor: pointer; transition: background .2s, border-color .2s; }
+.pf-photo-link:hover { background: var(--pf-sunken); border-color: color-mix(in srgb, var(--pf-tone) 40%, var(--pf-line)); }
+.pf-photo-thumb { display: block; flex: none; width: 28px; height: 28px; }
+
+/* The photo menu: a preview, then upload / remove / cancel stacked on hairlines. */
+.pf-photo-dialog { width: min(100% - 32px, 380px); max-width: none; margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--pf-line); border-radius: 26px; background: var(--sf-overlay, var(--pf-surface)); color: var(--pf-ink); box-shadow: var(--ev-5); }
+.pf-photo-dialog::backdrop { background: color-mix(in srgb, #07121a 55%, transparent); backdrop-filter: blur(6px); }
+.pf-photo-dialog[open] { animation: pf-dialog-in .35s cubic-bezier(.34, 1.3, .64, 1); }
+.pf-photo-head { display: grid; justify-items: center; gap: 6px; padding: 28px 26px 22px; text-align: center; }
+.pf-photo-preview { position: relative; width: 108px; height: 108px; margin-bottom: 12px; padding: 3px; border-radius: 50%; background: conic-gradient(from 200deg, #fbe8b8, #e9c27a 25%, #a8772c 50%, #e9c27a 75%, #fbe8b8); box-shadow: 0 14px 30px -14px #a8772c99; }
+.pf-photo-preview.is-busy::after { content: ''; position: absolute; inset: -5px; border: 2px solid transparent; border-top-color: var(--pf-tone); border-radius: 50%; animation: pf-spin .9s linear infinite; }
+.pf-photo-head h2 { margin: 0; font: 400 26px/1.1 var(--pf-serif); letter-spacing: -.02em; }
+.pf-photo-head p { max-width: 30ch; margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--pf-muted); }
+.pf-photo-head .pf-photo-error { margin-top: 8px; padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--st-critical, #9a2f1f) 10%, transparent); color: var(--st-critical, #9a2f1f); font-weight: 550; }
+.pf-photo-actions { display: grid; }
+.pf-photo-actions button { min-height: 52px; padding: 0 20px; border-top: 1px solid var(--pf-line-faint); font-size: 14.5px; font-weight: 500; color: var(--pf-ink); cursor: pointer; transition: background .15s; }
+.pf-photo-actions button:hover:not(:disabled) { background: var(--pf-sunken); }
+.pf-photo-actions button:disabled { opacity: .5; cursor: default; }
+.pf-photo-actions .is-primary { color: var(--pf-tone); font-weight: 700; }
+.pf-photo-actions .is-danger { color: var(--st-critical, #9a2f1f); font-weight: 700; }
+.pf-photo-actions button:focus-visible { outline-offset: -3px; }
 
 /* --------------------------------------------------------------------------
  * Medals
@@ -307,6 +330,8 @@
 @keyframes pf-pop { from { scale: 0; } to { scale: 1; } }
 @keyframes pf-fill { from { scale: 0 1; } }
 @keyframes pf-slide { from { left: 0; } }
+@keyframes pf-spin { to { rotate: 360deg; } }
+@keyframes pf-dialog-in { from { opacity: 0; scale: .94; } }
 
 /* --------------------------------------------------------------------------
  * Layout
@@ -365,4 +390,5 @@
   .pf-curve-line { stroke-dashoffset: 0; }
   .pf-curve-area { opacity: 1; }
   .pf-medal.is-unlocked:hover .pf-coin { transform: none; }
+  .pf-photo-dialog[open] { animation: none; }
 }
