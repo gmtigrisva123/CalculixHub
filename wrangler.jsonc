@@ -1,0 +1,31 @@
+// Cloudflare Workers deployment. See docs/deploy-cloudflare.md.
+//
+// The built front end in dist/ is served as static assets, with headers from
+// the dist/_headers file that `npm run build:cloudflare` writes. Only the API
+// and paths with no matching file reach the Worker in server/cloudflareEntry.ts.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "calculixhub",
+  "main": "server/cloudflareEntry.ts",
+  "compatibility_date": "2026-10-29",
+  // node:crypto (admin sessions) and process.env (server/config.ts).
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+  },
+  // Plain-text variables set here replace dashboard values on every deploy.
+  // Everything else (ALLOWED_ORIGINS, the Supabase and Gemini keys, the admin
+  // secrets) is set in the dashboard and kept across deploys by `keep_vars`.
+  "vars": {
+    "NODE_ENV": "production",
+    // Cloudflare appends to a client-supplied x-forwarded-for rather than
+    // replacing it, so the header must never be believed here. The Worker
+    // passes cf-connecting-ip, which Cloudflare does overwrite, as the peer.
+    "TRUST_PROXY": "false",
+  },
+  "keep_vars": true,
+}
