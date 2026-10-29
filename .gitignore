@@ -46,3 +46,7 @@ supabase/.temp/
 # Local tooling stays inside this project
 .cache/
 .artifacts/
+
+# Cloudflare Wrangler local state and local-only secrets
+.wrangler/
+.dev.vars*

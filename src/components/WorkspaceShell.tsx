@@ -68,7 +68,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
     <div className="workspace-refresh">
       <a className="workspace-skip" href="#workspace-main">Skip to content</a>
       <aside className={`workspace-sidebar ${mobileMenu ? 'is-open' : ''}`} aria-label="Main navigation">
-        <a className="workspace-brand" href="/?home=1"><span className="workspace-logo">c<span>·</span></span>calculix<span>hub</span></a>
+        <a className="workspace-brand" href="/?home=1"><span className="workspace-logo"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M30 9C11 2 2 27 18 32c7 3 15-3 15-10M7 23 32 12" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" /><circle cx="31" cy="12" r="3" fill="currentColor" /></svg></span>calculix<span>hub</span></a>
         <button className="workspace-menu-close" aria-label="Close navigation" onClick={() => setMobileMenu(false)}><X size={20} /></button>
         <div className="workspace-space"><span className="workspace-space-icon"><BookOpen size={18} /></span><span><strong>My learning space</strong><small>A place to think</small></span><Check size={14} /></div>
         <p className="workspace-nav-label">YOUR WORKSPACE</p>

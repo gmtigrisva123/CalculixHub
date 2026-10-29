@@ -11,6 +11,8 @@
     "dev": "tsx server/main.ts",
     "build": "vite build && esbuild server/main.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "build:vercel": "vite build && node scripts/build-vercel-api.mjs",
+    "build:cloudflare": "vite build && node scripts/build-cloudflare.mjs",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "test": "vitest run",
@@ -56,6 +58,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "wrangler": "^4.155.0"
   }
 }
