@@ -31,6 +31,9 @@ const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; fo
 const FONT_CSS_ORIGIN = 'https://fonts.googleapis.com';
 const FONT_FILE_ORIGIN = 'https://fonts.gstatic.com';
 
+/** Gemini REST endpoint, reached from the browser with a learner-supplied key. */
+const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com';
+
 /**
  * Content-Security-Policy for the application document.
  *
@@ -89,7 +92,10 @@ const DOCUMENT_CSP = [
   // REST, auth and storage travel over https; realtime is a WebSocket, and
   // `connect-src` matches on scheme, so wss:// is listed separately even though
   // it is the same host.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  // generativelanguage.googleapis.com: the AI tutor calls Gemini directly with
+  // the learner's own API key (src/lib/geminiClient.ts). Without it every
+  // request was refused by the browser and a valid key appeared not to work.
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${GEMINI_ORIGIN}`,
   "manifest-src 'self'",
   "worker-src 'self'",
   "object-src 'none'",
