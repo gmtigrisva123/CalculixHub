@@ -171,14 +171,22 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
     if (item.proOnly) return problem(403, 'pro-required', 'Proof practice is locked', 'Pro proof grading is coming soon.');
 
     // The verdict, decided here and nowhere else.
-    const caller = await verifyAccessToken(context.request.headers.get('authorization'));
+    const authorization = context.request.headers.get('authorization');
+    const caller = await verifyAccessToken(authorization);
+    // A learner who sent a session but could not be verified must not be
+    // graded as a guest: the reply would look like a saved answer while
+    // nothing reached their history. Tell the client to refresh the session.
+    if (authorization && !caller) return problem(401, 'unauthenticated', 'Session expired', 'Sign in again to save your answer.');
     const key=(practiceSession??context.clientKey)+':'+item.id;
     let correct=gradeAnswer(userAnswer,item.correctAnswer);
     let pointsAwarded=0;
     let progress:{attemptsUsed:number;finished:boolean;forfeited:boolean};
     if(caller){
       const outcome=await recordAttempt({userId:caller.id,problem:item,submittedAnswer:forfeit?'__forfeit__':userAnswer,isCorrect:!forfeit&&correct,durationMs,authorization:context.request.headers.get('authorization')!});
-      if(outcome.status==='failed'||outcome.status==='not-configured')return problem(503,'save-failed','Answer not saved','Reconnect and retry. Your progress has not been changed.');
+      if(outcome.status==='failed'||outcome.status==='not-configured'){
+        console.error('[CalculixHub] Learn attempt not saved',{status:outcome.status,problemId:item.id,reason:outcome.reason});
+        return problem(503,'save-failed','Answer not saved','Reconnect and retry. Your progress has not been changed.');
+      }
       correct=outcome.correct??correct;pointsAwarded=outcome.pointsAwarded;
       progress={attemptsUsed:outcome.attemptsUsed??0,finished:outcome.finished??false,forfeited:outcome.forfeited??false};
       if(forfeit||outcome.status==='exhausted'||outcome.status==='already-solved')return json({correct,pointsAwarded,...progress,explanation:correct?'Your solved answer is saved.':'This question is closed.',guidance:'Study the worked solution.'});

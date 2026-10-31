@@ -9,7 +9,7 @@ import { buildApp } from './app';
  */
 export const config = { runtime: 'nodejs' };
 
-type ServerApp = (request: Request) => Promise<Response>;
+type ServerApp = ReturnType<typeof buildApp>;
 
 let app: ServerApp | undefined;
 
@@ -21,7 +21,12 @@ function load(): ServerApp {
 export default {
   async fetch(request: Request): Promise<Response> {
     try {
-      return await load()(request);
+      // Vercel's edge writes x-vercel-forwarded-for itself and discards any
+      // copy the client sent, so it is the transport-level peer address here,
+      // as cf-connecting-ip is on Cloudflare. Without it every visitor shared
+      // one rate-limit bucket, and a busy minute 429'd everyone's answers.
+      const peer = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim();
+      return await load()(request, { peerAddress: peer || undefined });
     } catch (error) {
       // Keep operational details in Vercel logs. Never return a stack,
       // configuration value, or database error to a public API caller.

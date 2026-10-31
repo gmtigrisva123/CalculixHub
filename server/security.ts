@@ -160,7 +160,49 @@ export function evaluateOrigin(request: Request, config: AppConfig): OriginDecis
   const origin = request.headers.get('origin');
   if (!origin) return { kind: 'no-origin' };
   if (config.allowedOrigins.includes(origin)) return { kind: 'allowed', origin };
+  if (isSameOrigin(request, origin)) return { kind: 'allowed', origin };
   return { kind: 'denied', origin };
+}
+
+/**
+ * Whether the page that sent this request is served from the API's own host.
+ *
+ * The allowlist exists for *cross*-origin callers. The web app calls `/api/*`
+ * on the host that served it, and browsers attach `Origin` to every POST even
+ * when it is same-origin. Requiring that host to also be listed in
+ * ALLOWED_ORIGINS meant a deployment reached through a domain missing from the
+ * list -- a new custom domain, its `www.` variant, a preview URL -- refused
+ * every write from its own front end with a 403, while GETs (which carry no
+ * `Origin`) kept working and hid the problem.
+ *
+ * A browser cannot forge `Host` (or the forwarded host a platform proxy sets),
+ * so a cross-site page can never satisfy this comparison; a non-browser client
+ * could, but it can send any `Origin` it likes anyway, which is why this check
+ * is a same-origin-policy control and not authentication. Only the host is
+ * compared, because TLS is often terminated in front of the function and the
+ * scheme it observes may be `http`.
+ */
+function isSameOrigin(request: Request, origin: string): boolean {
+  let originHost: string;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    originHost = parsed.host.toLowerCase();
+  } catch {
+    return false;
+  }
+
+  const hosts = new Set<string>();
+  try {
+    hosts.add(new URL(request.url).host.toLowerCase());
+  } catch {
+    /* A relative or malformed URL simply contributes nothing. */
+  }
+  for (const header of ['x-forwarded-host', 'host']) {
+    const value = request.headers.get(header)?.split(',')[0]?.trim().toLowerCase();
+    if (value) hosts.add(value);
+  }
+  return hosts.has(originHost);
 }
 
 /**
