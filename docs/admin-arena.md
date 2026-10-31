@@ -17,3 +17,7 @@ Validation: TypeScript checks, production build, PostgreSQL/PGlite migrations an
 Reference: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase functions](https://supabase.com/docs/guides/database/functions), [ETS IRT introduction](https://www.ets.org/Media/Research/pdf/RM-20-06.pdf).
 
 Hosted verification: arena_catalog responds successfully, problem_catalog contains 124 rows, and unauthenticated learning_grade is denied. No real learner/Admin account was signed in by the agent.
+
+## Weekly arenas
+
+`npx tsx scripts/weekly-arena.ts` (options `--start YYYY-MM-DD --days 7 --count 10 --dry`) draws a fresh, topic-balanced set of generated numeric questions (answers computed or brute-forced in code) and writes `supabase/migrations/<date>000100_weekly_arena_<week>.sql`, an idempotent publish of that week's arena. `supabase/weekly-arenas/ledger.json` records every question fingerprint and statement used, so later weeks never repeat one. Apply the new migration in the Supabase SQL Editor; rerunning the script for the same ISO week does nothing.
