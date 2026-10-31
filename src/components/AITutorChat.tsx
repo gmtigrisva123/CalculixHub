@@ -11,6 +11,10 @@ import { apiUrl } from '../services/apiBase';
 import { backdrop, duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import { generateWithKey, normalizeGeminiKey, readStoredGeminiKey, storeGeminiKey } from '../lib/geminiClient';
+
+const TUTOR_SYSTEM_INSTRUCTION =
+  'You are the Calculix AI Tutor: a warm but rigorous mathematics teacher for a secondary-school student. Teach by the Socratic method. Draw the next step out of the learner rather than handing over the answer. Write clear English with academic substance and LaTeX notation ($x^2$, $\\frac{a}{b}$). Be concise and precise.';
 
 interface ChatMessage {
   id: string;
@@ -50,7 +54,7 @@ export default function AITutorChat({ request }: AITutorChatProps) {
   const isDesktop = useIsDesktop();
 
   useEffect(() => {
-    const saved = localStorage.getItem('calculix_gemini_api_key') || '';
+    const saved = readStoredGeminiKey();
     setUserApiKey(saved);
     setHasSavedApiKey(Boolean(saved));
     if (saved) setShowKeyModal(false);
@@ -70,14 +74,10 @@ export default function AITutorChat({ request }: AITutorChatProps) {
   }, [messages, isOpen]);
 
   const handleSaveInlineKey = (key: string) => {
-    const trimmed = key.trim();
+    const trimmed = normalizeGeminiKey(key);
+    storeGeminiKey(trimmed);
     setUserApiKey(trimmed);
     setHasSavedApiKey(Boolean(trimmed));
-    if (trimmed) {
-      localStorage.setItem('calculix_gemini_api_key', trimmed);
-    } else {
-      localStorage.removeItem('calculix_gemini_api_key');
-    }
     setShowKeyModal(false);
   };
 
@@ -119,63 +119,39 @@ Let's work through this step-by-step:
     setLoading(true);
 
     try {
-      const savedKey = localStorage.getItem('calculix_gemini_api_key')?.trim();
+      const savedKey = readStoredGeminiKey();
 
       if (savedKey) {
-        // Direct call to Gemini API using user's personal API Key
-        const systemInstruction =
-          'You are the Calculix AI Tutor: a warm but rigorous mathematics teacher for a secondary-school student. Teach by the Socratic method. Draw the next step out of the learner rather than handing over the answer. Write clear English with academic substance and LaTeX notation ($x^2$, $\\frac{a}{b}$). Be concise and precise.';
-
-        // Try gemini-2.0-flash first, then gemini-1.5-flash
-        for (const modelName of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
-          try {
-            const resp = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(savedKey)}`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  contents: [
-                    {
-                      role: 'user',
-                      parts: [{ text: `${systemInstruction}\n\nUser Question: ${userMsg.text}` }],
-                    },
-                  ],
-                }),
-              }
-            );
-
-            const data = await resp.json();
-            const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (resp.ok && replyText) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: (Date.now() + 1).toString(),
-                  sender: 'tutor',
-                  text: replyText,
-                  timestamp: new Date(),
-                },
-              ]);
-              return;
-            } else if (data?.error?.message) {
-              // Return clear API error message to user
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: (Date.now() + 1).toString(),
-                  sender: 'tutor',
-                  text: `⚠️ **Gemini API Error:** ${data.error.message}\n\nPlease check your Gemini API Key in Settings or click the 🔑 key icon above to re-enter a valid key.`,
-                  timestamp: new Date(),
-                },
-              ]);
-              return;
-            }
-          } catch (modelErr) {
-            console.warn(`Model ${modelName} fetch failed, trying fallback model...`, modelErr);
-          }
+        // Direct call to Gemini with the learner's own key. The key never
+        // reaches our server; model choice and error wording live in geminiClient.
+        try {
+          const { text } = await generateWithKey(
+            savedKey,
+            [
+              ...messages
+                .filter((m) => m.id !== 'init')
+                .map((m) => ({ role: m.sender === 'user' ? ('user' as const) : ('model' as const), text: m.text })),
+              { role: 'user', text: userMsg.text },
+            ],
+            { systemInstruction: TUTOR_SYSTEM_INSTRUCTION },
+          );
+          setMessages((prev) => [
+            ...prev,
+            { id: (Date.now() + 1).toString(), sender: 'tutor', text, timestamp: new Date() },
+          ]);
+        } catch (keyErr) {
+          const reason = keyErr instanceof Error ? keyErr.message : String(keyErr);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 1).toString(),
+              sender: 'tutor',
+              text: `⚠️ **Gemini API error:** ${reason}\n\nYou can update the key in Settings or with the 🔑 icon above.`,
+              timestamp: new Date(),
+            },
+          ]);
         }
+        return;
       }
 
       // Default backend route call
@@ -184,7 +160,6 @@ Let's work through this step-by-step:
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(savedKey ? { 'x-gemini-api-key': savedKey } : {}),
           },
           body: JSON.stringify({
             message: userMsg.text,
@@ -195,7 +170,7 @@ Let's work through this step-by-step:
         if (response.ok) {
           const data = await response.json();
           let replyText = data.reply || "I didn't quite follow that — could you rephrase it?";
-          if (data.isFallback && !savedKey) {
+          if (data.isFallback) {
             replyText += '\n\n💡 *Tip: Add your Gemini API key in Settings for live explanations; Google usage limits may apply.*';
           }
 

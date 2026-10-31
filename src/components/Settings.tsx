@@ -9,6 +9,7 @@ import { Bell, Check, Eye, EyeOff, Flag, KeyRound, Monitor, Moon, Palette, Refre
 import { useTheme } from '../context/ThemeContext';
 import { reminderHour } from '../platform/reminders';
 import type { ThemePreference } from '../lib/theme';
+import { normalizeGeminiKey, readStoredGeminiKey, storeGeminiKey, testGeminiKey } from '../lib/geminiClient';
 import '../styles/settings.css';
 
 interface SettingsProps {
@@ -103,7 +104,7 @@ export default function Settings({
   const { preference, resolved, setPreference } = useTheme();
 
   useEffect(() => {
-    const savedKey = localStorage.getItem('calculix_gemini_api_key') || '';
+    const savedKey = readStoredGeminiKey();
     setApiKey(savedKey);
     setKeyState(savedKey ? 'saved' : 'none');
   }, []);
@@ -123,21 +124,20 @@ export default function Settings({
   }, []);
 
   const handleSaveApiKey = () => {
-    const trimmed = apiKey.trim();
+    const trimmed = normalizeGeminiKey(apiKey);
+    storeGeminiKey(trimmed);
+    setApiKey(trimmed);
     if (!trimmed) {
-      localStorage.removeItem('calculix_gemini_api_key');
       setKeyState('none');
       setKeyNotice({ text: 'API Key removed. AI Assistant will use default engine.', success: true });
       return;
     }
-
-    localStorage.setItem('calculix_gemini_api_key', trimmed);
     setKeyState('saved');
-    setKeyNotice({ text: 'Gemini API Key saved successfully!', success: true });
+    setKeyNotice({ text: 'Gemini API Key saved. Press "Test" to verify it works.', success: true });
   };
 
   const handleTestApiKey = async () => {
-    const trimmed = apiKey.trim();
+    const trimmed = normalizeGeminiKey(apiKey);
     if (!trimmed) {
       setKeyNotice({ text: 'Please enter a Gemini API Key to test.', success: false });
       return;
@@ -147,29 +147,15 @@ export default function Settings({
     setKeyNotice(null);
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(trimmed)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'Hello' }] }],
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok && data?.candidates) {
-        localStorage.setItem('calculix_gemini_api_key', trimmed);
-        setKeyState('verified');
-        setKeyNotice({ text: 'API Key verified! Live Gemini AI Tutor is ready.', success: true });
-      } else {
-        const errorMsg = data?.error?.message || 'Invalid API Key response';
-        setKeyNotice({ text: `Connection failed: ${errorMsg}`, success: false });
-      }
+      storeGeminiKey(trimmed);
+      setApiKey(trimmed);
+      const { model } = await testGeminiKey(trimmed);
+      setKeyState('verified');
+      setKeyNotice({ text: `API Key verified with ${model}. Live Gemini AI Tutor is ready.`, success: true });
     } catch (err: unknown) {
+      setKeyState('saved');
       const errorMessage = err instanceof Error ? err.message : 'Network error';
-      setKeyNotice({ text: `Test failed: ${errorMessage}`, success: false });
+      setKeyNotice({ text: `Connection failed: ${errorMessage}`, success: false });
     } finally {
       setTestingKey(false);
     }
@@ -177,7 +163,7 @@ export default function Settings({
 
   const handleClearApiKey = () => {
     setApiKey('');
-    localStorage.removeItem('calculix_gemini_api_key');
+    storeGeminiKey('');
     setKeyState('none');
     setKeyNotice({ text: 'API Key cleared.', success: true });
   };
