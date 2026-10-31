@@ -68,13 +68,28 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const headers = new Headers(init.headers);
   if (!headers.has('Content-Type') && init.body) headers.set('Content-Type', 'application/json');
 
+  let token: string | undefined;
   if (supabase) {
     // Reads the persisted session and refreshes it if it is close to expiry,
     // so a long practice session does not start failing mid-way.
     const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
+    token = data.session?.access_token;
     if (token) headers.set('Authorization', `Bearer ${token}`);
   }
 
-  return fetch(apiUrl(path), { ...init, headers });
+  const response = await fetch(apiUrl(path), { ...init, headers });
+
+  // A 401 means the server rejected the session before doing any work, so one
+  // retry with a freshly refreshed token cannot double-record anything. This
+  // covers a tab woken from sleep with a token that expired in the meantime.
+  if (response.status === 401 && token && supabase) {
+    const { data } = await supabase.auth.refreshSession();
+    const fresh = data.session?.access_token;
+    if (fresh && fresh !== token) {
+      headers.set('Authorization', `Bearer ${fresh}`);
+      return fetch(apiUrl(path), { ...init, headers });
+    }
+  }
+
+  return response;
 }

@@ -139,6 +139,38 @@ describe('origin policy', () => {
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
   });
 
+  it('allows the page’s own host even when ALLOWED_ORIGINS omits it', async () => {
+    // Browsers attach Origin to same-origin POSTs. A custom domain missing from
+    // the allowlist used to 403 every answer submission from its own front end.
+    const app = makeApp();
+    const response = await app(
+      new Request('https://www.calculixhub.example/api/evaluate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://www.calculixhub.example' },
+        body: JSON.stringify({ problemId: 'alg-f01', userAnswer: '1' }),
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    const proxied = await app(
+      new Request('http://internal-function/api/problems', {
+        headers: { origin: 'https://www.calculixhub.example', 'x-forwarded-host': 'www.calculixhub.example' },
+      }),
+    );
+    expect(proxied.status).toBe(200);
+  });
+
+  it('still refuses a different site posting to this host', async () => {
+    const response = await makeApp()(
+      new Request('https://www.calculixhub.example/api/evaluate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'https://calculixhub.example.evil.test' },
+        body: JSON.stringify({ problemId: 'alg-f01', userAnswer: '1' }),
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
   it('allows the Capacitor origin without configuration, so the iOS app works', async () => {
     const response = await makeApp()(get('/api/problems', { headers: { origin: 'capacitor://localhost' } }));
 

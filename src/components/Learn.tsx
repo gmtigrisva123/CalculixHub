@@ -19,6 +19,33 @@ import { useAmbient } from '../hooks/useAmbient';
 import { Collapse, StaggerItem } from './motion';
 import { EMPTY_PRACTICE, submitPractice } from '../../shared/practiceRules';
 
+/** Why a signed-in submission could not be saved, phrased for the learner. */
+interface SaveError { title: string; detail: string }
+
+class SubmitError extends Error {
+  constructor(readonly status: number) { super(`Request failed (${status})`); }
+}
+
+function describeSaveError(error: unknown, action: 'answer' | 'pass'): SaveError {
+  const what = action === 'answer' ? 'Your answer' : 'Your pass';
+  const notCounted = 'Nothing was counted, so you have not lost an attempt.';
+  if (error instanceof SubmitError) {
+    switch (error.status) {
+      case 401:
+        return { title: 'Your session has expired', detail: `Sign out and sign in again, then resubmit. ${notCounted}` };
+      case 403:
+        return { title: `${what} was not saved`, detail: `The server refused this connection. Reload the page and try again. ${notCounted}` };
+      case 404:
+        return { title: 'This question is no longer available', detail: 'Reload the page to refresh the question list.' };
+      case 429:
+        return { title: 'Too many submissions', detail: `Wait a minute, then submit again. ${notCounted}` };
+      default:
+        return { title: `${what} was not saved`, detail: `The server could not save it right now. Try again in a moment. ${notCounted}` };
+    }
+  }
+  return { title: `${what} was not saved`, detail: `Check your internet connection and submit again. ${notCounted}` };
+}
+
 interface LearnProps {
   problems: Problem[];
   completedProblems: string[];
@@ -76,6 +103,7 @@ export default function Learn({
   const [showHint, setShowHint] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [smartFeedback, setSmartFeedback] = useState<SmartFeedback | null>(null);
+  const [saveError, setSaveError] = useState<SaveError | null>(null);
   const [showFullSolution, setShowFullSolution] = useState(false);
   const [revealedWithoutScore, setRevealedWithoutScore] = useState(false);
 
@@ -98,6 +126,7 @@ export default function Learn({
     setAnswerInput('');
     setShowHint(false);
     setSmartFeedback(null);
+    setSaveError(null);
     setShowFullSolution(Boolean(attempts[prob.id]?.finished || completedProblems.includes(prob.id)) && !prob.proOnly);
     setRevealedWithoutScore(Boolean(attempts[prob.id]?.forfeited));
   };
@@ -107,6 +136,7 @@ export default function Learn({
     setAnswerInput('');
     setShowHint(false);
     setSmartFeedback(null);
+    setSaveError(null);
     setShowFullSolution(false);
     setRevealedWithoutScore(false);
   };
@@ -135,13 +165,14 @@ export default function Learn({
     if (!activeProblem || evaluating || activeProblem.proOnly) return;
     const actingUser = user?.id;
     setEvaluating(true);
+    setSaveError(null);
     try {
       const response=await apiFetch('/api/evaluate',{method:'POST',body:JSON.stringify({problemId:activeProblem.id,userAnswer:'__forfeit__',practiceSession,forfeit:true,durationMs:Math.min(14400000,Math.round(performance.now()-started.current))})});
-      if(!response.ok&&user)throw Error('Could not save the pass. Please reconnect and retry.');
+      if(!response.ok&&user)throw new SubmitError(response.status);
       if (currentUser.current !== actingUser) return;
       saveAttempt(activeProblem.id,{count:attempts[activeProblem.id]?.count??0,finished:true,forfeited:true});
       onSolveProblem(activeProblem.id,false,0);
-    } catch(e) {if(user){setSmartFeedback({correct:false,explanation:'Could not save the pass.',guidance:'Reconnect and try again.'});setEvaluating(false);return;}saveAttempt(activeProblem.id,{count:attempts[activeProblem.id]?.count??0,finished:true,forfeited:true});}
+    } catch(e) {if(user){if(currentUser.current===actingUser)setSaveError(describeSaveError(e,'pass'));setEvaluating(false);return;}saveAttempt(activeProblem.id,{count:attempts[activeProblem.id]?.count??0,finished:true,forfeited:true});}
     setEvaluating(false);
     setShowFullSolution(true);
     setRevealedWithoutScore(true);
@@ -167,6 +198,7 @@ export default function Learn({
 
     setEvaluating(true);
     setSmartFeedback(null);
+    setSaveError(null);
     setShowFullSolution(false);
     setRevealedWithoutScore(false);
 
@@ -176,7 +208,7 @@ export default function Learn({
         body: JSON.stringify({ problemId: activeProblem.id, userAnswer: answerInput, practiceSession,durationMs:Math.min(14400000,Math.round(performance.now()-started.current)) }),
       });
 
-      if (!response.ok) throw new Error(`Grading unavailable (${response.status})`);
+      if (!response.ok) throw new SubmitError(response.status);
       if (response.ok) {
         const data: SmartFeedback = await response.json();
         if(currentUser.current!==actingUser)return;
@@ -184,7 +216,9 @@ export default function Learn({
         started.current=performance.now();
       }
     } catch (err) {
-      if(user){setSmartFeedback({correct:false,explanation:'Your answer has not been saved.',guidance:'Reconnect and submit again. Points and progress only update after a successful database save.'});return;}
+      // Signed in, the database is the record: never fall back to a local
+      // verdict that would look saved. Say plainly what happened instead.
+      if(user){if(currentUser.current===actingUser)setSaveError(describeSaveError(err,'answer'));return;}
       const correct = gradeLocally(answerInput, activeProblem.correctAnswer);
 
 
@@ -493,6 +527,16 @@ export default function Learn({
                   <p className="text-[11px] leading-relaxed text-content-subtle">
                     The solution is open for learning. This problem will not add points or count as solved.
                   </p>
+                )}
+
+                {/* Save failure: not a verdict on the answer, so it is styled and worded apart from one. */}
+                {saveError && (
+                  <div role="alert" className="p-6 rounded-2xl border space-y-2 border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center gap-2 font-bold text-sm">
+                      <RefreshCw className="w-5 h-5 text-amber-500" /> {saveError.title}
+                    </div>
+                    <p className="text-xs leading-relaxed font-medium">{saveError.detail}</p>
+                  </div>
                 )}
 
                 {/* Smart Feedback Banner */}

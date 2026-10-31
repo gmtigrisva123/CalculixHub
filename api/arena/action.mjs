@@ -432,7 +432,28 @@ function evaluateOrigin(request, config3) {
   const origin = request.headers.get("origin");
   if (!origin) return { kind: "no-origin" };
   if (config3.allowedOrigins.includes(origin)) return { kind: "allowed", origin };
+  if (isSameOrigin(request, origin)) return { kind: "allowed", origin };
   return { kind: "denied", origin };
+}
+function isSameOrigin(request, origin) {
+  let originHost;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    originHost = parsed.host.toLowerCase();
+  } catch {
+    return false;
+  }
+  const hosts = /* @__PURE__ */ new Set();
+  try {
+    hosts.add(new URL(request.url).host.toLowerCase());
+  } catch {
+  }
+  for (const header of ["x-forwarded-host", "host"]) {
+    const value = request.headers.get(header)?.split(",")[0]?.trim().toLowerCase();
+    if (value) hosts.add(value);
+  }
+  return hosts.has(originHost);
 }
 function corsHeaders(origin) {
   return {
@@ -540,7 +561,7 @@ async function recordAttempt(input) {
   if (!settings.supabaseUrl || !settings.supabaseAnonKey || !input.authorization) return { status: "not-configured", pointsAwarded: 0 };
   const client = createClient(settings.supabaseUrl, settings.supabaseAnonKey, { auth: { persistSession: false }, global: { headers: { Authorization: input.authorization } } });
   const { data, error } = await client.rpc("learning_grade", { p_problem: input.problem.id, p_answer: input.submittedAnswer, p_duration: input.durationMs ?? null });
-  if (error) return { status: "failed", pointsAwarded: 0 };
+  if (error) return { status: "failed", pointsAwarded: 0, reason: error.message };
   return data;
 }
 
@@ -1395,14 +1416,19 @@ function createEvaluateHandler({ model }) {
     const item = (await loadProblemBank(context.config)).find((item2) => item2.id === problemId2);
     if (!item) return problem(404, "not-found", "Problem not found", "No item with that identifier.");
     if (item.proOnly) return problem(403, "pro-required", "Proof practice is locked", "Pro proof grading is coming soon.");
-    const caller = await verifyAccessToken(context.request.headers.get("authorization"));
+    const authorization = context.request.headers.get("authorization");
+    const caller = await verifyAccessToken(authorization);
+    if (authorization && !caller) return problem(401, "unauthenticated", "Session expired", "Sign in again to save your answer.");
     const key = (practiceSession ?? context.clientKey) + ":" + item.id;
     let correct = gradeAnswer(userAnswer, item.correctAnswer);
     let pointsAwarded = 0;
     let progress;
     if (caller) {
       const outcome = await recordAttempt({ userId: caller.id, problem: item, submittedAnswer: forfeit ? "__forfeit__" : userAnswer, isCorrect: !forfeit && correct, durationMs, authorization: context.request.headers.get("authorization") });
-      if (outcome.status === "failed" || outcome.status === "not-configured") return problem(503, "save-failed", "Answer not saved", "Reconnect and retry. Your progress has not been changed.");
+      if (outcome.status === "failed" || outcome.status === "not-configured") {
+        console.error("[CalculixHub] Learn attempt not saved", { status: outcome.status, problemId: item.id, reason: outcome.reason });
+        return problem(503, "save-failed", "Answer not saved", "Reconnect and retry. Your progress has not been changed.");
+      }
       correct = outcome.correct ?? correct;
       pointsAwarded = outcome.pointsAwarded;
       progress = { attemptsUsed: outcome.attemptsUsed ?? 0, finished: outcome.finished ?? false, forfeited: outcome.forfeited ?? false };
@@ -1834,7 +1860,8 @@ function load() {
 var vercelEntry_default = {
   async fetch(request) {
     try {
-      return await load()(request);
+      const peer = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim();
+      return await load()(request, { peerAddress: peer || void 0 });
     } catch (error) {
       console.error("[CalculixHub] API request failed", error);
       return new Response("Service unavailable", {
