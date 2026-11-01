@@ -8,6 +8,7 @@ const entries = [
   // Give each nested route a concrete function path.
   'api/arena/action.mjs',
   'api/live-stats/event.mjs',
+  'api/email/dispatch.mjs',
 ];
 
 for (const outfile of entries) {
