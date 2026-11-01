@@ -5,9 +5,9 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { Camera, Lock, LogOut, Sparkles } from 'lucide-react';
+import { CalendarDays, Camera, Check, Flame, Lock, LogOut, MapPin, Target, Trophy, Users } from 'lucide-react';
 import { UserStats, Problem, Topic } from '../../shared/types';
-import { RANK_TIERS, getRankForPoints, nextRankFor } from '../lib/topics';
+import { RANK_TIERS, TOPIC_LIST, getRankForPoints, nextRankFor } from '../lib/topics';
 import { AnimatedNumber, StaggerItem } from './motion';
 import { useAuth } from '../context/AuthContext';
 import { ACHIEVEMENTS } from '../domain/achievements';
@@ -29,83 +29,6 @@ type Vars = CSSProperties & Record<`--${string}`, string | number>;
 const grouped = (value: number) => Math.round(value).toLocaleString();
 const dayOf = (date: string) => Date.parse(date.length === 10 ? `${date}T00:00:00Z` : date);
 const formatDay = (time: number, withYear = true) => new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined, timeZone: 'UTC' });
-
-/* --------------------------------------------------------------------------
- * The skill rose: a Nightingale diagram with the learner at its origin
- * ------------------------------------------------------------------------ */
-
-/* Each topic owns a quadrant on the diagonal, pointing at the corner its label sits in. */
-const PETALS: Array<{ topic: Topic; angle: number; corner: string }> = [
-  { topic: 'Algebra', angle: -135, corner: 'tl' },
-  { topic: 'Geometry', angle: -45, corner: 'tr' },
-  { topic: 'Combinatorics', angle: 45, corner: 'br' },
-  { topic: 'Number Theory', angle: 135, corner: 'bl' },
-];
-const CENTRE = 200, INNER = 60, OUTER = 146, HALF_SPAN = 39;
-const radiusFor = (mastery: number) => INNER + (OUTER - INNER) * Math.min(Math.max(mastery, 0), 100) / 100;
-const polar = (radius: number, degrees: number) => {
-  const angle = degrees * Math.PI / 180;
-  return `${(CENTRE + radius * Math.cos(angle)).toFixed(2)},${(CENTRE + radius * Math.sin(angle)).toFixed(2)}`;
-};
-const sector = (inner: number, outer: number, from: number, to: number) =>
-  `M${polar(outer, from)} A${outer},${outer} 0 0 1 ${polar(outer, to)} L${polar(inner, to)} A${inner},${inner} 0 0 0 ${polar(inner, from)} Z`;
-const arc = (radius: number, from: number, to: number) => `M${polar(radius, from)} A${radius},${radius} 0 0 1 ${polar(radius, to)}`;
-
-function SkillRose({ skills, face, onEditFace }: { skills: UserStats['skills']; face: React.ReactNode; onEditFace?: () => void }) {
-  const ranked = PETALS.map(({ topic }) => ({ topic, value: skills[topic] ?? 0 })).sort((a, b) => b.value - a.value);
-  const strongest = ranked[0], weakest = ranked[ranked.length - 1];
-  const summary = strongest.value <= 0 ? 'Solve a few problems and your topics will take shape here.'
-    : strongest.value === weakest.value ? `Even across all four topics at ${Math.round(strongest.value)}%.`
-    : <>Strongest in <b>{strongest.topic}</b>. {weakest.topic} has the most room to grow.</>;
-
-  return <figure className="pf-rose">
-    <div className="pf-rose-plot">
-      <svg viewBox="0 0 400 400" aria-hidden="true">
-        <defs>
-          <pattern id="pf-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
-          <radialGradient id="pf-petal-fill" cx={CENTRE} cy={CENTRE} r={OUTER} gradientUnits="userSpaceOnUse"><stop offset=".4" stopColor="#e6bd73" stopOpacity=".05" /><stop offset="1" stopColor="#e6bd73" stopOpacity=".4" /></radialGradient>
-        </defs>
-        <g className="pf-rose-grid">
-          {[25, 50, 75, 100].map(mark => <circle key={mark} cx={CENTRE} cy={CENTRE} r={radiusFor(mark)} />)}
-          {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => <path key={angle} d={`M${polar(INNER, angle)} L${polar(OUTER + 14, angle)}`} />)}
-        </g>
-        {[25, 50, 75, 100].map(mark => <text key={mark} className="pf-rose-tick" x={CENTRE + 5} y={CENTRE - radiusFor(mark) - 4}>{mark}</text>)}
-        {PETALS.map(({ topic, angle }) => <path key={topic} className="pf-petal-track" d={sector(INNER, OUTER, angle - HALF_SPAN, angle + HALF_SPAN)} />)}
-        {PETALS.map(({ topic, angle }, index) => {
-          const value = skills[topic] ?? 0;
-          if (value <= 0) return null;
-          const reach = radiusFor(value);
-          return <g key={topic} className="pf-petal" style={{ '--i': index } as Vars}>
-            <path className="pf-petal-fill" d={sector(INNER, reach, angle - HALF_SPAN, angle + HALF_SPAN)} />
-            <path className="pf-petal-hatch" d={sector(INNER, reach, angle - HALF_SPAN, angle + HALF_SPAN)} />
-            <path className="pf-petal-cap" d={arc(reach, angle - HALF_SPAN, angle + HALF_SPAN)} />
-          </g>;
-        })}
-      </svg>
-      {onEditFace
-        ? <button type="button" className="pf-rose-face is-editable" onClick={onEditFace} aria-label="Change profile photo">{face}<span className="pf-face-badge" aria-hidden="true"><Camera size={15} strokeWidth={2.2} /></span></button>
-        : <div className="pf-rose-face">{face}</div>}
-      {PETALS.map(({ topic, corner }) => <p key={topic} className={`pf-rose-label is-${corner}`}><span>{topic}</span><strong>{Math.round(skills[topic] ?? 0)}<small>%</small></strong></p>)}
-    </div>
-    <figcaption>{summary}</figcaption>
-  </figure>;
-}
-
-/* --------------------------------------------------------------------------
- * The tier ladder
- * ------------------------------------------------------------------------ */
-
-/*
- * Four equal stages, each read linearly between its own thresholds. Elite has
- * no ceiling, so for drawing it runs to half again its threshold.
- */
-function ladderPosition(points: number) {
-  const edges = [...RANK_TIERS.map(tier => tier.minPoints), RANK_TIERS[RANK_TIERS.length - 1].minPoints * 1.5];
-  const stage = Math.max(0, RANK_TIERS.findIndex((_, index) => points < edges[index + 1]));
-  const last = RANK_TIERS.length - 1;
-  const index = points >= edges[last + 1] ? last : stage;
-  return (index + Math.min((points - edges[index]) / (edges[index + 1] - edges[index]), 1)) / RANK_TIERS.length;
-}
 
 /* --------------------------------------------------------------------------
  * Cumulative points over active days
@@ -236,6 +159,77 @@ function PhotoDialog({ open, onClose, userId, current, onSaved }: { open: boolea
 }
 
 /* --------------------------------------------------------------------------
+ * Activity: one square per day, like a contribution graph
+ * ------------------------------------------------------------------------ */
+
+const WEEKS = 22;
+const DAY = 86_400_000;
+
+function ActivityGrid({ timeline, streak }: { timeline: UserStats['learningTimeline']; streak: number }) {
+  const gains = new Map<number, number>();
+  let previous = 0;
+  [...timeline].map(day => ({ ...day, time: dayOf(day.date) })).filter(day => Number.isFinite(day.time)).sort((a, b) => a.time - b.time).forEach(day => {
+    const key = Math.floor(day.time / DAY);
+    gains.set(key, (gains.get(key) ?? 0) + Math.max(day.points - previous, 0));
+    previous = day.points;
+  });
+  const today = Math.floor(Date.now() / DAY);
+  const weekday = new Date(today * DAY).getUTCDay();
+  const first = today - weekday - (WEEKS - 1) * 7;
+  const peak = Math.max(1, ...gains.values());
+  const level = (gain: number) => gain <= 0 ? 0 : Math.min(4, Math.ceil(gain / peak * 4));
+  const months: { label: string; column: number }[] = [];
+  for (let week = 0; week < WEEKS; week++) {
+    const date = new Date((first + week * 7) * DAY);
+    const label = date.toLocaleDateString(undefined, { month: 'short', timeZone: 'UTC' });
+    if (!months.length || months[months.length - 1].label !== label) months.push({ label, column: week });
+  }
+  const activeDays = [...gains.entries()].filter(([key, gain]) => key >= first && gain > 0).length;
+
+  return <div className="pf-activity">
+    <div className="pf-activity-scroll">
+      <div className="pf-activity-grid" style={{ '--weeks': WEEKS } as Vars} role="img" aria-label={`${activeDays} active days in the last ${WEEKS} weeks`}>
+        <div className="pf-activity-months" aria-hidden="true">{months.map(month => <span key={month.column} style={{ gridColumn: month.column + 1 }}>{month.label}</span>)}</div>
+        <div className="pf-activity-days" aria-hidden="true"><span>Mon</span><span>Wed</span><span>Fri</span></div>
+        <div className="pf-activity-cells">
+          {Array.from({ length: WEEKS * 7 }, (_, index) => {
+            const key = first + Math.floor(index / 7) * 7 + (index % 7);
+            const gain = gains.get(key) ?? 0;
+            return <i key={index} className={key > today ? 'is-future' : undefined} data-level={level(gain)} title={key > today ? undefined : `${formatDay(key * DAY)} · ${gain ? `+${grouped(gain)} pts` : 'no practice'}`} />;
+          })}
+        </div>
+      </div>
+    </div>
+    <div className="pf-activity-foot">
+      <span><b>{activeDays}</b> active {activeDays === 1 ? 'day' : 'days'} · <b>{streak}</b>-day streak right now</span>
+      <span className="pf-legend" aria-hidden="true">Less{[0, 1, 2, 3, 4].map(n => <i key={n} data-level={n} />)}More</span>
+    </div>
+  </div>;
+}
+
+/* --------------------------------------------------------------------------
+ * Topics, as plain bars
+ * ------------------------------------------------------------------------ */
+
+const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#2f9c8c', Combinatorics: '#8b5cf6', 'Number Theory': '#0ea5e9' };
+
+function TopicBars({ skills }: { skills: UserStats['skills'] }) {
+  const ranked = TOPIC_LIST.map(topic => ({ topic, value: Math.round(skills[topic] ?? 0) }));
+  const sorted = [...ranked].sort((a, b) => b.value - a.value);
+  const note = sorted[0].value <= 0 ? 'Solve a few problems and your topics will fill in.'
+    : sorted[0].value === sorted[3].value ? `Even across the board at ${sorted[0].value}%.`
+    : <>You’re strongest in <b>{sorted[0].topic}</b>. <b>{sorted[3].topic}</b> is where the next points are.</>;
+  return <>
+    <ul className="pf-topics">{ranked.map(({ topic, value }) => <li key={topic} style={{ '--hue': TOPIC_HUE[topic], '--v': `${value}%` } as Vars}>
+      <span className="pf-topic-name"><i aria-hidden="true" />{topic}</span>
+      <span className="pf-topic-value">{value}%</span>
+      <span className="pf-topic-track" aria-hidden="true"><span /></span>
+    </li>)}</ul>
+    <p className="pf-note">{note}</p>
+  </>;
+}
+
+/* --------------------------------------------------------------------------
  * The page
  * ------------------------------------------------------------------------ */
 
@@ -243,6 +237,8 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const solvedQuestions = problems.filter((p) => completedProblems.includes(p.id));
   const rank = getRankForPoints(userStats.points);
   const nextTier = nextRankFor(userStats.points);
+  const tierIndex = RANK_TIERS.findIndex(tier => tier.name === rank.name);
+  const tierProgress = nextTier ? Math.min(1, (userStats.points - rank.minPoints) / (nextTier.minPoints - rank.minPoints)) : 1;
 
   const { profile, refreshProfile } = useAuth();
   const [photoOpen, setPhotoOpen] = useState(false);
@@ -253,94 +249,97 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const unlockedCount = badges.filter((b) => b.unlocked).length;
 
   const displayName = profile?.display_name || profile?.username || 'Calculix Learner';
-  const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : null;
   const hasAnswers = userStats.completedCount > 0 || userStats.accuracy > 0;
+  const activeDays = userStats.learningTimeline.length;
 
   return (
     <div className="profile-page">
-      <header className="pf-hero">
-        <div className="pf-hero-top">
-          <p className="pf-eyebrow"><span aria-hidden="true" />Your own learning journey</p>
-          <m.button onClick={onLogout} whileTap={{ scale: 0.95 }} className="pf-signout"><LogOut size={15} aria-hidden="true" /> Sign out</m.button>
+      <section className="pf-card pf-header" aria-labelledby="pf-name">
+        <div className="pf-cover" aria-hidden="true">
+          <span className="pf-blob is-a" /><span className="pf-blob is-b" /><span className="pf-blob is-c" /><span className="pf-blob is-d" />
+          <svg className="pf-contours" viewBox="0 0 800 200" preserveAspectRatio="none">
+            {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M-20 ${150 - i * 14} C 140 ${110 - i * 18}, 260 ${190 - i * 9}, 420 ${120 - i * 13} S 690 ${70 - i * 6}, 820 ${118 - i * 15}`} />)}
+          </svg>
         </div>
 
-        <div className="pf-hero-body">
-          <div className="pf-identity">
-            <h1>{displayName}</h1>
-            <p className="pf-handle">
-              {profile?.username ? <span>@{profile.username}</span> : <span>No username yet</span>}
-              <span className="pf-level">{userStats.level || 'Unplaced'}</span>
-            </p>
+        <div className="pf-header-body">
+          <div className="pf-face-wrap">
+            {profile
+              ? <button type="button" className="pf-face is-editable" onClick={() => setPhotoOpen(true)} aria-label="Change profile photo"><UserAvatar src={profile.avatar_url} /><span className="pf-face-badge" aria-hidden="true"><Camera size={15} strokeWidth={2.2} /></span></button>
+              : <div className="pf-face"><UserAvatar src={null} /></div>}
+          </div>
+
+          <div className="pf-header-main">
+            <div className="pf-name-row">
+              <div className="pf-identity">
+                <h1 id="pf-name">{displayName}</h1>
+                <p className="pf-handle">{profile?.username ? `@${profile.username}` : 'No username yet'}<span className="pf-chip is-level">{userStats.level || 'Unplaced'}</span><span className="pf-chip is-tier"><Trophy size={12} aria-hidden="true" />{rank.name}</span></p>
+              </div>
+              <div className="pf-header-actions">
+                {profile && <button type="button" className="pf-btn" onClick={() => setPhotoOpen(true)}><Camera size={15} aria-hidden="true" />{profile.avatar_url ? 'Change photo' : 'Add photo'}</button>}
+                <m.button onClick={onLogout} whileTap={{ scale: 0.96 }} className="pf-btn is-quiet"><LogOut size={15} aria-hidden="true" />Sign out</m.button>
+              </div>
+            </div>
             {profile?.bio && <p className="pf-bio">{profile.bio}</p>}
             <ul className="pf-facts">
-              {memberSince && <li>Member since {memberSince}</li>}
-              {profile?.country && <li>{profile.country}</li>}
-              {profile && <li><b>{grouped(profile.follower_count)}</b> {profile.follower_count === 1 ? 'follower' : 'followers'} · <b>{grouped(profile.following_count)}</b> following</li>}
+              {profile?.country && <li><MapPin size={14} aria-hidden="true" />{profile.country}</li>}
+              {memberSince && <li><CalendarDays size={14} aria-hidden="true" />Joined {memberSince}</li>}
+              {profile && <li><Users size={14} aria-hidden="true" /><b>{grouped(profile.follower_count)}</b> {profile.follower_count === 1 ? 'follower' : 'followers'} · <b>{grouped(profile.following_count)}</b> following</li>}
             </ul>
-
-            <div className="pf-ladder" style={{ '--p': ladderPosition(userStats.points) } as Vars}>
-              <div className="pf-ladder-head">
-                <p><span className="pf-kicker">Rank tier</span><strong>{rank.name}</strong></p>
-                <span>{nextTier ? `${grouped(nextTier.minPoints - userStats.points)} pts to ${nextTier.name}` : 'Top tier reached'}</span>
-              </div>
-              <div className="pf-ladder-track" aria-hidden="true"><span className="pf-ladder-fill" /><span className="pf-ladder-marker"><b>{grouped(userStats.points)}</b></span></div>
-              <ol className="pf-ladder-stops">{RANK_TIERS.map(tier => <li key={tier.name} className={tier.name === rank.name ? 'is-current' : userStats.points >= tier.minPoints ? 'is-passed' : undefined}>
-                <span>{tier.name}</span><small>{grouped(tier.minPoints)}</small>
-              </li>)}</ol>
-            </div>
           </div>
-
-          <SkillRose skills={userStats.skills} face={<UserAvatar src={profile?.avatar_url} />} onEditFace={profile ? () => setPhotoOpen(true) : undefined} />
         </div>
-      </header>
 
-      <dl className="pf-readouts">
-        <div><dt>Total points</dt><dd className="is-accent"><AnimatedNumber value={userStats.points} format={grouped} /></dd><p>Earned via solves &amp; contests</p></div>
-        <div><dt>Problems solved</dt><dd><AnimatedNumber value={solvedQuestions.length} /></dd><p>From your saved practice</p></div>
-        <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} />%</span> : '—'}</dd><p>Across every saved answer</p></div>
-        <div><dt>Streak</dt><dd><AnimatedNumber value={userStats.streak} /><small>{userStats.streak === 1 ? 'day' : 'days'}</small></dd><p>Active days in a row</p></div>
-        <div><dt>Global rank</dt><dd>{userStats.rank > 0 ? <>#{grouped(userStats.rank)}</> : '—'}</dd><p>{userStats.rank > 0 ? 'On the leaderboard' : 'Starts with your first answer'}</p></div>
-        <div><dt>Placement tier</dt><dd className="is-word">{userStats.level || 'Unplaced'}</dd><p>{userStats.level ? 'Set by placement assessment' : 'Placement assessment required'}</p></div>
-      </dl>
+        <dl className="pf-stats">
+          <div><dt>Points</dt><dd><AnimatedNumber value={userStats.points} format={grouped} /></dd></div>
+          <div><dt>Solved</dt><dd><AnimatedNumber value={solvedQuestions.length} /></dd></div>
+          <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} /><small>%</small></span> : '—'}</dd></div>
+          <div><dt>Streak</dt><dd><AnimatedNumber value={userStats.streak} /><small>{userStats.streak === 1 ? 'day' : 'days'}</small></dd></div>
+          <div><dt>Global rank</dt><dd>{userStats.rank > 0 ? <>#{grouped(userStats.rank)}</> : '—'}</dd></div>
+        </dl>
+      </section>
 
-      <div className="pf-split">
-        <section className="pf-card pf-growth" aria-labelledby="pf-growth-title">
-          <div className="pf-card-head">
-            <div><p className="pf-kicker">{userStats.learningTimeline.length ? `Cumulative · ${userStats.learningTimeline.length} active ${userStats.learningTimeline.length === 1 ? 'day' : 'days'}` : 'Cumulative points'}</p><h2 id="pf-growth-title">Points, added up</h2></div>
-            <span className="pf-integral" aria-hidden="true">∫</span>
-          </div>
-          <PointsCurve timeline={userStats.learningTimeline} />
-        </section>
+      <div className="pf-columns">
+        <div className="pf-main">
+          <section className="pf-card" aria-labelledby="pf-activity-title">
+            <header className="pf-card-head"><h2 id="pf-activity-title"><Flame size={17} aria-hidden="true" />Activity</h2><span className="pf-muted">Last {WEEKS} weeks</span></header>
+            <ActivityGrid timeline={userStats.learningTimeline} streak={userStats.streak} />
+          </section>
 
-        <section className="pf-card pf-account" aria-labelledby="pf-account-title">
-          <div className="pf-card-head"><div><p className="pf-kicker">Account</p><h2 id="pf-account-title">Identity &amp; details</h2></div></div>
-          <dl className="pf-ledger">
-            <div><dt>Profile photo</dt><dd>{profile
-              ? <button type="button" className="pf-photo-link" onClick={() => setPhotoOpen(true)}><span className="pf-photo-thumb"><UserAvatar src={profile.avatar_url} /></span>{profile.avatar_url ? 'Change' : 'Add a photo'}</button>
-              : 'Default'}</dd></div>
-            <div><dt>Display name</dt><dd>{displayName}</dd></div>
-            <div><dt>Username</dt><dd>{profile?.username ? `@${profile.username}` : 'Not set'}</dd></div>
-            <div><dt>Member since</dt><dd>{memberSince ?? 'Not available'}</dd></div>
-            <div><dt>Country</dt><dd>{profile?.country ?? 'Not set'}</dd></div>
-          </dl>
-        </section>
+          <section className="pf-card pf-growth" aria-labelledby="pf-growth-title">
+            <header className="pf-card-head"><h2 id="pf-growth-title"><Target size={17} aria-hidden="true" />Points over time</h2><span className="pf-muted">{activeDays ? `${activeDays} active ${activeDays === 1 ? 'day' : 'days'}` : 'No answers yet'}</span></header>
+            <PointsCurve timeline={userStats.learningTimeline} />
+          </section>
+        </div>
+
+        <aside className="pf-side">
+          <section className="pf-card pf-rank" aria-labelledby="pf-rank-title">
+            <header className="pf-card-head"><h2 id="pf-rank-title"><Trophy size={17} aria-hidden="true" />Rank</h2><span className="pf-muted">{grouped(userStats.points)} pts</span></header>
+            <p className="pf-rank-name">{rank.name}</p>
+            <p className="pf-muted">{nextTier ? <>{grouped(nextTier.minPoints - userStats.points)} points until <b>{nextTier.name}</b></> : 'You’ve reached the top tier.'}</p>
+            <div className="pf-rank-bar" style={{ '--p': tierProgress } as Vars} aria-hidden="true"><span /></div>
+            <ol className="pf-rank-steps">{RANK_TIERS.map((tier, index) => <li key={tier.name} className={index < tierIndex ? 'is-done' : index === tierIndex ? 'is-current' : undefined}>
+              <i aria-hidden="true">{index < tierIndex ? <Check size={11} strokeWidth={3} /> : null}</i><span>{tier.name}</span><small>{grouped(tier.minPoints)}</small>
+            </li>)}</ol>
+          </section>
+
+          <section className="pf-card" aria-labelledby="pf-topics-title">
+            <header className="pf-card-head"><h2 id="pf-topics-title">Topics</h2><span className="pf-muted">Mastery</span></header>
+            <TopicBars skills={userStats.skills} />
+          </section>
+        </aside>
       </div>
 
-      <section className="pf-medals" aria-labelledby="pf-medals-title">
-        <div className="pf-medals-head">
-          <div><p className="pf-kicker">Achievement badges</p><h2 id="pf-medals-title">Medals earned along the way</h2></div>
-          <div className="pf-medal-count">
-            <span><b>{unlockedCount}</b> of {badges.length} unlocked</span>
-            <ol aria-hidden="true">{badges.map(b => <li key={b.id} className={b.unlocked ? 'is-on' : undefined} />)}</ol>
-          </div>
-        </div>
+      <section className="pf-card pf-medals" aria-labelledby="pf-medals-title">
+        <header className="pf-card-head">
+          <h2 id="pf-medals-title">Badges</h2>
+          <span className="pf-medal-count"><b>{unlockedCount}</b>/{badges.length}<span className="pf-medal-meter" aria-hidden="true"><span style={{ width: `${unlockedCount / Math.max(badges.length, 1) * 100}%` }} /></span></span>
+        </header>
         <div className="pf-medal-grid">
           {badges.map((b, index) => (
             <StaggerItem key={b.id} index={index} inView className={`pf-medal${b.unlocked ? ' is-unlocked' : ''}`}>
-              <span className="pf-coin" aria-hidden="true"><span className="pf-coin-face">{b.icon}</span></span>
-              <h3>{b.title}</h3>
-              <p>{b.desc}</p>
-              <span className="pf-medal-state">{b.unlocked ? <><Sparkles size={11} aria-hidden="true" /> Unlocked</> : <><Lock size={11} aria-hidden="true" /> Locked</>}</span>
+              <span className="pf-coin" aria-hidden="true">{b.icon}{!b.unlocked && <span className="pf-coin-lock"><Lock size={11} /></span>}</span>
+              <div><h3>{b.title}</h3><p>{b.desc}</p></div>
             </StaggerItem>
           ))}
         </div>

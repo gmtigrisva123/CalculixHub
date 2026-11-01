@@ -76,7 +76,7 @@ var envSchema = z.object({
    * identifier; set this to whatever the deployment's project actually has
    * access to.
    */
-  GEMINI_MODEL: z.string().trim().min(1).default("gemini-2.0-flash"),
+  GEMINI_MODEL: z.string().trim().min(1).default("gemini-2.5-flash"),
   /**
    * Supabase project URL, e.g. "https://abcd.supabase.co".
    *
@@ -386,6 +386,7 @@ async function checkRateLimit(store, clientKey2, routeClass, policy) {
 var API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 var FONT_CSS_ORIGIN = "https://fonts.googleapis.com";
 var FONT_FILE_ORIGIN = "https://fonts.gstatic.com";
+var GEMINI_ORIGIN = "https://generativelanguage.googleapis.com";
 var THEME_BOOT_SCRIPT_HASH = "'sha256-0JDUOjcviM78444oEyhjy7t1FfZ1igvew/Ayd8B/BQU='";
 var DOCUMENT_CSP = [
   "default-src 'self'",
@@ -396,7 +397,10 @@ var DOCUMENT_CSP = [
   // REST, auth and storage travel over https; realtime is a WebSocket, and
   // `connect-src` matches on scheme, so wss:// is listed separately even though
   // it is the same host.
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  // generativelanguage.googleapis.com: the AI tutor calls Gemini directly with
+  // the learner's own API key (src/lib/geminiClient.ts). Without it every
+  // request was refused by the browser and a valid key appeared not to work.
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${GEMINI_ORIGIN}`,
   "manifest-src 'self'",
   "worker-src 'self'",
   "object-src 'none'",
@@ -1829,6 +1833,219 @@ function arenaRoutes() {
   ];
 }
 
+// server/routes/email.ts
+import { createHash, timingSafeEqual as timingSafeEqual2 } from "node:crypto";
+
+// server/email.ts
+function mailSettings(env = process.env, fallbackOrigin) {
+  const provider = env.EMAIL_PROVIDER === "smtp" || env.EMAIL_PROVIDER === "resend" ? env.EMAIL_PROVIDER : null;
+  const siteUrl = (env.APP_URL || fallbackOrigin || "http://localhost:8000").replace(/\/+$/, "");
+  const port = Number(env.SMTP_PORT || 465);
+  return {
+    provider,
+    from: env.EMAIL_FROM || (env.SMTP_USER ? `CalculixHub <${env.SMTP_USER}>` : "CalculixHub <onboarding@resend.dev>"),
+    siteUrl,
+    smtp: env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS ? { host: env.SMTP_HOST, port, secure: env.SMTP_SECURE ? env.SMTP_SECURE === "true" : port === 465, user: env.SMTP_USER, pass: env.SMTP_PASS } : void 0,
+    resendKey: env.RESEND_API_KEY || void 0
+  };
+}
+var escape = (value) => value.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+var str = (value) => typeof value === "string" ? value : "";
+var clip = (value, max) => value.length > max ? `${value.slice(0, max - 1).trimEnd()}\u2026` : value;
+function notificationHeadline(payload) {
+  const who = str(payload.actor) || "Someone";
+  switch (payload.type) {
+    case "follow":
+      return `${who} started following you`;
+    case "post_like":
+      return `${who} reacted to your post`;
+    case "comment_like":
+      return `${who} reacted to your comment`;
+    case "post_comment":
+      return `${who} commented on your post`;
+    case "comment_reply":
+      return `${who} replied to your comment`;
+    case "mention":
+      return payload.entity_type === "comment" ? `${who} mentioned you in a comment` : `${who} mentioned you in a post`;
+    case "post_share":
+      return `${who} shared your post`;
+    case "message":
+      return `${who} sent you a message`;
+    case "system":
+      return str(payload.body) || "Update from CalculixHub";
+    default:
+      return "You have a new notification";
+  }
+}
+function notificationLink(siteUrl, payload) {
+  const post = str(payload.post_id) || (payload.entity_type === "post" ? str(payload.entity_id) : "");
+  if (post) {
+    const params = new URLSearchParams({ tab: "community", post });
+    if (str(payload.comment_id)) params.set("comment", str(payload.comment_id));
+    return `${siteUrl}/?${params}`;
+  }
+  return `${siteUrl}/?tab=inbox`;
+}
+function layout({ preheader, eyebrow, headline, quote, cta, href, footnote }) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(headline)}</title></head>
+<body style="margin:0;padding:0;background:#f3f1ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17201f">
+<span style="display:none;max-height:0;overflow:hidden;opacity:0">${escape(preheader)}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f1ec;padding:32px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e4e0d6">
+<tr><td style="padding:22px 28px;border-bottom:1px solid #eeeae1"><span style="font:600 15px/1 Georgia,serif;color:#0f1d23">Calculix<span style="color:#b07d2a">Hub</span></span></td></tr>
+<tr><td style="padding:28px 28px 8px"><p style="margin:0 0 10px;font:600 11px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8577">${escape(eyebrow)}</p>
+<h1 style="margin:0;font:400 24px/1.3 Georgia,serif;color:#0f1d23">${escape(headline)}</h1></td></tr>
+${quote ? `<tr><td style="padding:14px 28px 0"><div style="border-left:3px solid #e6bd73;padding:10px 14px;background:#faf8f3;color:#3c4543;font-size:15px;line-height:1.55;white-space:pre-wrap">${escape(quote)}</div></td></tr>` : ""}
+<tr><td style="padding:24px 28px 30px"><a href="${escape(href)}" style="display:inline-block;background:#0f1d23;color:#f1ece2;text-decoration:none;font-weight:600;font-size:14px;padding:12px 20px;border-radius:9px">${escape(cta)}</a></td></tr>
+</table>
+<p style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:1.5;color:#8a8577">${escape(footnote)}</p>
+</td></tr></table></body></html>`;
+}
+function renderEmail(job, siteUrl) {
+  if (!job.recipient_email || !job.payload) return null;
+  const name = job.recipient_name || "there";
+  const payload = job.payload;
+  if (job.kind === "notification") {
+    const headline2 = notificationHeadline(payload);
+    const quote = payload.type !== "system" && str(payload.body) ? clip(str(payload.body), 400) : void 0;
+    const href2 = notificationLink(siteUrl, payload);
+    const cta = payload.type === "message" ? "Open your inbox" : payload.type === "follow" ? "See your notifications" : "View it on CalculixHub";
+    return {
+      to: job.recipient_email,
+      subject: clip(headline2, 120),
+      html: layout({ preheader: quote ?? headline2, eyebrow: "New notification", headline: headline2, quote, cta, href: href2, footnote: `Hi ${name}, you are receiving this because it happened on your CalculixHub account.` }),
+      text: `${headline2}
+
+${quote ? `"${quote}"
+
+` : ""}${cta}: ${href2}
+
+Hi ${name}, you are receiving this because it happened on your CalculixHub account.`
+    };
+  }
+  if (payload.deleted) return null;
+  const author = str(payload.author) || "A learner";
+  const body = clip(str(payload.body).trim(), 600);
+  const href = `${siteUrl}/?${new URLSearchParams({ tab: "community", post: str(payload.post_id) })}`;
+  const headline = `${author} posted in Community`;
+  return {
+    to: job.recipient_email,
+    subject: clip(body ? `${author}: ${body.split("\n")[0]}` : headline, 120),
+    html: layout({ preheader: body || headline, eyebrow: "New post", headline, quote: body || void 0, cta: "Read the post", href, footnote: `Hi ${name}, every new post on CalculixHub is sent to all members.` }),
+    text: `${headline}
+
+${body ? `${body}
+
+` : ""}Read the post: ${href}
+
+Hi ${name}, every new post on CalculixHub is sent to all members.`
+  };
+}
+var failure = (error) => ({ ok: false, error: clip(error instanceof Error ? error.message : String(error), 480) });
+async function createMailer(settings, fetcher = fetch) {
+  if (settings.provider === "resend" && settings.resendKey) {
+    const key = settings.resendKey;
+    return async (message) => {
+      try {
+        const response = await fetcher("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+          body: JSON.stringify({ from: settings.from, to: [message.to], subject: message.subject, html: message.html, text: message.text })
+        });
+        return response.ok ? { ok: true } : failure(`Resend ${response.status}: ${await response.text()}`);
+      } catch (error) {
+        return failure(error);
+      }
+    };
+  }
+  if (settings.provider === "smtp" && settings.smtp) {
+    const smtp = settings.smtp;
+    const specifier = "nodemailer";
+    const nodemailer = await import(
+      /* @vite-ignore */
+      specifier
+    );
+    const transport = (nodemailer.default ?? nodemailer).createTransport({ host: smtp.host, port: smtp.port, secure: smtp.secure, auth: { user: smtp.user, pass: smtp.pass }, pool: true, maxConnections: 3 });
+    return async (message) => {
+      try {
+        await transport.sendMail({ from: settings.from, to: message.to, subject: message.subject, html: message.html, text: message.text });
+        return { ok: true };
+      } catch (error) {
+        return failure(error);
+      }
+    };
+  }
+  return null;
+}
+
+// server/routes/email.ts
+var MAX_ATTEMPTS = 5;
+var MAX_BATCHES = 6;
+var BATCH_SIZE = 50;
+var CONCURRENCY = 5;
+var digest = (value) => createHash("sha256").update(value).digest();
+function bearerMatches(header, secret) {
+  if (!secret || secret.length < 24 || !header?.startsWith("Bearer ")) return false;
+  return timingSafeEqual2(digest(header.slice(7).trim()), digest(secret));
+}
+async function drainOutbox(client, mailer, siteUrl) {
+  const summary = { sent: 0, failed: 0, skipped: 0 };
+  const settle = async (id, patch) => {
+    await client.from("email_outbox").update({ locked_at: null, ...patch }).eq("id", id);
+  };
+  for (let batch = 0; batch < MAX_BATCHES; batch++) {
+    const { data, error } = await client.rpc("claim_email_outbox", { batch_size: BATCH_SIZE });
+    if (error) throw Error(`claim_email_outbox failed: ${error.message}`);
+    const jobs = data ?? [];
+    if (!jobs.length) break;
+    for (let start = 0; start < jobs.length; start += CONCURRENCY) {
+      await Promise.all(jobs.slice(start, start + CONCURRENCY).map(async (job) => {
+        const message = renderEmail(job, siteUrl);
+        if (!message) {
+          summary.skipped++;
+          return settle(job.id, { status: "skipped", last_error: job.recipient_email ? "Nothing to send." : "No email address." });
+        }
+        const result = await mailer(message);
+        if (result.ok) {
+          summary.sent++;
+          return settle(job.id, { status: "sent", sent_at: (/* @__PURE__ */ new Date()).toISOString(), last_error: null });
+        }
+        summary.failed++;
+        return settle(job.id, { status: job.attempts >= MAX_ATTEMPTS ? "failed" : "pending", last_error: result.error });
+      }));
+    }
+    if (jobs.length < BATCH_SIZE) break;
+  }
+  return summary;
+}
+var cachedMailer = null;
+var dispatch = async ({ request, config: config3 }) => {
+  const secret = process.env.EMAIL_DISPATCH_SECRET;
+  const header = request.headers.get("authorization");
+  if (!bearerMatches(header, secret) && !bearerMatches(header, process.env.CRON_SECRET)) {
+    return json({ error: "Not authorised." }, { status: 401 });
+  }
+  const client = adminClient();
+  if (!client) return json({ error: "Supabase service credentials are not configured." }, { status: 503 });
+  const origin = config3.allowedOrigins.find((o) => o.startsWith("https://"));
+  const settings = mailSettings(process.env, origin);
+  const key = JSON.stringify([settings.provider, settings.from, settings.smtp?.host, settings.smtp?.user, Boolean(settings.resendKey)]);
+  if (cachedMailer?.key !== key) cachedMailer = { key, mailer: await createMailer(settings) };
+  if (!cachedMailer.mailer) return json({ error: "No email provider configured. Set EMAIL_PROVIDER and its credentials." }, { status: 503 });
+  try {
+    return json({ ok: true, ...await drainOutbox(client, cachedMailer.mailer, settings.siteUrl) });
+  } catch (error) {
+    console.error("[CalculixHub] Email dispatch failed", error);
+    return json({ error: "Email dispatch failed. Apply supabase/email-delivery-setup.sql." }, { status: 503 });
+  }
+};
+function emailRoutes() {
+  return [
+    { method: "POST", path: "/api/email/dispatch", routeClass: "read", handler: dispatch },
+    { method: "GET", path: "/api/email/dispatch", routeClass: "read", handler: dispatch }
+  ];
+}
+
 // server/app.ts
 function buildApp(options = {}) {
   const config3 = options.config ?? config();
@@ -1837,6 +2054,7 @@ function buildApp(options = {}) {
   const routes = [
     ...adminRoutes(),
     ...arenaRoutes(),
+    ...emailRoutes(),
     // Paid routes. The `ai` class carries the tighter allowance.
     { method: "POST", path: "/api/chat", routeClass: "ai", handler: createChatHandler({ model }) },
     { method: "POST", path: "/api/evaluate", routeClass: "ai", handler: createEvaluateHandler({ model }) },

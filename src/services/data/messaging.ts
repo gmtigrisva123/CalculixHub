@@ -2,15 +2,23 @@ import { useCallback } from 'react';
 import { supabase } from '../supabase';
 import { useLiveQuery } from './liveQuery';
 import { useRealtimeSubscription } from './realtime';
-import type { ConversationRow, MessageRow } from '../database.types';
+import type { ConversationRow, MessageRow, ProfileRow } from '../database.types';
+/** Who is in a conversation, so the inbox can show a name and a face instead of "Direct conversation". */
+export interface ConversationParticipant { user_id:string; last_read_at?:string|null; profile:Pick<ProfileRow,'id'|'username'|'display_name'|'avatar_url'>|null }
+export type ConversationWithPeople = ConversationRow & { participants?: ConversationParticipant[] };
 export function useConversations(userId:string|null) {
  const load=useCallback(async()=>{
-  if(!userId)return [] as ConversationRow[];
+  if(!userId)return [] as ConversationWithPeople[];
   if(!supabase)throw Error('Messaging is not configured.');
-  const {data,error}=await supabase.from('conversations').select('*').order('last_message_at',{ascending:false,nullsFirst:false}).limit(100);
-  if(error)throw Error('Could not load conversations.');return (data??[]) as ConversationRow[];
+  const order=(q:any)=>q.order('last_message_at',{ascending:false,nullsFirst:false}).limit(100);
+  // Participants are embedded when the relationship is visible to PostgREST;
+  // older projects fall back to the bare rows rather than failing the inbox.
+  const rich=await order(supabase.from('conversations').select('*,participants:conversation_participants(user_id,last_read_at,profile:profiles(id,username,display_name,avatar_url))'));
+  if(!rich.error)return (rich.data??[]) as ConversationWithPeople[];
+  const {data,error}=await order(supabase.from('conversations').select('*'));
+  if(error)throw Error('Could not load conversations.');return (data??[]) as ConversationWithPeople[];
  },[userId]);
- const state=useLiveQuery('conversations:'+(userId??'guest'),[] as ConversationRow[],load);
+ const state=useLiveQuery('conversations:'+(userId??'guest'),[] as ConversationWithPeople[],load);
  useRealtimeSubscription({table:'conversations',enabled:Boolean(userId),onReconnect:state.reload},()=>void state.reload());
  useRealtimeSubscription({table:'conversation_participants',filter:userId?`user_id=eq.${userId}`:undefined,enabled:Boolean(userId)},()=>void state.reload());
  return state;

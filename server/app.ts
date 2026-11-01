@@ -24,6 +24,7 @@ import { problemsHandler, statisticsSeedHandler } from './routes/content';
 import { liveStatsEventHandler, liveStatsHandler } from './routes/liveStats';
 import { adminRoutes } from './routes/admin';
 import { arenaRoutes } from './routes/arena';
+import { emailRoutes } from './routes/email';
 
 export interface BuildAppOptions {
   config?: AppConfig;
@@ -42,7 +43,7 @@ export function buildApp(options: BuildAppOptions = {}) {
   const model = options.model !== undefined ? options.model : createModelClient(config, store);
 
   const routes: RouteDefinition[] = [
-    ...adminRoutes(), ...arenaRoutes(),
+    ...adminRoutes(), ...arenaRoutes(), ...emailRoutes(),
     // Paid routes. The `ai` class carries the tighter allowance.
     { method: 'POST', path: '/api/chat', routeClass: 'ai', handler: createChatHandler({ model }) },
     { method: 'POST', path: '/api/evaluate', routeClass: 'ai', handler: createEvaluateHandler({ model }) },

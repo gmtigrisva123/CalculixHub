@@ -26,3 +26,21 @@ The file is transactional, safe to rerun and preserves existing posts, comments 
 Last, run `supabase/qa-cohort-setup.sql`. It creates the QA cohort: accounts that sign up with a `+cxqa-` plus-address (the live-site QA bots and agents in `qa/`) see only each other, and learners never see them. That covers the feed, rankings, arenas, notifications, messages, presence and platform totals. The file adds restrictive policies and triggers of its own, so rerunning earlier files leaves them in place. The exception is four SECURITY DEFINER readers it redefines with the cohort filter: `arena_catalog`, `arena_action`, `platform_stats` and `learning_snapshot`. Rerun this file after `admin-arena-setup.sql` or `realtime-setup.sql`. `qa/cleanup.sql` removes the cohort and everything it created. See `qa/README.md`.
 
 Optionally, run `supabase/community-seed.sql` to open Community Solutions with 50 discussion threads (each with at least ten people replying, plus reactions and follows) written by 36 learner accounts. Run it after `community-social-setup.sql`. It is transactional and safe to rerun, and it stops without writing anything if a learner already holds one of its usernames. Times are relative to the moment it runs, so the threads read as recent. The accounts cannot sign in, and their addresses use the reserved `community-seed.calculixhub.invalid` domain, so no mail is sent. They count as learners everywhere else too, for example in platform totals. `supabase/community-seed-cleanup.sql` removes all of it, including any comments learners left on those threads. Both files are generated: edit the threads in `scripts/community-seed/` and rebuild with `node scripts/community-seed/build.mjs`.
+
+## Email for notifications and new posts
+
+Run `supabase/email-delivery-setup.sql` after `qa-cohort-setup.sql`. From then on:
+
+- every notification (follow, reaction, comment, reply, mention, share, message) is also emailed to the learner who received it;
+- every new post is emailed to every other member, except suspended accounts, the seed accounts on the reserved `.invalid` domain, and accounts in the other cohort (QA and learners never mail each other).
+
+The triggers only write rows into `public.email_outbox`, in the same transaction as the notification or post. The server route `POST /api/email/dispatch` sends them and retries failures up to five times. Set the server environment (see `.env.example`): `EMAIL_PROVIDER` (`smtp` for Gmail with an App Password, or `resend`), its credentials, `APP_URL` and `EMAIL_DISPATCH_SECRET`. Then tell the database where the dispatcher is:
+
+```sql
+update public.email_settings
+   set dispatch_url = 'https://<your-site>/api/email/dispatch',
+       dispatch_secret = '<the EMAIL_DISPATCH_SECRET value>'
+ where id = 1;
+```
+
+With the `pg_net` extension enabled (Database → Extensions), each enqueue wakes the dispatcher within seconds; with `pg_cron` enabled, it is also woken once a minute as a backstop. Without either, call the route from any scheduler with the same bearer secret.
