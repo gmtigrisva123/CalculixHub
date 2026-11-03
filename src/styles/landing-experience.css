@@ -1992,10 +1992,10 @@
     var(--lx-night-0);
 }
 .lx-footer-inner { display: flex; flex-direction: column; min-height: min(92svh, 760px); padding-top: clamp(64px, 12vh, 140px); }
-.lx-footer-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: start; }
-.lx-footer-lede { display: grid; gap: 18px; }
+.lx-footer-top { display: flex; justify-content: center; }
+.lx-footer-lede { display: grid; justify-items: center; gap: 18px; text-align: center; }
 .lx-footer-lede .lx-mark { width: 40px; height: 40px; }
-.lx-footer-lede p { max-width: 14em; font-family: var(--lx-serif); font-style: italic; font-size: clamp(28px, 3vw, 44px); line-height: 1.12; letter-spacing: -0.02em; color: var(--lx-on-night); }
+.lx-footer-lede p { max-width: 20em; font-family: var(--lx-serif); font-style: italic; font-size: clamp(28px, 3vw, 44px); line-height: 1.12; letter-spacing: -0.02em; color: var(--lx-on-night); }
 .lx-footer-links { display: flex; gap: clamp(40px, 6vw, 100px); }
 .lx-footer-links > div { display: grid; align-content: start; gap: 12px; justify-items: start; }
 .lx-footer-links h2 { margin-bottom: 6px; font-family: var(--lx-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lx-on-night-muted); }
@@ -2009,6 +2009,7 @@
   display: flex;
   justify-content: center;
   margin-top: auto;
+  margin-bottom: clamp(48px, 9vh, 110px);
   padding: 0 1vw;
   font-size: clamp(64px, 17.4vw, 300px);
   font-weight: 620;
@@ -2025,7 +2026,7 @@
 .lx-footer-bottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   padding: 22px 0 max(24px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--lx-night-rule);
