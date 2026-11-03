@@ -820,14 +820,39 @@
 .lx-idea-foot {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px 40px;
+  gap: 24px 40px;
   margin-top: clamp(56px, 9vh, 112px);
   padding-top: 26px;
   border-top: 1px solid var(--lx-rule);
 }
-.lx-idea-sub { max-width: 28em; font-size: clamp(18px, 1.5vw, 22px); line-height: 1.5; color: var(--lx-body); }
+.lx-idea-sub { max-width: 28em; font-size: clamp(20px, 2vw, 30px); line-height: 1.28; letter-spacing: -0.02em; color: var(--lx-body); }
+.lx-idea-sub { text-wrap: balance; }
+.lx-idea-sub em { font-family: var(--lx-serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; color: var(--lx-accent); }
+@media (max-width: 760px) { .lx-idea-br { display: none; } }
+/* The call to action: a quiet pill whose arrow sits in its own circle and fills on hover. */
+.lx-idea-cta {
+  gap: 14px;
+  padding: 8px 8px 8px 22px;
+  border-radius: 999px;
+  font-size: 16px;
+  box-shadow: 0 0 0 1px var(--lx-rule) inset;
+  transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
+.lx-idea-cta::after { display: none; }
+.lx-idea-cta .lx-arrow {
+  box-sizing: content-box;
+  padding: 9px;
+  border-radius: 50%;
+  color: var(--lx-paper);
+  background: var(--lx-accent);
+  transition: transform 0.4s var(--lx-glide), background-color 0.35s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lx-idea-cta:hover { box-shadow: 0 0 0 1px var(--lx-accent) inset; }
+  .lx-idea-cta:hover .lx-arrow { transform: translateY(2px) !important; }
+}
 
 /* ------------------------------------------------------------------------
  * The engine
