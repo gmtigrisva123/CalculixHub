@@ -1,26 +1,20 @@
 #!/usr/bin/env python3
-"""Generate the PWA / iOS icon set from the in-app brand mark.
+"""Generate the PWA / iOS icon set from the brand mark in public/favicon.svg.
 
-The mark is the same one used by the favicon in index.html and the sigma tile in
-the app shell: a brass capital sigma on an ink field. Rendering it here rather
-than checking in opaque binaries means the icons can be regenerated whenever the
-brand tokens move.
+The mark is the lowercase "e" drawn in favicon.svg: one teal stroke with a round
+terminal dot. The path is reproduced below (keep it in sync with the SVG) and
+rasterised with Pillow, so no SVG renderer is required.
 
 Usage:
     python3 scripts/generate-icons.py
 
-Requires Pillow and a serif TTF. Georgia is preferred because it is what the
-in-app mark specifies (font-family: Georgia, serif); the script falls back
-through Times New Roman to Arial Unicode so it still runs on hosts without it.
+Requires Pillow. Outputs to public/icons/ in two families:
 
-Outputs to public/icons/. Two families are produced:
-
-- "any" icons: the mark on its ink field, edge to edge. Used by desktop and
+- "any" icons: the mark on its paper field, edge to edge. Used by desktop and
   Android launchers and as the iOS apple-touch-icon, which is why they carry no
   transparency -- iOS composites non-opaque touch icons onto black.
 - "maskable" icons: the same mark inset to the safe zone so Android's adaptive
-  icon shapes (circle, squircle, teardrop) can crop 20% off each edge without
-  clipping the glyph.
+  icon shapes can crop 20% off each edge without clipping it.
 """
 
 from __future__ import annotations
@@ -29,23 +23,24 @@ import pathlib
 import sys
 
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw
 except ImportError:  # pragma: no cover - dependency guidance only
     sys.exit("Pillow is required: python3 -m pip install Pillow")
 
-# Brand tokens, mirroring src/index.css.
-INK_950 = "#161310"
-BRASS_500 = "#c8842a"
-BRASS_700 = "#855116"
+# Brand tokens. TEAL is oklch(48% .059 227) from favicon.svg, as sRGB.
+PAPER = "#f7f9f5"
+TEAL = "#366478"
 
-FONT_CANDIDATES = [
-    "/System/Library/Fonts/Supplemental/Georgia.ttf",
-    "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
-    "/Library/Fonts/Arial Unicode.ttf",
+# favicon.svg geometry, in its 40x40 viewBox.
+STROKE_WIDTH = 2.5
+DOT_CENTRE, DOT_RADIUS = (31.0, 12.0), 3.0
+# Cubic segments: (p0, c1, c2, p1). The crossbar is a straight line.
+CURVES = [
+    ((30, 9), (11, 2), (2, 27), (18, 32)),
+    ((18, 32), (25, 35), (33, 29), (33, 22)),
 ]
+BAR = ((7, 23), (32, 12))
 
-# Rendered at 4x then downsampled, which antialiases the glyph and the corner
-# radius far better than drawing at the target size directly.
 SUPERSAMPLE = 4
 
 # (filename, pixel size, maskable) -- 180 is the iOS apple-touch-icon size, 192
@@ -60,82 +55,77 @@ TARGETS = [
 ]
 
 
-def load_font(size: int) -> ImageFont.FreeTypeFont:
-    for path in FONT_CANDIDATES:
-        try:
-            return ImageFont.truetype(path, size)
-        except OSError:
-            continue
-    sys.exit(f"No usable serif font found. Tried: {', '.join(FONT_CANDIDATES)}")
+def bezier(p0, c1, c2, p1, steps: int = 80):
+    pts = []
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        pts.append(
+            (
+                u**3 * p0[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t**3 * p1[0],
+                u**3 * p0[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t**3 * p1[1],
+            )
+        )
+    return pts
 
 
-def lerp(a: str, b: str, t: float) -> tuple[int, int, int]:
-    """Blend two hex colours, used for the mark's brass gradient."""
-    ar, ag, ab = (int(a[i : i + 2], 16) for i in (1, 3, 5))
-    br, bg, bb = (int(b[i : i + 2], 16) for i in (1, 3, 5))
-    return (
-        round(ar + (br - ar) * t),
-        round(ag + (bg - ag) * t),
-        round(ab + (bb - ab) * t),
-    )
+def mark_polylines():
+    return [bezier(*c) for c in CURVES] + [[BAR[0], BAR[1]]]
+
+
+def mark_bounds():
+    xs, ys = [], []
+    for line in mark_polylines():
+        for x, y in line:
+            xs.append(x)
+            ys.append(y)
+    half = STROKE_WIDTH / 2
+    xs += [DOT_CENTRE[0] - DOT_RADIUS, DOT_CENTRE[0] + DOT_RADIUS]
+    ys += [DOT_CENTRE[1] - DOT_RADIUS, DOT_CENTRE[1] + DOT_RADIUS]
+    return min(xs) - half, min(ys) - half, max(xs) + half, max(ys) + half
 
 
 def render(size: int, maskable: bool) -> Image.Image:
     canvas = size * SUPERSAMPLE
-    img = Image.new("RGB", (canvas, canvas), INK_950)
+    img = Image.new("RGB", (canvas, canvas), PAPER)
     draw = ImageDraw.Draw(img)
 
-    # A maskable icon must survive a 20% crop on every edge, so the mark shrinks
-    # into the safe zone and the ink field bleeds to the boundary instead.
-    scale = 0.60 if maskable else 0.82
-    tile = canvas * scale
-    origin = (canvas - tile) / 2
+    # Fit the mark's bounding box into a fraction of the canvas and centre it.
+    # A maskable icon must survive a 20% crop on every edge, so it sits smaller.
+    x0, y0, x1, y1 = mark_bounds()
+    extent = max(x1 - x0, y1 - y0)
+    scale = canvas * (0.50 if maskable else 0.66) / extent
+    ox = (canvas - (x1 - x0) * scale) / 2 - x0 * scale
+    oy = (canvas - (y1 - y0) * scale) / 2 - y0 * scale
 
-    # Brass gradient, painted as horizontal bands across the tile. The mark in
-    # the app uses linear-gradient(30deg, brass-500, brass-700); a vertical
-    # approximation is indistinguishable at icon sizes.
-    radius = tile * 0.22
-    tile_img = Image.new("RGB", (int(tile), int(tile)), BRASS_500)
-    tile_draw = ImageDraw.Draw(tile_img)
-    for y in range(int(tile)):
-        tile_draw.line(
-            [(0, y), (int(tile), y)],
-            fill=lerp(BRASS_500, BRASS_700, y / max(1, tile - 1)),
-        )
+    def tx(pt):
+        return (pt[0] * scale + ox, pt[1] * scale + oy)
 
-    # Round the tile corners via a mask so the gradient keeps its shape.
-    mask = Image.new("L", (int(tile), int(tile)), 0)
-    ImageDraw.Draw(mask).rounded_rectangle(
-        [0, 0, int(tile) - 1, int(tile) - 1], radius=radius, fill=255
-    )
-    img.paste(tile_img, (int(origin), int(origin)), mask)
+    r = STROKE_WIDTH / 2 * scale
+    for line in mark_polylines():
+        pts = [tx(p) for p in line]
+        draw.line(pts, fill=TEAL, width=round(r * 2))
+        # Round caps and joins.
+        for cx, cy in (pts[0], pts[-1]):
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=TEAL)
+        for cx, cy in pts[1:-1]:
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=TEAL)
 
-    # Sigma, centred on the tile by its rendered bounding box rather than its
-    # font metrics -- Georgia's ascent leaves the glyph visibly high otherwise.
-    font = load_font(int(tile * 0.62))
-    glyph = "Σ"
-    left, top, right, bottom = draw.textbbox((0, 0), glyph, font=font)
-    draw.text(
-        (
-            origin + (tile - (right - left)) / 2 - left,
-            origin + (tile - (bottom - top)) / 2 - top,
-        ),
-        glyph,
-        font=font,
-        fill=INK_950,
-    )
+    dx, dy = tx(DOT_CENTRE)
+    dr = DOT_RADIUS * scale
+    draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=TEAL)
 
     return img.resize((size, size), Image.LANCZOS)
 
 
 def render_splash(size: int = 2732) -> Image.Image:
-    """iOS launch image: the mark centred on the ink field.
+    """iOS launch image: the mark centred on the paper field.
 
     Square at 2732px because iOS crops the same asset to every device aspect
     ratio; anything off-centre or near an edge gets cut on some screen. The mark
     is kept small for that reason.
     """
-    img = Image.new("RGB", (size, size), INK_950)
+    img = Image.new("RGB", (size, size), PAPER)
     mark = render(round(size * 0.16), maskable=False)
     offset = (size - mark.width) // 2
     img.paste(mark, (offset, offset))
