@@ -131,7 +131,7 @@
   left: 12px;
   z-index: 100;
   padding: 12px 18px;
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--lx-ink);
   color: var(--lx-paper) !important;
   transform: translateY(-160%);
@@ -161,7 +161,7 @@
   min-width: 34px;
   height: 22px;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: 7px;
   border: 1px solid currentColor;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -240,7 +240,7 @@
   gap: 14px;
   min-height: 56px;
   padding: 0 8px 0 26px;
-  border-radius: 999px;
+  border-radius: 16px;
   font-size: 16px;
   font-weight: 520;
   letter-spacing: -0.01em;
@@ -254,7 +254,7 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 11px;
   transition: transform 0.55s var(--lx-glide), background-color 0.35s ease;
 }
 .lx-btn .lx-arrow { transition: transform 0.55s var(--lx-glide); }
@@ -351,7 +351,7 @@
   width: min(1180px, 100%);
   height: 60px;
   padding: 0 8px 0 18px;
-  border-radius: 999px;
+  border-radius: 18px;
   color: var(--nav-fg);
   background: var(--nav-glass);
   box-shadow: 0 0 0 1px var(--nav-edge) inset, 0 1px 0 oklch(100% 0 0 / 0.08) inset, 0 14px 40px -24px oklch(10% 0.03 230 / 0.6);
@@ -394,7 +394,7 @@
   align-items: center;
   height: 40px;
   padding: 0 15px;
-  border-radius: 999px;
+  border-radius: 12px;
   font-size: 14.5px;
   font-weight: 480;
   color: var(--nav-dim);
@@ -405,7 +405,7 @@
 .lx-nav-pill {
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--nav-pill);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -416,7 +416,7 @@
 .lx-nav-signin {
   height: 40px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: 12px;
   font-size: 14.5px;
   font-weight: 480;
   color: var(--nav-dim);
@@ -432,7 +432,7 @@
   gap: 10px;
   height: 44px;
   padding: 0 5px 0 18px;
-  border-radius: 999px;
+  border-radius: 12px;
   font-size: 14.5px;
   font-weight: 560;
   cursor: pointer;
@@ -447,7 +447,7 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--lx-night-1);
   color: var(--lx-cream);
   transition: transform 0.55s var(--lx-glide), background-color 0.6s ease, color 0.6s ease;
@@ -462,7 +462,7 @@
   position: relative;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 12px;
   cursor: pointer;
   background: var(--nav-pill);
 }
@@ -499,7 +499,7 @@
   right: calc(var(--lx-frame) + 18px);
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 12px;
   background: var(--lx-paper-shade);
   cursor: pointer;
 }
@@ -835,7 +835,7 @@
 .lx-idea-cta {
   gap: 14px;
   padding: 8px 8px 8px 22px;
-  border-radius: 999px;
+  border-radius: 14px;
   font-size: 16px;
   box-shadow: 0 0 0 1px var(--lx-rule) inset;
   transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
@@ -844,7 +844,7 @@
 .lx-idea-cta .lx-arrow {
   box-sizing: content-box;
   padding: 9px;
-  border-radius: 50%;
+  border-radius: 9px;
   color: var(--lx-paper);
   background: var(--lx-accent);
   transition: transform 0.4s var(--lx-glide), background-color 0.35s ease;
@@ -1200,7 +1200,7 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 12px;
   color: var(--lx-body);
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.6s var(--lx-glide);
@@ -1251,7 +1251,7 @@
   display: flex;
   gap: 8px;
   padding: 6px;
-  border-radius: 999px;
+  border-radius: 16px;
   background: var(--lx-paper);
   box-shadow: 0 0 0 1px var(--lx-rule) inset;
   transition: box-shadow 0.4s ease;
@@ -1279,7 +1279,7 @@
   gap: 8px;
   height: 46px;
   padding: 0 20px;
-  border-radius: 999px;
+  border-radius: 10px;
   background: var(--lx-ink);
   color: var(--lx-paper);
   font-weight: 520;
@@ -1404,7 +1404,7 @@
   gap: 10px;
   height: 44px;
   padding: 0 18px 0 14px;
-  border-radius: 999px;
+  border-radius: 12px;
   font-size: 15px;
   color: var(--lx-on-night-body);
   background: oklch(100% 0 0 / 0.05);
@@ -1708,7 +1708,7 @@
 }
 .lx-vis-readout { display: flex; align-items: center; gap: 18px; font-family: var(--lx-mono); font-size: 13px; color: var(--lx-muted); }
 .lx-vis-readout b { font-weight: 500; font-size: 20px; color: var(--lx-ink); }
-.lx-vis-pill { margin-left: auto; padding: 6px 12px; border-radius: 999px; font-family: var(--lx-sans); font-size: 13px; font-weight: 520; color: var(--lx-accent); background: var(--lx-accent-soft); }
+.lx-vis-pill { margin-left: auto; padding: 6px 12px; border-radius: 8px; font-family: var(--lx-sans); font-size: 13px; font-weight: 520; color: var(--lx-accent); background: var(--lx-accent-soft); }
 .lx-vis-placement svg { width: 100%; height: auto; margin-top: 12px; overflow: visible; }
 .lx-vis-axis { stroke: var(--lx-rule); stroke-width: 1.2; }
 .lx-vis-area { fill: oklch(46.5% 0.075 222 / 0.12); }
@@ -2058,7 +2058,7 @@
   font-size: 13.5px;
   color: var(--lx-on-night-muted);
 }
-.lx-top { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; cursor: pointer; box-shadow: 0 0 0 1px var(--lx-night-rule) inset; transition: background-color 0.3s ease, color 0.3s ease; }
+.lx-top { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; cursor: pointer; box-shadow: 0 0 0 1px var(--lx-night-rule) inset; transition: background-color 0.3s ease, color 0.3s ease; }
 @media (hover: hover) and (pointer: fine) {
   .lx-top:hover { background: oklch(100% 0 0 / 0.08); color: var(--lx-on-night); }
 }
