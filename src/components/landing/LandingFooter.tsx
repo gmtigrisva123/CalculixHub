@@ -17,11 +17,9 @@ const WORD = 'calculixhub';
 
 interface LandingFooterProps {
   contentRef: RefObject<HTMLDivElement | null>;
-  onSignIn: () => void;
-  onRegister: () => void;
 }
 
-export default function LandingFooter({ contentRef, onSignIn, onRegister }: LandingFooterProps) {
+export default function LandingFooter({ contentRef }: LandingFooterProps) {
   const reduce = Boolean(useReducedMotion());
   // 0 when the sheet's bottom edge reaches the bottom of the screen, 1 when it has cleared the top.
   const { scrollYProgress: lift } = useScroll({ target: contentRef, offset: ['end end', 'end start'] });
@@ -35,21 +33,6 @@ export default function LandingFooter({ contentRef, onSignIn, onRegister }: Land
             <BrandMark />
             <p>Keep a little room for a good question.</p>
           </div>
-          <nav className="lx-footer-links" aria-label="Footer">
-            <div>
-              <h2>Begin</h2>
-              <button type="button" onClick={onRegister}>Create a free account</button>
-              <button type="button" onClick={onSignIn}>Sign in</button>
-              <a href="/?preview=ios">The iPhone experience <Arrow size={13} /></a>
-            </div>
-            <div>
-              <h2>Explore</h2>
-              <a href="/?auth=signup&tab=learn">Practice</a>
-              <a href="/?auth=signup&tab=archive">Exam archive</a>
-              <a href="/?auth=signup&tab=compete">Arena</a>
-              <a href="/?auth=signup&tab=community">Community</a>
-            </div>
-          </nav>
         </div>
 
         <p className="lx-wordmark">
@@ -61,11 +44,9 @@ export default function LandingFooter({ contentRef, onSignIn, onRegister }: Land
         </p>
 
         <div className="lx-footer-bottom lx-wrap">
-          <span>Made for the working-it-out part.</span>
           <button type="button" className="lx-top" onClick={() => scrollToTarget(0)}>
             Back to top <Arrow direction="up" size={13} />
           </button>
-          <span>© {new Date().getFullYear()} CalculixHub</span>
         </div>
       </m.div>
     </footer>

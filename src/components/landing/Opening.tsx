@@ -167,9 +167,12 @@ const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
           ))}
         </h2>
         <div className="lx-idea-foot">
-          <Rise as="p" className="lx-idea-sub">CalculixHub finds your level, then gives you problems that fit.</Rise>
+          <Rise as="p" className="lx-idea-sub">
+            CalculixHub finds your level,{' '}
+            <br className="lx-idea-br" />then gives you problems that <em>fit.</em>
+          </Rise>
           <Rise delay={0.08}>
-            <a className="lx-link" href="#engine" onClick={event => jumpTo(event, 'engine')}>
+            <a className="lx-link lx-idea-cta" href="#engine" onClick={event => jumpTo(event, 'engine')}>
               See how it works <Arrow direction="down" size={15} />
             </a>
           </Rise>

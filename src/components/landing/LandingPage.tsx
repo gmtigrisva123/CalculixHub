@@ -58,7 +58,7 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
           <FinalStage onRegister={onRegister} />
         </main>
       </div>
-      <LandingFooter contentRef={contentRef} onSignIn={onSignIn} onRegister={onRegister} />
+      <LandingFooter contentRef={contentRef} />
     </div>
   );
 }

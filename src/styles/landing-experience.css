@@ -820,14 +820,39 @@
 .lx-idea-foot {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px 40px;
+  gap: 24px 40px;
   margin-top: clamp(56px, 9vh, 112px);
   padding-top: 26px;
   border-top: 1px solid var(--lx-rule);
 }
-.lx-idea-sub { max-width: 28em; font-size: clamp(18px, 1.5vw, 22px); line-height: 1.5; color: var(--lx-body); }
+.lx-idea-sub { max-width: 28em; font-size: clamp(20px, 2vw, 30px); line-height: 1.28; letter-spacing: -0.02em; color: var(--lx-body); }
+.lx-idea-sub { text-wrap: balance; }
+.lx-idea-sub em { font-family: var(--lx-serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; color: var(--lx-accent); }
+@media (max-width: 760px) { .lx-idea-br { display: none; } }
+/* The call to action: a quiet pill whose arrow sits in its own circle and fills on hover. */
+.lx-idea-cta {
+  gap: 14px;
+  padding: 8px 8px 8px 22px;
+  border-radius: 999px;
+  font-size: 16px;
+  box-shadow: 0 0 0 1px var(--lx-rule) inset;
+  transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
+.lx-idea-cta::after { display: none; }
+.lx-idea-cta .lx-arrow {
+  box-sizing: content-box;
+  padding: 9px;
+  border-radius: 50%;
+  color: var(--lx-paper);
+  background: var(--lx-accent);
+  transition: transform 0.4s var(--lx-glide), background-color 0.35s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lx-idea-cta:hover { box-shadow: 0 0 0 1px var(--lx-accent) inset; }
+  .lx-idea-cta:hover .lx-arrow { transform: translateY(2px) !important; }
+}
 
 /* ------------------------------------------------------------------------
  * The engine
@@ -1992,10 +2017,10 @@
     var(--lx-night-0);
 }
 .lx-footer-inner { display: flex; flex-direction: column; min-height: min(92svh, 760px); padding-top: clamp(64px, 12vh, 140px); }
-.lx-footer-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; align-items: start; }
-.lx-footer-lede { display: grid; gap: 18px; }
+.lx-footer-top { display: flex; justify-content: center; }
+.lx-footer-lede { display: grid; justify-items: center; gap: 18px; text-align: center; }
 .lx-footer-lede .lx-mark { width: 40px; height: 40px; }
-.lx-footer-lede p { max-width: 14em; font-family: var(--lx-serif); font-style: italic; font-size: clamp(28px, 3vw, 44px); line-height: 1.12; letter-spacing: -0.02em; color: var(--lx-on-night); }
+.lx-footer-lede p { max-width: 20em; font-family: var(--lx-serif); font-style: italic; font-size: clamp(28px, 3vw, 44px); line-height: 1.12; letter-spacing: -0.02em; color: var(--lx-on-night); }
 .lx-footer-links { display: flex; gap: clamp(40px, 6vw, 100px); }
 .lx-footer-links > div { display: grid; align-content: start; gap: 12px; justify-items: start; }
 .lx-footer-links h2 { margin-bottom: 6px; font-family: var(--lx-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lx-on-night-muted); }
@@ -2009,6 +2034,7 @@
   display: flex;
   justify-content: center;
   margin-top: auto;
+  margin-bottom: clamp(48px, 9vh, 110px);
   padding: 0 1vw;
   font-size: clamp(64px, 17.4vw, 300px);
   font-weight: 620;
@@ -2025,7 +2051,7 @@
 .lx-footer-bottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   padding: 22px 0 max(24px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--lx-night-rule);
