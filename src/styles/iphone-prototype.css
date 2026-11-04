@@ -4,7 +4,7 @@
 /* ── Premium hero (Ethereal Glass · Editorial Split) ───────────────────── */
 .iphone-presentation { --mx: 0; --my: 0; --ease: cubic-bezier(.32, .72, 0, 1); background: #06130e; color: #f1f7e9; isolation: isolate; }
 .ip-presentation-copy { width: 560px; max-width: 46vw; position: relative; z-index: 2; }
-.ip-presentation-eyebrow { display: inline-flex; gap: 10px; align-items: center; padding: 8px 14px 8px 12px; border-radius: 999px; font-size: 10px; letter-spacing: .22em; font-weight: 500; color: #bfe08f; background: #ffffff0a; box-shadow: inset 0 0 0 1px #ffffff1a, inset 0 1px 0 #ffffff1f; }
+.ip-presentation-eyebrow { display: inline-flex; gap: 10px; align-items: center; padding: 8px 14px 8px 12px; border-radius: 8px; font-size: 10px; letter-spacing: .22em; font-weight: 500; color: #bfe08f; background: #ffffff0a; box-shadow: inset 0 0 0 1px #ffffff1a, inset 0 1px 0 #ffffff1f; }
 .ip-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccff7b; box-shadow: 0 0 0 0 #ccff7b99, 0 0 14px #ccff7b; display: inline-block; flex-shrink: 0; animation: ip-pulse 2.4s var(--ease) infinite; }
 .ip-presentation-copy > h1 { font-size: clamp(48px, 5.8vw, 88px); font-weight: 600; letter-spacing: -.05em; line-height: 1; margin: 30px 0 28px; }
 .ip-presentation-copy > h1 > span { display: block; padding-bottom: .06em; }
@@ -13,14 +13,14 @@
 .ip-presentation-lede { max-width: 430px; color: #9db39f; font-size: 17px; line-height: 1.7; margin: 0; }
 .ip-presentation-features { list-style: none; display: grid; gap: 14px; margin: 34px 0 44px; padding: 0; font-size: 15px; font-weight: 500; color: #e3efd9; }
 .ip-presentation-features > li { display: flex; align-items: center; gap: 12px; }
-.ip-feature-check { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 30% 25%, #ccff7b30, #ccff7b0f); color: #ccff7b; display: grid; place-items: center; flex-shrink: 0; box-shadow: inset 0 0 0 1px #ccff7b40, 0 0 18px #ccff7b1f; }
+.ip-feature-check { width: 26px; height: 26px; border-radius: 8px; background: radial-gradient(circle at 30% 25%, #ccff7b30, #ccff7b0f); color: #ccff7b; display: grid; place-items: center; flex-shrink: 0; box-shadow: inset 0 0 0 1px #ccff7b40, 0 0 18px #ccff7b1f; }
 .ip-presentation-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding-top: 34px; position: relative; }
 .ip-presentation-actions::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, #ccff7b55, #ffffff14 40%, transparent); }
 /* Double-bezel CTA: glass tray (shell) + lime core */
-.ip-cta-shell { display: inline-flex; padding: 6px; border-radius: 999px; background: #ffffff0d; box-shadow: inset 0 0 0 1px #ffffff1f, 0 18px 50px -18px #ccff7b66; text-decoration: none; transition: transform .6s var(--ease), box-shadow .6s var(--ease); }
-.ip-presentation-cta { display: inline-flex; align-items: center; gap: 18px; padding: 8px 8px 8px 28px; border-radius: 999px; background: linear-gradient(180deg, #d9ff95, #bff060); color: #0d2a1c; font-size: 15px; font-weight: 600; letter-spacing: -.01em; box-shadow: inset 0 1px 1px #ffffffb0, inset 0 -2px 6px #7fa73a66; position: relative; overflow: hidden; }
+.ip-cta-shell { display: inline-flex; padding: 6px; border-radius: 16px; background: #ffffff0d; box-shadow: inset 0 0 0 1px #ffffff1f, 0 18px 50px -18px #ccff7b66; text-decoration: none; transition: transform .6s var(--ease), box-shadow .6s var(--ease); }
+.ip-presentation-cta { display: inline-flex; align-items: center; gap: 18px; padding: 8px 8px 8px 26px; border-radius: 10px; background: linear-gradient(180deg, #d9ff95, #bff060); color: #0d2a1c; font-size: 15px; font-weight: 600; letter-spacing: -.01em; box-shadow: inset 0 1px 1px #ffffffb0, inset 0 -2px 6px #7fa73a66; position: relative; overflow: hidden; }
 .ip-presentation-cta::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, #ffffff8c 50%, transparent 65%); transform: translateX(-120%); transition: transform .9s var(--ease); }
-.ip-cta-orb { width: 42px; height: 42px; border-radius: 50%; background: #0d2a1c; color: #ccff7b; display: grid; place-items: center; transition: transform .6s var(--ease); position: relative; z-index: 1; box-shadow: inset 0 1px 0 #ffffff26; }
+.ip-cta-orb { width: 42px; height: 42px; border-radius: 7px; background: #0d2a1c; color: #ccff7b; display: grid; place-items: center; transition: transform .6s var(--ease); position: relative; z-index: 1; box-shadow: inset 0 1px 0 #ffffff26; }
 .ip-cta-shell:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px #ccff7b66, 0 24px 60px -16px #ccff7b99; }
 .ip-cta-shell:hover .ip-presentation-cta::after { transform: translateX(120%); }
 .ip-cta-shell:hover .ip-cta-orb { transform: translate(2px, -2px) scale(1.06); }
@@ -121,6 +121,7 @@
 .ip-glyph { position: absolute; font-family: Georgia, 'Times New Roman', serif; font-style: italic; line-height: 1; color: transparent; -webkit-text-stroke: 1px #ccff7b2e; opacity: .9; transform: translate3d(calc(var(--mx) * var(--depth) * 22px), calc(var(--my) * var(--depth) * 22px), 0); transition: transform .8s var(--ease); animation: ip-bob 9s var(--ease) var(--delay) infinite alternate; }
 .ip-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 45%, #020806cc 100%); }
 .ip-grain { position: absolute; inset: 0; opacity: .09; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.ip-particles { position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: screen; }
 /* Device stage */
 .ip-device-area { perspective: 1600px; }
 .ip-stage-glow { position: absolute; left: 50%; top: 50%; width: 130%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, #ccff7b3d 0%, #1fa57a26 38%, transparent 66%); filter: blur(30px); animation: ip-breathe 7s var(--ease) infinite alternate; }
@@ -130,12 +131,12 @@
 .ip-glare { position: absolute; inset: 9px; border-radius: 49px; pointer-events: none; background: radial-gradient(circle at calc(50% + var(--mx) * 45%) calc(28% + var(--my) * 30%), #ffffff2e, transparent 42%), linear-gradient(115deg, transparent 40%, #ffffff0f 50%, transparent 60%); mix-blend-mode: soft-light; }
 .ip-reflection { position: absolute; left: 8%; right: 8%; bottom: -34px; height: 40px; background: radial-gradient(ellipse at 50% 0%, #ccff7b55, transparent 70%); filter: blur(14px); opacity: .7; }
 /* Floating glass chips (double bezel) */
-.ip-chip { position: absolute; z-index: 3; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; padding: 11px 16px 11px 12px; border-radius: 20px; background: #0a1c14b8; box-shadow: inset 0 0 0 1px #ffffff1f, inset 0 1px 0 #ffffff26, 0 24px 40px -18px #000000b3; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); white-space: nowrap; transform: translate3d(calc(var(--mx) * var(--cd, 1) * -16px), calc(var(--my) * var(--cd, 1) * -12px), 0); transition: transform .8s var(--ease); animation: ip-chip-in 1s var(--ease) backwards; }
+.ip-chip { position: absolute; z-index: 3; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; padding: 11px 16px 11px 12px; border-radius: 12px; background: #0a1c14b8; box-shadow: inset 0 0 0 1px #ffffff1f, inset 0 1px 0 #ffffff26, 0 24px 40px -18px #000000b3; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); white-space: nowrap; transform: translate3d(calc(var(--mx) * var(--cd, 1) * -16px), calc(var(--my) * var(--cd, 1) * -12px), 0); transition: transform .8s var(--ease); animation: ip-chip-in 1s var(--ease) backwards; }
 .ip-chip b { font-size: 13px; font-weight: 600; color: #f1f7e9; letter-spacing: -.01em; grid-column: 2; line-height: 1.2; }
 .ip-chip small { font-size: 11px; color: #8fa790; grid-column: 2; line-height: 1.3; }
 .ip-chip-dot, .ip-chip-icon { grid-row: 1 / span 2; grid-column: 1; }
-.ip-chip-dot { width: 9px; height: 9px; margin: 0 4px; border-radius: 50%; background: #ccff7b; box-shadow: 0 0 14px #ccff7b; animation: ip-pulse 2.4s var(--ease) infinite; }
-.ip-chip-icon { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #ccff7b24; color: #ccff7b; box-shadow: inset 0 0 0 1px #ccff7b44; }
+.ip-chip-dot { width: 9px; height: 9px; margin: 0 4px; border-radius: 3px; background: #ccff7b; box-shadow: 0 0 14px #ccff7b; animation: ip-pulse 2.4s var(--ease) infinite; }
+.ip-chip-icon { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: #ccff7b24; color: #ccff7b; box-shadow: inset 0 0 0 1px #ccff7b44; }
 .ip-chip-live { right: calc(100% - 26px); top: 17%; --cd: 1.4; animation-delay: .9s; }
 .ip-chip-sync { left: calc(100% - 26px); top: 46%; --cd: .9; animation-delay: 1.1s; }
 .ip-chip-math { right: calc(100% - 18px); bottom: 15%; --cd: 1.7; grid-template-columns: 1fr; animation-delay: 1.3s; }
