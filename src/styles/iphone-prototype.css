@@ -1,19 +1,23 @@
 .iphone-presentation { min-height: 100dvh; background: #f2f4ec; color: #17291f; display: flex; align-items: center; justify-content: center; gap: clamp(60px, 9vw, 160px); padding: 42px 6%; position: relative; overflow: hidden; font-family: 'Geist', 'Inter', -apple-system, sans-serif; }
 .ip-back-website { position: absolute; top: 27px; left: 40px; display: flex; gap: 9px; align-items: center; font-size: 11px; text-decoration: none; color: #526253; z-index: 2; }
-.ip-presentation-copy { width: 460px; max-width: 43vw; position: relative; z-index: 1; }
-.ip-presentation-eyebrow { display: flex; gap: 9px; align-items: center; font-size: 9px; letter-spacing: .13em; font-weight: 600; color: #5c7156; }
-.ip-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #699c4a; display: inline-block; flex-shrink: 0; }
-.ip-presentation-copy > h1 { font-size: clamp(55px, 6.2vw, 91px); font-weight: 600; letter-spacing: -.075em; line-height: 1.02; margin: 32px 0 27px; position: relative; }
-.ip-presentation-copy > h1 > span:first-child { color: #6d8664; }
-.ip-headline-asterisk { position: absolute; color: #a0c568; font-size: 85px; transform: rotate(15deg); top: -10px; right: -12px; }
-.ip-presentation-copy > p { max-width: 350px; color: #62715f; font-size: 14px; line-height: 1.85; }
-.ip-presentation-features { display: grid; gap: 15px; margin: 30px 0 45px; font-size: 12px; }
-.ip-presentation-features > span { display: flex; align-items: center; gap: 10px; }
-.ip-presentation-features svg { color: #5a8047; }
-.ip-presentation-instruction { display: flex; align-items: center; gap: 14px; padding: 20px 0; border-block: 1px solid #d7dfce; }
-.ip-presentation-instruction > span { width: 42px; height: 42px; border: 1px solid #cfdbc4; border-radius: 50%; display: grid; place-items: center; }
-.ip-presentation-instruction p { font-size: 10px; color: #68785f; line-height: 1.8; }
-.ip-presentation-instruction strong { display: block; font-size: 12px; color: #243b25; font-weight: 550; }
+.ip-presentation-copy { width: 540px; max-width: 46vw; position: relative; z-index: 1; }
+.ip-presentation-eyebrow { display: flex; gap: 10px; align-items: center; font-size: 11px; letter-spacing: .16em; font-weight: 600; color: #5c7156; }
+.ip-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #699c4a; box-shadow: 0 0 0 4px #699c4a26; display: inline-block; flex-shrink: 0; }
+.ip-presentation-copy > h1 { font-size: clamp(46px, 5.4vw, 80px); font-weight: 600; letter-spacing: -.045em; line-height: 1.04; margin: 26px 0 24px; text-wrap: balance; }
+.ip-presentation-copy > h1 > span { display: block; }
+.ip-presentation-copy > h1 > span:last-child { color: #4f7a45; }
+.ip-presentation-lede { max-width: 420px; color: #5b6b58; font-size: 17px; line-height: 1.65; margin: 0; }
+.ip-presentation-features { list-style: none; display: grid; gap: 14px; margin: 32px 0 40px; padding: 0; font-size: 15px; font-weight: 500; color: #243b25; }
+.ip-presentation-features > li { display: flex; align-items: center; gap: 12px; }
+.ip-feature-check { width: 24px; height: 24px; border-radius: 50%; background: #e3edd6; color: #3f7a3a; display: grid; place-items: center; flex-shrink: 0; }
+.ip-presentation-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding-top: 32px; border-top: 1px solid #d7dfce; }
+.ip-presentation-cta { display: inline-flex; align-items: center; gap: 16px; padding: 8px 8px 8px 26px; border-radius: 999px; background: #174e36; color: #f1f7e9; font-size: 15px; font-weight: 600; text-decoration: none; transition: background .18s, transform .18s, box-shadow .18s; box-shadow: 0 10px 24px -12px #174e36cc; }
+.ip-presentation-cta > span { width: 40px; height: 40px; border-radius: 50%; background: #ccff7b; color: #174e36; display: grid; place-items: center; transition: transform .2s; }
+.ip-presentation-cta:hover { background: #1d6044; transform: translateY(-1px); }
+.ip-presentation-cta:hover > span { transform: translate(2px, -2px); }
+.ip-presentation-cta:active { transform: scale(.98); }
+.ip-presentation-cta:focus-visible { outline: 2px solid #8baf56; outline-offset: 3px; }
+.ip-presentation-hint { font-size: 13px; color: #6d7b66; line-height: 1.6; margin: 0; }
 .ip-presentation-footer { display: flex; align-items: center; gap: 14px; font-size: 9px; color: #77836f; margin-top: 30px; }
 .ip-presentation-footer i { height: 3px; width: 3px; background: #9caa8f; border-radius: 50%; }
 .ip-presentation-decoration { position: absolute; bottom: -130px; left: -50px; font-size: 480px; font-weight: 300; line-height: 1; color: #dce5d04d; pointer-events: none; }
@@ -96,4 +100,4 @@
 .ip-arena-rules { display: grid; gap: 14px; margin: 23px 0; }.ip-arena-rules > div, .ip-arena-rules > span { display: flex; gap: 10px; font-size: 10px; align-items: center; }.ip-duration-label { font-size: 10px; color: var(--ip-muted); margin: 18px 0 10px; }.ip-start-sprint { margin-top: 18px; }.ip-arena-disclaimer { font-size: 8px; line-height: 1.8; color: var(--ip-muted); text-align: center; margin-top: 16px; }.ip-arena-running h1 { font-size: 28px; letter-spacing: -1px; font-weight: 550; margin: 20px 0 15px; }.ip-arena-track { display: flex; gap: 5px; margin: 25px 0 18px; }.ip-arena-track > span { flex: 1; background: var(--ip-line); height: 4px; border-radius: 4px; }.ip-arena-track .is-done { background: #739756; }.ip-arena-track .is-current { background: #b5d37b; }.ip-timer { font-size: 14px !important; color: var(--ip-ink) !important; font-variant-numeric: tabular-nums; }.ip-timer.is-urgent { color: #b76248 !important; }.ip-arena-answer { background: var(--ip-well); border-radius: 13px; padding: 14px; margin-top: 17px; }.ip-arena-answer strong { font-size: 12px; }.ip-arena-answer p { font-size: 10px; line-height: 1.7; margin: 8px 0 14px; }.ip-end-sprint { margin: 15px auto 0; }
 .ip-arena-results { text-align: center; padding-top: 30px; }.ip-arena-results > svg { color: #8fad50; width: 60px; height: 60px; margin: 20px auto; }.ip-arena-results h1 { font-size: 32px; letter-spacing: -1px; font-weight: 550; }.ip-arena-results p { color: var(--ip-muted); font-size: 12px; line-height: 1.8; margin: 17px 0; }.ip-arena-results .ip-button { margin-top: 20px; }.ip-result-score { font-size: 70px; font-weight: 550; letter-spacing: -3px; margin: 30px 0; }.ip-result-score small { font-size: 30px; color: var(--ip-muted); }
 @media (max-width: 899px) { .iphone-presentation { min-height: 100dvh; padding: 62px 15px 24px; }.ip-presentation-copy, .ip-presentation-decoration { display: none; }.ip-back-website { top: 20px; left: 20px; font-size: 10px; }.ip-mobile-preview-label { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 9px; margin-bottom: 14px; }.ip-device-caption { margin-top: 13px; } }
-@media (prefers-reduced-motion: reduce) { .ip-view { animation: none; }.ip-screen button, .ip-toast { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .ip-view { animation: none; }.ip-presentation-cta, .ip-presentation-cta > span { transition: none; }.ip-screen button, .ip-toast { transition: none; } }
