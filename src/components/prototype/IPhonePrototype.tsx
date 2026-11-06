@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { ArrowUpRight, Check } from 'lucide-react';
-import ParticleField from './ParticleField';
 import '../../styles/iphone-prototype.css';
 const GLYPHS = [
  {c:'∫',x:'4%',y:'12%',s:'120px',d:1.2,t:0},{c:'π',x:'44%',y:'7%',s:'84px',d:.7,t:1.4},{c:'∑',x:'38%',y:'78%',s:'110px',d:1,t:2.2},
@@ -18,7 +17,6 @@ export default function IPhonePrototype() {
   <div className="ip-bg" aria-hidden="true">
    <span className="ip-aurora ip-aurora-lime"/><span className="ip-aurora ip-aurora-teal"/><span className="ip-aurora ip-aurora-mint"/>
    <span className="ip-grid"/>
-   <ParticleField className="ip-particles"/>
    {GLYPHS.map((g,i)=><span key={i} className="ip-glyph" style={{left:g.x,top:g.y,fontSize:g.s,'--depth':g.d,'--delay':`${g.t}s`} as CSSProperties}>{g.c}</span>)}
    <span className="ip-vignette"/><span className="ip-grain"/>
   </div>
