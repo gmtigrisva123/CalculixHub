@@ -71,7 +71,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
           </m.div>
           <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" delay={0.22} stagger={0.085} />
           <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 1.1, ease: GLIDE, delay: 0.75 }}>
-            Real contest problems, matched to your level and explained step by step.
+            Numerous contest problems, matched to your level and explained step by step.
           </m.p>
           <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: GLIDE, delay: 0.92 }}>
             <Magnetic>

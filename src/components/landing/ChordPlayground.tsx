@@ -76,7 +76,7 @@ export default function ChordPlayground() {
             <SplitText as="h2" id="lx-play-title" className="lx-h2" text={'Two chords.\n*One hidden radius.*'} />
           </div>
           <Rise as="p" className="lx-lead" delay={0.1}>
-            No timer, no score. Move the picture until you see it.
+            You're gonna scroll it to see some crazy, amazing stuff in maths.
           </Rise>
         </header>
 
