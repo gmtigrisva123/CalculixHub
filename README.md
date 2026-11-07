@@ -2,7 +2,7 @@
 
 This is a practice app for students training for math competitions (AMC, AIME, USAMO, IMO). You solve problems, and the app tries to figure out how good you are and what to give you next, kind of like how a good tutor would.
 
-[Live demo](https://gmtigrisva123.github.io/CalculixHub/)
+[The product](https://calculixhub.com/)
 
 ## The idea
 
