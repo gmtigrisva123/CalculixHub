@@ -77,6 +77,7 @@ button:not(:disabled), a, summary, select { cursor: pointer; }
 .workspace-brand > span:last-child { margin-left: -9px; font-weight: 450; }
 .workspace-logo { width: 32px; height: 34px; background: #ccff7b; color: #174e36; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; }
 .workspace-logo > svg { width: 24px; height: 24px; }
+.cx-mark-glyph { width: 22px; height: 22px; }
 .workspace-space { display: flex; align-items: center; gap: 9px; padding: 15px 8px 20px; margin-top: 26px; border-bottom: 1px solid var(--ln); }
 .workspace-space-icon { height: 34px; width: 34px; display: grid; place-items: center; background: var(--sf-sunken); border-radius: 10px; color: var(--ac); }
 .workspace-space strong { display: block; font-size: 11px; font-weight: 650; }

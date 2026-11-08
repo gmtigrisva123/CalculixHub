@@ -13,6 +13,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { animate, m, useInView, useReducedMotion, useSpring, type Variants } from 'motion/react';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
+import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from '../brand';
 
 /** The page's signature curve: a fast departure that glides into place. */
 export const GLIDE = [0.16, 1, 0.3, 1] as const;
@@ -273,19 +274,19 @@ export function Arrow({ direction = 'up-right', size = 16 }: { direction?: 'righ
   );
 }
 
-/** The CalculixHub mark: a pencilled curve and the point it is heading for. */
+/** The CalculixHub mark (see brand.ts), able to draw itself in. */
 export function BrandMark({ draw = false }: { draw?: boolean }) {
   return (
-    <svg className="lx-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+    <svg className="lx-mark" viewBox={MARK_VIEWBOX} fill="none" aria-hidden="true">
       <m.path
-        d="M30 9C11 2 2 27 18 32c7 3 15-3 15-10M7 23 32 12"
-        stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"
+        d={MARK_PATH}
+        stroke="currentColor" strokeWidth={MARK_STROKE} strokeLinecap="round"
         initial={draw ? { pathLength: 0 } : false}
         animate={{ pathLength: 1 }}
         transition={{ duration: 1.4, ease: GLIDE, delay: 0.2 }}
       />
       <m.circle
-        cx="31" cy="12" r="3" fill="currentColor"
+        cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill="currentColor"
         initial={draw ? { scale: 0, opacity: 0 } : false}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.5, ease: GLIDE, delay: 1.2 }}

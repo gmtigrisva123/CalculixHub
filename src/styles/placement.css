@@ -1,7 +1,7 @@
 @import '../../tokens.css';
 .placement-study{min-height:100dvh;background:var(--color-paper);color:var(--color-ink);font-family:var(--font-body);padding:0 clamp(24px,5vw,88px);display:flex;flex-direction:column}
 .placement-header{display:flex;align-items:center;justify-content:space-between;padding:32px 0;border-bottom:1px solid var(--color-rule-faint)}
-.placement-study button{cursor:pointer}.placement-brand{display:flex;align-items:center;font-family:var(--font-display);font-weight:750;font-size:23px;letter-spacing:-1px}.placement-brand span:first-child{font-weight:450}.placement-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--color-pencil);margin:10px 0 0 7px}
+.placement-study button{cursor:pointer}.placement-brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:750;font-size:23px;letter-spacing:-1px}.placement-brand-mark{width:1.3em;height:1.3em;flex:none;color:var(--color-accent)}.placement-brand-word span{font-weight:450}
 .placement-back{display:flex;gap:9px;align-items:center;font-size:14px;color:var(--color-body)}
 .placement-layout{width:100%;max-width:1280px;margin:auto;display:grid;grid-template-columns: .85fr 1.15fr;gap:clamp(40px,8vw,140px);padding:70px 0 85px;align-items:start}
 .placement-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--color-accent);font-weight:650}

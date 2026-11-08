@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
+import BrandLogo from './BrandLogo';
+import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from './brand';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';
@@ -640,7 +642,8 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           <style>
             body { font-family: 'Georgia', serif; color: #0d1117; padding: 45px; line-height: 1.6; background: #ffffff; }
             .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1d4ed8; padding-bottom: 25px; margin-bottom: 35px; }
-            .logo { font-size: 26px; font-weight: 900; color: #161b22; text-transform: uppercase; letter-spacing: 1.5px; }
+            .logo { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 900; color: #161b22; text-transform: uppercase; letter-spacing: 1.5px; }
+            .logo svg { width: 34px; height: 34px; color: #366478; }
             .subtitle { font-size: 11px; color: #4a5567; text-transform: uppercase; font-weight: 700; margin-top: 5px; }
             .date { font-size: 13px; color: #4a5567; font-family: monospace; background: #eef1f5; padding: 5px 10px; border-radius: 6px; }
             .section { margin-bottom: 40px; page-break-inside: avoid; }
@@ -660,7 +663,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
         <body>
           <div class="header">
             <div>
-              <div class="logo">CalculixHub</div>
+              <div class="logo"><svg viewBox="${MARK_VIEWBOX}" fill="none"><path d="${MARK_PATH}" stroke="currentColor" stroke-width="${MARK_STROKE}" stroke-linecap="round"/><circle cx="${MARK_DOT.cx}" cy="${MARK_DOT.cy}" r="${MARK_DOT.r}" fill="currentColor"/></svg>CalculixHub</div>
               <div class="subtitle">Math OS &amp; AI Personalization Ecosystem</div>
             </div>
             <div class="date">Generated: ${new Date().toLocaleString('en-US')}</div>
@@ -770,7 +773,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       <div className="cq-auth-story">
         <div className="cq-auth-wash" aria-hidden="true" />
         <div className="cq-auth-brand relative flex items-center gap-3">
-          <span className="cq-symbol" aria-hidden="true"><Mail className="w-5 h-5" /></span>
+          <span className="cq-symbol" aria-hidden="true"><BrandLogo /></span>
           <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
         </div>
         <div className="cq-auth-story-copy relative max-w-[40ch]">
@@ -811,7 +814,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
       <div className="cq-auth-story">
         <div className="cq-auth-wash" aria-hidden="true" />
         <div className="cq-auth-brand relative flex items-center gap-3">
-          <span className="cq-symbol" aria-hidden="true"><CheckCircle2 className="w-5 h-5" /></span>
+          <span className="cq-symbol" aria-hidden="true"><BrandLogo /></span>
           <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
         </div>
         <div className="cq-auth-story-copy relative max-w-[40ch]">
@@ -883,7 +886,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           <div className="cq-auth-wash" aria-hidden="true" />
 
           <div className="cq-auth-brand relative flex items-center gap-3">
-            <span className="cq-symbol" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><path d="M30 9C11 2 2 27 18 32c7 3 15-3 15-10M7 23 32 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><circle cx="31" cy="12" r="3" fill="currentColor"/></svg></span>
+            <span className="cq-symbol" aria-hidden="true"><BrandLogo /></span>
             <span className="flex flex-col leading-[1.15]">
               <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
               <span className="type-eyebrow text-stone-500">A place to think</span>

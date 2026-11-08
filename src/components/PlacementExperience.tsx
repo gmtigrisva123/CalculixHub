@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Leaf } from 'lucide-react';
 import MathText from './MathText';
+import BrandLogo from './BrandLogo';
 import { evaluatePlacement, tierForTheta, recommendedSource, type IRTItem, type ResponseRecord } from '../domain/irt';
 import { ITEM_BANK } from '../domain/itemBank';
 import '../styles/placement.css';
@@ -35,7 +36,7 @@ export default function PlacementExperience(props: Props) {
       <span className="placement-window-spacer" aria-hidden="true" />
     </div>
     <header className="placement-header">
-      <button className="placement-brand" onClick={props.onHome} aria-label="CalculixHub home">Calculix<span>Hub</span><span className="placement-brand-dot" /></button>
+      <button className="placement-brand" onClick={props.onHome} aria-label="CalculixHub home"><BrandLogo className="placement-brand-mark" /><span className="placement-brand-word">Calculix<span>Hub</span></span></button>
       <button className="placement-back" onClick={props.onHome}><ArrowLeft size={16} /> Back home</button>
     </header>
     <main className="placement-layout">
