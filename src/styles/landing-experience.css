@@ -72,6 +72,8 @@
   --lx-sans: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   --lx-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
   --lx-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* The one hand-written voice on the page: margin notes, nothing more. */
+  --lx-hand: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
 
   /* Motion */
   --lx-glide: cubic-bezier(0.16, 1, 0.3, 1);
@@ -344,28 +346,74 @@
   --nav-glass: oklch(22% 0.035 228 / 0.42);
   --nav-edge: oklch(100% 0 0 / 0.13);
   --nav-pill: oklch(100% 0 0 / 0.1);
+  --nav-sheen: oklch(100% 0 0 / 0.1);
+  --nav-glow: oklch(85% 0.095 208 / 0.16);
+  position: relative;
   pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 8px;
   width: min(1180px, 100%);
-  height: 60px;
-  padding: 0 8px 0 18px;
-  border-radius: 18px;
+  height: 62px;
+  padding: 0 9px 0 22px;
+  border-radius: 999px;
   color: var(--nav-fg);
-  background: var(--nav-glass);
-  box-shadow: 0 0 0 1px var(--nav-edge) inset, 0 1px 0 oklch(100% 0 0 / 0.08) inset, 0 14px 40px -24px oklch(10% 0.03 230 / 0.6);
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  /* Glass with a little light caught in its upper edge, as if a lamp stood just off-screen. */
+  background:
+    radial-gradient(60% 140% at 12% -40%, var(--nav-glow), transparent 70%),
+    linear-gradient(180deg, var(--nav-sheen), transparent 55%),
+    var(--nav-glass);
+  box-shadow:
+    0 1px 0 oklch(100% 0 0 / 0.1) inset,
+    0 -1px 0 oklch(0% 0 0 / 0.14) inset,
+    0 22px 44px -26px oklch(8% 0.03 230 / 0.75),
+    0 4px 14px -8px oklch(8% 0.03 230 / 0.45);
+  backdrop-filter: blur(22px) saturate(1.65);
+  -webkit-backdrop-filter: blur(22px) saturate(1.65);
   transition: background-color 0.6s ease, color 0.6s ease, box-shadow 0.6s ease, width 0.6s var(--lx-glide);
+}
+/* The edge is a hairline that fades from bright at the top-left to nothing — never a flat outline. */
+.lx-nav-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, oklch(100% 0 0 / 0.38), var(--nav-edge) 32%, oklch(100% 0 0 / 0.04) 62%, oklch(85% 0.095 208 / 0.22));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* How far down the page you are, pencilled along the foot of the island. */
+.lx-nav-read {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--lx-brass), var(--lx-cyan));
+  opacity: 0.85;
+  pointer-events: none;
 }
 .lx-nav[data-tone='paper'] .lx-nav-bar {
   --nav-fg: var(--lx-ink);
   --nav-dim: oklch(40% 0.022 228 / 0.86);
-  --nav-glass: oklch(98.5% 0.008 84 / 0.72);
-  --nav-edge: oklch(24% 0.028 228 / 0.08);
+  --nav-glass: oklch(98.6% 0.009 84 / 0.74);
+  --nav-edge: oklch(24% 0.028 228 / 0.12);
   --nav-pill: oklch(24% 0.028 228 / 0.07);
-  box-shadow: 0 0 0 1px var(--nav-edge) inset, 0 1px 0 oklch(100% 0 0 / 0.7) inset, 0 16px 40px -26px hsl(var(--lx-shadow) / 0.45);
+  --nav-sheen: oklch(100% 0 0 / 0.65);
+  --nav-glow: oklch(88% 0.08 76 / 0.28);
+  box-shadow:
+    0 1px 0 oklch(100% 0 0 / 0.9) inset,
+    0 -1px 0 oklch(24% 0.028 228 / 0.05) inset,
+    0 24px 44px -28px hsl(var(--lx-shadow) / 0.5),
+    0 4px 14px -8px hsl(var(--lx-shadow) / 0.2);
+}
+.lx-nav[data-tone='paper'] .lx-nav-bar::before {
+  background: linear-gradient(135deg, oklch(100% 0 0 / 0.95), var(--nav-edge) 34%, oklch(24% 0.028 228 / 0.05) 66%, oklch(55% 0.13 40 / 0.2));
 }
 
 .lx-brand {
@@ -379,7 +427,9 @@
   white-space: nowrap;
 }
 .lx-brand-word span { font-weight: 400; opacity: 0.86; }
-.lx-mark { width: 26px; height: 26px; color: var(--lx-cyan); transition: color 0.6s ease; }
+.lx-brand-mark { display: inline-grid; place-items: center; }
+.lx-mark { width: 28px; height: 28px; color: var(--lx-cyan); transition: color 0.6s ease; filter: drop-shadow(0 0 8px oklch(85% 0.095 208 / 0.45)); }
+.lx-nav[data-tone='paper'] .lx-mark { filter: none; }
 .lx-nav[data-tone='paper'] .lx-mark { color: var(--lx-accent); }
 
 .lx-nav-links {
@@ -392,9 +442,9 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  height: 40px;
-  padding: 0 15px;
-  border-radius: 12px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
   font-size: 14.5px;
   font-weight: 480;
   color: var(--nav-dim);
@@ -405,18 +455,34 @@
 .lx-nav-pill {
   position: absolute;
   inset: 0;
-  border-radius: 12px;
-  background: var(--nav-pill);
+  border-radius: 999px;
+  background: linear-gradient(180deg, oklch(100% 0 0 / 0.07), transparent), var(--nav-pill);
+  box-shadow: 0 0 0 1px oklch(100% 0 0 / 0.07) inset;
 }
+/* A small brass dot under the chapter you are in, like a pencil's tap on the page. */
+.lx-nav-pill::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--lx-brass);
+  box-shadow: 0 0 8px var(--lx-brass);
+}
+.lx-nav[data-tone='paper'] .lx-nav-pill { box-shadow: 0 0 0 1px oklch(24% 0.028 228 / 0.06) inset; }
+.lx-nav[data-tone='paper'] .lx-nav-pill::after { background: var(--lx-pencil); box-shadow: none; }
 @media (hover: hover) and (pointer: fine) {
   .lx-nav-links a:hover { color: var(--nav-fg); }
 }
 
 .lx-nav-actions { display: flex; align-items: center; gap: 6px; margin-left: 10px; }
 .lx-nav-signin {
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 12px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
   font-size: 14.5px;
   font-weight: 480;
   color: var(--nav-dim);
@@ -429,32 +495,35 @@
 .lx-nav-cta {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 5px 0 18px;
-  border-radius: 12px;
+  gap: 12px;
+  height: 46px;
+  padding: 0 5px 0 20px;
+  border-radius: 999px;
   font-size: 14.5px;
-  font-weight: 560;
+  font-weight: 580;
+  letter-spacing: -0.005em;
   cursor: pointer;
   color: var(--lx-night-1);
-  background: var(--lx-cream);
-  transition: transform 0.5s var(--lx-glide), background-color 0.6s ease, color 0.6s ease;
+  background: linear-gradient(180deg, oklch(97.5% 0.04 92), var(--lx-cream) 55%, oklch(90% 0.075 86));
+  box-shadow: 0 1px 0 oklch(100% 0 0 / 0.7) inset, 0 8px 22px -8px oklch(83% 0.12 76 / 0.55);
+  transition: transform 0.5s var(--lx-glide), background-color 0.6s ease, color 0.6s ease, box-shadow 0.5s var(--lx-glide);
 }
-.lx-nav[data-tone='paper'] .lx-nav-cta { background: var(--lx-ink); color: var(--lx-paper); }
+.lx-nav[data-tone='paper'] .lx-nav-cta { background: linear-gradient(180deg, oklch(32% 0.03 228), var(--lx-ink)); color: var(--lx-paper); box-shadow: 0 1px 0 oklch(100% 0 0 / 0.14) inset, 0 10px 22px -10px hsl(var(--lx-shadow) / 0.7); }
 .lx-nav-cta:active { transform: scale(0.96); }
 .lx-nav-cta-icon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: var(--lx-night-1);
   color: var(--lx-cream);
   transition: transform 0.55s var(--lx-glide), background-color 0.6s ease, color 0.6s ease;
 }
 .lx-nav[data-tone='paper'] .lx-nav-cta-icon { background: var(--lx-paper); color: var(--lx-ink); }
 @media (hover: hover) and (pointer: fine) {
-  .lx-nav-cta:hover .lx-nav-cta-icon { transform: translate(2px, -1px) scale(1.06); }
+  .lx-nav-cta:hover { box-shadow: 0 1px 0 oklch(100% 0 0 / 0.7) inset, 0 12px 28px -8px oklch(83% 0.12 76 / 0.75); }
+  .lx-nav-cta:hover .lx-nav-cta-icon { transform: translate(2px, -1px) rotate(8deg) scale(1.06); }
 }
 
 .lx-burger {
@@ -462,7 +531,7 @@
   position: relative;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 50%;
   cursor: pointer;
   background: var(--nav-pill);
 }
@@ -529,7 +598,8 @@
 }
 @media (max-width: 560px) {
   .lx-nav-signin { display: none; }
-  .lx-nav-bar { height: 56px; padding-left: 14px; padding-right: 6px; }
+  .lx-nav-bar { height: 58px; padding-left: 18px; padding-right: 7px; }
+  .lx-nav-read { left: 24px; right: 24px; }
   .lx-nav-cta { height: 42px; padding-left: 15px; font-size: 14px; }
   .lx-nav-cta-icon { width: 32px; height: 32px; }
   .lx-brand { font-size: 18px; }
@@ -569,6 +639,9 @@
   inset: 0;
   z-index: -2;
   background:
+    /* a pool of warm lamplight low under the strip, so the dark has a source */
+    radial-gradient(34% 30% at 74% 92%, oklch(52% 0.09 70 / 0.22), transparent 72%),
+    radial-gradient(26% 34% at 72% 46%, oklch(42% 0.07 200 / 0.55), transparent 70%),
     radial-gradient(52% 62% at 70% 44%, oklch(34% 0.065 210 / 0.85), transparent 72%),
     radial-gradient(38% 46% at 82% 18%, oklch(30% 0.05 250 / 0.5), transparent 70%),
     radial-gradient(60% 50% at 8% 108%, oklch(28% 0.05 200 / 0.55), transparent 70%),
@@ -592,6 +665,17 @@
   background:
     linear-gradient(90deg, oklch(14% 0.03 234 / 0.72) 0%, oklch(14% 0.03 234 / 0.25) 40%, transparent 62%),
     linear-gradient(0deg, oklch(14% 0.03 234 / 0.7) 0%, transparent 36%);
+}
+/* Film grain: breaks up the gradient banding and gives the dark the tooth of real paper. */
+.lx-hero-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.1 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
 }
 .lx-hero-shade {
   position: absolute;
@@ -681,17 +765,32 @@
 }
 .lx-dash { opacity: 0.5; margin: 0 0.08em; }
 .lx-hero-caption {
+  position: relative;
   justify-self: end;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  max-width: 340px;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--lx-on-night-muted);
+  max-width: 330px;
+  padding-top: 4px;
+  font-family: var(--lx-hand);
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: 0.005em;
+  color: var(--lx-brass);
+  transform: rotate(-2.2deg);
+  transform-origin: 100% 100%;
+  text-wrap: balance;
 }
-.lx-hero-caption em { font-family: var(--lx-serif); font-style: italic; font-size: 1.12em; color: var(--lx-on-night); }
-.lx-hero-caption .lx-live { transform: translateY(-1px); }
+.lx-hero-caption em { font-style: normal; color: var(--lx-on-night); }
+/* The arrow is drawn by hand, curling up from the note to the edge it talks about. */
+.lx-hero-scribble {
+  position: absolute;
+  right: 52px;
+  bottom: calc(100% + 2px);
+  width: 118px;
+  height: auto;
+  color: var(--lx-brass);
+  opacity: 0.9;
+  overflow: visible;
+}
 
 .lx-scroll-cue {
   display: flex;

@@ -64,6 +64,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
           />
         </Suspense>
         <div className="lx-hero-vignette" aria-hidden="true" />
+        <div className="lx-hero-grain" aria-hidden="true" />
 
         <m.div className="lx-hero-copy" style={{ y: copyY, opacity: copyOpacity }}>
           <m.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: GLIDE, delay: 0.1 }}>
@@ -71,7 +72,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
           </m.div>
           <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" delay={0.22} stagger={0.085} />
           <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 1.1, ease: GLIDE, delay: 0.75 }}>
-            Numerous contest problems, matched to your level and explained step by step.
+            Contest problems chosen to fit you, then talked through one step at a time — the way a good tutor would, sitting right beside you.
           </m.p>
           <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: GLIDE, delay: 0.92 }}>
             <Magnetic>
@@ -93,9 +94,20 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
             <HeroStat label="real exams"><CountUp value={ARCHIVE_FIGURES.papers} delay={1.18} /></HeroStat>
             <HeroStat label="years of contests">{ARCHIVE_FIGURES.firstYear}<span className="lx-dash">–</span>{ARCHIVE_FIGURES.lastYear}</HeroStat>
           </m.dl>
-          <m.p className="lx-hero-caption" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2, delay: 1.6 }}>
-            <span className="lx-live" aria-hidden="true" />
-            <span><em>A Möbius strip</em> · one side, one edge.</span>
+          <m.p className="lx-hero-caption" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2, delay: 1.9 }}>
+            <svg className="lx-hero-scribble" viewBox="0 0 150 120" fill="none" aria-hidden="true">
+              <m.path
+                d="M136 112C92 114 40 100 26 62C20 44 30 26 48 12"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1, ease: GLIDE, delay: 2.1 }}
+              />
+              <m.path
+                d="M34 12 49 11 47 27"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.4, ease: GLIDE, delay: 3 }}
+              />
+            </svg>
+            <span>Trace the gold edge with a finger. <em>Twice round, and you&rsquo;re home</em> — one side, one edge.</span>
           </m.p>
           <a className="lx-scroll-cue" href="#idea" onClick={event => jumpTo(event, 'idea')}>
             <span>Scroll</span>
