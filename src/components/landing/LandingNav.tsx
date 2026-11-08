@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
-import { AnimatePresence, m, useMotionValueEvent, useScroll } from 'motion/react';
+import { AnimatePresence, m, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
 import { Arrow, BrandMark, GLIDE } from './kit';
 import { scrollToTarget, setScrollLocked } from './smoothScroll';
 
@@ -21,7 +21,7 @@ import { scrollToTarget, setScrollLocked } from './smoothScroll';
 export const NAV_LINKS = [
   { id: 'engine', label: 'How it works', chapter: '02' },
   { id: 'playground', label: 'Try one', chapter: '03' },
-  { id: 'worlds', label: 'Topics', chapter: '04' },
+  { id: 'topics', label: 'Topics', chapter: '04' },
   { id: 'archive', label: 'Past papers', chapter: '05' },
   { id: 'plans', label: 'Plans', chapter: '07' },
 ] as const;
@@ -54,7 +54,10 @@ export default function LandingNav({ onSignIn, onRegister }: LandingNavProps) {
   const [lifted, setLifted] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
-  const { scrollY } = useScroll();
+  const { scrollY, scrollYProgress } = useScroll();
+  // How far down the page the reader is: a pencil line drawn along the foot of the island.
+  const read = useSpring(scrollYProgress, { stiffness: 140, damping: 26, mass: 0.4 });
+  const [wave, setWave] = useState(0);
 
   const close = () => {
     setOpen(false);
@@ -149,7 +152,9 @@ export default function LandingNav({ onSignIn, onRegister }: LandingNavProps) {
       >
         <div className="lx-nav-bar">
           <a className="lx-brand" href="/?home=1" aria-label="CalculixHub, back to the top" onClick={event => { event.preventDefault(); setOpen(false); scrollToTarget(0); }}>
-            <BrandMark draw />
+            <span className="lx-brand-mark" onPointerEnter={() => setWave(value => value + 1)}>
+              <BrandMark key={wave} draw />
+            </span>
             <span className="lx-brand-word">calculix<span>hub</span></span>
           </a>
           <nav className="lx-nav-links" aria-label="Sections">
@@ -178,6 +183,7 @@ export default function LandingNav({ onSignIn, onRegister }: LandingNavProps) {
               <span /><span />
             </button>
           </div>
+          <m.span className="lx-nav-read" style={{ scaleX: read }} aria-hidden="true" />
         </div>
       </m.header>
 
