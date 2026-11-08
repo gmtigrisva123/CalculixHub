@@ -39,8 +39,8 @@ describe('the CalculixHub logo', () => {
     expect(card.subarray(1, 4).toString()).toBe('PNG');
     expect(card.readUInt32BE(16)).toBe(1200);
     expect(card.readUInt32BE(20)).toBe(630);
-    expect(html).toMatch(/og:image" content="https:\/\/[^"]+\/og-image\.png"/);
-    expect(html).toMatch(/twitter:image" content="https:\/\/[^"]+\/og-image\.png"/);
+    expect(html).toMatch(/og:image" content="https:\/\/[^"]+\/og-image\.png\?v=\d+"/);
+    expect(html).toMatch(/twitter:image" content="https:\/\/[^"]+\/og-image\.png\?v=\d+"/);
     expect(html).toContain('property="og:image:width" content="1200"');
     expect(html).toContain('property="og:image:height" content="630"');
 
