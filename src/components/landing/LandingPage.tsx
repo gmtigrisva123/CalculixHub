@@ -4,7 +4,7 @@ import LandingNav from './LandingNav';
 import Opening from './Opening';
 import EngineStory from './EngineStory';
 import ChordPlayground from './ChordPlayground';
-import WorldsChapter from './WorldsChapter';
+import TopicsChapter from './TopicsChapter';
 import ArchiveLadder from './ArchiveLadder';
 import JourneyStack from './JourneyStack';
 import PlansSection from './PlansSection';
@@ -25,7 +25,7 @@ interface LandingPageProps {
  * product's own mathematics.
  *
  * Paper is the ground; ink stages hold the parts that move — the hero's
- * Möbius strip, the engine replaying a real placement, the four worlds, and
+ * Möbius strip, the engine replaying a real placement, the topics board, and
  * the closing note. Everything sits on one raised sheet that lifts at the end
  * to uncover the footer.
  */
@@ -50,7 +50,7 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
           <Opening onRegister={onRegister} />
           <EngineStory onRegister={onRegister} />
           <ChordPlayground />
-          <WorldsChapter />
+          <TopicsChapter onRegister={onRegister} />
           <ArchiveLadder />
           <JourneyStack onRegister={onRegister} />
           <PlansSection onRegister={onRegister} />

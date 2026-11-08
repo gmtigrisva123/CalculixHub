@@ -21,7 +21,7 @@ import { scrollToTarget, setScrollLocked } from './smoothScroll';
 export const NAV_LINKS = [
   { id: 'engine', label: 'How it works', chapter: '02' },
   { id: 'playground', label: 'Try one', chapter: '03' },
-  { id: 'worlds', label: 'Topics', chapter: '04' },
+  { id: 'topics', label: 'Topics', chapter: '04' },
   { id: 'archive', label: 'Past papers', chapter: '05' },
   { id: 'plans', label: 'Plans', chapter: '07' },
 ] as const;

@@ -4,7 +4,7 @@
  * One ground and one kind of exception. The page is warm paper with blue-ink
  * type, the same paper the sign-in and placement screens stand on, so leaving
  * the landing never feels like changing sites. Where the page *shows* the
- * product — the Möbius hero, the engine replay, the four worlds, the closing
+ * product — the Möbius hero, the engine replay, the topics board, the closing
  * invitation — it sets an ink stage on the paper: a rounded, inset panel of
  * night-blue, lit from within by the mathematics on it. They are the same
  * stages the dashboard, arena and exam archive open with.
@@ -655,8 +655,7 @@
   transition: opacity 1.8s ease;
 }
 .lx-hero-field.is-ready { opacity: 1; }
-.lx-hero-field canvas,
-.lx-worlds-field canvas { display: block; width: 100%; height: 100%; }
+.lx-hero-field canvas { display: block; width: 100%; height: 100%; }
 .lx-hero-vignette {
   position: absolute;
   inset: 0;
@@ -1479,145 +1478,395 @@
 }
 
 /* ------------------------------------------------------------------------
- * Four worlds
+ * Topics: four rooms, a chalkboard, and a real problem in each
  * --------------------------------------------------------------------- */
 
-.lx-worlds { position: relative; padding: 0 var(--lx-frame); }
-.lx-worlds-stage {
+.lx-topics { position: relative; padding: 0 var(--lx-frame); }
+.lx-topics-stage {
   position: relative;
   overflow: clip;
   isolation: isolate;
   border-radius: var(--lx-stage-r);
   color: var(--lx-on-night);
+  /* A slate board at night: a lamp-lit corner, and the pale smears of an eraser dragged across it. */
   background:
-    radial-gradient(60% 34% at 70% 18%, oklch(29% 0.06 250 / 0.55), transparent 70%),
-    radial-gradient(50% 30% at 15% 60%, oklch(27% 0.05 200 / 0.45), transparent 70%),
-    linear-gradient(180deg, var(--lx-night-1) 0%, var(--lx-night-0) 45%, var(--lx-night-1) 100%);
+    radial-gradient(64% 28% at 16% 0%, oklch(34% 0.05 205 / 0.55), transparent 70%),
+    radial-gradient(52% 26% at 92% 38%, oklch(31% 0.05 235 / 0.42), transparent 70%),
+    radial-gradient(44% 9% at 26% 33%, oklch(60% 0.03 210 / 0.07), transparent 72%),
+    radial-gradient(38% 8% at 76% 64%, oklch(60% 0.03 210 / 0.06), transparent 72%),
+    radial-gradient(46% 8% at 38% 86%, oklch(60% 0.03 210 / 0.06), transparent 72%),
+    linear-gradient(180deg, oklch(21% 0.036 216) 0%, oklch(17.5% 0.032 224) 100%);
 }
-.lx-worlds-head { padding: var(--lx-section) 0 calc(var(--lx-section) * 0.55); }
-.lx-worlds-head .lx-h2 { margin: 22px 0 26px; }
-.lx-worlds-index { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
-.lx-worlds-index a {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 18px 0 14px;
-  border-radius: 12px;
-  font-size: 15px;
-  color: var(--lx-on-night-body);
-  background: oklch(100% 0 0 / 0.05);
-  box-shadow: 0 0 0 1px var(--lx-night-rule) inset;
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* The tooth of the board: the same fine grain as the hero, so the two dark stages are one material. */
+.lx-topics-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.14;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.1 -.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
 }
-.lx-worlds-index a span { font-family: var(--lx-serif); font-size: 21px; line-height: 1; color: var(--lx-cyan); }
-@media (hover: hover) and (pointer: fine) {
-  .lx-worlds-index a:hover { background: oklch(100% 0 0 / 0.1); color: var(--lx-on-night); }
+.lx-chalk-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* What was rubbed out before the lesson, still faintly there. */
+.lx-topics-ghosts { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.lx-topics-ghosts span {
+  position: absolute;
+  font-family: var(--lx-hand);
+  white-space: nowrap;
+  color: oklch(100% 0 0 / 0.055);
+  filter: blur(0.5px);
 }
 
-.lx-worlds-body {
+.lx-topics-head {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
-  padding-bottom: 8vh;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: clamp(32px, 5vw, 96px);
+  align-items: end;
+  padding: var(--lx-section) 0 clamp(56px, 7vw, 104px);
 }
-.lx-worlds-visual {
-  grid-column: 2;
-  grid-row: 1;
-  position: sticky;
-  top: 0;
-  height: 100svh;
-}
-.lx-worlds-field { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; }
-.lx-worlds-field.is-ready { opacity: 1; }
-.lx-worlds-hud {
-  position: absolute;
-  top: clamp(96px, 13vh, 130px);
-  left: 6%;
-  right: 8%;
-}
-.lx-worlds-steps { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--lx-on-night-muted); }
-.lx-worlds-steps li { display: inline-flex; align-items: center; gap: 7px; transition: color 0.5s ease; }
-.lx-worlds-steps span { font-family: var(--lx-mono); font-size: 11px; opacity: 0.7; }
-.lx-worlds-steps li[data-active] { color: var(--lx-on-night); }
-.lx-worlds-steps li[data-active] span { color: var(--lx-brass); opacity: 1; }
-.lx-worlds-meter { height: 1px; margin-top: 14px; background: var(--lx-night-rule); overflow: hidden; }
-.lx-worlds-meter span { display: block; height: 100%; background: linear-gradient(90deg, var(--lx-cyan), var(--lx-brass)); transform-origin: 0 50%; }
-.lx-worlds-caption {
-  position: absolute;
-  left: 6%;
-  right: 8%;
-  bottom: clamp(32px, 7vh, 64px);
-  min-height: 3.2em;
-}
-.lx-worlds-caption p { max-width: 30em; font-family: var(--lx-serif); font-style: italic; font-size: clamp(17px, 1.3vw, 20px); line-height: 1.45; color: var(--lx-on-night-body); }
-.lx-worlds-caption-label { display: block; margin-bottom: 6px; font-family: var(--lx-mono); font-style: normal; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lx-brass); }
-
-.lx-worlds-list { grid-column: 1; grid-row: 1; }
-.lx-world {
+.lx-topics-head .lx-h2 { margin-top: 22px; font-size: clamp(42px, 5.8vw, 96px); }
+.lx-topics-aside {
   display: flex;
-  align-items: center;
-  min-height: 100svh;
-  padding: 10vh clamp(8px, 1vw, 16px) 10vh var(--lx-gutter);
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+  font-family: var(--lx-hand);
+  font-size: clamp(23px, 2vw, 28px);
+  line-height: 1.05;
+  color: var(--lx-brass);
+  rotate: -2deg;
 }
-.lx-world-card { width: 100%; max-width: 560px; }
-.lx-world-meta { display: flex; align-items: center; gap: 14px; font-family: var(--lx-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lx-on-night-muted); }
-.lx-world-symbol {
+.lx-topics-aside svg { flex: none; width: 46px; margin-bottom: -10px; }
+
+.lx-topics-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  font-family: var(--lx-serif);
-  font-size: 26px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--world-tone, var(--lx-cyan));
-  background: oklch(100% 0 0 / 0.06);
-  box-shadow: 0 0 0 1px var(--lx-night-rule) inset;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(30px, 3.4vw, 56px) clamp(24px, 3vw, 48px);
+  align-items: start;
+  /* The second column sits lower, as things pinned up by hand never line up. */
+  padding-bottom: calc(clamp(48px, 5vw, 80px) + 88px);
 }
-.lx-world[data-world='1'] { --world-tone: var(--lx-w1-a); }
-.lx-world[data-world='2'] { --world-tone: var(--lx-w2-a); }
-.lx-world[data-world='3'] { --world-tone: var(--lx-w3-a); }
-.lx-world[data-world='4'] { --world-tone: var(--lx-w4-a); }
-.lx-world-title {
-  margin: 26px 0 12px;
+.lx-topic:nth-child(even) { translate: 0 88px; }
+
+.lx-topic { --tone: var(--lx-w1-a); --tone-soft: var(--lx-w1-b); position: relative; }
+.lx-topic[data-topic='2'] { --tone: var(--lx-w2-a); --tone-soft: var(--lx-w2-b); }
+.lx-topic[data-topic='3'] { --tone: var(--lx-w3-a); --tone-soft: var(--lx-w3-b); }
+.lx-topic[data-topic='4'] { --tone: var(--lx-w4-a); --tone-soft: var(--lx-w4-b); }
+
+.lx-topic-inner {
+  position: relative;
+  padding: clamp(22px, 2.4vw, 34px);
+  /* Cut by hand: no two corners alike. */
+  border-radius: 34px 28px 36px 26px / 28px 36px 26px 32px;
+  background:
+    radial-gradient(70% 40% at 0% 0%, color-mix(in oklch, var(--tone) 11%, transparent), transparent 70%),
+    linear-gradient(180deg, oklch(100% 0 0 / 0.06), oklch(100% 0 0 / 0.02));
+  box-shadow: 0 0 0 1px var(--lx-night-rule) inset, 0 1px 0 oklch(100% 0 0 / 0.07) inset, 0 40px 70px -42px oklch(4% 0.02 230 / 0.9);
+}
+/* A light that follows the pointer along the edge, in the room's own colour. */
+.lx-topic-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  background: radial-gradient(380px circle at var(--sx, 50%) var(--sy, 0%), var(--tone), transparent 62%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+@media (hover: hover) and (pointer: fine) {
+  .lx-topic:hover .lx-topic-inner::before { opacity: 0.9; }
+}
+.lx-topic[data-solved] .lx-topic-inner::before { opacity: 0.7; }
+
+.lx-topic-head { display: flex; align-items: center; justify-content: space-between; }
+.lx-topic-number { font-family: var(--lx-mono); font-size: 12px; letter-spacing: 0.14em; color: var(--tone); }
+.lx-topic-symbol {
   font-family: var(--lx-serif);
-  font-size: clamp(46px, 4.6vw, 76px);
+  font-size: clamp(48px, 4.4vw, 70px);
+  line-height: 0.8;
+  color: var(--tone);
+  text-shadow: 0 0 34px color-mix(in oklch, var(--tone) 55%, transparent);
+}
+.lx-topic-title {
+  margin: 6px 0 0;
+  font-family: var(--lx-serif);
+  font-size: clamp(44px, 4.8vw, 74px);
   font-weight: 420;
   line-height: 1;
   letter-spacing: -0.04em;
+  color: var(--lx-on-night);
 }
-.lx-world-line { max-width: 24em; font-size: clamp(17px, 1.3vw, 19px); line-height: 1.55; color: var(--lx-on-night-body); }
-.lx-theorem {
-  margin: 30px 0 26px;
-  padding: 18px 22px 14px;
-  border-radius: 20px;
-  background: oklch(100% 0 0 / 0.045);
-  box-shadow: 0 0 0 1px var(--lx-night-rule) inset, 0 1px 0 oklch(100% 0 0 / 0.06) inset;
+.lx-topic-feel {
+  margin-top: 6px;
+  font-family: var(--lx-hand);
+  font-size: clamp(25px, 2.2vw, 31px);
+  line-height: 1.1;
+  color: var(--tone);
+  rotate: -1deg;
+  transform-origin: 0 50%;
 }
-.lx-theorem-head { font-family: var(--lx-mono); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--world-tone); }
-.lx-theorem-formula { display: block; padding: 8px 0 4px; font-size: clamp(20px, 1.7vw, 26px); color: var(--lx-on-night); }
-.lx-theorem-formula > span { margin: 0.25em 0 !important; }
-.lx-theorem-formula .katex-display { margin: 0; }
 
-@media (max-width: 960px) {
-  .lx-worlds-body { grid-template-columns: minmax(0, 1fr); }
-  .lx-worlds-visual { grid-column: 1; grid-row: 1; height: 100svh; }
-  .lx-worlds-list { grid-column: 1; grid-row: 1; position: relative; z-index: 1; }
-  .lx-world { align-items: flex-end; padding: 46svh 14px 6svh; }
-  .lx-world-card {
-    padding: 22px 20px 16px;
-    border-radius: 24px;
-    /* Opaque: the field's labels pass behind the card as it scrolls, and must not show through. */
-    background: oklch(17% 0.034 230);
-    box-shadow: 0 0 0 1px var(--lx-night-rule) inset, 0 30px 60px -30px oklch(5% 0.02 230 / 0.9);
-  }
-  .lx-world-title { font-size: 40px; margin: 16px 0 8px; }
-  .lx-theorem { margin: 20px 0 16px; }
-  .lx-worlds-hud { top: 88px; left: 20px; right: 20px; }
-  .lx-worlds-steps li:not([data-active]) { display: none; }
-  .lx-worlds-caption { top: 120px; bottom: auto; left: 20px; right: 20px; }
-  .lx-worlds-caption p { font-size: 15px; }
+/* The board itself: a darker panel with the day's work on it. */
+.lx-topic-board {
+  margin: 20px -6px 0;
+  padding: 10px 8px 6px;
+  border-radius: 20px 24px 18px 24px;
+  background: linear-gradient(180deg, oklch(14% 0.03 226 / 0.55), oklch(16% 0.03 224 / 0.35));
+  box-shadow: 0 0 0 1px var(--lx-night-rule) inset, 0 10px 30px oklch(4% 0.02 230 / 0.35) inset;
+}
+.lx-board { display: block; width: 100%; height: auto; overflow: visible; }
+.lx-board-chalk { filter: url(#lx-chalk) drop-shadow(0 0 3px oklch(100% 0 0 / 0.22)); color: oklch(95% 0.014 92); }
+.lx-stroke { fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+.lx-stroke.is-thin { stroke-width: 2.3; }
+.lx-stroke.is-faint { stroke-opacity: 0.4; }
+.lx-stroke.is-tone { stroke: var(--tone); }
+.lx-fill { fill: currentColor; }
+.lx-fill.is-tone { fill: var(--tone); }
+.lx-scrawl { font-family: var(--lx-hand); font-weight: 500; fill: currentColor; }
+.lx-scrawl.is-tone,
+.lx-scrawl .is-tone { fill: var(--tone); }
+.lx-scrawl.is-note { fill: oklch(88% 0.02 220); fill-opacity: 0.7; }
+
+/* The problem, on a slip of real paper pinned to the board. */
+.lx-slip {
+  position: relative;
+  margin: 26px 2px 0;
+  padding: 26px clamp(18px, 2vw, 26px) 16px;
+  border-radius: 5px 11px 7px 13px;
+  color: var(--lx-ink);
+  background:
+    linear-gradient(180deg, oklch(100% 0 0 / 0.6), transparent 26%),
+    var(--lx-paper-raised);
+  box-shadow: 0 1px 0 oklch(100% 0 0 / 0.9) inset, 0 26px 40px -22px oklch(3% 0.02 230 / 0.95), 0 3px 8px oklch(3% 0.02 230 / 0.35);
+  rotate: -0.7deg;
+}
+.lx-topic:nth-child(even) .lx-slip { rotate: 0.6deg; }
+.lx-slip-tape {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 96px;
+  height: 27px;
+  margin-left: -48px;
+  rotate: -2.5deg;
+  background: color-mix(in oklch, var(--tone-soft) 78%, transparent);
+  box-shadow: 0 1px 3px oklch(4% 0.02 230 / 0.35);
+  clip-path: polygon(0 0, 100% 0, 97% 25%, 100% 50%, 97% 75%, 100% 100%, 0 100%, 3% 75%, 0 50%, 3% 25%);
+}
+.lx-topic:nth-child(even) .lx-slip-tape { rotate: 2deg; }
+.lx-slip-ref { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lx-muted); }
+.lx-slip-prompt { display: block; margin-top: 10px; font-family: var(--lx-serif); font-size: clamp(18px, 1.45vw, 21px); line-height: 1.5; color: var(--lx-ink); }
+
+.lx-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.lx-opt {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 16px 0 8px;
+  border-radius: 14px 20px 16px 20px;
+  font-size: 16px;
+  color: var(--lx-ink);
+  cursor: pointer;
+  background: oklch(24% 0.028 228 / 0.035);
+  box-shadow: 0 0 0 1.5px oklch(24% 0.028 228 / 0.2) inset;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, opacity 0.3s ease, transform 0.4s var(--lx-glide);
+}
+.lx-opt:active { transform: scale(0.96); }
+.lx-opt-letter {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: var(--lx-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lx-muted);
+  background: var(--lx-paper-shade);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+.lx-opt-text { white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .lx-opt:not([data-state]):hover { background: oklch(24% 0.028 228 / 0.08); box-shadow: 0 0 0 1.5px oklch(24% 0.028 228 / 0.42) inset; }
+}
+/* A wrong choice is crossed out in pencil, the way you would on the exam sheet. */
+.lx-opt[data-state='wrong'] { opacity: 0.5; cursor: default; }
+.lx-opt[data-state='wrong']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 52%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--lx-pencil);
+  transform-origin: 0 50%;
+  animation: lx-strike 0.45s var(--lx-glide) both;
+}
+@keyframes lx-strike { from { transform: scaleX(0) rotate(-2deg); } to { transform: scaleX(1) rotate(-2deg); } }
+.lx-opt[data-state='right'] {
+  cursor: default;
+  background: oklch(95% 0.05 150);
+  box-shadow: 0 0 0 2px oklch(52% 0.13 150) inset;
+  animation: lx-settle 0.6s var(--lx-glide);
+}
+.lx-opt[data-state='right'] .lx-opt-letter { color: #fff; background: oklch(52% 0.13 150); }
+@keyframes lx-settle { 0% { transform: scale(0.94); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.lx .lx-slip :focus-visible { outline-color: var(--lx-accent); }
+
+.lx-slip-note { min-height: 100px; margin-top: 14px; }
+.lx-slip-pencil { font-family: var(--lx-hand); font-size: 26px; line-height: 1.05; color: var(--lx-pencil); rotate: -1deg; transform-origin: 0 50%; }
+.lx-slip-pencil.is-right { color: oklch(46% 0.12 150); }
+.lx-slip-hint,
+.lx-slip-reason { display: block; margin-top: 6px; font-size: 15.5px; line-height: 1.55; color: var(--lx-body); }
+.lx-slip-hint { font-family: var(--lx-hand); font-size: 23px; line-height: 1.2; color: var(--lx-body); }
+.lx-slip-nudge {
+  margin-top: 2px;
+  font-family: var(--lx-hand);
+  font-size: 23px;
+  color: var(--lx-accent);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1.5px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lx-slip-nudge:hover { color: var(--lx-ink); }
+}
+
+.lx-topic-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; margin-top: 24px; }
+.lx-topic-covers { max-width: 19em; font-size: 14px; line-height: 1.5; color: var(--lx-on-night-muted); }
+.lx-topic-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 46px;
+  padding: 0 6px 0 20px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 560;
+  color: var(--lx-on-night);
+  box-shadow: 0 0 0 1px oklch(100% 0 0 / 0.22) inset;
+  transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.45s var(--lx-glide), transform 0.5s var(--lx-glide);
+}
+.lx-topic-go:active { transform: scale(0.97); }
+.lx-topic-go-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--lx-night-1);
+  background: var(--tone);
+  transition: transform 0.55s var(--lx-glide);
+}
+.lx-topic[data-solved] .lx-topic-go { color: var(--lx-night-1); background: var(--tone-soft); box-shadow: 0 10px 28px -10px var(--tone); }
+.lx-topic[data-solved] .lx-topic-go-icon { color: var(--tone-soft); background: var(--lx-night-1); }
+@media (hover: hover) and (pointer: fine) {
+  .lx-topic-go:hover { background: oklch(100% 0 0 / 0.08); }
+  .lx-topic[data-solved] .lx-topic-go:hover { background: #fff; }
+  .lx-topic-go:hover .lx-topic-go-icon { transform: translate(2px, -1px) rotate(8deg); }
+}
+
+.lx-topics-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px 48px;
+  padding: 8px 0 clamp(80px, 9vw, 136px);
+}
+.lx-topics-foot-note { font-family: var(--lx-hand); font-size: clamp(40px, 4.6vw, 64px); line-height: 0.95; color: var(--lx-brass); rotate: -1.5deg; transform-origin: 0 50%; }
+.lx-topics-foot-line { margin-top: 12px; max-width: 29em; font-size: clamp(17px, 1.3vw, 20px); line-height: 1.55; color: var(--lx-on-night-body); }
+
+/* The ledge under the board, with the chalk and the eraser on it. */
+.lx-ledge {
+  position: relative;
+  z-index: 1;
+  height: 34px;
+  background:
+    linear-gradient(180deg, oklch(100% 0 0 / 0.14), transparent 22%),
+    linear-gradient(180deg, oklch(37% 0.055 62), oklch(25% 0.042 56));
+  box-shadow: 0 -18px 36px -14px oklch(4% 0.02 230 / 0.8), 0 1px 0 oklch(62% 0.07 72 / 0.5) inset;
+}
+.lx-chalk-piece {
+  position: absolute;
+  bottom: calc(100% - 7px);
+  width: 56px;
+  height: 13px;
+  border-radius: 3px 6px 6px 3px;
+  background: linear-gradient(180deg, #fff, oklch(88% 0.02 90));
+  box-shadow: 0 2px 3px oklch(4% 0.02 230 / 0.5);
+}
+.lx-chalk-piece.is-1 { left: 9%; rotate: -2deg; }
+.lx-chalk-piece.is-2 { left: calc(9% + 70px); rotate: 3deg; background: linear-gradient(180deg, var(--lx-w1-b), var(--lx-w1-a)); }
+.lx-chalk-piece.is-3 { left: calc(9% + 150px); bottom: calc(100% - 9px); rotate: -5deg; background: linear-gradient(180deg, var(--lx-w2-b), var(--lx-w2-a)); }
+.lx-chalk-piece.is-stub { left: calc(9% + 232px); width: 22px; rotate: 18deg; background: linear-gradient(180deg, var(--lx-w3-b), var(--lx-w3-a)); }
+.lx-eraser {
+  position: absolute;
+  right: 12%;
+  bottom: calc(100% - 6px);
+  width: 98px;
+  height: 32px;
+  border-radius: 4px 5px 3px 3px;
+  rotate: 1.5deg;
+  background:
+    linear-gradient(180deg, oklch(34% 0.012 230) 0 36%, transparent 36%),
+    linear-gradient(180deg, oklch(52% 0.07 70), oklch(40% 0.06 62));
+  box-shadow: 0 3px 5px oklch(4% 0.02 230 / 0.55);
+}
+.lx-eraser::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 3px;
+  height: 7px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, oklch(100% 0 0 / 0.14) 0 2px, transparent 2px 5px);
+}
+.lx-chalk-smudge {
+  position: absolute;
+  right: calc(12% - 40px);
+  bottom: 100%;
+  width: 190px;
+  height: 46px;
+  background: radial-gradient(50% 50% at 50% 100%, oklch(100% 0 0 / 0.1), transparent 72%);
+  filter: blur(4px);
+}
+
+@media (max-width: 1060px) {
+  .lx-topics-head { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; }
+  .lx-topics-grid { grid-template-columns: minmax(0, 1fr); padding-bottom: 56px; }
+  .lx-topic:nth-child(even) { translate: none; }
+  .lx-topic-inner { max-width: 680px; margin-inline: auto; }
+}
+@media (max-width: 560px) {
+  .lx-topic-inner { padding: 20px 14px 18px; border-radius: 28px 24px 30px 22px / 24px 30px 22px 28px; }
+  .lx-topic-board { margin-inline: -4px; padding-inline: 4px; }
+  .lx-slip { padding: 24px 16px 14px; }
+  .lx-opt { min-height: 46px; }
+  .lx-slip-note { min-height: 132px; }
+  .lx-topics-ghosts span:nth-child(n + 4) { display: none; }
+  .lx-chalk-piece.is-3, .lx-chalk-piece.is-stub { display: none; }
+  .lx-eraser { right: 8%; }
 }
 
 /* ------------------------------------------------------------------------
@@ -2181,8 +2430,7 @@
   .lx-arena-sweep,
   .lx-typing span { animation: none; }
   .lx-hero-title em::after { animation: none; clip-path: none; }
-  .lx-hero-field,
-  .lx-worlds-field { transition: none; }
+  .lx-hero-field { transition: none; }
   .lx-btn,
   .lx-btn-icon,
   .lx-arrow,

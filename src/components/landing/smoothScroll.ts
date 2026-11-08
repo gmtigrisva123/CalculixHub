@@ -4,7 +4,7 @@
  *
  * A mouse wheel scrolls in notches, 100px at a time, and every scroll-linked
  * figure on the page — the sheet sliding over the hero, the engine replay, the
- * four worlds morphing — would step with it. Lenis interpolates the wheel into
+ * progress line along the nav — would step with it. Lenis interpolates the wheel into
  * one continuous movement over native scrolling, so `position: sticky`, find in
  * page, keyboard scrolling and the scrollbar all keep working, and touch input
  * is left entirely to the platform's own momentum.

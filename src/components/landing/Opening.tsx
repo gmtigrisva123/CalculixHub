@@ -56,7 +56,6 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
         <div className="lx-hero-sky" aria-hidden="true" />
         <Suspense fallback={null}>
           <ParticleField
-            variant="mobius"
             release={release}
             still={reduce}
             className={ready ? 'lx-hero-field is-ready' : 'lx-hero-field'}
