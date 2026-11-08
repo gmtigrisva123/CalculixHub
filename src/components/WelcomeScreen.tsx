@@ -664,7 +664,7 @@ export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
           <div class="header">
             <div>
               <div class="logo"><svg viewBox="${MARK_VIEWBOX}" fill="none"><path d="${MARK_PATH}" stroke="currentColor" stroke-width="${MARK_STROKE}" stroke-linecap="round"/><circle cx="${MARK_DOT.cx}" cy="${MARK_DOT.cy}" r="${MARK_DOT.r}" fill="currentColor"/></svg>CalculixHub</div>
-              <div class="subtitle">Math OS &amp; AI Personalization Ecosystem</div>
+              <div class="subtitle">A place to think</div>
             </div>
             <div class="date">Generated: ${new Date().toLocaleString('en-US')}</div>
           </div>

@@ -1,6 +1,6 @@
 {
   "name": "Calculix Hub",
-  "description": "An integrated EdTech platform and learning operating system for math learning, competition, analytics, and community.",
+  "description": "Stay with the question. Contest math from AMC to IMO, with problems picked to fit your level and talked through one step at a time.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

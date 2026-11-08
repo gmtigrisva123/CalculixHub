@@ -319,14 +319,15 @@ def render_og_card(width: int = 1200, height: int = 630) -> Image.Image:
     word_font = load_font(["Inter-SemiBold.otf", "Inter-SemiBold.ttf", "DejaVuSans-Bold.ttf"], 96 * ss)
     light_font = load_font(["Inter-Regular.otf", "Inter-Regular.ttf", "DejaVuSans.ttf"], 96 * ss)
     line_font = load_font(["Inter-Medium.otf", "Inter-Medium.ttf", "DejaVuSans.ttf"], 36 * ss)
+    small_line_font = load_font(["Inter-Regular.otf", "Inter-Regular.ttf", "DejaVuSans.ttf"], 30 * ss)
     small_font = load_font(["Inter-Medium.otf", "Inter-Medium.ttf", "DejaVuSans.ttf"], 24 * ss)
 
     word_y = h * 0.30
     draw.text((left, word_y), "calculix", font=word_font, fill=ON_NIGHT)
     calculix_width = draw.textlength("calculix", font=word_font)
     draw.text((left + calculix_width, word_y), "hub", font=light_font, fill=ON_NIGHT)
-    draw.text((left, h * 0.54), "Competition math, matched", font=line_font, fill=ON_NIGHT_MUTED)
-    draw.text((left, h * 0.54 + 50 * ss), "to your level.", font=line_font, fill=ON_NIGHT_MUTED)
+    draw.text((left, h * 0.54), "Stay with the question.", font=line_font, fill=ON_NIGHT)
+    draw.text((left, h * 0.54 + 52 * ss), "Contest math, matched to your level.", font=small_line_font, fill=ON_NIGHT_MUTED)
     draw.rounded_rectangle([left, h * 0.80, left + 74 * ss, h * 0.80 + 4 * ss], radius=2 * ss, fill="#f1c071")
     draw.text((left, h * 0.80 + 22 * ss), "AMC  \u00b7  AIME  \u00b7  USAMO  \u00b7  IMO", font=small_font, fill=ON_NIGHT_MUTED)
 

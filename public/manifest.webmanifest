@@ -1,7 +1,7 @@
 {
-  "name": "CalculixHub — Adaptive Math OS",
+  "name": "CalculixHub",
   "short_name": "CalculixHub",
-  "description": "Adaptive math training with AI personalization, ranked competition, and real-time analytics.",
+  "description": "Stay with the question. Contest math from AMC to IMO, with problems picked to fit your level and talked through one step at a time.",
   "lang": "en",
   "dir": "ltr",
   "start_url": ".",

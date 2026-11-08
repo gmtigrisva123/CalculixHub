@@ -50,4 +50,20 @@ describe('the CalculixHub logo', () => {
     expect(ico.readUInt16LE(2)).toBe(1);
     expect(ico.readUInt16LE(4)).toBe(3);
   });
+
+  it('says the same thing in the tab, the share card and the install prompt', () => {
+    const html = read('index.html');
+    const content = (selector: string) => html.match(new RegExp(`<meta ${selector} content="([^"]*)"`))?.[1];
+    const title = html.match(/<title>([^<]*)<\/title>/)?.[1];
+    const description = content('name="description"');
+    expect(title).toBeTruthy();
+    expect(description).toBeTruthy();
+    expect(content('property="og:title"')).toBe(title);
+    expect(content('name="twitter:title"')).toBe(title);
+    expect(content('property="og:description"')).toBe(description);
+    expect(content('name="twitter:description"')).toBe(description);
+    expect(JSON.parse(read('public/manifest.webmanifest')).description).toBe(description);
+    // A link preview truncates at about this length.
+    expect(description!.length).toBeLessThanOrEqual(160);
+  });
 });
