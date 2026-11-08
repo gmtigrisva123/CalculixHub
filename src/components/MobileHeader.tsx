@@ -10,6 +10,7 @@ import { screenTitle } from '../lib/navigation';
 import { duration, ease, spring } from '../lib/motion';
 import { AnimatedNumber } from './motion';
 import ThemeToggle from './ThemeToggle';
+import BrandLogo from './BrandLogo';
 
 interface MobileHeaderProps {
   activeTab: string;
@@ -50,12 +51,12 @@ export default function MobileHeader({
     >
       <div className="flex items-center gap-2.5">
         {/*
-          The mark is the one piece of real metal in the header: a azure tile
+          The mark is the one piece of real metal in the header: an azure tile
           with a light top edge and its own faint glow. It is the only element
           here that should catch the eye before the content does.
         */}
         <div className="w-8 h-8 rounded-[2px] cx-mark h-8 w-8 text-[15px]">
-          &#8721;
+          <BrandLogo className="cx-mark-glyph" />
         </div>
         <div className="flex flex-col gap-px">
           <span className="text-[12px] font-semibold tracking-[0.16em] uppercase text-content leading-none">

@@ -90,13 +90,13 @@ function notificationLink(siteUrl: string, payload: Record<string, unknown>): st
 
 /* One layout for every message: table-based and inline-styled, because that is
  * what Gmail, Outlook and Apple Mail all render the same way. */
-function layout({ preheader, eyebrow, headline, quote, cta, href, footnote }: { preheader: string; eyebrow: string; headline: string; quote?: string; cta: string; href: string; footnote: string }) {
+function layout({ preheader, eyebrow, headline, quote, cta, href, footnote, siteUrl }: { preheader: string; eyebrow: string; headline: string; quote?: string; cta: string; href: string; footnote: string; siteUrl: string }) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(headline)}</title></head>
 <body style="margin:0;padding:0;background:#f3f1ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17201f">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0">${escape(preheader)}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f1ec;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e4e0d6">
-<tr><td style="padding:22px 28px;border-bottom:1px solid #eeeae1"><span style="font:600 15px/1 Georgia,serif;color:#0f1d23">Calculix<span style="color:#b07d2a">Hub</span></span></td></tr>
+<tr><td style="padding:20px 28px;border-bottom:1px solid #eeeae1"><img src="${escape(siteUrl)}/icons/icon-192.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:middle;border:0;border-radius:7px;margin-right:10px"><span style="vertical-align:middle;font:600 15px/1 Georgia,serif;color:#0f1d23">Calculix<span style="color:#b07d2a">Hub</span></span></td></tr>
 <tr><td style="padding:28px 28px 8px"><p style="margin:0 0 10px;font:600 11px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8577">${escape(eyebrow)}</p>
 <h1 style="margin:0;font:400 24px/1.3 Georgia,serif;color:#0f1d23">${escape(headline)}</h1></td></tr>
 ${quote ? `<tr><td style="padding:14px 28px 0"><div style="border-left:3px solid #e6bd73;padding:10px 14px;background:#faf8f3;color:#3c4543;font-size:15px;line-height:1.55;white-space:pre-wrap">${escape(quote)}</div></td></tr>` : ''}
@@ -120,7 +120,7 @@ export function renderEmail(job: ClaimedEmail, siteUrl: string): RenderedEmail |
     return {
       to: job.recipient_email,
       subject: clip(headline, 120),
-      html: layout({ preheader: quote ?? headline, eyebrow: 'New notification', headline, quote, cta, href, footnote: `Hi ${name}, you are receiving this because it happened on your CalculixHub account.` }),
+      html: layout({ siteUrl, preheader: quote ?? headline, eyebrow: 'New notification', headline, quote, cta, href, footnote: `Hi ${name}, you are receiving this because it happened on your CalculixHub account.` }),
       text: `${headline}\n\n${quote ? `"${quote}"\n\n` : ''}${cta}: ${href}\n\nHi ${name}, you are receiving this because it happened on your CalculixHub account.`,
     };
   }
@@ -133,7 +133,7 @@ export function renderEmail(job: ClaimedEmail, siteUrl: string): RenderedEmail |
   return {
     to: job.recipient_email,
     subject: clip(body ? `${author}: ${body.split('\n')[0]}` : headline, 120),
-    html: layout({ preheader: body || headline, eyebrow: 'New post', headline, quote: body || undefined, cta: 'Read the post', href, footnote: `Hi ${name}, every new post on CalculixHub is sent to all members.` }),
+    html: layout({ siteUrl, preheader: body || headline, eyebrow: 'New post', headline, quote: body || undefined, cta: 'Read the post', href, footnote: `Hi ${name}, every new post on CalculixHub is sent to all members.` }),
     text: `${headline}\n\n${body ? `${body}\n\n` : ''}Read the post: ${href}\n\nHi ${name}, every new post on CalculixHub is sent to all members.`,
   };
 }
