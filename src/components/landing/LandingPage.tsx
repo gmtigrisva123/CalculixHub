@@ -11,6 +11,7 @@ import PlansSection from './PlansSection';
 import FaqSection from './FaqSection';
 import FinalStage from './FinalStage';
 import LandingFooter from './LandingFooter';
+import MarginRails from './MarginRails';
 import { scrollToTarget, useSmoothScroll } from './smoothScroll';
 import '../../styles/landing-experience.css';
 
@@ -46,6 +47,7 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
       <a className="lx-skip" href="#idea">Skip to the content</a>
       <LandingNav onSignIn={onSignIn} onRegister={onRegister} />
       <div className="lx-content" ref={contentRef}>
+        <MarginRails />
         <main className="lx-main">
           <Opening onRegister={onRegister} />
           <EngineStory onRegister={onRegister} />
