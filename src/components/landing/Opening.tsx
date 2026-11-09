@@ -17,7 +17,7 @@ import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type
 import { ARCHIVE_FIGURES } from './archiveFigures';
 import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SplitText } from './kit';
 import { jumpTo } from './LandingNav';
-import HeroCream from './HeroCream';
+import HeroGlow from './HeroGlow';
 
 const ParticleField = lazy(() => import('./ParticleField'));
 
@@ -116,7 +116,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
         </m.div>
         <m.div className="lx-hero-shade" style={{ opacity: shade }} aria-hidden="true" />
       </m.div>
-      <HeroCream cover={cover} />
+      <HeroGlow cover={cover} />
     </section>
   );
 }
