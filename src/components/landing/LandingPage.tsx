@@ -14,6 +14,7 @@ import LandingFooter from './LandingFooter';
 import MarginRails from './MarginRails';
 import { scrollToTarget, useSmoothScroll } from './smoothScroll';
 import '../../styles/landing-experience.css';
+import '../../styles/landing-frame.css';
 
 interface LandingPageProps {
   liveStats: { registeredUsers: number; testsCompleted: number; problemsSolved: number };
