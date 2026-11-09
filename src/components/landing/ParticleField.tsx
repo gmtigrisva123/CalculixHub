@@ -1,17 +1,15 @@
 /**
  * Mathematics as light: the landing hero's particle stage, drawn with WebGL.
  *
- * A person thinking, in profile, turned towards the page's words. The face is
- * drawn by a warm line of light, the head by a soft volume of particles that
- * glows brightest at its rim, and the hair by strands that light runs along.
- * Where the mind is, seeds grow by the golden angle, a pulse passing out through
- * them now and then, and a few drift up out of the head as thoughts do. On first
- * paint the particles assemble out of a wide shell, and as the hero is scrolled
- * away the figure loosens and drifts.
+ * Threads of light flow along the Lorenz attractor — the butterfly of chaos
+ * theory, one path looping round two wings for ever without crossing itself.
+ * Where the path runs fast, crossing from wing to wing, it burns warm; where it
+ * slows in the eye of a wing it cools. On first paint the particles assemble out
+ * of a wide shell, and as the hero is scrolled away the form loosens and drifts.
  *
- * Every particle's motion is computed in the vertex shader from a handful of
- * stored numbers, so the CPU does no per-particle work after setup and the GPU
- * uploads nothing per frame.
+ * The path is integrated once on the CPU and handed to the GPU as a texture;
+ * every particle then finds its own place along it in the vertex shader, so
+ * the CPU does no per-particle work after setup and nothing is uploaded per frame.
  *
  * On cost, the rules ArchiveGalaxy set: named three.js imports, the device
  * pixel ratio capped (lower on small or low-core devices, which also get fewer
@@ -30,10 +28,10 @@
 import { useEffect, useRef } from 'react';
 import type { MotionValue } from 'motion/react';
 import {
-  AdditiveBlending, BufferAttribute, BufferGeometry, Clock, Color, PerspectiveCamera, Points, Scene,
-  ShaderMaterial, Vector2, WebGLRenderer,
+  AdditiveBlending, BufferAttribute, BufferGeometry, Clock, Color, DataTexture, FloatType, NearestFilter, PerspectiveCamera,
+  Points, RGBAFormat, Scene, ShaderMaterial, Vector2, WebGLRenderer,
 } from 'three';
-import { figureLayout, KIND, MIND, mulberry32, risingPoint, seedPoint, type FigureCounts } from './particleShapes';
+import { flowLayout, lorenzPath, mulberry32, pathPoint } from './particleShapes';
 
 export interface ParticleFieldProps {
   /** 0 at rest, 1 once the hero has been scrolled away. */
@@ -47,8 +45,14 @@ export interface ParticleFieldProps {
 const FOV = 32;
 const TAU = Math.PI * 2;
 
+/** Samples along the path, and the width of the texture that holds them. */
+const PATH_LENGTH = 16384;
+const PATH_WIDTH = 1024;
+
 const VERTEX = /* glsl */ `
-attribute vec4 aMeta;
+attribute vec4 aParam;
+attribute vec3 aOffset;
+uniform sampler2D uPath;
 uniform float uTime;
 uniform float uIntro;
 uniform float uRelease;
@@ -64,92 +68,71 @@ varying vec3 vColor;
 varying float vAlpha;
 varying float vHalo;
 
-const float TAU = 6.2831853;
-const vec3 MIND = vec3(${MIND.x.toFixed(4)}, ${MIND.y.toFixed(4)}, ${MIND.z.toFixed(4)});
+const float LENGTH = ${PATH_LENGTH.toFixed(1)};
+const float WIDTH = ${PATH_WIDTH.toFixed(1)};
+const float ROWS = ${(PATH_LENGTH / PATH_WIDTH).toFixed(1)};
+
+vec4 pathAt(float i) {
+  return texture2D(uPath, vec2((mod(i, WIDTH) + 0.5) / WIDTH, (floor(i / WIDTH) + 0.5) / ROWS));
+}
+
+// The path at a fractional sample index, between its two neighbours.
+vec4 along(float at) {
+  float i = floor(at);
+  return mix(pathAt(i), pathAt(min(i + 1.0, LENGTH - 1.0)), at - i);
+}
 
 float hash(float n) { return fract(sin(n) * 43758.5453123); }
 
 void main() {
-  float seed = aMeta.x;
-  float path = aMeta.y;
-  float light = aMeta.z;
-  int kind = int(aMeta.w + 0.5);
-  vec3 target = position;
+  float seed = abs(aParam.w);
+  bool dust = aParam.w < 0.0;
+  vec3 target;
   vec3 colour;
   float alpha;
-  float size = 1.0;
-  float glow = 0.0;
-  float flare = 0.0;
-
-  if (kind == ${KIND.outline}) {
-    // The profile: warm, and a slow bead of light travelling down the face and back up.
-    flare = 0.55 * pow(0.5 + 0.5 * cos((path - uTime * 0.035) * TAU), 60.0);
-    colour = uEdge;
-    alpha = 0.62 * light;
-    size = 1.25;
-    glow = 0.22;
-  } else if (kind == ${KIND.surface}) {
-    // Skin: barely breathing. Lit from the side the words are on, brightest at the rim.
-    target += 0.006 * vec3(sin(uTime * 0.8 + seed * 40.0), cos(uTime * 0.7 + seed * 23.0), 0.0);
-    float lamp = smoothstep(1.1, -1.2, target.x) * 0.7 + 0.3 * smoothstep(-1.4, 1.4, target.y);
-    colour = mix(uCool, mix(uWarm, uEdge, 0.25), lamp * 0.55);
-    alpha = 0.15 + 0.4 * light;
-    size = 0.9 + 0.3 * light;
-  } else if (kind == ${KIND.hair}) {
-    // Hair: strands that sway a hair's breadth, with light running along them from brow to nape.
-    target.x += 0.012 * sin(uTime * 0.6 + path * 7.0 + position.z * 4.0);
-    target.y += 0.008 * cos(uTime * 0.5 + path * 5.0);
-    flare = 0.6 * pow(0.5 + 0.5 * cos((path * 1.6 - uTime * 0.11 + position.z * 1.7) * TAU), 18.0);
-    colour = mix(uWarm, uCool, 0.35 * (1.0 - light));
-    alpha = 0.1 + 0.2 * light;
-    size = 0.9;
-    glow = 0.05;
-  } else if (kind == ${KIND.feature}) {
-    colour = uEdge;
-    alpha = 0.5;
-    size = 1.05;
-    glow = 0.12;
-  } else if (kind == ${KIND.seed}) {
-    // Seed n at angle n·φ, radius ∝ √n; the flower turns slowly, and a pulse spreads out through it.
-    float a = position.y + uTime * 0.05;
-    float r = position.x;
-    float v = r * sin(a);
-    target = vec3(MIND.x + r * cos(a), MIND.y + v * 0.9, MIND.z + v * 0.42);
-    flare = pow(0.5 + 0.5 * cos((path - uTime * 0.09) * TAU), 14.0);
-    colour = mix(mix(uEdge, vec3(1.0, 0.96, 0.86), 0.5), uEdge, path);
-    alpha = 0.6 - 0.22 * path;
-    size = 1.05 - 0.3 * path;
-    glow = 0.1;
-    // The pulse brightens the seeds it passes rather than swelling them, so the spiral stays legible.
-    flare *= 0.55;
-  } else if (kind == ${KIND.rising}) {
-    // Thoughts drift up out of the crown, each on its own loop, appearing and fading.
-    float cycle = fract(uTime * 0.035 * position.z + path);
-    target = vec3(
-      MIND.x + position.x * (0.4 + cycle) + 0.12 * sin(position.y + cycle * 5.0),
-      MIND.y + 0.45 + cycle * 1.5,
-      MIND.z + 0.1 * cos(position.y + cycle * 4.0));
-    colour = mix(uEdge, vec3(1.0), 0.35);
-    alpha = 0.6 * sin(cycle * 3.14159);
-    size = 1.1;
-    glow = 0.3;
+  float size;
+  float fast = 0.0;
+  float crest = 0.0;
+  float ends = 1.0;
+  if (!dust) {
+    seed = aParam.z;
+    // Each thread slides along the path at its own pace; the whole path takes a few minutes to travel.
+    float u = fract(aParam.x + uTime * 0.0075 * aParam.y);
+    vec4 here = along(u * (LENGTH - 1.0));
+    fast = here.w;
+    // The path's two ends are far apart, so a thread fades out at one and in at the other.
+    ends = smoothstep(0.0, 0.01, u) * smoothstep(1.0, 0.99, u);
+    // Fibres stray from the centre line, and stray a little further where the path slows and spreads.
+    float stray = aParam.w * (1.2 - 0.5 * fast) * (1.0 + 0.25 * sin(uTime * 0.6 + seed * 50.0));
+    target = here.xyz + aOffset * stray;
+    // The two wings take different light: one cool, one pale; the crossing between them burns warm.
+    float wing = smoothstep(-0.9, 0.9, here.x);
+    colour = mix(uCool, uWarm, wing * 0.7);
+    colour = mix(colour, uEdge, smoothstep(0.55, 0.95, fast) * 0.85);
+    // A slow crest of light travels the path ahead of the flow.
+    crest = pow(0.5 + 0.5 * cos((u * 9.0 - uTime * 0.05) * 6.2831853), 30.0);
+    alpha = 0.3 + 0.16 * fast;
+    size = 0.7 + 0.4 * smoothstep(0.6, 1.0, fast);
   } else {
-    float theta = position.x + uTime * 0.018;
-    float phi = position.y;
-    float r = position.z;
-    target = vec3(r * sin(phi) * cos(theta), r * cos(phi) * 0.55, r * sin(phi) * sin(theta));
+    float theta = aParam.x + uTime * 0.018;
+    float phi = aParam.y;
+    float r = aParam.z;
+    target = vec3(r * sin(phi) * cos(theta), r * cos(phi) * 0.6, r * sin(phi) * sin(theta));
     colour = mix(uCool, uWarm, hash(seed * 91.7));
     alpha = 0.26;
     size = 0.55 + seed * 0.75;
   }
 
+  // The whole form breathes, very slightly, as something alive would.
+  target *= 1.0 + 0.01 * sin(uTime * 0.55);
+
   // Assembly out of a wide shell, each particle on its own delay.
-  vec3 scatter = normalize(vec3(hash(seed * 13.13 + path) - 0.5, hash(seed * 7.71 + light) - 0.5, hash(seed * 3.37) - 0.5) + 1e-4);
+  vec3 scatter = normalize(vec3(hash(seed * 13.13) - 0.5, hash(seed * 7.71) - 0.5, hash(seed * 3.37) - 0.5) + 1e-4);
   float t = clamp(uIntro * 1.5 - seed * 0.5, 0.0, 1.0);
   t = 1.0 - pow(1.0 - t, 3.0);
   vec3 p = mix(scatter * (5.5 + seed * 5.0), target, t);
 
-  // Released as the hero scrolls away: the figure loosens outwards and lifts.
+  // Released as the hero scrolls away: the form loosens outwards and lifts.
   p += scatter * uRelease * (0.4 + seed * 2.2);
   p.y += uRelease * (seed - 0.35) * 0.9;
 
@@ -164,23 +147,23 @@ void main() {
   clip.xy += normalize(d + 1e-5) * near * 0.05 * clip.w;
   gl_Position = clip;
 
-  // Depth: the near side is crisp and bright, the far side falls back into the dark.
+  // Depth: the near side of the form is crisp and bright, the far side falls back into the dark.
   float near01 = clamp(0.5 + (uDist + mv.z) / 4.0, 0.0, 1.0);
-  float depthFade = mix(0.7, 1.1, near01);
-  // Now and then a particle catches the light, like a spark off a pencil's graphite.
-  float spark = kind == ${KIND.dust} ? 0.0 : step(0.988, seed) * (0.5 + 0.5 * sin(uTime * (0.5 + seed * 1.3) + seed * 90.0));
+  float depthFade = mix(0.6, 1.12, near01);
+  // Now and then a particle catches the light and flares, like a spark off a pencil's graphite.
+  float spark = dust ? 0.0 : step(0.988, seed) * (0.5 + 0.5 * sin(uTime * (0.5 + seed * 1.3) + seed * 90.0));
   float twinkle = 0.76 + 0.24 * sin(uTime * (0.7 + seed * 2.1) + seed * 61.0);
-  gl_PointSize = 1.9 * size * (mix(0.88, 1.08, near01) + near * 1.2 + flare * 0.9 + spark * 1.3) * uScale / -mv.z;
+  gl_PointSize = 1.9 * size * (mix(0.86, 1.1, near01) + near * 1.2 + crest * 0.8 + spark * 1.3) * uScale / -mv.z;
 
-  vColor = colour * (0.85 + 0.3 * twinkle) + flare * 0.3 + spark * 0.4;
-  vHalo = glow + flare * 0.25 + spark * 0.5;
-  vAlpha = ((alpha + flare * 0.35) * depthFade * twinkle * t + near * 0.2) * (1.0 - uRelease * 0.7);
+  vColor = colour * (0.85 + 0.3 * twinkle) + crest * 0.3 + spark * 0.4;
+  vHalo = dust ? 0.0 : 0.08 + 0.14 * fast + crest * 0.25 + spark * 0.5;
+  vAlpha = ((alpha + crest * 0.3) * ends * depthFade * twinkle * t + near * 0.2) * (1.0 - uRelease * 0.7);
 }`;
 
 /*
  * A point is drawn at 1.9x its core size so there is room for a halo: a tight
  * bright core, and a wide faint bloom that — added up over the thousands of
- * points that overlap — makes the figure glow like light through paper.
+ * points that overlap — makes the form glow like light through paper.
  */
 const WORLDS_FRAGMENT = /* glsl */ `
 varying vec3 vColor;
@@ -242,15 +225,12 @@ function shuffleRecords(count: number, rng: () => number, arrays: { data: Float3
   }
 }
 
-/** How many particles each part of the figure gets, on a capable device and a modest one. */
-const COUNTS: Record<'high' | 'low', FigureCounts> = {
-  high: { outline: 2600, surface: 15000, hair: 12000, features: 760, seeds: 1400, rising: 220, dust: 1800 },
-  low: { outline: 1500, surface: 7000, hair: 6000, features: 480, seeds: 900, rising: 120, dust: 700 },
-};
+/** Threads along the path and loose dust, on a capable device and a modest one. */
+const COUNTS = { high: { threads: 46000, dust: 1800 }, low: { threads: 20000, dust: 700 } } as const;
 
-/** The figure's resting turn towards the viewer, in radians, and how far it is lowered to sit centred. */
-const TURN = 0.16;
-const LIFT = -0.32;
+/** The form's resting tilt towards the viewer and turn about its height, in radians: the wings open, never edge-on. */
+const TILT = 0.22;
+const TURN = 0.36;
 
 /** Quality steps the loop can fall back through: share of particles drawn, pixel-ratio ceiling, point size. */
 const QUALITY = [
@@ -305,14 +285,21 @@ export default function ParticleField({ release, still, className, onReady }: Pa
     let count = 0;
     const pointer = new Vector2(10, 10);
 
-    const layout = figureLayout(tier === 'low' ? COUNTS.low : COUNTS.high, rng);
-    shuffleRecords(layout.count, rng, [{ data: layout.position, size: 3 }, { data: layout.meta, size: 4 }]);
+    const counts = tier === 'low' ? COUNTS.low : COUNTS.high;
+    const layout = flowLayout(counts.threads, counts.dust, rng);
+    shuffleRecords(layout.count, rng, [{ data: layout.params, size: 4 }, { data: layout.offsets, size: 3 }]);
     count = layout.count;
-    geometry.setAttribute('position', new BufferAttribute(layout.position, 3));
-    geometry.setAttribute('aMeta', new BufferAttribute(layout.meta, 4));
+    geometry.setAttribute('aParam', new BufferAttribute(layout.params, 4));
+    geometry.setAttribute('aOffset', new BufferAttribute(layout.offsets, 3));
+    // three needs a position attribute to know how many vertices to draw.
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(layout.count * 3), 3));
+    const path = new DataTexture(lorenzPath(PATH_LENGTH).samples, PATH_WIDTH, PATH_LENGTH / PATH_WIDTH, RGBAFormat, FloatType);
+    path.minFilter = NearestFilter;
+    path.magFilter = NearestFilter;
+    path.needsUpdate = true;
     material = new ShaderMaterial({
       uniforms: {
-        uTime: { value: 0 }, uIntro: { value: still ? 1 : 0 }, uRelease: { value: 0 }, uScale: { value: 1 }, uDist: { value: 10 },
+        uPath: { value: path }, uTime: { value: 0 }, uIntro: { value: still ? 1 : 0 }, uRelease: { value: 0 }, uScale: { value: 1 }, uDist: { value: 10 },
         uPointer: { value: pointer }, uPointerPower: { value: 0 }, uAspect: { value: 1 },
         uCool: { value: readColor(style, '--lx-pf-cool', '#7fd3e6') },
         uWarm: { value: readColor(style, '--lx-pf-warm', '#b9a6ff') },
@@ -327,7 +314,6 @@ export default function ParticleField({ release, still, className, onReady }: Pa
 
     const points = new Points(geometry, material);
     points.frustumCulled = false;
-    points.position.y = LIFT;
     scene.add(points);
 
     // --- Sizing -----------------------------------------------------------
@@ -341,15 +327,15 @@ export default function ParticleField({ release, still, className, onReady }: Pa
       camera.aspect = width / height;
       const tanHalf = Math.tan((FOV * Math.PI) / 360);
       const wide = width >= 960;
-      // Fit the figure's half-height across the narrower dimension, with a margin.
-      const extent = 2.45;
+      // Fit the form's half-height across the narrower dimension, with a margin.
+      const extent = 2.75;
       const share = wide ? 0.77 : 0.78;
       const fitHeight = extent / (tanHalf * share);
       const fitWidth = extent / (tanHalf * camera.aspect * share);
       camera.position.set(0, 0, Math.max(fitHeight, fitWidth) * (wide ? 1 : 1.04));
       camera.lookAt(0, 0, 0);
       uniforms.uDist.value = camera.position.z;
-      // Wide: the figure sits right of the words, facing them; narrow: above them.
+      // Wide: the form sits right of the words; narrow: above them.
       if (wide) camera.setViewOffset(width, height, -width * 0.25, height * 0.02, width, height);
       else camera.setViewOffset(width, height, 0, height * (camera.aspect < 0.8 ? 0.27 : 0.2), width, height);
       camera.updateProjectionMatrix();
@@ -446,8 +432,8 @@ export default function ParticleField({ release, still, className, onReady }: Pa
 
       uniforms.uIntro.value = intro;
       uniforms.uRelease.value = live.current.release?.get() ?? 0;
-      // Turned a little towards the viewer, and turning a little more and back, slowly, as someone lost in thought.
-      points.rotation.set(pitch, TURN + 0.07 * Math.sin(time * 0.21) + yaw, 0.03 * Math.sin(time * 0.13));
+      // The butterfly sways slowly about its height, so its two wings show their depth without ever turning edge-on.
+      points.rotation.set(TILT + pitch, TURN + 0.28 * Math.sin(time * 0.09) + yaw, 0.04);
       uniforms.uTime.value = time;
       uniforms.uPointerPower.value = pointerPower;
       activeRenderer.render(scene, camera);
@@ -511,6 +497,7 @@ export default function ParticleField({ release, still, className, onReady }: Pa
       canvas.removeEventListener('webglcontextlost', onLost);
       geometry.dispose();
       material.dispose();
+      path.dispose();
       activeRenderer.dispose();
       activeRenderer.forceContextLoss();
       canvas.remove();
@@ -539,7 +526,7 @@ function runFallback(host: HTMLElement, style: CSSStyleDeclaration) {
   };
 }
 
-/** The same figure, drawn in 2D from the same angle. */
+/** The same form, drawn in 2D from the same angle. */
 function drawFallback(canvas: HTMLCanvasElement, host: HTMLElement, style: CSSStyleDeclaration) {
   const context = canvas.getContext('2d');
   if (!context) return;
@@ -551,43 +538,28 @@ function drawFallback(canvas: HTMLCanvasElement, host: HTMLElement, style: CSSSt
   // The same framing as the live stage: right of the words when wide, above them when narrow.
   const cx = canvas.width * (wide ? 0.75 : 0.5);
   const cy = canvas.height * (wide ? 0.5 : 0.3);
-  const scale = Math.min(canvas.width, canvas.height) / (wide ? 5.6 : 6.6);
-  const cos = Math.cos(TURN);
-  const sin = Math.sin(TURN);
+  const scale = Math.min(canvas.width, canvas.height) / (wide ? 6.4 : 7.4);
+  const [cosY, sinY] = [Math.cos(TURN), Math.sin(TURN)];
+  const [cosX, sinX] = [Math.cos(TILT), Math.sin(TILT)];
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.globalCompositeOperation = 'lighter';
   const cool = style.getPropertyValue('--lx-pf-cool').trim() || '#6fcde4';
   const warm = style.getPropertyValue('--lx-pf-warm').trim() || '#dcefe9';
   const edge = style.getPropertyValue('--lx-pf-edge').trim() || '#ffc56e';
-  // A modest sample is enough for a still picture, and keeps the paint quick on the slow machines that get it.
-  const layout = figureLayout(COUNTS.low, mulberry32(5));
-  for (let i = 0; i < layout.count; i += 1) {
-    let x = layout.position[i * 3];
-    let y = layout.position[i * 3 + 1];
-    let z = layout.position[i * 3 + 2];
-    const path = layout.meta[i * 4 + 1];
-    const light = layout.meta[i * 4 + 2];
-    const kind = layout.meta[i * 4 + 3];
-    let color = cool;
-    let alpha = 0.15 + 0.4 * light;
-    if (kind === KIND.outline || kind === KIND.feature) { color = edge; alpha = 0.6 * light; }
-    else if (kind === KIND.hair) { color = warm; alpha = 0.1 + 0.2 * light; }
-    else if (kind === KIND.seed) { [x, y, z] = seedPoint(x, y); color = edge; alpha = 0.55 - 0.2 * path; }
-    else if (kind === KIND.rising) { [x, y, z] = risingPoint(x, y, path); color = edge; alpha = 0.6 * Math.sin(path * Math.PI); }
-    else if (kind === KIND.dust) {
-      const [theta, phi, r] = [x, y, z];
-      [x, y, z] = [r * Math.sin(phi) * Math.cos(theta), r * Math.cos(phi) * 0.55, r * Math.sin(phi) * Math.sin(theta)];
-      color = warm;
-      alpha = 0.2;
-    }
-    // Turn about the vertical, as the live stage does, then project.
-    const rx = x * cos + z * sin;
-    const rz = -x * sin + z * cos;
-    const depth = 7 / (7 - rz);
-    context.globalAlpha = Math.max(0, Math.min(1, alpha));
-    context.fillStyle = color;
+  const path = lorenzPath(PATH_LENGTH);
+  const rng = mulberry32(5);
+  for (let k = 0; k < 9000; k += 1) {
+    const [x0, y0, z0, fast] = pathPoint(path, rng() * (path.length - 1));
+    // Turn about the vertical, then tip towards the viewer, as the live stage does.
+    const x = x0 * cosY + z0 * sinY;
+    const z1 = -x0 * sinY + z0 * cosY;
+    const y = y0 * cosX - z1 * sinX;
+    const z = y0 * sinX + z1 * cosX;
+    const depth = 7 / (7 - z);
+    context.globalAlpha = 0.3 + 0.3 * fast;
+    context.fillStyle = fast > 0.7 ? edge : x0 > 0 ? warm : cool;
     context.beginPath();
-    context.arc(cx + rx * scale * depth, cy - (y + LIFT) * scale * depth, ratio * 0.9, 0, TAU);
+    context.arc(cx + x * scale * depth, cy - y * scale * depth, ratio * 0.8, 0, TAU);
     context.fill();
   }
 }

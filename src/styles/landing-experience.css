@@ -4,7 +4,7 @@
  * One ground and one kind of exception. The page is warm paper with blue-ink
  * type, the same paper the sign-in and placement screens stand on, so leaving
  * the landing never feels like changing sites. Where the page *shows* the
- * product — the thinking-figure hero, the engine replay, the topics board, the closing
+ * product — the Lorenz hero, the engine replay, the topics board, the closing
  * invitation — it sets an ink stage on the paper: a rounded, inset panel of
  * night-blue, lit from within by the mathematics on it. They are the same
  * stages the dashboard, arena and exam archive open with.
@@ -639,7 +639,7 @@
   inset: 0;
   z-index: -2;
   background:
-    /* a pool of warm lamplight low under the figure, so the dark has a source */
+    /* a pool of warm lamplight low under the butterfly, so the dark has a source */
     radial-gradient(34% 30% at 74% 92%, oklch(52% 0.09 70 / 0.22), transparent 72%),
     radial-gradient(26% 34% at 72% 46%, oklch(42% 0.07 200 / 0.55), transparent 70%),
     radial-gradient(52% 62% at 70% 44%, oklch(34% 0.065 210 / 0.85), transparent 72%),
@@ -779,7 +779,7 @@
   text-wrap: balance;
 }
 .lx-hero-caption em { font-style: normal; color: var(--lx-on-night); }
-/* The arrow is drawn by hand, curling up from the note to the figure it talks about. */
+/* The arrow is drawn by hand, curling up from the note to the form it talks about. */
 .lx-hero-scribble {
   position: absolute;
   right: 52px;

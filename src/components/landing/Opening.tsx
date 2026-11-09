@@ -1,10 +1,10 @@
 /**
  * The first two screens: the hero, and the sheet of paper that slides over it.
  *
- * The hero is an ink stage holding a person thinking. It is sticky inside this
+ * The hero is an ink stage holding the Lorenz attractor. It is sticky inside this
  * wrapper, so as the reader scrolls the manifesto rises over it like a sheet
  * drawn across a lit table: the stage recedes, its words lift away, and the
- * figure loosens into the dark. Once the sheet has covered it, the wrapper ends
+ * butterfly loosens into the dark. Once the sheet has covered it, the wrapper ends
  * and the hero leaves with it — it is never uncovered again, which is what lets
  * its render loop stop (the IntersectionObserver sees it go).
  *
@@ -106,7 +106,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
                 initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.4, ease: GLIDE, delay: 3 }}
               />
             </svg>
-            <span>Every seed in that head sits 137.5° from the last. <em>That&rsquo;s how a thought grows</em> — one small turn at a time.</span>
+            <span>Three short equations draw this one path. It never repeats, never crosses itself — <em>chaos, but it never gets lost.</em></span>
           </m.p>
           <a className="lx-scroll-cue" href="#idea" onClick={event => jumpTo(event, 'idea')}>
             <span>Scroll</span>
