@@ -25,7 +25,7 @@ interface LandingPageProps {
  * product's own mathematics.
  *
  * Paper is the ground; ink stages hold the parts that move — the hero's
- * Möbius strip, the engine replaying a real placement, the topics board, and
+ * thinking figure, the engine replaying a real placement, the topics board, and
  * the closing note. Everything sits on one raised sheet that lifts at the end
  * to uncover the footer.
  */
