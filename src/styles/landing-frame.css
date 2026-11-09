@@ -1,112 +1,29 @@
 /*
- * The hero's frame: the strip of paper between the ink stage and the edge of
- * the screen.
+ * The hero's frame, melting: see HeroCream.tsx.
  *
- * Left bare it read as a gap. It is drawn now like the border of a drafting
- * sheet: a fine ruler ticked along all four edges, a brass registration mark
- * in each corner, and one slow glint of light that travels round the frame.
- * Both layers sit behind the stage (z-index -1 inside the hero's own stacking
- * context), so they can only ever show in the frame itself.
+ * Two tall SVGs, one down each edge of the screen, laid over the hero stage's
+ * left and right borders. The right one is the left one mirrored. A soft
+ * shadow under the cream is what lifts it off the dark stage.
  */
 
-@property --lxf-turn {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-.lx-hero {
-  --lxf-tick: oklch(38% 0.05 222 / 0.22);
-  --lxf-tick-strong: oklch(38% 0.05 222 / 0.42);
-  --lxf-brass: oklch(66% 0.13 70 / 0.9);
-  --lxf-arm: clamp(8px, 0.9vw, 14px);
-}
-
-/* The glint: a short comet of brass and teal, running round the frame and nowhere else. */
-.lx-hero::before {
-  content: '';
+.lxc {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
-  padding: var(--lx-frame);
-  background: conic-gradient(
-    from var(--lxf-turn) at 50% 50%,
-    transparent 0deg,
-    transparent 292deg,
-    oklch(70% 0.09 208 / 0.18) 322deg,
-    oklch(74% 0.13 72 / 0.6) 350deg,
-    oklch(86% 0.1 80 / 0.9) 357deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  animation: lxf-orbit 16s linear infinite;
-}
-@keyframes lxf-orbit {
-  to { --lxf-turn: 360deg; }
+  --lxc-frame: var(--lx-frame);
 }
 
-/*
- * The ruler and the corner marks. Minor ticks every 8px, a longer one every
- * 40px, all hanging from the very edge of the screen; the corner marks are two
- * hairline arms each, set just inside the corner.
- */
-.lx-hero::after {
-  content: '';
+.lxc-side {
+  --lxc-frame: var(--lx-frame);
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    /* corners: top-left */
-    linear-gradient(var(--lxf-brass) 0 0) left 4px top 4px / var(--lxf-arm) 1px,
-    linear-gradient(var(--lxf-brass) 0 0) left 4px top 4px / 1px var(--lxf-arm),
-    /* top-right */
-    linear-gradient(var(--lxf-brass) 0 0) right 4px top 4px / var(--lxf-arm) 1px,
-    linear-gradient(var(--lxf-brass) 0 0) right 4px top 4px / 1px var(--lxf-arm),
-    /* bottom-left */
-    linear-gradient(var(--lxf-brass) 0 0) left 4px bottom 4px / var(--lxf-arm) 1px,
-    linear-gradient(var(--lxf-brass) 0 0) left 4px bottom 4px / 1px var(--lxf-arm),
-    /* bottom-right */
-    linear-gradient(var(--lxf-brass) 0 0) right 4px bottom 4px / var(--lxf-arm) 1px,
-    linear-gradient(var(--lxf-brass) 0 0) right 4px bottom 4px / 1px var(--lxf-arm),
-    /* top and bottom rulers */
-    repeating-linear-gradient(90deg, var(--lxf-tick-strong) 0 1px, transparent 1px 40px) left 0 top 0 / 100% 6px no-repeat,
-    repeating-linear-gradient(90deg, var(--lxf-tick) 0 1px, transparent 1px 8px) left 0 top 0 / 100% 3px no-repeat,
-    repeating-linear-gradient(90deg, var(--lxf-tick-strong) 0 1px, transparent 1px 40px) left 0 bottom 0 / 100% 6px no-repeat,
-    repeating-linear-gradient(90deg, var(--lxf-tick) 0 1px, transparent 1px 8px) left 0 bottom 0 / 100% 3px no-repeat,
-    /* left and right rulers */
-    repeating-linear-gradient(180deg, var(--lxf-tick-strong) 0 1px, transparent 1px 40px) left 0 top 0 / 6px 100% no-repeat,
-    repeating-linear-gradient(180deg, var(--lxf-tick) 0 1px, transparent 1px 8px) left 0 top 0 / 3px 100% no-repeat,
-    repeating-linear-gradient(180deg, var(--lxf-tick-strong) 0 1px, transparent 1px 40px) right 0 top 0 / 6px 100% no-repeat,
-    repeating-linear-gradient(180deg, var(--lxf-tick) 0 1px, transparent 1px 8px) right 0 top 0 / 3px 100% no-repeat;
-  background-repeat: no-repeat;
-  /* the ruler fades out toward the corners, leaving them to the brass marks */
-  -webkit-mask:
-    linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%),
-    linear-gradient(180deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%),
-    linear-gradient(#000 0 0) left 0 top 0 / 30px 30px no-repeat,
-    linear-gradient(#000 0 0) right 0 top 0 / 30px 30px no-repeat,
-    linear-gradient(#000 0 0) left 0 bottom 0 / 30px 30px no-repeat,
-    linear-gradient(#000 0 0) right 0 bottom 0 / 30px 30px no-repeat;
-  mask:
-    linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%),
-    linear-gradient(180deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%),
-    linear-gradient(#000 0 0) left 0 top 0 / 30px 30px no-repeat,
-    linear-gradient(#000 0 0) right 0 top 0 / 30px 30px no-repeat,
-    linear-gradient(#000 0 0) left 0 bottom 0 / 30px 30px no-repeat,
-    linear-gradient(#000 0 0) right 0 bottom 0 / 30px 30px no-repeat;
-  animation: lxf-draw 1.6s var(--lx-glide) 0.3s both;
+  top: 0;
+  height: 100%;
+  width: calc(var(--lx-frame) + 56px);
+  overflow: visible;
+  filter: drop-shadow(2px 6px 6px oklch(6% 0.03 232 / 0.55));
 }
-/* On arrival the frame draws itself in, a beat after the stage. */
-@keyframes lxf-draw {
-  from { opacity: 0; transform: scale(1.012); }
-  to { opacity: 1; transform: none; }
-}
+.lxc-left { left: 0; }
+.lxc-right { right: 0; transform: scaleX(-1); }
 
-@media (prefers-reduced-motion: reduce) {
-  .lx-hero::before { animation: none; opacity: 0.6; }
-  .lx-hero::after { animation: none; }
-}
+.lxc-side :is(.lxc-strip, .lxc-swell, .lxc-trail, .lxc-head) { fill: var(--lx-paper); }
