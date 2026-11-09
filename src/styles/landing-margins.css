@@ -224,7 +224,7 @@
   transform: translateY(-50%);
 }
 .mr-node button {
-  pointer-events: auto;
+  pointer-events: none;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -293,6 +293,7 @@
   transform: translateX(2px);
   letter-spacing: 0.2em;
 }
+.mr[data-live='1'] .mr-node button { pointer-events: auto; }
 .mr-node button:hover .mr-dot { transform: scale(1.5); border-color: var(--mr-ink); }
 .mr-node button:hover .mr-node-label { opacity: 1; color: var(--mr-ink); transform: translateX(4px); }
 

@@ -433,6 +433,9 @@ function Rails() {
       });
       maskRail(left, 0, size.lLeft, size.lLeft + size.lw, rects, vh);
       maskRail(right, 1, size.rLeft, size.rLeft + size.rw, rects, vh);
+      // The spine only takes clicks while it can be seen, and while nothing has masked it away.
+      const live = arrive > 0.9 && masks[0] === 'none';
+      if ((root.dataset.live === '1') !== live) root.dataset.live = live ? '1' : '';
 
       if (arrive <= 0.001) return; // nothing to see yet: keep the canvases idle
 

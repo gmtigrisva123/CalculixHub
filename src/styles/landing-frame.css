@@ -1,79 +1,177 @@
 /*
- * The hero's frame, lit: see HeroGlow.tsx.
+ * The hero's frame: a pearl mount with a neon edge. See HeroGlow.tsx.
  *
- * Three layers behind the stage, each a conic gradient turning slowly round
- * its centre: two blurred blooms that spill a little way onto the paper, and
- * an unblurred rim one pixel larger than the stage, so its edge reads as lit.
- * The turning angle is a registered custom property, so the gradient itself
- * rotates while the boxes stay exactly where the stage is.
+ * Behind the stage (.lxg-back), only the frame strip shows:
+ *   pearl   mother-of-pearl colours drifting across the strip
+ *   satin   a white sheen that sweeps across it every few seconds
+ *   bloom   the neon's light falling on the pearl
+ *   rim     the neon tube itself, just proud of the stage edge
+ *   stars   small four-point stars twinkling along the frame
+ *
+ * In front of the stage (.lxg-front), only the stage edge is touched:
+ *   haze    the tube's glow, blurred, spilling a few pixels onto the dark
+ *   core    the bright line of the tube
+ *   spark   two white-hot sparks chasing round, with their own glow
+ *
+ * Every ring is a still, rounded clip (.lxg-clip) holding a rotating square of
+ * conic gradient (.lxg-spin). Only the square's transform animates.
  */
 
-@property --lxg-turn {
-  syntax: '<angle>';
-  inherits: true;
-  initial-value: 0deg;
-}
-
 .lxg {
-  --lxg-teal: oklch(74% 0.12 205);
-  --lxg-cyan: oklch(82% 0.1 200);
-  --lxg-brass: oklch(80% 0.13 75);
-  --lxg-rose: oklch(78% 0.08 30);
+  --lxg-cyan: oklch(84% 0.14 205);
+  --lxg-teal: oklch(72% 0.14 190);
+  --lxg-gold: oklch(84% 0.15 82);
+  --lxg-coral: oklch(74% 0.16 35);
+  --lxg-violet: oklch(72% 0.13 295);
   position: absolute;
   inset: 0;
-  z-index: -1;
   pointer-events: none;
-  animation: lxg-turn 24s linear infinite;
 }
-@keyframes lxg-turn {
-  to { --lxg-turn: 360deg; }
-}
+.lxg-back { z-index: -1; }
+.lxg-front { z-index: 1; }
 
-.lxg-bloom,
-.lxg-rim {
+/* ------------------------------------------------------------ the turning */
+
+.lxg-clip {
   position: absolute;
   inset: var(--lx-frame);
+  overflow: hidden;
   border-radius: var(--lx-stage-r);
+}
+.lxg-spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 160vmax;
+  height: 160vmax;
+  margin: -80vmax 0 0 -80vmax;
   background: conic-gradient(
-    from var(--lxg-turn),
-    var(--lxg-teal) 0deg,
-    transparent 55deg,
-    var(--lxg-brass) 110deg,
-    var(--lxg-rose) 140deg,
-    transparent 190deg,
-    var(--lxg-cyan) 240deg,
-    transparent 300deg,
-    var(--lxg-teal) 360deg
+    var(--lxg-cyan) 0deg,
+    var(--lxg-teal) 50deg,
+    oklch(72% 0.14 190 / 0.35) 85deg,
+    var(--lxg-gold) 130deg,
+    var(--lxg-coral) 165deg,
+    oklch(74% 0.16 35 / 0.35) 205deg,
+    var(--lxg-violet) 250deg,
+    oklch(72% 0.13 295 / 0.4) 285deg,
+    var(--lxg-cyan) 360deg
   );
+  will-change: transform;
+  animation: lxg-spin 20s linear infinite;
+}
+/* Two sparks, half a turn apart, running the other way and faster. */
+.lxg-spin-sparks {
+  background: conic-gradient(
+    transparent 0deg 150deg,
+    oklch(100% 0 0 / 0.12) 162deg,
+    oklch(98% 0.03 90) 178deg,
+    transparent 180deg 330deg,
+    oklch(100% 0 0 / 0.12) 342deg,
+    oklch(97% 0.04 205) 358deg,
+    transparent 360deg
+  );
+  animation: lxg-spin 7s linear infinite reverse;
+}
+@keyframes lxg-spin { to { transform: rotate(360deg); } }
+
+/* A ring: the clip's own padding is all that the mask lets through. */
+.lxg-ring {
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
 
-/* A close, brighter bloom hugging the stage... */
-.lxg-bloom {
-  filter: blur(10px);
-  opacity: 0.85;
-  animation: lxg-breathe 6s ease-in-out infinite;
+/* ---------------------------------------------------------------- behind */
+
+/* The pearl needs no mask: the stage covers its middle, and filling behind
+   the stage's rounded corners keeps those corners pearl too. */
+.lxg-pearl,
+.lxg-satin {
+  position: absolute;
+  inset: 0;
 }
-/* ...and a wide, faint one, half a turn out of step, so the light pools rather than orbits. */
-.lxg-bloom-wide {
-  filter: blur(26px);
-  opacity: 0.55;
-  transform: rotate(180deg);
-  animation-duration: 9s;
-  animation-delay: -3s;
+.lxg-pearl {
+  background:
+    linear-gradient(115deg,
+      oklch(93% 0.055 20),
+      oklch(95% 0.06 85),
+      oklch(92% 0.06 165),
+      oklch(91% 0.06 225),
+      oklch(91% 0.06 300),
+      oklch(93% 0.055 20),
+      oklch(95% 0.06 85),
+      oklch(92% 0.06 165));
+  background-size: 300% 300%;
+  animation: lxg-pearl 16s ease-in-out infinite alternate;
+}
+@keyframes lxg-pearl {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+.lxg-satin {
+  background: linear-gradient(105deg, transparent 42%, oklch(100% 0 0 / 0.85) 50%, transparent 58%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: soft-light;
+  animation: lxg-satin 6.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes lxg-satin {
+  0% { background-position: 130% 0; }
+  55%, 100% { background-position: -30% 0; }
+}
+
+.lxg-bloom {
+  inset: calc(var(--lx-frame) - 3px);
+  border-radius: calc(var(--lx-stage-r) + 3px);
+  filter: blur(14px) saturate(1.35);
+  animation: lxg-breathe 5s ease-in-out infinite;
 }
 @keyframes lxg-breathe {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.9; }
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+.lxg-rim {
+  inset: calc(var(--lx-frame) - 2.5px);
+  border-radius: calc(var(--lx-stage-r) + 2.5px);
 }
 
-/* The rim: the same light, unblurred, one pixel proud of the stage edge. */
-.lxg-rim {
-  inset: calc(var(--lx-frame) - 1.5px);
-  border-radius: calc(var(--lx-stage-r) + 1.5px);
+.lxg-stars { position: absolute; inset: 0; }
+.lxg-stars i {
+  position: absolute;
+  translate: -50% -50%;
+  background: radial-gradient(circle, oklch(100% 0 0) 0 22%, var(--lxg-hue) 50%, var(--lxg-hue) 100%);
+  clip-path: polygon(50% 0, 57% 43%, 100% 50%, 57% 57%, 50% 100%, 43% 57%, 0 50%, 43% 43%);
+  filter: drop-shadow(0 0 4px var(--lxg-hue)) drop-shadow(0 0 1px var(--lxg-hue));
+  animation: lxg-twinkle 3s ease-in-out infinite;
+}
+@keyframes lxg-twinkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  45% { transform: scale(1) rotate(45deg); opacity: 1; }
+  60% { transform: scale(0.85) rotate(60deg); opacity: 0.9; }
+}
+
+/* -------------------------------------------------------------- in front */
+
+.lxg-haze {
+  position: absolute;
+  inset: 0;
+  filter: blur(7px);
+  mix-blend-mode: screen;
   opacity: 0.9;
 }
+.lxg-ring-thick { padding: 3px; }
+.lxg-ring-core { padding: 1.5px; mix-blend-mode: screen; }
+.lxg-haze-spark { filter: blur(5px); opacity: 1; }
+.lxg-ring-glint { padding: 4px; }
+.lxg-ring-spark { padding: 2px; mix-blend-mode: screen; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lxg,
-  .lxg-bloom { animation: none; }
+  .lxg-spin,
+  .lxg-pearl,
+  .lxg-satin,
+  .lxg-bloom,
+  .lxg-stars i { animation: none; }
+  .lxg-stars i { transform: scale(0.8) rotate(45deg); opacity: 0.8; }
+  .lxg-ring-spark,
+  .lxg-haze-spark { display: none; }
 }
