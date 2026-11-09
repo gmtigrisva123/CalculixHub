@@ -1,34 +1,47 @@
 import { describe, expect, it } from 'vitest';
-import { MOBIUS, mobiusLayout, mobiusPoint } from './particleShapes';
-
-function finite(values: Float32Array) {
-  return values.every(Number.isFinite);
-}
+import { flowLayout, lorenzPath, pathPoint } from './particleShapes';
 
 describe('landing hero form', () => {
-  it('closes the Möbius strip after two laps, flipping sides after one', () => {
-    const [x, y, z] = mobiusPoint(0.7, 0.4);
-    const [x4, y4, z4] = mobiusPoint(0.7 + 4 * Math.PI, 0.4);
-    expect(x4).toBeCloseTo(x, 9);
-    expect(y4).toBeCloseTo(y, 9);
-    expect(z4).toBeCloseTo(z, 9);
-    // One lap later the same point is the one across the strip: there is only one side.
-    const [x2, y2, z2] = mobiusPoint(0.7 + 2 * Math.PI, 0.4);
-    const [xs, ys, zs] = mobiusPoint(0.7, -0.4);
-    expect(x2).toBeCloseTo(xs, 9);
-    expect(y2).toBeCloseTo(ys, 9);
-    expect(z2).toBeCloseTo(zs, 9);
+  it('traces the Lorenz attractor inside a bounded stage', () => {
+    const path = lorenzPath(4000);
+    expect(path.samples.every(Number.isFinite)).toBe(true);
+    for (let i = 0; i < path.length; i += 1) {
+      expect(Math.abs(path.samples[i * 4])).toBeLessThan(2.2);
+      expect(Math.abs(path.samples[i * 4 + 1])).toBeLessThan(2.4);
+      expect(Math.abs(path.samples[i * 4 + 2])).toBeLessThan(2.6);
+      expect(path.samples[i * 4 + 3]).toBeGreaterThanOrEqual(0);
+      expect(path.samples[i * 4 + 3]).toBeLessThanOrEqual(1);
+    }
   });
 
-  it('lays rails symmetrically across the strip so the flow has no seam', () => {
-    const layout = mobiusLayout(8, 50, 20);
-    expect(layout.count).toBe(8 * 50 + 20);
-    expect(finite(layout.params)).toBe(true);
-    const offsets = new Set<number>();
-    for (let i = 0; i < 8 * 50; i += 1) offsets.add(Math.round(layout.params[i * 4 + 1] * 20) / 20);
-    for (const s of offsets) expect(offsets.has(Math.round(-s * 20) / 20) || Math.abs(s) < 0.05).toBe(true);
-    for (let i = 0; i < 8 * 50; i += 1) expect(Math.abs(layout.params[i * 4 + 1])).toBeLessThanOrEqual(MOBIUS.halfWidth + 0.01);
-    // Dust is flagged by a negative seed.
-    for (let i = 8 * 50; i < layout.count; i += 1) expect(layout.params[i * 4 + 3]).toBeLessThan(0);
+  it('visits both wings, crossing between them again and again', () => {
+    const path = lorenzPath(4000);
+    let crossings = 0;
+    for (let i = 1; i < path.length; i += 1) {
+      if (Math.sign(path.samples[i * 4]) !== Math.sign(path.samples[(i - 1) * 4])) crossings += 1;
+    }
+    expect(crossings).toBeGreaterThan(5);
+  });
+
+  it('is deterministic, and interpolates between its samples', () => {
+    const a = lorenzPath(500);
+    const b = lorenzPath(500);
+    expect(Array.from(a.samples)).toEqual(Array.from(b.samples));
+    const [x] = pathPoint(a, 10.5);
+    expect(x).toBeCloseTo((a.samples[40] + a.samples[44]) / 2, 6);
+  });
+
+  it('lays threads along the path and flags dust with a negative seed', () => {
+    const layout = flowLayout(300, 40);
+    expect(layout.count).toBe(340);
+    expect(layout.params.every(Number.isFinite)).toBe(true);
+    for (let i = 0; i < 300; i += 1) {
+      expect(layout.params[i * 4]).toBeGreaterThanOrEqual(0);
+      expect(layout.params[i * 4]).toBeLessThan(1);
+      expect(layout.params[i * 4 + 3]).toBeGreaterThan(0);
+      const length = Math.hypot(layout.offsets[i * 3], layout.offsets[i * 3 + 1], layout.offsets[i * 3 + 2]);
+      expect(length).toBeCloseTo(1, 5);
+    }
+    for (let i = 300; i < layout.count; i += 1) expect(layout.params[i * 4 + 3]).toBeLessThan(0);
   });
 });

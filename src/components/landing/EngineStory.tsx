@@ -74,7 +74,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
   const { scrollYProgress: playhead } = useScroll({ target: sectionRef, offset: ['start start', 'end end'] });
   const { scrollYProgress: arrival } = useScroll({ target: sectionRef, offset: ['start end', 'start start'] });
   const stageScale = useTransform(arrival, [0, 1], [reduce ? 1 : 0.9, 1]);
-  const stageRadius = useTransform(arrival, [0.6, 1], ['56px', '40px']);
+  const stageRadius = useTransform(arrival, [0.6, 1], ['22px', '16px']);
 
   const [beat, setBeat] = useState(0);
   const [answered, setAnswered] = useState(0);
