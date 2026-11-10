@@ -176,7 +176,7 @@ export default function Plan() {
           return (
             <m.section key={id} className={`pl-card is-${id}${id === current ? ' is-current' : ''}`} aria-labelledby={`pl-${id}`}
               initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}>
-              {id === 'pro' && <span className="pl-ribbon">Most chosen for contest season</span>}
+              {id === 'pro' && <span className="pl-ribbon">For contest season</span>}
               <h2 id={`pl-${id}`}>{data.name}</h2>
               <p className="pl-audience">{data.audience}</p>
               <Price plan={data} cycle={cycle} />

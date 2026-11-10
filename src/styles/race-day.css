@@ -1,0 +1,108 @@
+/*
+ * Race day — the dashboard's countdown card. Namespaced `rd-`, and built on the
+ * dashboard's own card and tokens (dashboard-refresh.css).
+ *
+ * The three phases use three of the dashboard's validated marks: verdigris for
+ * building, amber for sharpening, and the quiet slate for the taper.
+ */
+.rd {
+  --rd-build: var(--dh-geo, #209d8c);
+  --rd-sharpen: var(--dh-alg, #c8842a);
+  --rd-taper: var(--dh-bar, #7a97a0);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(20px, 3vw, 40px);
+  align-items: start;
+  margin-top: 14px;
+  padding: clamp(20px, 2.6vw, 30px);
+}
+.rd :is(h2, p, ol) { margin: 0; }
+.rd ol { padding: 0; list-style: none; }
+.rd-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* The number: the one loud thing on the card. */
+.rd-count { display: grid; justify-items: center; align-content: center; gap: 6px; min-width: clamp(120px, 14vw, 168px); min-height: 168px; align-self: start; padding: 18px 16px; border-radius: 20px; text-align: center; color: #f1ece2; background: radial-gradient(90% 80% at 50% 0%, #e6bd732e, transparent 70%), linear-gradient(165deg, #1b3039, #0f1d23); box-shadow: inset 0 0 0 1px #e6bd7326; }
+.rd-count strong { font: 400 clamp(54px, 6vw, 84px)/.9 var(--dh-math, 'Newsreader', Georgia, serif); letter-spacing: -.05em; font-variant-numeric: lining-nums tabular-nums; }
+.rd-count strong.is-word { font-size: clamp(34px, 3.6vw, 46px); font-style: italic; letter-spacing: -.03em; }
+.rd-count span { font: 600 10.5px/1.3 'Geist Mono', ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: #e6bd73; }
+
+.rd-body { display: grid; gap: 16px; min-width: 0; }
+.rd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rd-kicker { display: inline-flex; align-items: center; gap: 6px; font: 600 10.5px/1.3 'Geist Mono', ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--dh-accent-text); }
+.rd-head h2 { margin-top: 6px; font: 600 clamp(20px, 2vw, 24px)/1.2 var(--dh-display, 'Manrope', sans-serif); letter-spacing: -.03em; color: var(--dh-ink); }
+.rd-head h2 span { font-weight: 450; color: var(--dh-ink-2); }
+.rd-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; color: var(--dh-ink-2); transition: background .2s, color .2s; }
+.rd-icon:hover { background: var(--dh-accent-wash); color: var(--dh-ink); }
+
+/* Every week to the contest, each as wide as the days it holds. */
+.rd-track { display: flex; gap: 4px; height: 12px; }
+.rd-track li { position: relative; flex: var(--span) 1 0; min-width: 6px; border-radius: 4px; background: var(--rd-taper); transform-origin: left; animation: rd-draw .7s var(--dh-ease-out, ease-out) both; animation-delay: calc(var(--i) * 45ms); }
+.rd-track li.is-build { background: var(--rd-build); }
+.rd-track li.is-sharpen { background: var(--rd-sharpen); }
+.rd-track li:not(.is-now) { opacity: .55; }
+.rd-track li.is-now::after { content: ''; position: absolute; left: 0; top: -5px; bottom: -5px; width: 3px; border-radius: 2px; background: var(--dh-ink); }
+.rd-legend { display: flex; align-items: center; gap: 6px; margin-top: -8px; font-size: 12px; color: var(--dh-ink-2); }
+.rd-legend i { width: 9px; height: 9px; margin-left: 10px; border-radius: 3px; background: var(--rd-taper); }
+.rd-legend i:first-child { margin-left: 0; }
+.rd-legend i.is-build { background: var(--rd-build); }
+.rd-legend i.is-sharpen { background: var(--rd-sharpen); }
+
+.rd-week { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border: 1px solid var(--dh-rule); border-radius: 16px; background: var(--dh-accent-wash); }
+.rd-week > div { min-width: 0; }
+.rd-week-label { font: 600 10.5px/1.3 'Geist Mono', ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--dh-ink-2); }
+.rd-week-focus { margin-top: 6px; font-size: 15.5px; line-height: 1.45; color: var(--dh-ink); text-wrap: pretty; }
+.rd-week-focus b { font-weight: 650; }
+.rd-note { font-size: 13.5px; line-height: 1.5; color: var(--dh-ink-2); text-wrap: pretty; }
+.rd-week .rd-note { margin-top: 4px; }
+
+.rd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; min-height: 42px; padding: 0 16px; border: 1px solid var(--dh-rule); border-radius: 12px; background: var(--dh-card); color: var(--dh-ink); font: 600 13.5px/1 var(--dh-body, inherit); cursor: pointer; white-space: nowrap; transition: transform .16s, background .2s, filter .2s; }
+.rd-btn:hover:not(:disabled) { background: var(--dh-accent-wash); }
+.rd-btn:active:not(:disabled) { transform: scale(.97); }
+.rd-btn:disabled { opacity: .5; cursor: not-allowed; }
+.rd-btn.is-solid { border-color: transparent; background: var(--dh-ink); color: var(--sf-raised); }
+.rd-btn.is-solid:hover:not(:disabled) { background: var(--dh-ink); filter: brightness(1.18); }
+
+.rd-toggle { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 2px; font-size: 13.5px; font-weight: 600; color: var(--dh-accent-text); cursor: pointer; }
+.rd-toggle svg { transition: rotate .3s var(--dh-ease-out, ease-out); }
+.rd-toggle svg.is-open { rotate: 180deg; }
+.rd-plan { overflow: hidden; }
+.rd-plan ol { display: grid; border-top: 1px solid var(--dh-rule); }
+.rd-plan li { display: grid; grid-template-columns: 118px 86px minmax(0, 1fr); align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--dh-rule-faint); font-size: 13.5px; color: var(--dh-ink-2); }
+.rd-plan-when { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
+.rd-plan b { font-weight: 650; color: var(--dh-ink); }
+.rd-plan-phase { display: inline-flex; align-items: center; gap: 7px; font: 600 10.5px/1 'Geist Mono', ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.rd-plan-phase::before { content: ''; width: 8px; height: 8px; border-radius: 3px; background: var(--rd-taper); }
+.rd-plan li.is-build .rd-plan-phase::before { background: var(--rd-build); }
+.rd-plan li.is-sharpen .rd-plan-phase::before { background: var(--rd-sharpen); }
+.rd-locked, .rd-preview { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--dh-ink-2); }
+.rd-locked button { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-weight: 650; color: var(--dh-accent-text); cursor: pointer; }
+
+/* Before a date is set: one line, and the form it opens. */
+.rd-empty { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+.rd-flag { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--dh-accent-wash); color: var(--dh-accent-text); }
+.rd-empty h2 { font: 600 19px/1.2 var(--dh-display, 'Manrope', sans-serif); letter-spacing: -.03em; color: var(--dh-ink); }
+.rd-empty p { margin-top: 4px; font-size: 14px; line-height: 1.5; color: var(--dh-ink-2); }
+
+.rd-form { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.rd-form label { display: grid; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--dh-ink-2); }
+.rd .rd-form :is(select, input) { min-height: 42px; padding: 0 12px; border: 1px solid var(--dh-rule); border-radius: 12px; background: var(--sf); color: var(--dh-ink); font: 500 14px var(--dh-body, inherit); }
+.rd-form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@keyframes rd-draw { from { scale: 0 1; opacity: 0; } }
+
+@media (max-width: 900px) {
+  .rd-empty { grid-template-columns: auto minmax(0, 1fr); }
+  .rd-empty > :last-child { grid-column: 1 / -1; justify-self: start; }
+  .rd-week { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .rd { grid-template-columns: minmax(0, 1fr); }
+  .rd-count { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 12px; padding: 14px 18px; }
+  .rd-count strong { font-size: 52px; }
+  .rd-head h2 span { display: block; margin-top: 2px; font-size: 15px; }
+  .rd-plan li { grid-template-columns: minmax(0, 1fr) auto; }
+  .rd-plan-what { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-track li { animation: none; }
+}

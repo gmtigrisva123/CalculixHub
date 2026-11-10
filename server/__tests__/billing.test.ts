@@ -190,8 +190,8 @@ describe('plans', () => {
 
   it('prices yearly below twelve months, and says by how much', () => {
     expect(PLANS.pro.price.yearly).toBeLessThan(PLANS.pro.price.monthly * 12);
-    expect(yearlySaving(PLANS.pro)).toBe(27);
-    expect(monthlyEquivalent(PLANS.pro)).toBe(658);
+    expect(yearlySaving(PLANS.pro)).toBe(33);
+    expect(monthlyEquivalent(PLANS.pro)).toBe(600);
   });
 
   it('keeps a cancelled plan until the period that was paid for ends', () => {

@@ -34,6 +34,7 @@ import Community from './components/Community';
 import Profile from './components/Profile';
 import Settings, { type SaveOutcome } from './components/Settings';
 import Plan from './components/Plan';
+import ScratchPaper from './components/ScratchPaper';
 import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
 import { TabTransition } from './components/motion';
@@ -344,11 +345,12 @@ function LearningApp() {
       <WorkspaceShell activeTab={activeTab} onSelect={selectTab}
         name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
         points={userStats.points} streak={userStats.streak} online={online}
-        pendingGrades={pendingGrades} notices={notices} onOpenScratch={() => setScratchOpen(true)}>
+        pendingGrades={pendingGrades} notices={notices} onOpenScratch={() => setScratchOpen(open => !open)}>
         <PullToRefresh onRefresh={handleRefresh}>
           <TabTransition tabKey={activeTab}>
           {activeTab === 'dashboard' && (
             <Dashboard
+              minutesPerDay={Number(studyPace.match(/\d+/)?.[0]) || 30}
               userStats={userStats}
               weeklyChallenges={weeklyChallenges}
               contests={contests}
@@ -391,6 +393,7 @@ function LearningApp() {
               problems={problems}
               onLogout={handleLogout}
               onTriggerAlert={(badge) => queueAchievements([badge])}
+              onSeePlans={() => selectTab('plan')}
             />
           )}
 
@@ -413,6 +416,7 @@ function LearningApp() {
           </TabTransition>
         </PullToRefresh>
       </WorkspaceShell>
+      <ScratchPaper open={scratchOpen} onOpenChange={setScratchOpen} />
       <AITutorChat key={profile?.id ?? 'guest'} request={tutorRequest?.userId === (profile?.id ?? 'guest') ? tutorRequest : null} />
       <AchievementToast achievement={achievementQueue[0] || null}
         onClose={() => setAchievementQueue(prev => prev.slice(1))}

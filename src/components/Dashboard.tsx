@@ -12,9 +12,10 @@ import TopicTiles from './dashboard/TopicTiles';
 import MomentumChart from './dashboard/MomentumChart';
 import ProofTile from './dashboard/ProofTile';
 import NextAdventure from './dashboard/NextAdventure';
+import RaceDay from './dashboard/RaceDay';
 import { activeDays, dailyPoints, greeting, pointsCurve, weekTotal } from './dashboard/dashboardModel';
 
-interface DashboardProps { userStats: UserStats; weeklyChallenges: WeeklyChallenge[]; contests: Contest[]; onNavigateToTab: (tab: string, arg?: { topic?: Topic; level?: Level }) => void; onJoinChallenge: (id: string) => void; onJoinContest: (id: string) => void; onRewardPoints?: (pts: number) => void; }
+interface DashboardProps { minutesPerDay?: number; userStats: UserStats; weeklyChallenges: WeeklyChallenge[]; contests: Contest[]; onNavigateToTab: (tab: string, arg?: { topic?: Topic; level?: Level }) => void; onJoinChallenge: (id: string) => void; onJoinContest: (id: string) => void; onRewardPoints?: (pts: number) => void; }
 
 const QUOTE = 'Mathematics is the art of giving the same name to different things.';
 
@@ -28,7 +29,7 @@ const QUOTE = 'Mathematics is the art of giving the same name to different thing
  * a small proof running. All of it stops on the hero's pause control, off
  * screen, in a hidden tab, and under reduced motion.
  */
-export default function Dashboard({ userStats: stats, weeklyChallenges, contests, onNavigateToTab: navigate, onJoinChallenge, onJoinContest }: DashboardProps) {
+export default function Dashboard({ minutesPerDay = 30, userStats: stats, weeklyChallenges, contests, onNavigateToTab: navigate, onJoinChallenge, onJoinContest }: DashboardProps) {
   const still = Boolean(useReducedMotion());
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((value) => !value), []);
@@ -95,6 +96,8 @@ export default function Dashboard({ userStats: stats, weeklyChallenges, contests
         week={week}
         still={still}
       />
+
+      <RaceDay skills={stats.skills} minutesPerDay={minutesPerDay} navigate={navigate} still={still} />
 
       <TopicTiles skills={stats.skills} still={still} paused={paused} navigate={navigate} />
 

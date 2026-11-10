@@ -55,7 +55,7 @@ export const PLANS: Record<PlanId, Plan> = {
     id: 'pro',
     name: 'Pro',
     audience: 'For the season you are training for something.',
-    price: { monthly: 900, yearly: 7900 },
+    price: { monthly: 900, yearly: 7200 },
     features: [
       { label: 'A week-by-week plan up to your contest date', state: 'ready' },
       { label: 'Printable progress reports for parents and coaches', state: 'ready' },
