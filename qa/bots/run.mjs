@@ -29,8 +29,8 @@ const PROFILES = {
 };
 
 const NAV = {
-  Dashboard: 'Home', Learn: 'Learn', 'Exam Archive': 'Exams', Arena: 'Arena', Leaderboard: 'Ranks',
-  Progress: 'Stats', Community: 'Forum', Profile: 'You', Settings: 'Config', Inbox: 'Inbox',
+  Home: 'Home', Learn: 'Learn', 'Exam Archive': 'Exams', Arena: 'Arena', Leaderboard: 'Ranks',
+  Progress: 'Progress', Community: 'Community', Profile: 'You', Settings: 'Settings', Inbox: 'Inbox', Plan: 'Plan',
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

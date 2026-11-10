@@ -134,7 +134,8 @@ export default function WorkspaceShell({ activeTab, onSelect, name, points, stre
               {entry.items.map(({ key, label, icon: Icon }) => (
                 <button key={key} className="workspace-nav-item" aria-current={activeTab === key ? 'page' : undefined} onClick={() => navigate(key)}>
                   <Icon size={18} strokeWidth={1.9} /><span>{label}</span>
-                  {key === 'inbox' && inbox.unreadCount > 0 && <span className="ws-nav-count" aria-label={`${inbox.unreadCount} unread`}>{inbox.unreadCount > 99 ? '99+' : inbox.unreadCount}</span>}
+                  {/* The bell in the top bar announces the count; here it is a visual echo, so the button is still just "Inbox". */}
+                  {key === 'inbox' && inbox.unreadCount > 0 && <span className="ws-nav-count" aria-hidden="true">{inbox.unreadCount > 99 ? '99+' : inbox.unreadCount}</span>}
                   {key === 'plan' && plan.plan !== 'free' && <span className="ws-nav-plan">{planName}</span>}
                 </button>
               ))}

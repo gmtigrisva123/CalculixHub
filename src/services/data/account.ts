@@ -9,7 +9,7 @@
  * browser can ask for them and has no way to aim them at anyone.
  */
 
-import { supabase } from '../supabase';
+import { AUTH_STORAGE_KEY, supabase } from '../supabase';
 
 export type AccountResult = { ok: true } | { ok: false; error: string };
 
@@ -57,15 +57,33 @@ export async function deleteMyAccount(): Promise<AccountResult> {
   }
   // The account no longer exists; this only clears the token this browser holds.
   await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  // Belt and braces: a token for an account that no longer exists must not be left behind.
+  try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* storage is unavailable */ }
   clearLocalData();
   return { ok: true };
 }
 
-/** Everything CalculixHub keeps in this browser, under its own prefix. */
+/**
+ * Which of this browser's stored keys are CalculixHub's own preferences and
+ * working data.
+ *
+ * Those all start `calculix_`. The sign-in session is deliberately not among
+ * them: it is stored under a different name, and it is a credential. It must
+ * never be written into an export file, and "forget this device" clears
+ * preferences without signing anyone out. Anything that looks like a key or
+ * token is left out as well, so a future setting cannot leak one by accident.
+ */
+export function ownDeviceKeys(keys: readonly string[]): string[] {
+  return keys.filter(key => key.startsWith('calculix_'));
+}
+export const exportableDeviceKeys = (keys: readonly string[]): string[] =>
+  ownDeviceKeys(keys).filter(key => !/key|token|auth|secret|session/i.test(key));
+
+/** Clears what this browser remembers for CalculixHub. The account, and the session, are untouched. */
 export function clearLocalData(): void {
   for (const store of [localStorage, sessionStorage]) {
     try {
-      for (const key of Object.keys(store)) if (key.startsWith('calculix')) store.removeItem(key);
+      for (const key of ownDeviceKeys(Object.keys(store))) store.removeItem(key);
     } catch { /* storage is unavailable; there is nothing to clear */ }
   }
 }
@@ -110,8 +128,8 @@ export async function exportMyData(userId: string, email: string | null): Promis
   }));
   const device: Record<string, string> = {};
   try {
-    // The Gemini key is the learner's own secret; a file that gets emailed around is no place for it.
-    for (const key of Object.keys(localStorage)) if (key.startsWith('calculix') && !/key/i.test(key)) device[key] = localStorage.getItem(key) ?? '';
+    // Secrets stay out: a file that may get emailed around is no place for an API key or a session.
+    for (const key of exportableDeviceKeys(Object.keys(localStorage))) device[key] = localStorage.getItem(key) ?? '';
   } catch { /* storage is unavailable */ }
   return { exported_at: new Date().toISOString(), account: { id: userId, email }, tables: Object.fromEntries(results), this_device: device };
 }
