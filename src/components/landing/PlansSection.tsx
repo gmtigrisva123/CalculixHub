@@ -1,73 +1,120 @@
 /**
- * "Plans": what is free today, and what is still being built.
+ * "Pricing": three plans, one switch between monthly and yearly, and nothing
+ * the page cannot stand behind.
  *
- * Free is the one plan that exists, so it is the one set in ink. Pro and Max
- * say "Coming soon" in their first line and list only what they would add;
- * nothing on this page charges or activates anything. The cards light under
- * the pointer.
+ * Every name, price and feature comes from shared/plans.ts, the same file the
+ * workspace Plan screen and the checkout route read, so the front page cannot
+ * quote a price the checkout does not charge. A feature still being built is
+ * drawn with an open dashed ring and the words "in the works". While checkout
+ * is not switched on, the Pro card says so and offers the preview instead of a
+ * purchase.
  */
 
-import type { ReactNode } from 'react';
-import { ARCHIVE_FIGURES } from './archiveFigures';
+import { useEffect, useState, type ReactNode } from 'react';
+import { m } from 'motion/react';
+import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
+import { billingConfig } from '../../services/data/plan';
 import { Arrow, Eyebrow, Magnetic, Rise, SplitText, useSpotlight } from './kit';
 
-const FREE_INCLUDES = [
-  'Find your level',
-  'Practice with full solutions',
-  `All ${ARCHIVE_FIGURES.papers} past exams`,
-  'Live Arena contests',
-];
+const AUDIENCE: Record<PlanId, string> = { free: 'For every learner', pro: 'For contest season', team: 'For clubs and schools' };
 
 export default function PlansSection({ onRegister }: { onRegister: () => void }) {
+  const [cycle, setCycle] = useState<BillingCycle>('yearly');
+  // null until the server has answered; the card then says which of the two it is.
+  const [checkout, setCheckout] = useState<boolean | null>(null);
+  useEffect(() => { let alive = true; void billingConfig().then(config => { if (alive) setCheckout(config.checkout); }); return () => { alive = false; }; }, []);
+  const saving = yearlySaving(PLANS.pro);
+
   return (
     <section className="lx-plans" id="plans" data-tone="paper" aria-labelledby="lx-plans-title">
       <div className="lx-wrap">
-        <header className="lx-section-head lx-section-head-split">
+        <header className="lx-section-head lx-plans-head">
           <div>
-            <Eyebrow index="07">Plans</Eyebrow>
-            <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={'Free to start.\n*More on the way.*'} />
+            <Eyebrow index="08">Pricing</Eyebrow>
+            <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={'Free to practise.\n*Pro for the season.*'} />
           </div>
+          <Rise className="lx-cycle-wrap" delay={0.1}>
+            <div className="lx-cycle" role="radiogroup" aria-label="Billing period">
+              {(['monthly', 'yearly'] as const).map(value => (
+                <button key={value} type="button" role="radio" aria-checked={cycle === value} onClick={() => setCycle(value)}>
+                  {cycle === value && <m.span layoutId="lx-cycle-thumb" className="lx-cycle-thumb" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                  <span>{value === 'monthly' ? 'Monthly' : 'Yearly'}{value === 'yearly' && <em>save {saving}%</em>}</span>
+                </button>
+              ))}
+            </div>
+          </Rise>
         </header>
 
         <div className="lx-plan-grid">
-          <PlanCard featured delay={0}>
-            <span className="lx-plan-status"><span className="lx-live" aria-hidden="true" />Available now</span>
-            <h3 className="lx-plan-name">Free</h3>
-            <p className="lx-plan-price"><strong>$0</strong></p>
-            <ul className="lx-plan-list">
-              {FREE_INCLUDES.map(item => <li key={item}><Check />{item}</li>)}
-            </ul>
-            <Magnetic className="lx-plan-action">
-              <button type="button" className="lx-btn lx-btn-cream" onClick={onRegister}>
-                <span>Create a free account</span>
-                <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
-              </button>
-            </Magnetic>
-          </PlanCard>
-
-          <PlanCard delay={0.08}>
-            <span className="lx-plan-status">Coming soon</span>
-            <h3 className="lx-plan-name">Pro</h3>
-            <p className="lx-plan-price"><strong>Everything in Free, plus</strong></p>
-            <ul className="lx-plan-list">
-              <li><Soon />Feedback on written proofs</li>
-              <li><Soon />Deeper progress reports</li>
-            </ul>
-            <p className="lx-plan-foot">No price yet</p>
-          </PlanCard>
-
-          <PlanCard delay={0.16}>
-            <span className="lx-plan-status">Coming soon</span>
-            <h3 className="lx-plan-name">Max</h3>
-            <p className="lx-plan-price"><strong>Everything in Pro, plus</strong></p>
-            <ul className="lx-plan-list">
-              <li><Soon />Long-term study plans</li>
-            </ul>
-            <p className="lx-plan-foot">No price yet</p>
-          </PlanCard>
+          {PLAN_ORDER.map((id, index) => {
+            const plan = PLANS[id];
+            return (
+              <PlanCard key={id} featured={id === 'pro'} delay={index * 0.08}>
+                <span className="lx-plan-status">{id === 'pro' && <span className="lx-live" aria-hidden="true" />}{AUDIENCE[id]}</span>
+                <h3 className="lx-plan-name">{plan.name}</h3>
+                <Price plan={plan} cycle={cycle} />
+                <p className="lx-plan-audience">{plan.audience}</p>
+                {id !== 'free' && <p className="lx-plan-plus">Everything in {id === 'pro' ? 'Free' : 'Pro'}, and</p>}
+                <ul className="lx-plan-list">
+                  {plan.features.map(feature => (
+                    <li key={feature.label} className={feature.state === 'planned' ? 'is-soon' : undefined}>
+                      {feature.state === 'ready' ? <Check /> : <Soon />}
+                      <span>{feature.label}{feature.state === 'planned' && <em>in the works</em>}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="lx-plan-action">
+                  {id === 'free' && (
+                    <Magnetic>
+                      <button type="button" className="lx-btn lx-btn-ink" onClick={onRegister}>
+                        <span>Create a free account</span>
+                        <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
+                      </button>
+                    </Magnetic>
+                  )}
+                  {id === 'pro' && (
+                    <>
+                      <Magnetic>
+                        <a className="lx-btn lx-btn-cream" href="/?auth=signup&tab=plan">
+                          <span>{checkout ? 'Start with Pro' : 'Try Pro in the preview'}</span>
+                          <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
+                        </a>
+                      </Magnetic>
+                      {checkout === false && <p className="lx-plan-fine">Checkout isn’t open yet. Until it is, every account gets Pro’s features at no charge, and you’ll hear before that changes.</p>}
+                      {checkout && <p className="lx-plan-fine">Cancel any time. You keep Pro until the period you paid for ends.</p>}
+                    </>
+                  )}
+                  {id === 'team' && (
+                    <>
+                      <a className="lx-link" href="/?auth=signup&tab=plan">Tell us about your group <Arrow size={15} /></a>
+                      <p className="lx-plan-fine">From {TEAM_MIN_SEATS} students, arranged with you directly.</p>
+                    </>
+                  )}
+                </div>
+              </PlanCard>
+            );
+          })}
         </div>
+
+        <Rise as="ul" className="lx-plan-promises" delay={0.1}>
+          <li><b>Free is not a trial.</b> Placement, practice, the archive and the Arena don’t expire.</li>
+          <li><b>No adverts, no data for sale.</b> Pro and Team are what pay for the servers.</li>
+          <li><b>Leave with your work.</b> Download everything, or delete your account, from Settings.</li>
+        </Rise>
       </div>
     </section>
+  );
+}
+
+function Price({ plan, cycle }: { plan: Plan; cycle: BillingCycle }) {
+  if (plan.price.monthly === 0) return <p className="lx-plan-price"><strong>$0</strong><span>for as long as you like</span></p>;
+  const cents = cycle === 'yearly' ? monthlyEquivalent(plan) : plan.price.monthly;
+  return (
+    <p className="lx-plan-price">
+      {/* Keyed on the figure so a change of period swaps the number with a small lift instead of a jump. */}
+      <m.strong key={cents} className="lx-tabular" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>{dollars(cents)}</m.strong>
+      <span>{plan.unit ? `${plan.unit}, ` : ''}a month{cycle === 'yearly' ? `, billed ${dollars(plan.price.yearly)} a year` : ''}</span>
+    </p>
   );
 }
 

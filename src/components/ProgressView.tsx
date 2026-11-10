@@ -4,16 +4,21 @@
  */
 
 import React from 'react';
-import { AreaChart, TrendingUp, AlertTriangle, BookOpen, Clock, Lightbulb, Radar as RadarIcon, Route, Sparkles, Bug, CheckCircle2 } from 'lucide-react';
+import { AreaChart, Lock, Printer, AlertTriangle, BookOpen, Clock, Lightbulb, Radar as RadarIcon, Route, Sparkles, Bug, CheckCircle2 } from 'lucide-react';
 import { AnimatedNumber, SpringBar, StaggerItem } from './motion';
 import { UserStats, Topic } from '../../shared/types';
 import { TOPIC_META, formatMinutes } from '../lib/topics';
 import { forecastProgress, analyzeErrorPatterns, buildLearningPath, computeMetrics } from '../domain/analytics';
 import RadarChart from './charts/RadarChart';
 import VelocityChart from './charts/VelocityChart';
+import ProgressReport from './ProgressReport';
+import { useAuth } from '../context/AuthContext';
+import { usePlan } from '../services/data/plan';
+import '../styles/progress.css';
 
 interface ProgressViewProps {
   userStats: UserStats;
+  onSeePlans?: () => void;
 }
 
 const SKILL_DESCRIPTIONS: Record<string, string> = {
@@ -23,7 +28,10 @@ const SKILL_DESCRIPTIONS: Record<string, string> = {
   'Number Theory': 'Modular arithmetic, Euler\'s totient function, and prime lemmas.',
 };
 
-export default function ProgressView({ userStats }: ProgressViewProps) {
+export default function ProgressView({ userStats, onSeePlans }: ProgressViewProps) {
+  const { user, profile } = useAuth();
+  const plan = usePlan(user?.id ?? null);
+  const canPrint = plan.can('progress-report');
   const defaultSkills: Record<Topic, number> = {
     Algebra: 0,
     Geometry: 0,
@@ -53,22 +61,32 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="border-b border-line pb-4">
-        <p className="type-eyebrow text-violet-500 font-mono text-xs uppercase">Psychometrics &amp; Learning Analytics</p>
-        <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-violet-500" /> Analytics &amp; Performance Roadmap
-        </h1>
-      </div>
+      <header className="pg-head">
+        <div>
+          <p className="pg-eyebrow"><span aria-hidden="true" />How it’s going</p>
+          <h1>What you know, <em>and what’s next.</em></h1>
+          <p className="pg-summary">
+            {hasLearningEvidence
+              ? <>Strongest in <b>{sortedSkills[sortedSkills.length - 1][0]}</b>; the most room to grow is in <b>{weakestSkill[0]}</b>. Every figure here comes from your own answers.</>
+              : 'Solve a few problems and this page fills in. Every figure here comes from your own answers.'}
+          </p>
+        </div>
+        {user && (
+          <button type="button" className="pg-print" onClick={() => (canPrint ? window.print() : onSeePlans?.())}>
+            {canPrint ? <Printer size={16} aria-hidden="true" /> : <Lock size={15} aria-hidden="true" />} Print a report {!canPrint && <small>Pro</small>}
+          </button>
+        )}
+      </header>
+      {user && canPrint && <ProgressReport name={profile?.display_name ?? profile?.username ?? 'Learner'} userStats={userStats} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Skill Radar & Domain Meters */}
         <div className="lg:col-span-7 cx-glass-panel p-6 space-y-6">
           <div className="space-y-1">
             <h2 className="type-title text-lg font-bold text-content flex items-center gap-2">
-              <RadarIcon className="w-5 h-5 text-indigo-500" /> Skill Mastery Radar
+              <RadarIcon className="w-5 h-5 text-indigo-500" /> Mastery by topic
             </h2>
-            <p className="text-xs text-content-subtle font-mono">Real-time domain ability distribution updated after every problem.</p>
+            <p className="text-xs text-content-subtle font-mono">The share of your answers in each topic that were right.</p>
           </div>
 
           <div className="max-w-sm mx-auto py-2">
@@ -128,10 +146,10 @@ export default function ProgressView({ userStats }: ProgressViewProps) {
             </div>}
           </div>
 
-          {/* Practice Velocity Chart */}
+          {/* Points over time Chart */}
           <div className="cx-glass-panel p-6 space-y-4">
             <h2 className="type-title text-lg font-bold text-content flex items-center gap-2">
-              <AreaChart className="w-5 h-5 text-indigo-500" /> Practice Velocity
+              <AreaChart className="w-5 h-5 text-indigo-500" /> Points over time
             </h2>
             <div className="h-44">
               <VelocityChart data={timelineData} />

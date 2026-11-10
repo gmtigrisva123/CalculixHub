@@ -379,7 +379,7 @@ function LearningApp() {
           {activeTab === 'admin' && <AdminWorkspace onContentChange={() => void fetchProblems()} />}
 
           {activeTab === 'progress' && (
-            <ProgressView userStats={userStats} />
+            <ProgressView userStats={userStats} onSeePlans={() => selectTab('plan')} />
           )}
 
           {activeTab === 'community' && (

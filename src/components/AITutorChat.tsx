@@ -246,16 +246,16 @@ Let's work through this step-by-step:
         onClick={() => setIsOpen(!isOpen)}
         whileTap={{ scale: 0.95 }}
         transition={spring.press}
-        className="tutor-fab fixed right-3.5 md:right-6 bottom-20 md:bottom-6 top-auto h-auto max-h-12 z-50 flex items-center gap-2.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-semibold text-xs px-4 md:px-5 py-3 rounded-full shadow-lg shadow-indigo-500/25 border border-indigo-400/30 transition-all duration-200 group cursor-pointer"
+        className="tutor-fab fixed right-3.5 md:right-6 bottom-20 md:bottom-6 top-auto h-auto max-h-12 z-50 flex items-center gap-2.5 font-semibold text-xs px-4 md:px-5 py-3 rounded-full group cursor-pointer"
       >
         <Sparkles
           ref={sparkleRef}
-          className="w-4 h-4 animate-pulse group-hover:scale-110 transition-transform duration-160"
+          className="tutor-fab-spark w-4 h-4 group-hover:rotate-12 transition-transform duration-300"
         />
-        <span className="tutor-fab-label font-bold tracking-wide text-xs md:text-sm">Ask Math Assistant</span>
+        <span className="tutor-fab-label text-xs md:text-sm">Ask the tutor</span>
         <div
           ref={pingRef}
-          className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-stone-900 animate-ping"
+          className="tutor-fab-dot"
         />
       </m.button>
 

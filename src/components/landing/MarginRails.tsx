@@ -52,7 +52,7 @@ const CHAPTERS: Chapter[] = [
   { id: 'topics', label: 'Topics', title: 'Four rooms', fig: 'trefoil', figName: 'Trefoil knot', note: 'the simplest knot that won’t undo' },
   { id: 'archive', label: 'Past papers', title: 'Since 1959', fig: 'helix', figName: 'Double helix', note: 'one more rung every year' },
   { id: 'workspace', label: 'Practise', title: 'Get unstuck', fig: 'mobius', figName: 'Möbius strip', note: 'one side, one edge — keep going' },
-  { id: 'plans', label: 'Plans', title: 'Free to start', fig: 'tesseract', figName: 'Tesseract', note: 'a cube, one dimension further' },
+  { id: 'plans', label: 'Pricing', title: 'Free to practise', fig: 'tesseract', figName: 'Tesseract', note: 'a cube, one dimension further' },
   { id: 'faq', label: 'Questions', title: 'Answered', fig: 'torus', figName: 'Torus', note: 'every loop comes back around' },
   { id: 'begin', label: 'Begin', title: 'You’re allowed', fig: 'sphere', figName: 'Sphere', note: 'start anywhere, it’s all the same' },
 ];
@@ -127,7 +127,7 @@ function Rails() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const sections = CHAPTERS.map(c => document.getElementById(c.id));
     // The ink stages, and the archive's full-bleed marquee. Where one reaches into a margin, the margin steps aside for it.
-    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-final-stage, .lx-marquee'));
+    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee'));
     const hero = document.querySelector<HTMLElement>('.lx-hero-stage');
     const masks = ['', ''];
     type Box = { top: number; bottom: number; left: number; right: number };

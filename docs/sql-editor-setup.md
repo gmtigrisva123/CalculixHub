@@ -44,3 +44,7 @@ update public.email_settings
 ```
 
 With the `pg_net` extension enabled (Database → Extensions), each enqueue wakes the dispatcher within seconds; with `pg_cron` enabled, it is also woken once a minute as a backstop. Without either, call the route from any scheduler with the same bearer secret.
+
+## Account controls and billing
+
+Run `supabase/account-billing-setup.sql` after `email-delivery-setup.sql`. It adds the two functions behind the danger zone in Settings (`reset_my_progress()` and `delete_my_account()`, each acting only on the caller), the `subscriptions` table that records who holds a paid plan, and the `plan_interest` list. It is transactional, safe to rerun and redefines nothing from the earlier files. Until it is applied, Settings still shows the danger zone but both actions report that nothing was changed. `docs/billing-setup.md` covers the Stripe side.

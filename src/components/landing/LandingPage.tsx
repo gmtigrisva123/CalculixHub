@@ -7,6 +7,7 @@ import ChordPlayground from './ChordPlayground';
 import TopicsChapter from './TopicsChapter';
 import ArchiveLadder from './ArchiveLadder';
 import JourneyStack from './JourneyStack';
+import DeskSection from './DeskSection';
 import PlansSection from './PlansSection';
 import FaqSection from './FaqSection';
 import FinalStage from './FinalStage';
@@ -15,6 +16,8 @@ import MarginRails from './MarginRails';
 import { scrollToTarget, useSmoothScroll } from './smoothScroll';
 import '../../styles/landing-experience.css';
 import '../../styles/landing-frame.css';
+import '../../styles/landing-desk.css';
+import '../../styles/landing-plans.css';
 
 interface LandingPageProps {
   liveStats: { registeredUsers: number; testsCompleted: number; problemsSolved: number };
@@ -56,6 +59,7 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
           <TopicsChapter onRegister={onRegister} />
           <ArchiveLadder />
           <JourneyStack onRegister={onRegister} />
+          <DeskSection onRegister={onRegister} />
           <PlansSection onRegister={onRegister} />
           <FaqSection />
           <FinalStage onRegister={onRegister} />
