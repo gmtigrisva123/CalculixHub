@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import WorkspaceShell from './components/WorkspaceShell';
+import WorkspaceShell, { type WorkspaceNotice } from './components/WorkspaceShell';
 const IPhonePrototype = lazy(() => import('./components/prototype/IPhonePrototype'));
 
 export default function App() {
@@ -32,8 +32,8 @@ import AdminWorkspace from './components/AdminWorkspace';
 import ProgressView from './components/ProgressView';
 import Community from './components/Community';
 import Profile from './components/Profile';
-import ResearchAnalytics from './components/ResearchAnalytics';
-import Settings from './components/Settings';
+import Settings, { type SaveOutcome } from './components/Settings';
+import Plan from './components/Plan';
 import AITutorChat from './components/AITutorChat';
 import WelcomeScreen from './components/WelcomeScreen';
 import { TabTransition } from './components/motion';
@@ -63,6 +63,7 @@ function LearningApp() {
     return topic && ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'].includes(topic) ? { topic: topic as Topic } : undefined;
   });
   const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
+  const [scratchOpen, setScratchOpen] = useState(false);
   const [tutorRequest, setTutorRequest] = useState<{ id: number; userId: string; prompt?: string } | null>(null);
   const openTutor = (prompt?: string) => setTutorRequest(previous => ({ id: (previous?.id ?? 0) + 1, userId: profile?.id ?? 'guest', prompt }));
 
@@ -229,7 +230,6 @@ function LearningApp() {
     );
   };
   useEffect(()=>{setCustomGoal(learner.data.preferences?.goal??'Build fundamental mathematical problem-solving skills');setStudyPace(learner.data.preferences?.pace??'30 minutes / day (Recommended)');},[learner.data.preferences]);
-  const [saveSuccessNotify, setSaveSuccessNotify] = useState<boolean>(false);
 
   // 1. Fetch static math database problems
   //
@@ -300,12 +300,15 @@ function LearningApp() {
     setActiveTab(tab);
   };
 
-  const handleSaveSettings=async(e:React.FormEvent)=>{
-   e.preventDefault();setSaveSuccessNotify(false);
-   if(!supabase||!profile?.id){setReminderNotice('Sign in to save your learning preferences.');return;}
-   const {error}=await supabase.from('learner_preferences').upsert({user_id:profile.id,goal:customGoal,pace:studyPace});
-   if(error){setReminderNotice('Could not save your preferences. Please retry.');return;}
-   await learner.reload();setSaveSuccessNotify(true);
+  /** Goal and pace are saved the moment one is chosen; Settings shows the outcome. */
+  const savePreferences = async (next: { goal: string; pace: string }): Promise<SaveOutcome> => {
+    setCustomGoal(next.goal);
+    setStudyPace(next.pace);
+    if (!supabase || !profile?.id) return 'guest';
+    const { error } = await supabase.from('learner_preferences').upsert({ user_id: profile.id, goal: next.goal, pace: next.pace });
+    if (error) return 'error';
+    void learner.reload();
+    return 'saved';
   };
 
   if (authStatus === 'loading') return <main className="min-h-screen flex items-center justify-center bg-surface text-content"><p role="status">Opening your learning space…</p></main>;
@@ -315,16 +318,33 @@ function LearningApp() {
     return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
+  /*
+   * What this session needs the learner to know, each thing said once. Three
+   * loaders can fail for the same reason (no connection, no database), and
+   * three stacked copies of one sentence read as three problems.
+   */
+  const notices: WorkspaceNotice[] = [];
+  if (activeTab !== 'archive') {
+    for (const text of new Set([catalogError, learner.error, ranking.error].filter((value): value is string => Boolean(value)))) {
+      notices.push({ tone: 'warning', text, action: { label: 'Try again', onClick: () => void handleRefresh() } });
+    }
+  }
+  if (!isLoggedIn) {
+    notices.push({
+      tone: 'info',
+      text: activeTab === 'archive'
+        ? 'You’re exploring as a guest. Exam progress stays on this device; an account syncs it everywhere.'
+        : 'You’re exploring as a guest, so nothing here is saved. An account keeps your progress and finds your level.',
+      action: { label: 'Create a free account', href: '/?auth=signup' },
+    });
+  }
+
   return (
     <>
       <WorkspaceShell activeTab={activeTab} onSelect={selectTab}
         name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
         points={userStats.points} streak={userStats.streak} online={online}
-        pendingGrades={pendingGrades}>
-        {activeTab !== 'archive' && catalogError && <p role="alert" className="arena-notice">{catalogError}</p>}
-        {activeTab !== 'archive' && learner.error && <div role="alert" className="arena-notice">{learner.error}</div>}
-        {activeTab !== 'archive' && ranking.error && <div role="alert" className="arena-notice">{ranking.error}</div>}
-        {!isLoggedIn && <p className="arena-note">{activeTab === 'archive' ? 'Guest exam progress saves on this device. Sign in to sync across devices.' : 'Guest practice is not saved. Sign in to track your progress across devices.'}</p>}
+        pendingGrades={pendingGrades} notices={notices} onOpenScratch={() => setScratchOpen(true)}>
         <PullToRefresh onRefresh={handleRefresh}>
           <TabTransition tabKey={activeTab}>
           {activeTab === 'dashboard' && (
@@ -376,19 +396,18 @@ function LearningApp() {
 
           {activeTab === 'inbox' && <Inbox />}
 
-          {activeTab === 'research' && <ResearchAnalytics />}
+          {activeTab === 'plan' && <Plan />}
 
           {activeTab === 'settings' && (
             <Settings
               customGoal={customGoal}
-              setCustomGoal={setCustomGoal}
               studyPace={studyPace}
-              setStudyPace={setStudyPace}
+              onChangePreferences={savePreferences}
               studyReminders={studyReminders}
               onToggleReminders={handleToggleReminders}
               reminderNotice={reminderNotice}
-              onSaveSettings={handleSaveSettings}
-              saveSuccessNotify={saveSuccessNotify}
+              onLogout={handleLogout}
+              onProgressReset={() => void handleRefresh()}
             />
           )}
           </TabTransition>
