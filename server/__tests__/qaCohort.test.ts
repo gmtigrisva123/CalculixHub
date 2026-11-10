@@ -204,11 +204,18 @@ describe('arenas', () => {
   };
 
   it('lists and admits each cohort only to its own arenas', async () => {
+    const activeCount = async () =>
+      ((await db.asUser<{ stats: { activeContestsCount: number } }>(null, 'select public.platform_stats() as stats'))[0]!.stats).activeContestsCount;
+    const baseline = await activeCount();
     const live = await arena(minh, 'Saturday Arena');
     const qa = await arena(qaRavi, 'QA Arena');
 
+    // Seeded weekly arenas are live too; only look at the arenas this test creates.
+    const own = new Set(['Saturday Arena', 'QA Arena']);
     const titles = async (viewer: string | null) =>
-      ((await db.asUser<{ list: Array<{ title: string }> }>(viewer, 'select public.arena_catalog() as list'))[0]!.list).map((a) => a.title);
+      ((await db.asUser<{ list: Array<{ title: string }> }>(viewer, 'select public.arena_catalog() as list'))[0]!.list)
+        .map((a) => a.title)
+        .filter((t) => own.has(t));
     expect(await titles(null)).toEqual(['Saturday Arena']);
     expect(await titles(lan)).toEqual(['Saturday Arena']);
     expect(await titles(qaAnna)).toEqual(['QA Arena']);
@@ -218,8 +225,7 @@ describe('arenas', () => {
     await db.asUser(qaAnna, `select public.arena_action($1, 'register')`, [qa]);
     expect(await db.query('select 1 from public.arena_entries where arena_id = $1', [live])).toHaveLength(0);
 
-    const [{ stats }] = (await db.asUser<{ stats: { activeContestsCount: number } }>(null, 'select public.platform_stats() as stats')) as [{ stats: { activeContestsCount: number } }];
-    expect(stats.activeContestsCount).toBe(1);
+    expect(await activeCount()).toBe(baseline + 1);
   });
 });
 
