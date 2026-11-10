@@ -125,7 +125,7 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
 
   return (
     <article ref={spot} className="lx-topic" id={id} aria-labelledby={`${id}-title`} data-topic={index + 1} data-solved={solved || undefined}>
-      <Rise className="lx-topic-inner" y={44} amount={0.2} blur={false}>
+      <Rise className="lx-topic-inner" y={44} amount={0.2} panel>
         <header className="lx-topic-head">
           <span className="lx-topic-number">{String(index + 1).padStart(2, '0')}</span>
           <span className="lx-topic-symbol" aria-hidden="true">{room.symbol}</span>

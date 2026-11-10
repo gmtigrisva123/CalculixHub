@@ -14,7 +14,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { m } from 'motion/react';
 import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
 import { billingConfig } from '../../services/data/plan';
-import { Arrow, Eyebrow, Magnetic, Rise, SplitText, useSpotlight } from './kit';
+import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
 
 const AUDIENCE: Record<PlanId, string> = { free: 'For every learner', pro: 'For contest season', team: 'For clubs and schools' };
 
@@ -37,7 +37,7 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
             <div className="lx-cycle" role="radiogroup" aria-label="Billing period">
               {(['monthly', 'yearly'] as const).map(value => (
                 <button key={value} type="button" role="radio" aria-checked={cycle === value} onClick={() => setCycle(value)}>
-                  {cycle === value && <m.span layoutId="lx-cycle-thumb" className="lx-cycle-thumb" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                  {cycle === value && <m.span layoutId="lx-cycle-thumb" className="lx-cycle-thumb" transition={SPRING.press} />}
                   <span>{value === 'monthly' ? 'Monthly' : 'Yearly'}{value === 'yearly' && <em>save {saving}%</em>}</span>
                 </button>
               ))}
@@ -96,11 +96,11 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
           })}
         </div>
 
-        <Rise as="ul" className="lx-plan-promises" delay={0.1}>
-          <li><b>Free is not a trial.</b> Placement, practice, the archive and the Arena don’t expire.</li>
-          <li><b>No adverts, no data for sale.</b> Pro and Team are what pay for the servers.</li>
-          <li><b>Leave with your work.</b> Download everything, or delete your account, from Settings.</li>
-        </Rise>
+        <Stagger as="ul" className="lx-plan-promises" gap={0.1}>
+          <StaggerItem as="li"><b>Free is not a trial.</b> Placement, practice, the archive and the Arena don’t expire.</StaggerItem>
+          <StaggerItem as="li"><b>No adverts, no data for sale.</b> Pro and Team are what pay for the servers.</StaggerItem>
+          <StaggerItem as="li"><b>Leave with your work.</b> Download everything, or delete your account, from Settings.</StaggerItem>
+        </Stagger>
       </div>
     </section>
   );
@@ -112,7 +112,7 @@ function Price({ plan, cycle }: { plan: Plan; cycle: BillingCycle }) {
   return (
     <p className="lx-plan-price">
       {/* Keyed on the figure so a change of period swaps the number with a small lift instead of a jump. */}
-      <m.strong key={cents} className="lx-tabular" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>{dollars(cents)}</m.strong>
+      <m.strong key={cents} className="lx-tabular" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING.press, opacity: { duration: 0.2 } }}>{dollars(cents)}</m.strong>
       <span>{plan.unit ? `${plan.unit}, ` : ''}a month{cycle === 'yearly' ? `, billed ${dollars(plan.price.yearly)} a year` : ''}</span>
     </p>
   );
@@ -121,7 +121,7 @@ function Price({ plan, cycle }: { plan: Plan; cycle: BillingCycle }) {
 function PlanCard({ children, featured = false, delay }: { children: ReactNode; featured?: boolean; delay: number }) {
   const ref = useSpotlight<HTMLDivElement>();
   return (
-    <Rise className={featured ? 'lx-plan is-featured' : 'lx-plan'} delay={delay} y={44} blur={false}>
+    <Rise className={featured ? 'lx-plan is-featured' : 'lx-plan'} delay={delay} y={44} panel>
       <div ref={ref} className="lx-plan-inner lx-spot" data-tone={featured ? 'ink' : undefined}>{children}</div>
     </Rise>
   );

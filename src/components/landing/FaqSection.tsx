@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { PLANS, dollars } from '../../../shared/plans';
-import { Arrow, Eyebrow, GLIDE, Rise, SplitText } from './kit';
+import { Arrow, Eyebrow, GLIDE, Rise, SPRING, SplitText, fade } from './kit';
 
 const FAQS: [string, string][] = [
   ['What is CalculixHub?', 'A place to practise contest maths: find your level, solve real past problems, and learn from full solutions.'],
@@ -42,7 +42,7 @@ export default function FaqSection() {
                 key={question}
                 className="lx-faq-item"
                 data-open={expanded || undefined}
-                variants={{ hidden: { opacity: 0, y: 22 }, shown: { opacity: 1, y: 0, transition: { duration: 0.7, ease: GLIDE } } }}
+                variants={{ hidden: { opacity: 0, y: 22 }, shown: { opacity: 1, y: 0, transition: { ...SPRING.arrive, opacity: fade() } } }}
               >
                 <h3>
                   <button type="button" onClick={() => setOpen(expanded ? null : index)} aria-expanded={expanded} aria-controls={`lx-faq-${index}`} id={`lx-faq-q-${index}`}>

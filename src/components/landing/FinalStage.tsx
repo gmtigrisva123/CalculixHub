@@ -9,8 +9,8 @@
  */
 
 import { useLayoutEffect, useRef } from 'react';
-import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import { Arrow, Eyebrow, Magnetic, Rise, SplitText, useSpotlight } from './kit';
+import { m, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
+import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
 
 /*
  * The line keeps to the floor of the stage under the words, then climbs behind
@@ -28,7 +28,11 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
   const pathRef = useRef<SVGPathElement>(null);
   const tipRef = useRef<SVGGElement>(null);
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start 0.9', 'end 0.75'] });
-  const drawn = useTransform(scrollYProgress, [0, 0.85], [reduce ? 1 : 0.02, 1]);
+  // The line is drawn by the scroll, through a spring: it keeps pace while the reader
+  // scrolls and runs on a moment after they stop, the way a pencil finishes its stroke.
+  const eased = useSpring(scrollYProgress, SPRING.follow);
+  const drawn = useTransform(eased, [0, 0.85], [reduce ? 1 : 0.02, 1]);
+  const arrival = useStageArrival(sectionRef);
 
   const placeTip = (value: number) => {
     const path = pathRef.current;
@@ -42,7 +46,7 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
 
   return (
     <section ref={sectionRef} className="lx-final" id="begin" aria-labelledby="lx-final-title">
-      <div className="lx-final-stage" data-tone="ink">
+      <m.div className="lx-final-stage" data-tone="ink" style={arrival}>
         <svg className="lx-final-curve" viewBox="0 0 1240 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <path d={PATH} className="lx-final-trace" />
           <m.path ref={pathRef} d={PATH} className="lx-final-line" style={{ pathLength: drawn }} />
@@ -81,7 +85,7 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
           </div>
         </div>
         <p className="lx-final-caption" aria-hidden="true">progress is rarely a straight line.</p>
-      </div>
+      </m.div>
     </section>
   );
 }
@@ -112,7 +116,7 @@ function PathCard({ note, title, copy, action, href, onClick, featured = false, 
   );
   const className = featured ? 'lx-path lx-spot is-featured' : 'lx-path lx-spot';
   return (
-    <Rise delay={delay} y={40} blur={false}>
+    <Rise delay={delay} y={40} panel>
       <Magnetic strength={0.06} className="lx-path-magnet">
         {href
           ? <a ref={ref} className={className} href={href}>{body}</a>

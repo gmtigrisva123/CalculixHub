@@ -80,7 +80,7 @@ export default function ChordPlayground() {
           </Rise>
         </header>
 
-        <Rise className="lx-bezel" y={70} amount={0.15} blur={false}>
+        <Rise className="lx-bezel" y={70} amount={0.15} panel>
           <div className="lx-bezel-core lx-play-card">
             <div className="lx-play-problem">
               <span className="lx-play-tag">The problem</span>

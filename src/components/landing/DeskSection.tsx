@@ -11,10 +11,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { useInView, useReducedMotion } from 'motion/react';
+import { m, useInView, useReducedMotion } from 'motion/react';
 import { drawPage, extendStroke, type ScratchInk, type ScratchStroke, type ScratchTool } from '../../domain/scratch';
 import { PHASE_LABEL, dateKey, daysUntil, trainingPlan } from '../../domain/raceDay';
-import { Arrow, Eyebrow, Magnetic, Rise, SplitText } from './kit';
+import { Arrow, Eyebrow, Magnetic, Rise, SplitText, Stagger, StaggerItem, useStageArrival } from './kit';
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
@@ -87,10 +87,14 @@ function Sheet() {
   const clearedRef = useRef(cleared);
   clearedRef.current = cleared;
 
+  // The sheet's size in CSS pixels, measured when it changes rather than on every frame:
+  // reading clientWidth inside the drawing loop made the browser lay the page out each time.
+  const size = useRef({ width: 0, height: 0 });
+
   const paint = useCallback(() => {
     const node = canvas.current;
     if (!node) return;
-    const width = node.clientWidth, height = node.clientHeight;
+    const { width, height } = size.current;
     if (!width || !height) return;
     const density = Math.min(window.devicePixelRatio || 1, 2.5);
     if (node.width !== Math.round(width * density)) { node.width = Math.round(width * density); node.height = Math.round(height * density); }
@@ -122,7 +126,10 @@ function Sheet() {
   useEffect(() => {
     const node = canvas.current;
     if (!node) return;
-    const observer = new ResizeObserver(paint);
+    const observer = new ResizeObserver(([entry]) => {
+      size.current = { width: entry.contentRect.width, height: entry.contentRect.height };
+      paint();
+    });
     observer.observe(node);
     return () => observer.disconnect();
   }, [paint]);
@@ -221,26 +228,28 @@ function CountdownCard({ onRegister }: { onRegister: () => void }) {
 }
 
 export default function DeskSection({ onRegister }: { onRegister: () => void }) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const arrival = useStageArrival(sectionRef);
   return (
-    <section className="lx-desk" id="desk" aria-labelledby="lx-desk-title">
-      <div className="lx-desk-stage" data-tone="ink">
+    <section ref={sectionRef} className="lx-desk" id="desk" aria-labelledby="lx-desk-title">
+      <m.div className="lx-desk-stage" data-tone="ink" style={arrival}>
         <div className="lx-wrap lx-desk-grid">
           <header className="lx-desk-copy">
             <Eyebrow index="07">Your desk</Eyebrow>
             <SplitText as="h2" id="lx-desk-title" className="lx-h2" text={'Pen, paper,\n*and a date.*'} />
             <Rise as="p" className="lx-lead">Contest maths is done by hand, toward a day on the calendar. So every page has scratch paper under it, and your practice counts down to the day that matters.</Rise>
-            <Rise as="ul" className="lx-desk-points" delay={0.08}>
-              <li><b>Scratch paper</b> on every screen. Press S and it slides in beside the problem.</li>
-              <li><b>A countdown</b> to your contest, with the weeks before it planned: build, sharpen, taper.</li>
-              <li><b>A card to share</b> when a streak or a rank is worth showing someone.</li>
-            </Rise>
+            <Stagger as="ul" className="lx-desk-points" delay={0.1} gap={0.09}>
+              <StaggerItem as="li"><b>Scratch paper</b> on every screen. Press S and it slides in beside the problem.</StaggerItem>
+              <StaggerItem as="li"><b>A countdown</b> to your contest, with the weeks before it planned: build, sharpen, taper.</StaggerItem>
+              <StaggerItem as="li"><b>A card to share</b> when a streak or a rank is worth showing someone.</StaggerItem>
+            </Stagger>
           </header>
           <div className="lx-desk-objects">
-            <Rise y={50} blur={false} amount={0.2}><Sheet /></Rise>
-            <Rise y={50} blur={false} delay={0.12} amount={0.2}><CountdownCard onRegister={onRegister} /></Rise>
+            <Rise y={50} panel amount={0.2}><Sheet /></Rise>
+            <Rise y={50} panel delay={0.12} amount={0.2}><CountdownCard onRegister={onRegister} /></Rise>
           </div>
         </div>
-      </div>
+      </m.div>
     </section>
   );
 }

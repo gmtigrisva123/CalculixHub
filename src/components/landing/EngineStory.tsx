@@ -20,7 +20,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { ENGINE_RUN, TIER_BANDS, certainty, type EngineStep } from './engineRun';
-import { Arrow, Eyebrow, GLIDE, Magnetic, SplitText } from './kit';
+import { Arrow, Eyebrow, GLIDE, Magnetic, SPRING, SplitText } from './kit';
 
 const RUN = ENGINE_RUN;
 const ANSWERS = RUN.steps.length - 1;
@@ -73,8 +73,9 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const { scrollYProgress: playhead } = useScroll({ target: sectionRef, offset: ['start start', 'end end'] });
   const { scrollYProgress: arrival } = useScroll({ target: sectionRef, offset: ['start end', 'start start'] });
+  // The stage grows into the frame as it arrives. Scale only: its corner radius used to
+  // tighten on the way in, which repainted the whole stage on every frame of the approach.
   const stageScale = useTransform(arrival, [0, 1], [reduce ? 1 : 0.9, 1]);
-  const stageRadius = useTransform(arrival, [0.6, 1], ['22px', '16px']);
 
   const [beat, setBeat] = useState(0);
   const [answered, setAnswered] = useState(0);
@@ -158,7 +159,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
   return (
     <section ref={sectionRef} className="lx-engine" id="engine" aria-labelledby="lx-engine-title">
       <div className="lx-engine-pin">
-        <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale, borderRadius: stageRadius }}>
+        <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale }}>
           <div className="lx-engine-grid" aria-hidden="true" />
           <header className="lx-engine-head">
             <Eyebrow index="02">How it works</Eyebrow>
@@ -261,10 +262,10 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
               <AnimatePresence mode="popLayout" initial={false}>
                 <m.p
                   key={latest ? latest.item!.id : 'start'}
-                  initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
-                  transition={{ duration: 0.45, ease: GLIDE }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ ...SPRING.press, opacity: { duration: 0.25 } }}
                 >
                   {latest ? (
                     <>

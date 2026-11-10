@@ -15,7 +15,7 @@
 import { forwardRef, lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { ARCHIVE_FIGURES } from './archiveFigures';
-import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SplitText } from './kit';
+import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SPRING, SplitText, fade } from './kit';
 import { jumpTo } from './LandingNav';
 import HeroGlow from './HeroGlow';
 
@@ -67,14 +67,19 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
         <div className="lx-hero-grain" aria-hidden="true" />
 
         <m.div className="lx-hero-copy" style={{ y: copyY, opacity: copyOpacity }}>
-          <m.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: GLIDE, delay: 0.1 }}>
+          {/*
+            The opening choreography: eyebrow, headline word by word, lead, then
+            the two ways in. The buttons are on screen inside the first second,
+            and can be clicked from the first frame; nothing waits on a flourish.
+          */}
+          <m.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING.arrive, delay: 0.05, opacity: fade(0.05) }}>
             <Eyebrow live>Competition mathematics · AMC to IMO</Eyebrow>
           </m.div>
-          <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" delay={0.22} stagger={0.085} />
-          <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 1.1, ease: GLIDE, delay: 0.75 }}>
+          <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" delay={0.14} stagger={0.07} />
+          <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING.arrive, delay: 0.42, opacity: fade(0.42) }}>
             Contest problems chosen to fit you, then talked through one step at a time — the way a good tutor would, sitting right beside you.
           </m.p>
-          <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: GLIDE, delay: 0.92 }}>
+          <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING.arrive, delay: 0.52, opacity: fade(0.52) }}>
             <Magnetic>
               <button type="button" className="lx-btn lx-btn-cream" onClick={onRegister}>
                 <span>Find your level</span>
@@ -89,22 +94,22 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
         </m.div>
 
         <m.div className="lx-hero-foot" style={{ opacity: copyOpacity }}>
-          <m.dl className="lx-hero-stats" initial="hidden" animate="shown" variants={{ shown: { transition: { staggerChildren: 0.08, delayChildren: 1.05 } } }}>
-            <HeroStat label="past problems"><CountUp value={ARCHIVE_FIGURES.problems} delay={1.1} /></HeroStat>
-            <HeroStat label="real exams"><CountUp value={ARCHIVE_FIGURES.papers} delay={1.18} /></HeroStat>
+          <m.dl className="lx-hero-stats" initial="hidden" animate="shown" variants={{ shown: { transition: { staggerChildren: 0.07, delayChildren: 0.7 } } }}>
+            <HeroStat label="past problems"><CountUp value={ARCHIVE_FIGURES.problems} delay={0.75} /></HeroStat>
+            <HeroStat label="real exams"><CountUp value={ARCHIVE_FIGURES.papers} delay={0.82} /></HeroStat>
             <HeroStat label="years of contests">{ARCHIVE_FIGURES.firstYear}<span className="lx-dash">–</span>{ARCHIVE_FIGURES.lastYear}</HeroStat>
           </m.dl>
-          <m.p className="lx-hero-caption" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.2, delay: 1.9 }}>
+          <m.p className="lx-hero-caption" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 1.3 }}>
             <svg className="lx-hero-scribble" viewBox="0 0 150 120" fill="none" aria-hidden="true">
               <m.path
                 d="M136 112C92 114 40 100 26 62C20 44 30 26 48 12"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1, ease: GLIDE, delay: 2.1 }}
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1, ease: GLIDE, delay: 1.5 }}
               />
               <m.path
                 d="M34 12 49 11 47 27"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.4, ease: GLIDE, delay: 3 }}
+                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.4, ease: GLIDE, delay: 2.4 }}
               />
             </svg>
             <span>Three short equations draw this one path. It never repeats, never crosses itself — <em>chaos, but it never gets lost.</em></span>
@@ -123,7 +128,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
 
 function HeroStat({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <m.div className="lx-hero-stat" variants={{ hidden: { opacity: 0, y: 16 }, shown: { opacity: 1, y: 0, transition: { duration: 0.9, ease: GLIDE } } }}>
+    <m.div className="lx-hero-stat" variants={{ hidden: { opacity: 0, y: 16 }, shown: { opacity: 1, y: 0, transition: { ...SPRING.arrive, opacity: fade() } } }}>
       <dt>{label}</dt>
       <dd>{children}</dd>
     </m.div>
