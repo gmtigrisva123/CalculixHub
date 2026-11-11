@@ -12,7 +12,7 @@
   --ib-hover: color-mix(in srgb, var(--ct) 4%, transparent);
   --ib-select: color-mix(in srgb, var(--ac) 9%, var(--sf-raised));
   --ib-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --ib-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --ib-sans: 'Geist', system-ui, sans-serif;
   --ib-ease: cubic-bezier(.2, .8, .2, 1);
   --ib-live: #16a34a;
   color: var(--ct);
@@ -162,9 +162,6 @@
 .ib-empty h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ct); }
 .ib-empty p { margin: 0; max-width: 40ch; font-size: 13.5px; line-height: 1.5; }
 .ib-empty.is-thread { flex: 1; align-content: center; }
-.ib-signedout { display: grid; justify-items: start; gap: 6px; padding: 32px; border: 1px dashed var(--ln); border-radius: 16px; }
-.ib-signedout h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
-.ib-signedout p { margin: 0; color: var(--ct-muted); }
 .ib-skeleton { display: grid; gap: 10px; padding: 16px; }
 .ib-skeleton span { height: 56px; border-radius: 12px; background: linear-gradient(90deg, var(--sf-sunken), var(--sf), var(--sf-sunken)); background-size: 200% 100%; animation: ib-shimmer 1.4s linear infinite; }
 .ib-skeleton.is-tight span { height: 46px; }

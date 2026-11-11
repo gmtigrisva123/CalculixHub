@@ -43,7 +43,7 @@ const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#209d8
 const TOPICS: readonly Topic[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
 
 const SERIF = `'Newsreader', Georgia, serif`;
-const SANS = `'Geist', 'DM Sans', system-ui, sans-serif`;
+const SANS = `'Geist', system-ui, sans-serif`;
 const MONO = `'Geist Mono', ui-monospace, monospace`;
 
 /** The faces the card is set in. Loaded before drawing: a canvas does not wait for a webfont the way the page does. */

@@ -48,66 +48,145 @@
     <!--
       Webfonts.
 
-      Loaded here rather than with `@import url(...)` at the top of index.css.
-      A remote @import inside the app stylesheet cannot start downloading until
-      that stylesheet has itself been fetched and parsed, which stacks three
-      round trips in front of first paint; a <link> in the head starts during
-      HTML parse. The preconnect pair warms the TLS handshake to both Google
-      hosts before the stylesheet URL is even known — fonts.gstatic.com is where
-      the font binaries live and it is crossorigin, hence the separate hint.
+      Served from this origin (see src/styles/fonts.css), not from Google. A
+      first visit used to open two more connections, to fonts.googleapis.com
+      and fonts.gstatic.com, and could not draw a word until a stylesheet had
+      come back from the first of them. Now the only thing between the HTML and
+      text on screen is this site's own CSS.
 
-      Geist, Newsreader and Geist Mono are requested as weight *ranges*, which
-      Google serves as one variable file per style instead of a file per cut.
-      The landing page sets its display type at in-between weights (Geist at
-      560, say) and Newsreader's optical-size axis lets the same family draw a
-      hairline-contrast italic at 140px and a sturdy one at 16px. Newsreader
-      keeps its italic because italic, not weight, is how emphasis is marked;
-      Geist Mono is the voice of numbers and instrument readouts.
+      The two files below are the faces the landing hero is set in: Geist for
+      "Stay with the", Newsreader's italic for "question". Preloading starts
+      them downloading alongside the stylesheet, so the headline is normally
+      drawn in its real type on the first frame instead of arriving in a
+      fallback and jumping. Everything else (Geist Mono, the upright
+      Newsreader, Caveat) is fetched when a page first uses it.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,300..500&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&family=Caveat:wght@500;600&display=swap"
-    />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2" />
 
     <!--
-      Theme boot.
+      The colour the browser tints its own chrome with. Declared before the
+      boot script, which corrects it for the night theme: a script cannot
+      change a tag that has not been parsed yet.
+    -->
+    <meta name="theme-color" content="#f7f5ef" />
 
-      This runs before the first paint, and it has to: the alternative is the
-      browser painting the default theme and React correcting it a beat later,
-      which is a full-screen white flash on every cold load for anyone using the
-      night theme. That flash is the single most visible way an app announces
-      that its theming was added late.
+    <!--
+      Boot: the theme, and the first frame.
 
-      Deliberately inline and synchronous. A module script is deferred by
-      definition and would run after paint, and an external file would be a
-      blocking request for ~15 lines. Kept in sync with src/lib/theme.ts, which
-      owns the same logic for every switch after this one.
+      This runs before the first paint, and it has to. Two things are decided
+      here that cannot wait for the app's own code:
 
-      `data-theme` always holds the *resolved* theme, never `system` — that is
-      what lets styles/tokens.css describe night exactly once instead of
-      duplicating it under a `prefers-color-scheme` media query.
+      1. The theme. Otherwise the browser paints daylight and React corrects it
+         a beat later, a full-screen flash on every cold load for anyone using
+         the night theme. `data-theme` always holds the *resolved* theme, never
+         `system`, which is what lets styles/tokens.css describe night once.
+         Kept in sync with src/lib/theme.ts, which owns every switch after
+         this one.
+
+      2. Which ground to paint while the app loads (`data-boot`). The landing
+         page opens on a night stage and the workspace on paper, so a single
+         neutral colour would be wrong for one of them and would have to be
+         swapped under the visitor's eyes. A stored session or a guest pass
+         means the workspace; a sign-in or recovery link means the paper of the
+         forms; anything else is a first visit, and gets the night. The app
+         reads the same answer from src/boot/boot.ts.
+
+      Deliberately inline and synchronous: a module script is deferred by
+      definition and would run after paint.
     -->
     <script>
       (function () {
+        var root = document.documentElement;
+        var resolved = 'light';
         try {
           var stored = localStorage.getItem('calculix_theme');
           var pref = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
-          var resolved =
-            pref === 'system'
-              ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-              : pref;
-          document.documentElement.dataset.theme = resolved;
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', resolved === 'dark' ? '#12251c' : '#f7f9f5');
+          resolved = pref === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : pref;
         } catch (e) {
           // Private browsing can throw on localStorage access. Daylight is a
           // safe floor, and the app corrects itself once React mounts.
-          document.documentElement.dataset.theme = 'light';
         }
+        root.dataset.theme = resolved;
+
+        var boot = 'landing';
+        try {
+          var query = new URLSearchParams(location.search);
+          var link = query.has('code') || query.has('error') || query.has('auth') || query.has('recovery') || /error=|access_token=|type=/.test(location.hash);
+          var session = !!localStorage.getItem('calculixhub.auth');
+          var guest = !query.has('home') && !link && (query.get('demo') === '1' || localStorage.getItem('calculix_guest_access') === 'true');
+          boot = query.get('preview') === 'ios' ? 'paper' : session && !query.has('recovery') ? 'workspace' : guest ? 'workspace' : link ? 'paper' : 'landing';
+        } catch (e) {}
+        root.dataset.boot = boot;
+
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', boot === 'landing' ? '#f8f4ed' : resolved === 'dark' ? '#141d22' : '#efece4');
       })();
     </script>
+
+    <!--
+      The first frame's styles. Inline, so they apply with the HTML and do not
+      wait for the app's stylesheet.
+
+      `#boot` is one fixed element over the page. It is drawn entirely with
+      backgrounds: no images, no fonts, nothing to fetch. Its colours repeat
+      what the real screens use (the landing's night stage in
+      styles/landing-experience.css, the workspace's desk and sheet in
+      styles/shell.css), so when src/boot/boot.ts fades it out, what is
+      underneath is already the same picture.
+
+      The mark in the middle holds back for a third of a second. On a fast
+      connection the app is ready before then and the visitor sees only the
+      ground resolve into the page; the mark is for the slow cases, where it
+      says "this is loading" rather than "this is broken".
+    -->
+    <style>
+      html { background: #f8f4ed; }
+      html[data-boot='workspace'] { background: #efece4; }
+      html[data-boot='paper'] { background: #f7f5ef; }
+      html[data-theme='dark'][data-boot='workspace'] { background: #141d22; }
+      html[data-theme='dark'][data-boot='paper'] { background: #1b272d; }
+      body { margin: 0; }
+
+      #boot, .boot-hold { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; }
+      #boot { opacity: 1; transition: opacity .42s cubic-bezier(.4, 0, .2, 1); contain: strict; }
+      #boot.is-leaving { opacity: 0; pointer-events: none; }
+      .boot-hold { position: static; min-height: 100dvh; }
+
+      /* Landing: paper frame, night stage. */
+      #boot { background: #f8f4ed; }
+      .boot-stage { position: absolute; inset: clamp(8px, 1.05vw, 16px); border-radius: clamp(10px, 1.1vw, 16px);
+        background:
+          radial-gradient(26% 34% at 72% 46%, rgba(0, 78, 88, .55), transparent 70%),
+          radial-gradient(52% 62% at 70% 44%, rgba(0, 58, 72, .85), transparent 72%),
+          linear-gradient(170deg, #001822 0%, #000c15 100%); }
+
+      /* Workspace: the desk, the rail, the sheet. Widths match styles/shell.css. */
+      html[data-boot='workspace'] #boot { background: #efece4; }
+      html[data-boot='workspace'] .boot-stage { inset: 0 0 0 264px; border-radius: 22px 0 0 0; background: #f7f5ef; box-shadow: 0 0 0 1px #e2dfd5; }
+      html[data-boot='paper'] #boot { background: #f7f5ef; }
+      html[data-boot='paper'] .boot-stage { display: none; }
+      html[data-theme='dark'][data-boot='workspace'] #boot { background: #141d22; }
+      html[data-theme='dark'][data-boot='workspace'] .boot-stage { background: #1b272d; box-shadow: 0 0 0 1px #384950; }
+      html[data-theme='dark'][data-boot='paper'] #boot { background: #1b272d; }
+      @media (max-width: 767px) { html[data-boot='workspace'] .boot-stage { inset: 0; border-radius: 0; } }
+
+      .boot-mark { position: relative; width: 44px; height: 44px; color: #7ddfee; opacity: 0; animation: boot-in .5s .34s ease forwards; }
+      html[data-boot='workspace'] .boot-mark, html[data-boot='paper'] .boot-mark, .boot-hold .boot-mark { color: #426c7b; }
+      html[data-theme='dark'][data-boot='workspace'] .boot-mark, html[data-theme='dark'][data-boot='paper'] .boot-mark, html[data-theme='dark'] .boot-hold .boot-mark { color: #afcbd3; }
+      @media (min-width: 768px) { html[data-boot='workspace'] #boot .boot-mark { left: 132px; } }
+      .boot-mark svg { display: block; width: 100%; height: 100%; }
+      .boot-mark path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: boot-draw 1.5s .34s cubic-bezier(.65, 0, .35, 1) infinite alternate; }
+      .boot-mark circle { opacity: .9; }
+      .boot-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      @keyframes boot-in { to { opacity: 1; } }
+      @keyframes boot-draw { to { stroke-dashoffset: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        #boot { transition: none; }
+        .boot-mark { animation: none; opacity: 1; }
+        .boot-mark path { animation: none; stroke-dashoffset: 0; }
+      }
+    </style>
 
     <!--
       Installable web app.
@@ -118,7 +197,6 @@
       resolve against the manifest, so it needs no build-time substitution.
     -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#f7f9f5" />
 
     <!--
       iOS ignores the manifest when adding to the home screen: the name comes
@@ -131,6 +209,13 @@
     <link rel="apple-touch-icon" href="/icons/icon-180.png" />
   </head>
   <body>
+    <!-- The first frame: see the inline styles above and src/boot/boot.ts. The mark is src/components/brand.ts. -->
+    <div id="boot" aria-hidden="true">
+      <div class="boot-stage"></div>
+      <span class="boot-mark">
+        <svg viewBox="0 0 40 40" fill="none"><path pathLength="100" d="M30 9C11 2 2 27 18 32c7 3 15-3 15-10M7 23 32 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /><circle cx="31" cy="12" r="3" fill="currentColor" /></svg>
+      </span>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

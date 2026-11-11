@@ -1,14 +1,77 @@
-/* Progress: the page header. The cards below it keep their own styles. */
-.pg-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 22px; border-bottom: 1px solid var(--ln); }
-.pg-head p, .pg-head h1 { margin: 0; }
-.pg-eyebrow { display: flex; align-items: center; gap: 10px; font: 600 11px/1.3 'Geist Mono', ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--ct-subtle); }
-.pg-eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: #c8973a; box-shadow: 0 0 0 4px #c8973a26; }
-.pg-head h1 { margin-top: 12px; font: 400 clamp(32px, 3.6vw, 48px)/1.02 'Newsreader', Georgia, serif; letter-spacing: -.035em; color: var(--ct); text-wrap: balance; }
-.pg-head h1 em { font-style: italic; font-weight: 350; color: var(--ac-text); }
-.pg-summary { margin-top: 10px !important; max-width: 58ch; font-size: 15px; line-height: 1.55; color: var(--ct-muted); }
-.pg-summary b { font-weight: 600; color: var(--ct); }
-.pg-print { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--ln); border-radius: 12px; background: var(--sf-raised); color: var(--ct); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s, transform .16s; }
-.pg-print:hover { background: var(--sf-sunken); }
-.pg-print:active { transform: scale(.97); }
-.pg-print small { padding: 2px 7px; border-radius: 999px; font: 600 10px/1.4 'Geist Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; background: color-mix(in srgb, #c8973a 18%, transparent); color: #8a6417; }
-[data-theme='dark'] .pg-print small { color: #e6bd73; }
+/*
+ * Progress (components/ProgressView.tsx): four figures across the top, then
+ * mastery by topic beside what to do about it. The heading is the shared one
+ * in styles/page.css.
+ */
+
+.pr { display: grid; gap: 18px; }
+.pr .pg-head { margin-bottom: 8px; }
+
+.pr-print { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border: 1px solid var(--ln-strong); border-radius: 12px; background: var(--sf-raised); color: var(--ct); font-size: 14px; font-weight: 580; transition: border-color .16s, transform .2s cubic-bezier(.22, 1, .36, 1); }
+.pr-print:hover { border-color: var(--ct-subtle); }
+.pr-print:active { transform: scale(.97); }
+.pr-print small { padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, #c8973a 18%, transparent); color: #8a6417; font: 600 10px/1.4 'Geist Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
+[data-theme='dark'] .pr-print small { color: #e6bd73; }
+
+/* The four figures: one card, ruled into columns, so they read as one line of a ledger. */
+.pr-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border: 1px solid var(--ln); border-radius: 20px; background: var(--sf-raised); }
+.pr-figures > div { padding: 20px 22px 18px; }
+.pr-figures > div + div { border-left: 1px solid var(--ln-faint); }
+.pr-figures dt { display: flex; align-items: center; gap: 8px; color: var(--ct-subtle); font-size: 13px; }
+.pr-figures dt svg { color: var(--ac-text); }
+.pr-figures dd { margin: 10px 0 0; font: 560 clamp(26px, 2.4vw, 34px)/1 'Geist', system-ui, sans-serif; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.pr-figures dd small { margin-left: 4px; color: var(--ct-subtle); font-size: 14px; font-weight: 450; letter-spacing: -.01em; }
+.pr-figures dd em { display: block; margin-top: 9px; color: var(--ct-subtle); font: 400 12.5px/1.3 'Geist', system-ui, sans-serif; letter-spacing: 0; }
+
+.pr-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; gap: 18px; }
+.pr-side { display: grid; gap: 18px; }
+
+.pr-card { min-width: 0; padding: clamp(18px, 2vw, 26px); border: 1px solid var(--ln); border-radius: 20px; background: var(--sf-raised); }
+.pr-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.pr-card-head > span { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 1px solid var(--ln); border-radius: 11px; background: var(--sf); color: var(--ac-text); }
+.pr-card-head.is-warm > span { border-color: color-mix(in srgb, #c8973a 35%, var(--ln)); background: color-mix(in srgb, #e6bd73 16%, var(--sf)); color: #a8742a; }
+[data-theme='dark'] .pr-card-head.is-warm > span { color: #e6bd73; }
+.pr-card-head h2 { margin: 0; font: 560 19px/1.25 'Geist', system-ui, sans-serif; letter-spacing: -.028em; }
+.pr-card-head p { margin: 3px 0 0; color: var(--ct-muted); font-size: 13.5px; line-height: 1.5; }
+
+.pr-radar { max-width: 340px; margin: 18px auto 6px; color: var(--ac); }
+.pr-radar text { fill: var(--ct-subtle); }
+.pr-radar .text-stone-200 { color: var(--ln); }
+
+.pr-topics { display: grid; gap: 18px; margin: 0; padding: 20px 0 0; border-top: 1px solid var(--ln-faint); list-style: none; }
+.pr-topic { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; }
+.pr-topic strong { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 580; letter-spacing: -.012em; }
+.pr-topic strong i { width: 8px; height: 8px; border-radius: 50%; background: var(--cx-hue); }
+/* The four topic hues, as lib/topics.tsx assigns them. */
+.pr-topic.is-alg { --cx-hue: #c8842a; }
+.pr-topic.is-geo { --cx-hue: #2f9c8c; }
+.pr-topic.is-cmb { --cx-hue: #8b5cf6; }
+.pr-topic.is-nt { --cx-hue: #0ea5e9; }
+.pr-topic p { grid-column: 1; margin: 0; color: var(--ct-subtle); font-size: 13px; line-height: 1.45; }
+.pr-topic b { grid-area: 1 / 2 / 3 / 3; align-self: center; font: 560 20px/1 'Geist', system-ui, sans-serif; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pr-topic b small { margin-left: 1px; color: var(--ct-subtle); font-size: 12px; font-weight: 450; }
+.pr-track { grid-column: 1 / -1; height: 6px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: var(--sf-sunken); }
+.pr-fill { height: 100%; border-radius: inherit; background: var(--cx-hue); }
+
+.pr-focus { margin-top: 16px; padding: 15px 16px; border: 1px solid var(--ln); border-radius: 14px; background: var(--sf); color: var(--ct-muted); font-size: 14px; line-height: 1.55; }
+.pr-focus.is-set { border-color: color-mix(in srgb, #c8973a 36%, var(--ln)); background: color-mix(in srgb, #e6bd73 12%, var(--sf-raised)); color: var(--ct); }
+.pr-focus h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+.pr-focus p { margin: 0; }
+.pr-steps { display: grid; gap: 10px; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px solid var(--ln-faint); color: var(--ct-muted); font-size: 14px; line-height: 1.5; list-style: none; counter-reset: step; }
+.pr-steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; counter-increment: step; }
+.pr-steps li::before { content: counter(step); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--sf-sunken); color: var(--ct-muted); font: 600 11px/1 'Geist Mono', ui-monospace, monospace; }
+.pr-steps strong { color: var(--ct); font-weight: 600; }
+
+.pr-chart { height: 208px; margin-top: 16px; }
+
+@media (max-width: 1099px) {
+  .pr-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .pr-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: 18px; }
+  .pr-figures > div { padding: 16px; }
+  .pr-figures > div:nth-child(odd) { border-left: 0; }
+  .pr-figures > div:nth-child(n + 3) { border-top: 1px solid var(--ln-faint); }
+  .pr-print { width: 100%; justify-content: center; }
+  .pr .pg-aside { width: 100%; }
+}

@@ -1,6 +1,6 @@
 /* Hallmark · macrostructure: floodlit stage → ticket board → rule strip (bespoke, inside the workspace system)
  * genre: playful · tone: competitive, warm, alive · anchor hue: steel blue (refresh.css --ac)
- * display: Manrope · body: DM Sans · notation: Newsreader
+ * display and body: Geist · notation: Newsreader
  * Previous: a static orbit diagram beside a plain list. Current: a living stadium, ticket-cut matches, rules that act themselves out.
  * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · contrast: pass (40–41) · mobile: pass (34, 49, 50–57)
  * Scope: the Arena lobby only. Everything is namespaced `al-`; arena-admin.css, which the Admin workspace shares, is untouched.
@@ -11,7 +11,7 @@
  * ------------------------------------------------------------------------ */
 
 .arena-space {
-  --al-display: 'Manrope', 'Geist', sans-serif;
+  --al-display: 'Geist', sans-serif;
   --al-math: 'Newsreader', Georgia, serif;
   --al-ease: cubic-bezier(.32, .72, 0, 1);
 

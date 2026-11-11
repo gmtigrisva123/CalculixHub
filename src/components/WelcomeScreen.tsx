@@ -54,6 +54,8 @@ import '../styles/landing-refresh.css';
 
 interface WelcomeScreenProps {
   onLoginSuccess: (name: string, level: Level) => void;
+  /** The form to open on, when the visitor asked for one from the landing page. */
+  initialMode?: 'login' | 'register';
 }
 
 const DOMAINS: Domain[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
@@ -156,13 +158,14 @@ function linkGeometry(node: GraphNode) {
 const SELF_ORIGIN: React.CSSProperties = { transformBox: 'fill-box', transformOrigin: 'center' };
 
 
-export default function WelcomeScreen({ onLoginSuccess }: WelcomeScreenProps) {
+export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeScreenProps) {
   const { signIn, signUp, resendConfirmation, signInWithSocial, authError, requestPasswordReset, updatePassword, recoveringPassword, completeOnboarding, status: authStatus, hasOnboarded, confirmedElsewhere, dismissConfirmedElsewhere } = useAuth();
 
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'register' | 'verify' | 'confirmed' | 'reset' | 'placement'>(() => {
     if (initialPasswordRecovery) return 'reset';
     if (initialConfirmationElsewhere) return 'confirmed';
     if (initialEmailConfirmation) return 'login';
+    if (initialMode) return initialMode;
     return new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing';
   });
   const [email, setEmail] = useState('');

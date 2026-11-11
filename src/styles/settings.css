@@ -31,7 +31,7 @@
   --se-bad: #b13a26;
 
   --se-serif: 'Newsreader', Georgia, serif;
-  --se-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --se-sans: 'Geist', system-ui, sans-serif;
   --se-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --se-ease: cubic-bezier(.22, 1, .36, 1);
 
@@ -107,7 +107,7 @@
  * ------------------------------------------------------------------------ */
 
 .se-body { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: clamp(20px, 3vw, 36px); align-items: start; }
-.se-index { position: sticky; top: 24px; display: grid; gap: 2px; padding: 8px; border: 1px solid var(--se-line); border-radius: 20px; background: var(--se-surface); }
+.se-index { position: sticky; top: var(--ws-sticky, 24px); display: grid; gap: 2px; padding: 8px; border: 1px solid var(--se-line); border-radius: 20px; background: var(--se-surface); }
 .se-index button { position: relative; display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 12px; border-radius: 12px; color: var(--se-muted); font-size: 13.5px; font-weight: 550; text-align: left; cursor: pointer; transition: background .2s, color .2s; }
 .se-index button:hover { background: var(--se-sunken); color: var(--se-ink); }
 .se-index button[aria-current='true'] { background: var(--se-tone-soft); color: var(--se-ink); }

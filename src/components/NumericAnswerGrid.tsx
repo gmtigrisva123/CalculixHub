@@ -13,7 +13,7 @@ export default function NumericAnswerGrid({ digits, value, onChange, disabled }:
           {Array.from({ length: 10 }, (_, digit) => <button
             key={digit} type="button" aria-label={'Column ' + (column + 1) + ', digit ' + digit}
             aria-pressed={selected[column] === String(digit)}
-            className={'block w-full min-h-11 my-1 rounded-full border font-mono transition-colors ' + (selected[column] === String(digit) ? 'border-indigo-500 bg-indigo-500/20 text-indigo-500' : 'border-line text-content hover:bg-surface-sunken')}
+            className={'block w-full min-h-11 lg:min-h-9 my-1 rounded-[10px] border font-mono text-[15px] transition-colors ' + (selected[column] === String(digit) ? 'border-accent bg-accent-muted text-accent-text font-semibold' : 'border-line text-content hover:bg-surface-sunken')}
             onClick={() => { const next = [...selected]; next[column] = String(digit); onChange(next.join('')); }}
           >{digit}</button>)}
         </div>

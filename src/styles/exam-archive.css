@@ -1,6 +1,6 @@
 /* Hallmark · genre: atmospheric sky over the workspace paper · macrostructure: Map / Diagram (an orrery of the whole catalog) → shelves by decade → exam desk
  * theme: custom "Observatory" · tone: nocturnal, precise, unhurried · anchor hue: starlight gold on night blue
- * display: Newsreader (roman) · body: DM Sans · math: KaTeX via MathText · nav/footer: the workspace shell's own
+ * display: Newsreader (roman) · body: Geist · math: KaTeX via MathText · nav/footer: the workspace shell's own
  * enrichment: WebGL star map drawn from the catalog (each star is a problem; data, not decoration)
  * motion: sky drift + twinkle (pausable, still under reduced motion) · rail glide · a result's constellation drawn in
  * Previous: eight paper cards in a flat grid. Current: the archive as one sky, shelves where each paper is its own
@@ -16,7 +16,7 @@
 
 .xa {
   --xa-display: 'Newsreader', Georgia, serif;
-  --xa-body: 'DM Sans', 'Geist', sans-serif;
+  --xa-body: 'Geist', sans-serif;
   --xa-ease: cubic-bezier(.32, .72, 0, 1);
   --xa-ease-in-out: cubic-bezier(.65, 0, .35, 1);
 
@@ -683,7 +683,7 @@
 }
 
 .xa-desk-grid { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 32px; align-items: start; }
-.xa-desk-side { position: sticky; top: 20px; display: grid; gap: 16px; min-width: 0; }
+.xa-desk-side { position: sticky; top: var(--ws-sticky, 20px); display: grid; gap: 16px; min-width: 0; }
 .xa-rail ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .xa-rail-node {
   position: relative;
@@ -1077,7 +1077,7 @@
  * ------------------------------------------------------------------------ */
 
 @media (min-width: 768px) {
-  .xa-toolbar { position: sticky; top: 16px; z-index: 6; }
+  .xa-toolbar { position: sticky; top: var(--ws-sticky, 16px); z-index: 6; }
 }
 
 @media (max-width: 900px) {

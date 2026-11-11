@@ -24,7 +24,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { isBackendConfigured, supabase } from '../services/supabase';
+import { AUTH_STORAGE_KEY, isBackendConfigured, supabase } from '../services/supabase';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { deriveSignupUsername } from '../services/authInput';
 import type { Level, ProfileRow } from '../services/database.types';
@@ -104,8 +104,28 @@ function friendlyAuthError(raw: string | undefined, context: 'signIn' | 'signUp'
   return 'Something went wrong. Please try again.';
 }
 
+/**
+ * Whether this page load could turn out to be signed in.
+ *
+ * A session can only come from two places: the copy kept in this browser's
+ * storage, or a sign-in link that carries a code in the address. With neither,
+ * the visitor is certainly signed out, and there is no reason to hold the page
+ * back while the SDK starts up just to be told so. That wait is what a
+ * first-time visitor used to see before the landing page.
+ */
+function sessionMayExist(): boolean {
+  try {
+    if (localStorage.getItem(AUTH_STORAGE_KEY)) return true;
+  } catch {
+    return true; // Storage is unreadable, so let the SDK decide.
+  }
+  const url = new URL(window.location.href);
+  if (['code', 'auth', 'recovery', 'error', 'token_hash'].some(name => url.searchParams.has(name) && url.searchParams.get(name) !== 'signup')) return true;
+  return /access_token=|refresh_token=|error=|type=/.test(url.hash);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>(isBackendConfigured ? 'loading' : 'unavailable');
+  const [status, setStatus] = useState<AuthStatus>(() => (!isBackendConfigured ? 'unavailable' : sessionMayExist() ? 'loading' : 'anonymous'));
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [recoveringPassword, setRecoveringPassword] = useState(false);

@@ -28,7 +28,7 @@
   --lb-tone: #a87a2f;
 
   --lb-serif: 'Newsreader', Georgia, serif;
-  --lb-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --lb-sans: 'Geist', system-ui, sans-serif;
   --lb-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --lb-ease: cubic-bezier(.22, 1, .36, 1);
 
@@ -350,7 +350,7 @@
  * ------------------------------------------------------------------------ */
 
 .lb-aside { display: grid; gap: 16px; min-width: 0; }
-@media (min-width: 1081px) and (min-height: 860px) { .lb-aside { position: sticky; top: 24px; } }
+@media (min-width: 1081px) and (min-height: 860px) { .lb-aside { position: sticky; top: var(--ws-sticky, 24px); } }
 .lb-you {
   position: relative;
   isolation: isolate;

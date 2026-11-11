@@ -76,7 +76,7 @@
  * The typed confirmation
  * ------------------------------------------------------------------------ */
 
-.se-confirm { width: min(460px, calc(100vw - 32px)); margin: auto; padding: 0; border: 1px solid var(--ln); border-radius: 24px; background: var(--sf-raised); color: var(--ct); box-shadow: 0 40px 100px -30px #000000a6; font-family: 'Geist', 'DM Sans', system-ui, sans-serif; }
+.se-confirm { width: min(460px, calc(100vw - 32px)); margin: auto; padding: 0; border: 1px solid var(--ln); border-radius: 24px; background: var(--sf-raised); color: var(--ct); box-shadow: 0 40px 100px -30px #000000a6; font-family: 'Geist', system-ui, sans-serif; }
 .se-confirm::backdrop { background: #0b161b99; backdrop-filter: blur(6px); }
 .se-confirm[open] { animation: se-confirm-in .28s cubic-bezier(.22, 1, .36, 1); }
 @keyframes se-confirm-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }

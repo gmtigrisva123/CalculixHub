@@ -16,7 +16,7 @@
   --pf-sunken: var(--sf-sunken);
   --pf-tone: var(--ac);
   --pf-warm: #d9822b;
-  --pf-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --pf-sans: 'Geist', system-ui, sans-serif;
   --pf-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --pf-ease: cubic-bezier(.22, 1, .36, 1);
   --pf-radius: 22px;

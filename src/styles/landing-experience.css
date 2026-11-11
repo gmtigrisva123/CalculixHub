@@ -614,6 +614,8 @@
  * --------------------------------------------------------------------- */
 
 .lx-opening { position: relative; }
+/* Blank paper standing in for the chapters until they are mounted (chapters.ts). */
+.lx-chapters-hold { min-height: 240vh; }
 
 .lx-hero {
   position: sticky;
@@ -846,6 +848,16 @@
   .lx-hero-stat dd { font-size: 22px; }
   .lx-hero-stat dt { font-size: 10px; letter-spacing: 0.1em; }
   .lx-scroll-line { height: 30px; }
+}
+/*
+ * A short phone has less room above the headline than the butterfly needs, and
+ * its lower wing ran through the eyebrow. The whole field is lifted a little;
+ * the strip this uncovers at the foot is under the copy's own shade.
+ */
+@media (max-width: 760px) and (max-height: 740px) {
+  .lx-hero-field { translate: 0 -8%; }
+  /* Where a wing tip still reaches the eyebrow, the letters keep a little night of their own. */
+  .lx-hero-copy .lx-eyebrow { text-shadow: 0 0 10px var(--lx-night-0), 0 0 2px var(--lx-night-0); }
 }
 /* A laptop screen is wide but short: the title is sized by height instead, so the copy clears the nav. */
 @media (max-height: 780px) and (min-width: 761px) {

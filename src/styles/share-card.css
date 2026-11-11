@@ -1,5 +1,5 @@
 /* The share-card dialog. Namespaced `sc-`; uses the workspace's theme tokens. */
-.sc-dialog { width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--ln); border-radius: 26px; background: var(--sf-raised); color: var(--ct); box-shadow: 0 40px 100px -30px #000000a6; font-family: 'Geist', 'DM Sans', system-ui, sans-serif; }
+.sc-dialog { width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--ln); border-radius: 26px; background: var(--sf-raised); color: var(--ct); box-shadow: 0 40px 100px -30px #000000a6; font-family: 'Geist', system-ui, sans-serif; }
 .sc-dialog::backdrop { background: #0b161b99; backdrop-filter: blur(6px); }
 .sc-dialog[open] { display: grid; gap: 18px; padding: 24px; animation: sc-in .3s cubic-bezier(.22, 1, .36, 1); }
 @keyframes sc-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }

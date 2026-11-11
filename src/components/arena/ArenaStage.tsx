@@ -369,7 +369,7 @@ function ArenaStage({ still, paused, onTogglePause }: ArenaStageProps) {
         note(at, text, p) {
           if (p <= 0) return;
           project(view, at[0], at[1], 0, A);
-          ctx.font = `600 ${Math.round(11 * A.k)}px "DM Sans", sans-serif`;
+          ctx.font = `600 ${Math.round(11 * A.k)}px "Geist", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillStyle = palette.muted;
@@ -571,7 +571,7 @@ function ArenaStage({ still, paused, onTogglePause }: ArenaStageProps) {
     /** Section signs on each stand's outer rim, a dark pill so they read over the lights. */
     const drawLabels = (view: View, on: number) => {
       if (on <= 0) return;
-      ctx.font = '700 10px "DM Sans", sans-serif';
+      ctx.font = '700 10px "Geist", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.setLineDash([]);
