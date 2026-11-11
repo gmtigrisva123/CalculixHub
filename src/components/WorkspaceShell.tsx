@@ -73,6 +73,9 @@ interface PaletteEntry {
 /** ⌘ on Apple keyboards, Ctrl everywhere else. */
 const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
+/** The title index.html gives the site, restored when the workspace is left. */
+const SITE_TITLE = typeof document !== 'undefined' ? document.title : 'CalculixHub';
+
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
 
@@ -129,6 +132,13 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
   const results = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const accountTrigger = useRef<HTMLButtonElement>(null);
+
+  // The browser tab is named for the page, so several open at once can be told apart.
+  useEffect(() => {
+    const page = NAV_ITEMS.find(item => item.key === activeTab)?.label;
+    document.title = page ? `${page} · CalculixHub` : SITE_TITLE;
+    return () => { document.title = SITE_TITLE; };
+  }, [activeTab]);
 
   // Opening Admin once, by address or from the palette, pins it to this device's sidebar.
   useEffect(() => { if (activeTab === 'admin' && !staff) { pinStaffNav(); setStaff(true); } }, [activeTab, staff]);

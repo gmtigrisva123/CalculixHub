@@ -39,7 +39,7 @@ export default function ArchiveLadder() {
             <SplitText as="h2" id="lx-archive-title" className="lx-h2" text={'Every past paper,\n*from AMC to IMO.*'} />
           </div>
           <Rise as="p" className="lx-lead" delay={0.1}>
-            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} pretty beautiful problems from {ARCHIVE_FIGURES.papers} past exams. Take a whole paper, or one problem at a time.
+            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} problems from {ARCHIVE_FIGURES.papers} past exams, every one of them worth an afternoon. Take a whole paper, or one problem at a time.
           </Rise>
         </header>
       </div>

@@ -222,7 +222,7 @@ body:has(.ws) { background: var(--ws-desk); }
 .ws-account-trigger { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 12px; text-align: left; transition: background-color .16s; }
 .ws-account-trigger:hover, .ws-account-trigger[aria-expanded='true'] { background: var(--ws-hover); }
 .ws-account-trigger > svg { flex: none; margin-left: auto; color: var(--ct-subtle); }
-.ws-account-who, .ws-menu-who > span:last-child, .ws-drawer-who > span:last-child { display: grid; min-width: 0; }
+.ws-account-who, .ws-menu-who > span:last-child, .ws-drawer-who > span:nth-child(2) { display: grid; min-width: 0; }
 .ws-account-who strong, .ws-menu-who strong, .ws-drawer-who strong { overflow: hidden; font-size: 13.5px; font-weight: 600; line-height: 1.25; letter-spacing: -.012em; text-overflow: ellipsis; white-space: nowrap; }
 .ws-account-who small, .ws-menu-who small, .ws-drawer-who small { overflow: hidden; color: var(--ct-subtle); font-size: 12px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 

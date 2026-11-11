@@ -55,6 +55,8 @@ interface LearnProps {
   onOpenTutor: (prompt?: string) => void;
   savedAttempts?: Record<string,{count:number;finished:boolean;forfeited:boolean}>;
   initialFilters?: { topic?: Topic; level?: Level };
+  /** Goes up each time Learn is chosen from the navigation, including while it is already open. */
+  visit?: number;
 }
 
 export default function Learn({
@@ -64,6 +66,7 @@ export default function Learn({
   onOpenTutor,
   initialFilters,
   savedAttempts,
+  visit = 0,
 }: LearnProps) {
   // Kept here rather than in the catalog, so the list is as the learner left it when they come back from a question.
   const [view, setView] = useState<CatalogView>(INITIAL_VIEW);
@@ -114,9 +117,24 @@ export default function Learn({
   // Where the list was scrolled to when a question was opened, so "back" returns to the same card.
   const listScroll = useRef(0);
 
-  const handleSelectProblem = (prob: Problem) => {
-    listScroll.current = window.scrollY;
-    window.scrollTo({ top: 0, behavior: 'instant' });
+  /*
+   * The open question is part of the address (?problem=…), so the browser's
+   * Back button returns to the list instead of leaving Learn, Forward reopens
+   * the question, and a question can be linked to. `ownEntry` records whether
+   * this page put that entry in the history, which decides how "Back to
+   * Problem List" gets back: by stepping back to the list's own entry, or, for
+   * someone who arrived on the question directly, by rewriting this one.
+   */
+  const ownEntry = useRef(false);
+  const writeProblem = (id: string | null, mode: 'push' | 'replace') => {
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set('problem', id); else url.searchParams.delete('problem');
+    const address = url.pathname + url.search + url.hash;
+    if (mode === 'push') window.history.pushState({ problem: id }, '', address);
+    else window.history.replaceState(window.history.state, '', address);
+  };
+
+  const showProblem = (prob: Problem) => {
     started.current=performance.now();
     setActiveProblem(prob);
     setAnswerInput('');
@@ -127,7 +145,7 @@ export default function Learn({
     setRevealedWithoutScore(Boolean(attempts[prob.id]?.forfeited));
   };
 
-  const handleCloseWorkspace = () => {
+  const hideProblem = () => {
     setActiveProblem(null);
     setAnswerInput('');
     setShowHint(false);
@@ -136,6 +154,43 @@ export default function Learn({
     setShowFullSolution(false);
     setRevealedWithoutScore(false);
   };
+
+  const handleSelectProblem = (prob: Problem) => {
+    listScroll.current = window.scrollY;
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    writeProblem(prob.id, 'push');
+    ownEntry.current = true;
+    showProblem(prob);
+  };
+
+  const handleCloseWorkspace = () => {
+    if (ownEntry.current) { window.history.back(); return; } // the history listener below closes it
+    if (new URLSearchParams(window.location.search).has('problem')) writeProblem(null, 'replace');
+    hideProblem();
+  };
+
+  // Back, Forward, and arriving on a link to a question.
+  const follow = useRef(() => {});
+  follow.current = () => {
+    const id = new URLSearchParams(window.location.search).get('problem');
+    const wanted = id ? problems.find(problem => problem.id === id) ?? null : null;
+    if (wanted && wanted.id !== activeProblem?.id) { window.scrollTo({ top: 0, behavior: 'instant' }); showProblem(wanted); }
+    if (!wanted && activeProblem) { ownEntry.current = false; hideProblem(); }
+  };
+  useEffect(() => {
+    const onHistory = () => follow.current();
+    window.addEventListener('popstate', onHistory);
+    return () => window.removeEventListener('popstate', onHistory);
+  }, []);
+  // Choosing Learn in the navigation always means the list, even from inside a question.
+  const lastVisit = useRef(visit);
+  useEffect(() => {
+    if (lastVisit.current === visit) return;
+    lastVisit.current = visit;
+    if (activeProblem) handleCloseWorkspace();
+  }, [visit]);
+  const catalogReady = problems.length > 0;
+  useEffect(() => { if (catalogReady) follow.current(); }, [catalogReady]);
 
   const applyVerdict = (feedback: SmartFeedback, correct: boolean) => {
     if (!activeProblem) return;

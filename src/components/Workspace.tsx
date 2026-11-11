@@ -53,6 +53,27 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
    */
   const [activeTab, setActiveTab] = useState<string>(openingTab);
 
+  /*
+   * The address follows the page. Back and Forward then move between pages the
+   * way they do everywhere else on the web, a reload keeps you where you were,
+   * and any page can be bookmarked. Parameters that belong to one page (a post
+   * being linked to, a topic filter) are dropped on the way out of it.
+   */
+  const goTo = (tab: string) => {
+    setActiveTab(tab);
+    if (openingTab() === tab) return;
+    const url = new URL(window.location.href);
+    for (const name of ['post', 'comment', 'view', 'topic', 'problem', 'checkout']) url.searchParams.delete(name);
+    if (tab === 'dashboard') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', tab);
+    window.history.pushState({ tab }, '', url.pathname + url.search + url.hash);
+  };
+  useEffect(() => {
+    const onHistory = () => setActiveTab(openingTab());
+    window.addEventListener('popstate', onHistory);
+    return () => window.removeEventListener('popstate', onHistory);
+  }, []);
+
   // Deep navigation overrides for AI recommendations
   const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(() => {
     const topic = new URLSearchParams(window.location.search).get('topic');
@@ -60,6 +81,7 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
   });
   const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
   const [scratchOpen, setScratchOpen] = useState(false);
+  const [learnVisit, setLearnVisit] = useState(0);
   const [tutorRequest, setTutorRequest] = useState<{ id: number; userId: string; prompt?: string } | null>(null);
   const openTutor = (prompt?: string) => { setOverlays(true); setTutorRequest(previous => ({ id: (previous?.id ?? 0) + 1, userId: profile?.id ?? 'guest', prompt })); };
 
@@ -99,6 +121,10 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
     }
     onSignedOut();
 
+    // The next person to sign in on this browser starts on Home, not on the page this session ended on.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tab');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     setActiveTab('dashboard');
     setCompletedProblems([]);
     setUserStats({
@@ -246,12 +272,12 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
    if(fresh.length){saveShownToastIds(shown.current,profile.id);queueAchievements(fresh);}
   },[isLoggedIn,profile?.id,learner.loading,learner.error,userStats,completedProblems.length]);
   const handleSolveProblemStatus=(_id:string,_correct:boolean,_points:number)=>{if(isLoggedIn)void learner.reload();};
-  const handleJoinChallenge=(_id:string)=>setActiveTab('compete');
-  const handleJoinContest=(_id:string)=>setActiveTab('compete');
+  const handleJoinChallenge=(_id:string)=>goTo('compete');
+  const handleJoinContest=(_id:string)=>goTo('compete');
 
   // Navigation controller with search query injection
   const navigateWithFilters = (tab: string, args?: { topic?: Topic; level?: Level }) => {
-    setActiveTab(tab);
+    goTo(tab);
     if (args) {
       setOverrideFilters(args);
     } else {
@@ -268,10 +294,11 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
    */
   const selectTab = (tab: TabKey) => {
     if (tab === 'learn') {
+      setLearnVisit(count => count + 1);
       navigateWithFilters('learn');
       return;
     }
-    setActiveTab(tab);
+    goTo(tab);
   };
 
   /** Goal and pace are saved the moment one is chosen; Settings shows the outcome. */
@@ -338,6 +365,7 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
               initialFilters={overrideFilters}
               savedAttempts={learner.data.attempts}
               onOpenTutor={openTutor}
+              visit={learnVisit}
             />
           )}
 
