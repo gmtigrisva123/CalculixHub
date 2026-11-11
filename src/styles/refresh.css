@@ -156,12 +156,12 @@ button:not(:disabled), a, summary, select { cursor: pointer; }
 /* Quiet study palette shared with the bespoke landing page. */
 :root { --sf:#f7f5ef; --sf-raised:#fdfcf7; --sf-sunken:#eeede7; --sf-overlay:#fdfcf7; --sf-rail:#f7f5ef; --ct:#293d46; --ct-muted:#5c6b70; --ct-subtle:#6d797c; --ct-rail:#617176; --ln:#e2dfd5; --ln-faint:#ebe8df; --ln-strong:#cbc9bf; --ac:#426c7b; --ac-hover:#345664; --ac-muted:#e5edef; --ac-text:#3b6270; --ac-contrast:#faf9f4; }
 :root[data-theme='dark'] { --sf:#1b272d; --sf-raised:#22333b; --sf-sunken:#182329; --sf-overlay:#2a3d46; --sf-rail:#1b272d; --ct:#eeeae0; --ct-muted:#b5c0c0; --ct-subtle:#9eaeae; --ct-rail:#a4b4b5; --ln:#384950; --ln-faint:#303f45; --ln-strong:#4b646e; --ac:#afcbd3; --ac-hover:#c3d9dd; --ac-muted:#2b454e; --ac-text:#b0cfd7; --ac-contrast:#213740; }
-body { font-family:'DM Sans','Geist',sans-serif; }
-.workspace-refresh { font-family:'DM Sans','Geist',sans-serif; }
+body { font-family:'Geist',sans-serif; }
+.workspace-refresh { font-family:'Geist',sans-serif; }
 .workspace-logo,.cx-mark { background:#dce7e8; color:#426c7b; }
 .workspace-nav-item[aria-current='page'] { background:#e5ebea; color:#3d6470; }[data-theme='dark'] .workspace-nav-item[aria-current='page'] { background:#30464e; color:#bad3db; }
 .workspace-active-dot { background:#618695; }
-.workspace-content .type-title { font-family:'Manrope','Geist',sans-serif; font-weight:500; }
+.workspace-content .type-title { font-family:'Geist',sans-serif; font-weight:500; }
 .workspace-refresh .cx-card,.workspace-refresh .cx-card-bezel,.workspace-refresh .cx-card-quantum,.workspace-refresh .cx-glass-panel { border-radius:12px; box-shadow:none; }
 .workspace-refresh .cx-btn { border-radius:7px; }
 
@@ -185,4 +185,4 @@ body { font-family:'DM Sans','Geist',sans-serif; }
   .workspace-breadcrumb { font-size:15px; }
   .workspace-footer { font-size:12px; }
 }
-.prototype-loading { min-height:100dvh; display:grid; place-items:center; font-family:'DM Sans','Geist',sans-serif; color:var(--ct-muted); }
+.prototype-loading { min-height:100dvh; display:grid; place-items:center; font-family:'Geist',sans-serif; color:var(--ct-muted); }

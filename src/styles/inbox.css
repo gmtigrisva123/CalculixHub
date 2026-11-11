@@ -12,7 +12,7 @@
   --ib-hover: color-mix(in srgb, var(--ct) 4%, transparent);
   --ib-select: color-mix(in srgb, var(--ac) 9%, var(--sf-raised));
   --ib-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --ib-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --ib-sans: 'Geist', system-ui, sans-serif;
   --ib-ease: cubic-bezier(.2, .8, .2, 1);
   --ib-live: #16a34a;
   color: var(--ct);

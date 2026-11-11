@@ -28,7 +28,7 @@
   --lb-tone: #a87a2f;
 
   --lb-serif: 'Newsreader', Georgia, serif;
-  --lb-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --lb-sans: 'Geist', system-ui, sans-serif;
   --lb-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --lb-ease: cubic-bezier(.22, 1, .36, 1);
 

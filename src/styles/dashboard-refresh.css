@@ -1,6 +1,6 @@
 /* Hallmark · macrostructure: Bento Grid, as a living instrument panel — night stage → instruments → topic medallions → momentum · proof · next → closing line
  * genre: atmospheric stage on the workspace paper · tone: luxurious, precise, alive · anchor hue: the workspace accent (refresh.css --ac) + four validated topic hues
- * display: Manrope · body: DM Sans · notation: Newsreader · nav/footer: the workspace shell's own
+ * display and body: Geist · notation: Newsreader · nav/footer: the workspace shell's own
  * enrichment: a canvas drawing machine (64 Fourier circles drawing one curve per domain), a live proof in each topic medallion, a visual proof of (x + y)²
  * motion: one orchestrated entrance, count-ups and draw-ons for data; ambient loops pause off screen, in hidden tabs and on the stage's pause control, and hold still under reduced motion
  * Previous: pastel cards in micro type, a static formula over the headline, every day's value printed on its bar, a light hero that stayed light at night.
@@ -14,8 +14,8 @@
  * ------------------------------------------------------------------------ */
 
 .dh {
-  --dh-display: 'Manrope', 'Geist', sans-serif;
-  --dh-body: 'DM Sans', 'Geist', sans-serif;
+  --dh-display: 'Geist', sans-serif;
+  --dh-body: 'Geist', sans-serif;
   --dh-math: 'Newsreader', Georgia, serif;
   --dh-ease: cubic-bezier(.32, .72, 0, 1);
   --dh-ease-out: cubic-bezier(.23, 1, .32, 1);

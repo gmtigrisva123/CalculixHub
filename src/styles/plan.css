@@ -21,7 +21,7 @@
   --pl-good: var(--pf, #2d7858);
   --pl-bad: #b13a26;
   --pl-serif: 'Newsreader', Georgia, serif;
-  --pl-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --pl-sans: 'Geist', system-ui, sans-serif;
   --pl-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --pl-ease: cubic-bezier(.22, 1, .36, 1);
 

@@ -614,6 +614,8 @@
  * --------------------------------------------------------------------- */
 
 .lx-opening { position: relative; }
+/* Blank paper standing in for the chapters until they are mounted (chapters.ts). */
+.lx-chapters-hold { min-height: 240vh; }
 
 .lx-hero {
   position: sticky;

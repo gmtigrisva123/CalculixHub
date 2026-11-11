@@ -1,6 +1,6 @@
 /* Hallmark · genre: atmospheric sky over the workspace paper · macrostructure: Map / Diagram (an orrery of the whole catalog) → shelves by decade → exam desk
  * theme: custom "Observatory" · tone: nocturnal, precise, unhurried · anchor hue: starlight gold on night blue
- * display: Newsreader (roman) · body: DM Sans · math: KaTeX via MathText · nav/footer: the workspace shell's own
+ * display: Newsreader (roman) · body: Geist · math: KaTeX via MathText · nav/footer: the workspace shell's own
  * enrichment: WebGL star map drawn from the catalog (each star is a problem; data, not decoration)
  * motion: sky drift + twinkle (pausable, still under reduced motion) · rail glide · a result's constellation drawn in
  * Previous: eight paper cards in a flat grid. Current: the archive as one sky, shelves where each paper is its own
@@ -16,7 +16,7 @@
 
 .xa {
   --xa-display: 'Newsreader', Georgia, serif;
-  --xa-body: 'DM Sans', 'Geist', sans-serif;
+  --xa-body: 'Geist', sans-serif;
   --xa-ease: cubic-bezier(.32, .72, 0, 1);
   --xa-ease-in-out: cubic-bezier(.65, 0, .35, 1);
 

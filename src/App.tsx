@@ -3,424 +3,77 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import WorkspaceShell, { type WorkspaceNotice } from './components/WorkspaceShell';
+import { Suspense, lazy, useState } from 'react';
+import type { Level } from '../shared/types';
+import { useAuth } from './context/AuthContext';
+import { lazyWithPreload } from './lib/lazy';
+import { openingTab, preloadScreen } from './lib/screens';
+import { bootVariant } from './boot/boot';
+import BootLift, { BootHold } from './boot/BootLift';
+import Welcome from './components/Welcome';
+
 const IPhonePrototype = lazy(() => import('./components/prototype/IPhonePrototype'));
+const Workspace = lazyWithPreload(() => import('./components/Workspace'));
+
+/*
+ * The entry bundle holds only what every visit needs: React, the session, and
+ * this gate. What sits behind the gate is fetched separately, and started here,
+ * as this file is evaluated, so the download overlaps React's own start-up
+ * instead of waiting for the first render to ask for it. index.html has
+ * already worked out which side of the gate this visit is headed for.
+ */
+if (bootVariant === 'workspace') {
+  void Workspace.preload();
+  preloadScreen(openingTab());
+}
 
 export default function App() {
   return new URLSearchParams(window.location.search).get('preview') === 'ios'
-    ? <Suspense fallback={<div className="prototype-loading" role="status">Opening your pocket-sized learning space…</div>}><IPhonePrototype /></Suspense>
+    ? <Suspense fallback={<BootHold label="Opening your pocket-sized learning space…" />}><IPhonePrototype /><BootLift /></Suspense>
     : <LearningApp />;
 }
 
-import { Problem, UserStats, WeeklyChallenge, Contest, CommunityDiscussion, Topic, Level } from '../shared/types';
-import { computeStreak } from './domain/streak';
-import { apiUrl, apiFetch, isNativePlatform } from './services/apiBase';
-import { remindersEnabled, enableReminders, disableReminders, syncReminders } from './platform/reminders';
-import { useOnlineStatus } from './platform/offline';
-import PullToRefresh from './components/PullToRefresh';
-import { NAV_ITEMS, type TabKey } from './lib/navigation';
-import Dashboard from './components/Dashboard';
-import Learn from './components/Learn';
-const ExamArchive = lazy(() => import('./components/ExamArchive'));
-import Arena from './components/Arena';
-import Leaderboard from './components/Leaderboard';
-import Inbox from './components/Inbox';
-import { supabase } from './services/supabase';
-import { useRealtimeSubscription } from './services/data/realtime';
-import AdminWorkspace from './components/AdminWorkspace';
-import ProgressView from './components/ProgressView';
-import Community from './components/Community';
-import Profile from './components/Profile';
-import Settings, { type SaveOutcome } from './components/Settings';
-import Plan from './components/Plan';
-import ScratchPaper from './components/ScratchPaper';
-import AITutorChat from './components/AITutorChat';
-import WelcomeScreen from './components/WelcomeScreen';
-import { TabTransition } from './components/motion';
-import { useAuth } from './context/AuthContext';
-import { useLeaderboard, useLearnerSnapshot } from './services/data/people';
-import AchievementToast from './components/AchievementToast';
-import { ACHIEVEMENTS, getShownToastIds, saveShownToastIds, type Achievement } from './domain/achievements';
-
 function LearningApp() {
-  /**
-   * Opening tab, honouring a ?tab= query parameter.
-   *
-   * The manifest's app shortcuts ("Start practicing", "View analytics") launch
-   * ./?tab=learn and ./?tab=progress, so a long-press on the installed icon can
-   * land directly on a workspace. Read once during initial state rather than in
-   * an effect, which would otherwise flash the dashboard first. Unknown values
-   * fall through to the dashboard.
-   */
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    const requested = new URLSearchParams(window.location.search).get('tab');
-    return NAV_ITEMS.some((item) => item.key === requested) ? requested! : 'dashboard';
-  });
-
-  // Deep navigation overrides for AI recommendations
-  const [overrideFilters, setOverrideFilters] = useState<{ topic?: Topic; level?: Level } | undefined>(() => {
-    const topic = new URLSearchParams(window.location.search).get('topic');
-    return topic && ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'].includes(topic) ? { topic: topic as Topic } : undefined;
-  });
-  const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
-  const [scratchOpen, setScratchOpen] = useState(false);
-  const [tutorRequest, setTutorRequest] = useState<{ id: number; userId: string; prompt?: string } | null>(null);
-  const openTutor = (prompt?: string) => setTutorRequest(previous => ({ id: (previous?.id ?? 0) + 1, userId: profile?.id ?? 'guest', prompt }));
-
-  const queueAchievements = (newlyUnlocked: Achievement[]) => {
-    if (newlyUnlocked.length > 0) {
-      setAchievementQueue((prev) => [...prev, ...newlyUnlocked]);
-    }
-  };
-
-  // Connectivity, and any answers captured while offline. The queue drains
-  // automatically as soon as the connection returns.
-  const online = useOnlineStatus();
-  const pendingGrades = 0;
-
   /**
    * Authentication.
    *
-   * `sessionStorage.getItem('calculix_is_logged_in') === 'true'` used to stand
-   * in for this. That was not authentication: the browser owned the string, so
-   * anyone could set it from a console, and it carried no identity the server
-   * could act on. The session now comes from a server-signed JWT that Supabase
-   * verifies on every request and that every row-level security policy reads.
-   *
-   * `status` distinguishes "still restoring" from "definitely signed out",
-   * which is what stops a refresh flashing the landing page at a signed-in
-   * learner before the session is rehydrated.
+   * The session is a server-signed JWT that Supabase verifies on every request
+   * and that every row-level security policy reads. `status` distinguishes
+   * "still restoring" from "definitely signed out", which is what stops a
+   * refresh flashing the landing page at a signed-in learner before the
+   * session is rehydrated.
    */
-  const { status: authStatus, authError, profile, signOut, hasOnboarded, confirmedElsewhere } = useAuth();
+  const { status: authStatus, authError, hasOnboarded, confirmedElsewhere } = useAuth();
   const isLoggedIn = authStatus === 'authenticated';
 
   const [guestAllowed, setGuestAllowed] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('home') || params.has('auth') || params.has('code') || params.has('error') || window.location.hash.includes('error=')) return false;
-    return new URLSearchParams(window.location.search).get('demo') === '1' || localStorage.getItem('calculix_guest_access') === 'true';
+    return params.get('demo') === '1' || localStorage.getItem('calculix_guest_access') === 'true';
   });
 
-  const handleLoginSuccess = (_name:string,_level:Level) => {
+  const handleLoginSuccess = (_name: string, _level: Level) => {
     const destination = new URL(window.location.href);
     destination.searchParams.delete('auth');
     window.history.replaceState(null, '', destination.pathname + destination.search + destination.hash);
-    localStorage.setItem('calculix_guest_access','true');setGuestAllowed(true);
+    localStorage.setItem('calculix_guest_access', 'true');
+    setGuestAllowed(true);
   };
 
-  const handleLogout = async () => {
-    // Revokes the refresh token server-side, so signing out actually ends the
-    // session rather than only hiding it from this tab.
-    const result = await signOut();
-    if (!result.ok) {
-      setReminderNotice(result.error ?? 'Could not sign out. Please try again.');
-      return;
-    }
+  // Still restoring a stored session. The cover from index.html is on screen,
+  // so there is nothing to draw underneath it yet.
+  if (authStatus === 'loading') return null;
 
-    // Clear the local caches from the pre-database build. Progress now lives in
-    // Postgres, so nothing of value is lost, but stale copies would otherwise
-    // be shown to the next person to use this browser.
-    for (const key of [
-      'calculix_is_logged_in', 'calculix_user_name', 'calculix_stats',
-      'calculix_completed', 'calculix_discussions', 'calculix_contests',
-      'calculix_registered_users', 'calculix_guest_access',
-    ]) {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    }
-    setGuestAllowed(false);
-
-    setActiveTab('dashboard');
-    setCompletedProblems([]);
-    setUserStats({
-      rank: 0,
-      points: 0,
-      streak: 0,
-      completedCount: 0,
-      accuracy: 0,
-      timeSpent: 0,
-      skills: {
-        Algebra: 0,
-        Geometry: 0,
-        Combinatorics: 0,
-        'Number Theory': 0,
-      },
-      weaknesses: [],
-      learningTimeline: [],
-    });
-  };
-
-  // States
-  const [catalogError,setCatalogError]=useState('');
-  const [problems, setProblems] = useState<Problem[]>([]);
-  const [weeklyChallenges, setWeeklyChallenges] = useState<WeeklyChallenge[]>([]);
-  const [contests, setContests] = useState<Contest[]>([]);
-  const [discussions, setDiscussions] = useState<CommunityDiscussion[]>([]);
-  const [completedProblems, setCompletedProblems] = useState<string[]>([]);
-  const [userStats, setUserStats] = useState<UserStats>({
-    rank: 0,
-    points: 0,
-    streak: 0,
-    completedCount: 0,
-    accuracy: 0,
-    timeSpent: 0,
-    skills: {
-      Algebra: 0,
-      Geometry: 0,
-      Combinatorics: 0,
-      'Number Theory': 0,
-    },
-    weaknesses: [],
-    learningTimeline: [],
-  });
-
-  const learner=useLearnerSnapshot(isLoggedIn ? profile?.id ?? null : null);
-  const ranking=useLeaderboard();
-  useEffect(()=>{
-   const row=learner.data.stats;
-   setCompletedProblems(learner.data.completed);
-   setUserStats({level:hasOnboarded?profile?.level:undefined,rank:learner.data.rank??0,
-    points:row?.points??0,streak:row?.current_streak??0,completedCount:row?.problems_solved??0,
-    accuracy:learner.data.accuracyPct??0,timeSpent:(row?.time_spent_seconds??0)/60,skills:learner.data.skills,
-    weaknesses:[],learningTimeline:learner.data.timeline});
-  },[learner.data,ranking.data,profile?.id,profile?.level,hasOnboarded]);
-
-  // Settings State
-  const [customGoal, setCustomGoal] = useState<string>('Build fundamental mathematical problem-solving skills');
-  const [studyPace, setStudyPace] = useState<string>('30 minutes / day (Recommended)');
-  // Reflects what is actually scheduled, not an optimistic default: the OS can
-  // refuse permission, and the toggle must not claim to be on when it is not.
-  const [studyReminders, setStudyReminders] = useState<boolean>(() => remindersEnabled());
-  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
-
-  /**
-   * Turn the daily reminder on or off.
-   *
-   * Permission is requested here rather than on load because browsers reject
-   * unsolicited prompts, and iOS only offers notifications to an installed PWA
-   * at all — so a refusal needs explaining rather than silently failing.
-   */
-  const handleToggleReminders = async (enabled: boolean) => {
-    if (!enabled) {
-      await disableReminders();
-      setStudyReminders(false);
-      setReminderNotice(null);
-      return;
-    }
-
-    const result = await enableReminders();
-
-    if (result === 'granted') {
-      setStudyReminders(true);
-      setReminderNotice(
-        isNativePlatform()
-          ? null
-          : 'Reminders are on. In a browser tab they only appear while CalculixHub is open — install the app for reminders that arrive on their own.',
-      );
-      return;
-    }
-
-    // Permission was not granted, so nothing is scheduled. Leave the toggle off.
-    setStudyReminders(false);
-    setReminderNotice(
-      result === 'denied'
-        ? 'Notifications are blocked for CalculixHub. Re-enable them in your browser or system settings, then try again.'
-        : result === 'unsupported'
-          ? 'This browser cannot show notifications. Install the app to get streak reminders.'
-          : 'Reminders need notification permission. Tap the toggle again and choose Allow.',
-    );
-  };
-  useEffect(()=>{setCustomGoal(learner.data.preferences?.goal??'Build fundamental mathematical problem-solving skills');setStudyPace(learner.data.preferences?.pace??'30 minutes / day (Recommended)');},[learner.data.preferences]);
-
-  // 1. Fetch static math database problems
-  //
-  // Declared outside the mount effect because pull-to-refresh re-runs both
-  // fetches on demand. Offline these resolve from the service worker cache, so
-  // a refresh with no connection still repopulates rather than blanking the UI.
-  const fetchProblems = async () => {
-    try {
-      const response = await fetch(apiUrl('/api/problems'));
-      if (response.ok) {
-        const data = await response.json();
-        setProblems(data);setCatalogError('');
-      }else setCatalogError('Could not load the live question catalog. Please retry.');
-    } catch (err) {
-      setCatalogError('The live question catalog is unavailable.');
-    }
-  };
-
-  useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.catalog',onReconnect:fetchProblems},()=>void fetchProblems());
-  const fetchArenaSchedule = async () => {
-    try {
-      const response = await apiFetch('/api/arenas');
-      if (!response.ok) return;
-      const rows = await response.json();
-      setContests(rows.map((arena:any)=>({id:arena.id,title:arena.title,date:arena.starts_at,
-        duration:`${arena.duration_minutes} minutes`,problemCount:arena.question_count??0,
-        status:arena.status==='closed'||Date.parse(arena.ends_at)<=Date.now()?'past':Date.parse(arena.starts_at)>Date.now()?'upcoming':'ongoing'})));
-    } catch { /* Arena displays the connection error when opened. */ }
-  };
-  useRealtimeSubscription({table:'realtime_signals',filter:'scope=eq.arena',onReconnect:fetchArenaSchedule},()=>void fetchArenaSchedule());
-  useEffect(()=>{void fetchArenaSchedule();},[]);
-  const handleRefresh=async()=>{await Promise.all([fetchProblems(),learner.reload(),ranking.reload()]);};
-  useEffect(()=>{void fetchProblems();void syncReminders();},[]);
-  const shown=React.useRef(new Set<string>());
-  useEffect(()=>{shown.current=profile?.id?getShownToastIds(profile.id):new Set();setAchievementQueue([]);},[profile?.id]);
-  useEffect(()=>{
-   if(!isLoggedIn||!profile?.id||learner.loading||learner.error)return;
-   const fresh=ACHIEVEMENTS.filter(a=>a.condition(userStats,completedProblems.length)&&!shown.current.has(a.id));
-   fresh.forEach(a=>shown.current.add(a.id));
-   if(fresh.length){saveShownToastIds(shown.current,profile.id);queueAchievements(fresh);}
-  },[isLoggedIn,profile?.id,learner.loading,learner.error,userStats,completedProblems.length]);
-  const handleSolveProblemStatus=(_id:string,_correct:boolean,_points:number)=>{if(isLoggedIn)void learner.reload();};
-  const handleJoinChallenge=(_id:string)=>setActiveTab('compete');
-  const handleJoinContest=(_id:string)=>setActiveTab('compete');
-
-  // Navigation controller with search query injection
-  const navigateWithFilters = (tab: string, args?: { topic?: Topic; level?: Level }) => {
-    setActiveTab(tab);
-    if (args) {
-      setOverrideFilters(args);
-    } else {
-      setOverrideFilters(undefined);
-    }
-  };
-
-  /**
-   * Tab selection shared by the desktop sidebar and the mobile bottom rail.
-   *
-   * 'learn' routes through navigateWithFilters so that selecting it from the
-   * nav clears any topic/level override left behind by an AI recommendation
-   * deep-link; the remaining tabs do not read overrideFilters.
-   */
-  const selectTab = (tab: TabKey) => {
-    if (tab === 'learn') {
-      navigateWithFilters('learn');
-      return;
-    }
-    setActiveTab(tab);
-  };
-
-  /** Goal and pace are saved the moment one is chosen; Settings shows the outcome. */
-  const savePreferences = async (next: { goal: string; pace: string }): Promise<SaveOutcome> => {
-    setCustomGoal(next.goal);
-    setStudyPace(next.pace);
-    if (!supabase || !profile?.id) return 'guest';
-    const { error } = await supabase.from('learner_preferences').upsert({ user_id: profile.id, goal: next.goal, pace: next.pace });
-    if (error) return 'error';
-    void learner.reload();
-    return 'saved';
-  };
-
-  if (authStatus === 'loading') return <main className="min-h-screen flex items-center justify-center bg-surface text-content"><p role="status">Opening your learning space…</p></main>;
-  const registrationRequested = new URLSearchParams(window.location.search).get('auth') === 'signup';
-  const recoveryRequested = new URLSearchParams(window.location.search).get('recovery') === '1';
+  const params = new URLSearchParams(window.location.search);
+  const registrationRequested = params.get('auth') === 'signup';
+  const recoveryRequested = params.get('recovery') === '1';
   if (confirmedElsewhere || (registrationRequested && !isLoggedIn) || recoveryRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
-    return <WelcomeScreen onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  /*
-   * What this session needs the learner to know, each thing said once. Three
-   * loaders can fail for the same reason (no connection, no database), and
-   * three stacked copies of one sentence read as three problems.
-   */
-  const notices: WorkspaceNotice[] = [];
-  if (activeTab !== 'archive') {
-    for (const text of new Set([catalogError, learner.error, ranking.error].filter((value): value is string => Boolean(value)))) {
-      notices.push({ tone: 'warning', text, action: { label: 'Try again', onClick: () => void handleRefresh() } });
-    }
-  }
-  if (!isLoggedIn) {
-    notices.push({
-      tone: 'info',
-      text: activeTab === 'archive'
-        ? 'You’re exploring as a guest. Exam progress stays on this device; an account syncs it everywhere.'
-        : 'You’re exploring as a guest, so nothing here is saved. An account keeps your progress and finds your level.',
-      action: { label: 'Create a free account', href: '/?auth=signup' },
-    });
+    return <Welcome onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
-    <>
-      <WorkspaceShell activeTab={activeTab} onSelect={selectTab}
-        name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
-        points={userStats.points} streak={userStats.streak} online={online}
-        pendingGrades={pendingGrades} notices={notices} onOpenScratch={() => setScratchOpen(open => !open)}>
-        <PullToRefresh onRefresh={handleRefresh}>
-          <TabTransition tabKey={activeTab}>
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              minutesPerDay={Number(studyPace.match(/\d+/)?.[0]) || 30}
-              userStats={userStats}
-              weeklyChallenges={weeklyChallenges}
-              contests={contests}
-              onNavigateToTab={navigateWithFilters}
-              onJoinChallenge={handleJoinChallenge}
-              onJoinContest={handleJoinContest}
-            />
-          )}
-
-          {activeTab === 'learn' && (
-            <Learn
-              problems={problems}
-              completedProblems={completedProblems}
-              userStats={userStats}
-              onSolveProblem={handleSolveProblemStatus}
-              initialFilters={overrideFilters}
-              savedAttempts={learner.data.attempts}
-              onOpenTutor={openTutor}
-            />
-          )}
-
-          {activeTab === 'archive' && <Suspense fallback={<p role="status">Opening the exam archive…</p>}><ExamArchive userId={isLoggedIn ? profile?.id ?? null : null} /></Suspense>}
-
-          {activeTab === 'compete' && <Arena />}
-          {activeTab === 'leaderboard' && <Leaderboard rows={ranking.data} loading={ranking.loading} error={ranking.error} onRefresh={ranking.reload} currentUserId={profile?.id ?? null} currentRank={userStats.rank} currentPoints={userStats.points} currentSolved={userStats.completedCount} onPractice={() => { if (isLoggedIn) selectTab('learn'); else window.location.assign('/?auth=signup'); }} />}
-          {activeTab === 'admin' && <AdminWorkspace onContentChange={() => void fetchProblems()} />}
-
-          {activeTab === 'progress' && (
-            <ProgressView userStats={userStats} onSeePlans={() => selectTab('plan')} />
-          )}
-
-          {activeTab === 'community' && (
-            <Community problems={problems} />
-          )}
-
-          {activeTab === 'profile' && (
-            <Profile
-              userStats={userStats}
-              completedProblems={completedProblems}
-              problems={problems}
-              onLogout={handleLogout}
-              onTriggerAlert={(badge) => queueAchievements([badge])}
-              onSeePlans={() => selectTab('plan')}
-            />
-          )}
-
-          {activeTab === 'inbox' && <Inbox />}
-
-          {activeTab === 'plan' && <Plan />}
-
-          {activeTab === 'settings' && (
-            <Settings
-              customGoal={customGoal}
-              studyPace={studyPace}
-              onChangePreferences={savePreferences}
-              studyReminders={studyReminders}
-              onToggleReminders={handleToggleReminders}
-              reminderNotice={reminderNotice}
-              onLogout={handleLogout}
-              onProgressReset={() => void handleRefresh()}
-            />
-          )}
-          </TabTransition>
-        </PullToRefresh>
-      </WorkspaceShell>
-      <ScratchPaper open={scratchOpen} onOpenChange={setScratchOpen} />
-      <AITutorChat key={profile?.id ?? 'guest'} request={tutorRequest?.userId === (profile?.id ?? 'guest') ? tutorRequest : null} />
-      <AchievementToast achievement={achievementQueue[0] || null}
-        onClose={() => setAchievementQueue(prev => prev.slice(1))}
-        onNavigateToProfile={() => selectTab('profile')} />
-    </>
+    <Suspense fallback={<BootHold label="Opening your learning space…" />}>
+      <Workspace onSignedOut={() => setGuestAllowed(false)} />
+    </Suspense>
   );
 }

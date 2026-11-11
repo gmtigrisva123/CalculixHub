@@ -23,7 +23,7 @@
   --cm-angry: #cf5208;
   --cm-love-fill: linear-gradient(180deg, #ff6b86, #e8194b);
   --cm-like-fill: linear-gradient(180deg, color-mix(in srgb, var(--ac) 70%, #ffffff), var(--ac));
-  font-family: var(--font-body, 'DM Sans', 'Geist', sans-serif);
+  font-family: var(--font-body, 'Geist', sans-serif);
   color: var(--ct);
 }
 
@@ -848,7 +848,7 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 12px;
-  font-family: var(--font-display, 'Manrope', 'Geist', sans-serif);
+  font-family: var(--font-display, 'Geist', sans-serif);
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -.015em;
@@ -999,7 +999,7 @@
   padding: 0 56px;
   border-bottom: 1px solid var(--ln);
 }
-.cm-dialog-header h2 { font-family: var(--font-display, 'Manrope', 'Geist', sans-serif); font-size: 18px; font-weight: 600; letter-spacing: -.015em; text-align: center; }
+.cm-dialog-header h2 { font-family: var(--font-display, 'Geist', sans-serif); font-size: 18px; font-weight: 600; letter-spacing: -.015em; text-align: center; }
 .cm-dialog-close {
   position: absolute;
   right: 12px;

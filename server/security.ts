@@ -27,10 +27,6 @@ import { problem } from './http';
  */
 const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
-/** Google Fonts serves the stylesheet and the font binaries from separate hosts. */
-const FONT_CSS_ORIGIN = 'https://fonts.googleapis.com';
-const FONT_FILE_ORIGIN = 'https://fonts.gstatic.com';
-
 /** Gemini REST endpoint, reached from the browser with a learner-supplied key. */
 const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com';
 
@@ -47,7 +43,7 @@ const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com';
  *   first paint, is allowed by its hash; see `THEME_BOOT_SCRIPT_HASH`.
  * - `style-src` does permit `'unsafe-inline'`, unavoidably: KaTeX emits inline
  *   `style` attributes in the markup it generates, and that markup is inserted
- *   as HTML by `MathText`.
+ *   as HTML by `MathText`. The first-frame styles in `index.html` rely on it too.
  * - `frame-ancestors 'self'` permits the same-origin iPhone preview while
  *   still preventing other websites from embedding the application.
  *
@@ -73,22 +69,24 @@ const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com';
  * an arbitrary host, which is the property this directive was protecting.
  */
 /**
- * SHA-256 of the inline theme bootstrap in `index.html`.
+ * SHA-256 of the inline boot script in `index.html`, which sets the theme and
+ * chooses the ground painted before the app loads.
  *
- * Without it the policy refused that script, so the theme was only applied once
- * React mounted: a white flash on every load for anyone on the night theme. A
+ * Without it the policy refuses that script, so the theme is only applied once
+ * React mounts: a white flash on every load for anyone on the night theme. A
  * hash admits exactly that script and nothing injected beside it. The guarantee
  * test recomputes it from `index.html`, so editing the script without updating
  * this fails CI instead of silently reintroducing the flash.
  */
-export const THEME_BOOT_SCRIPT_HASH = "'sha256-0JDUOjcviM78444oEyhjy7t1FfZ1igvew/Ayd8B/BQU='";
+export const THEME_BOOT_SCRIPT_HASH = "'sha256-qUAu6B5XhzfQTFZiZADlDbPG3YUgtu1Ir8P18qIAI58='";
 
 const DOCUMENT_CSP = [
   "default-src 'self'",
   `script-src 'self' ${THEME_BOOT_SCRIPT_HASH}`,
-  `style-src 'self' 'unsafe-inline' ${FONT_CSS_ORIGIN}`,
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
-  `font-src 'self' data: ${FONT_FILE_ORIGIN}`,
+  // Webfonts are served from this origin (src/styles/fonts.css); no font host is allowed.
+  "font-src 'self' data:",
   // REST, auth and storage travel over https; realtime is a WebSocket, and
   // `connect-src` matches on scheme, so wss:// is listed separately even though
   // it is the same host.

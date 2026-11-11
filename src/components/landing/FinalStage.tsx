@@ -9,7 +9,7 @@
  */
 
 import { useLayoutEffect, useRef } from 'react';
-import { m, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
+import { m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
 import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
 
 /*
@@ -34,15 +34,27 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
   const drawn = useTransform(eased, [0, 0.85], [reduce ? 1 : 0.02, 1]);
   const arrival = useStageArrival(sectionRef);
 
+  /*
+   * The pencil tip rides the end of the drawn line. Finding a point along an
+   * SVG path makes the browser bring its layout up to date first, so it is
+   * only asked for while the stage is on screen: this section is at the foot
+   * of the page, and placing its tip on every spring tick while the reader was
+   * still at the top was costing a fifth of a second of forced layout during
+   * the page's first seconds. The path's length never changes, so it is
+   * measured once.
+   */
+  const onScreen = useInView(sectionRef, { margin: '300px 0px' });
+  const length = useRef(0);
   const placeTip = (value: number) => {
     const path = pathRef.current;
     const tip = tipRef.current;
     if (!path || !tip) return;
-    const point = path.getPointAtLength(path.getTotalLength() * Math.max(0, Math.min(1, value)));
+    length.current ||= path.getTotalLength();
+    const point = path.getPointAtLength(length.current * Math.max(0, Math.min(1, value)));
     tip.setAttribute('transform', `translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`);
   };
-  useMotionValueEvent(drawn, 'change', placeTip);
-  useLayoutEffect(() => placeTip(drawn.get()), [drawn]);
+  useMotionValueEvent(drawn, 'change', value => { if (onScreen) placeTip(value); });
+  useLayoutEffect(() => { if (onScreen) placeTip(drawn.get()); }, [drawn, onScreen]);
 
   return (
     <section ref={sectionRef} className="lx-final" id="begin" aria-labelledby="lx-final-title">

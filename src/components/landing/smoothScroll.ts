@@ -49,6 +49,10 @@ export function scrollToTarget(target: HTMLElement | number, { offset = 0, immed
   const destination = Math.max(0, y + offset);
   const jump = immediate || prefersReducedMotion();
   if (active) {
+    // The page may have just grown (a chapter was mounted). Lenis learns the
+    // new height on its own a moment later; a journey that starts before then
+    // would be cut short at the old foot of the page.
+    active.resize();
     const distance = Math.abs(destination - window.scrollY);
     active.scrollTo(destination, { immediate: jump, duration: Math.min(2.2, 0.9 + distance / 5200), easing: travel, force: true });
     return;

@@ -27,7 +27,7 @@
   border-radius: 22px;
   background: var(--scratch-paper);
   color: var(--scratch-pen);
-  font-family: 'Geist', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Geist', system-ui, sans-serif;
   box-shadow: 0 40px 90px -30px #0b161b8c, 0 12px 30px -18px #0b161b66;
   /* Put away: off the edge, tilted a few degrees like a sheet being slid under a book. */
   transform: translateX(calc(100% + 28px)) rotate(2.5deg);

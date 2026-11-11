@@ -31,7 +31,7 @@
   --se-bad: #b13a26;
 
   --se-serif: 'Newsreader', Georgia, serif;
-  --se-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --se-sans: 'Geist', system-ui, sans-serif;
   --se-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --se-ease: cubic-bezier(.22, 1, .36, 1);
 

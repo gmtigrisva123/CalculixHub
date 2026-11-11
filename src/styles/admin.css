@@ -23,7 +23,7 @@
   --ad-danger-strong: #b91c1c;
   --ad-hover: color-mix(in srgb, var(--ct) 4%, transparent);
   --ad-shadow: 0 1px 2px #14100a0a, 0 14px 32px -22px #14100a40;
-  --ad-sans: 'Geist', 'DM Sans', system-ui, sans-serif;
+  --ad-sans: 'Geist', system-ui, sans-serif;
   --ad-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --ad-ease: cubic-bezier(.22, 1, .36, 1);
 

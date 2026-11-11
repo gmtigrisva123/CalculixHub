@@ -384,16 +384,15 @@ async function checkRateLimit(store, clientKey2, routeClass, policy) {
 
 // server/security.ts
 var API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-var FONT_CSS_ORIGIN = "https://fonts.googleapis.com";
-var FONT_FILE_ORIGIN = "https://fonts.gstatic.com";
 var GEMINI_ORIGIN = "https://generativelanguage.googleapis.com";
-var THEME_BOOT_SCRIPT_HASH = "'sha256-0JDUOjcviM78444oEyhjy7t1FfZ1igvew/Ayd8B/BQU='";
+var THEME_BOOT_SCRIPT_HASH = "'sha256-qUAu6B5XhzfQTFZiZADlDbPG3YUgtu1Ir8P18qIAI58='";
 var DOCUMENT_CSP = [
   "default-src 'self'",
   `script-src 'self' ${THEME_BOOT_SCRIPT_HASH}`,
-  `style-src 'self' 'unsafe-inline' ${FONT_CSS_ORIGIN}`,
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
-  `font-src 'self' data: ${FONT_FILE_ORIGIN}`,
+  // Webfonts are served from this origin (src/styles/fonts.css); no font host is allowed.
+  "font-src 'self' data:",
   // REST, auth and storage travel over https; realtime is a WebSocket, and
   // `connect-src` matches on scheme, so wss:// is listed separately even though
   // it is the same host.
@@ -1886,13 +1885,13 @@ function notificationLink(siteUrl, payload) {
   }
   return `${siteUrl}/?tab=inbox`;
 }
-function layout({ preheader, eyebrow, headline, quote, cta, href, footnote }) {
+function layout({ preheader, eyebrow, headline, quote, cta, href, footnote, siteUrl }) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(headline)}</title></head>
 <body style="margin:0;padding:0;background:#f3f1ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17201f">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0">${escape(preheader)}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f1ec;padding:32px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;border:1px solid #e4e0d6">
-<tr><td style="padding:22px 28px;border-bottom:1px solid #eeeae1"><span style="font:600 15px/1 Georgia,serif;color:#0f1d23">Calculix<span style="color:#b07d2a">Hub</span></span></td></tr>
+<tr><td style="padding:20px 28px;border-bottom:1px solid #eeeae1"><img src="${escape(siteUrl)}/icons/icon-192.png" width="28" height="28" alt="" style="display:inline-block;vertical-align:middle;border:0;border-radius:7px;margin-right:10px"><span style="vertical-align:middle;font:600 15px/1 Georgia,serif;color:#0f1d23">Calculix<span style="color:#b07d2a">Hub</span></span></td></tr>
 <tr><td style="padding:28px 28px 8px"><p style="margin:0 0 10px;font:600 11px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:#8a8577">${escape(eyebrow)}</p>
 <h1 style="margin:0;font:400 24px/1.3 Georgia,serif;color:#0f1d23">${escape(headline)}</h1></td></tr>
 ${quote ? `<tr><td style="padding:14px 28px 0"><div style="border-left:3px solid #e6bd73;padding:10px 14px;background:#faf8f3;color:#3c4543;font-size:15px;line-height:1.55;white-space:pre-wrap">${escape(quote)}</div></td></tr>` : ""}
@@ -1913,7 +1912,7 @@ function renderEmail(job, siteUrl) {
     return {
       to: job.recipient_email,
       subject: clip(headline2, 120),
-      html: layout({ preheader: quote ?? headline2, eyebrow: "New notification", headline: headline2, quote, cta, href: href2, footnote: `Hi ${name}, you are receiving this because it happened on your CalculixHub account.` }),
+      html: layout({ siteUrl, preheader: quote ?? headline2, eyebrow: "New notification", headline: headline2, quote, cta, href: href2, footnote: `Hi ${name}, you are receiving this because it happened on your CalculixHub account.` }),
       text: `${headline2}
 
 ${quote ? `"${quote}"
@@ -1931,7 +1930,7 @@ Hi ${name}, you are receiving this because it happened on your CalculixHub accou
   return {
     to: job.recipient_email,
     subject: clip(body ? `${author}: ${body.split("\n")[0]}` : headline, 120),
-    html: layout({ preheader: body || headline, eyebrow: "New post", headline, quote: body || void 0, cta: "Read the post", href, footnote: `Hi ${name}, every new post on CalculixHub is sent to all members.` }),
+    html: layout({ siteUrl, preheader: body || headline, eyebrow: "New post", headline, quote: body || void 0, cta: "Read the post", href, footnote: `Hi ${name}, every new post on CalculixHub is sent to all members.` }),
     text: `${headline}
 
 ${body ? `${body}
@@ -2046,6 +2045,242 @@ function emailRoutes() {
   ];
 }
 
+// server/routes/billing.ts
+import { z as z5 } from "zod";
+
+// shared/plans.ts
+var PLANS = {
+  free: {
+    id: "free",
+    name: "Free",
+    audience: "Everything you need to practise seriously.",
+    price: { monthly: 0, yearly: 0 },
+    features: [
+      { label: "Placement that finds your level", state: "ready" },
+      { label: "Adaptive practice with full solutions", state: "ready" },
+      { label: "Every past paper in the archive", state: "ready" },
+      { label: "Live Arena contests and the leaderboard", state: "ready" },
+      { label: "Scratch paper on every screen", state: "ready" },
+      { label: "Race-day countdown and today\u2019s target", state: "ready" }
+    ]
+  },
+  pro: {
+    id: "pro",
+    name: "Pro",
+    audience: "For the season you are training for something.",
+    price: { monthly: 900, yearly: 7200 },
+    features: [
+      { label: "A week-by-week plan up to your contest date", state: "ready" },
+      { label: "Printable progress reports for parents and coaches", state: "ready" },
+      { label: "Every share-card design", state: "ready" },
+      { label: "Feedback on written proofs", state: "planned" },
+      { label: "Mistake review that brings old errors back", state: "planned" }
+    ]
+  },
+  team: {
+    id: "team",
+    name: "Team",
+    audience: "For clubs, coaches and schools.",
+    price: { monthly: 700, yearly: 6e3 },
+    unit: "per student",
+    features: [
+      { label: "Pro for every student", state: "ready" },
+      { label: "A coach\u2019s view of the whole group", state: "planned" },
+      { label: "Private Arena contests for your club", state: "planned" },
+      { label: "One invoice, seats you can reassign", state: "planned" }
+    ]
+  }
+};
+var ACTIVE_STATUSES = ["active", "trialing", "past_due"];
+
+// server/billing.ts
+import { createHmac as createHmac2, timingSafeEqual as timingSafeEqual3 } from "node:crypto";
+var present = (value) => value && value.trim() ? value.trim() : void 0;
+function billingSettings(env = process.env) {
+  const secretKey = present(env.STRIPE_SECRET_KEY);
+  const webhookSecret = present(env.STRIPE_WEBHOOK_SECRET);
+  const monthly = present(env.STRIPE_PRICE_PRO_MONTHLY);
+  const yearly = present(env.STRIPE_PRICE_PRO_YEARLY);
+  if (!secretKey || !webhookSecret || !monthly || !yearly) return null;
+  if (!/^(sk|rk)_(test|live)_/.test(secretKey) || !webhookSecret.startsWith("whsec_")) return null;
+  if (!monthly.startsWith("price_") || !yearly.startsWith("price_")) return null;
+  return { secretKey, webhookSecret, prices: { monthly, yearly }, siteUrl: present(env.APP_URL)?.replace(/\/+$/, "") };
+}
+function formEncode(fields) {
+  const body = new URLSearchParams();
+  for (const [key, value] of Object.entries(fields)) if (value !== void 0) body.set(key, String(value));
+  return body.toString();
+}
+var TOLERANCE_SECONDS = 300;
+function verifyStripeSignature(rawBody, header, secret, nowSeconds = Math.floor(Date.now() / 1e3)) {
+  if (!header) return false;
+  let timestamp;
+  const signatures = [];
+  for (const part of header.split(",")) {
+    const [key, value] = part.trim().split("=", 2);
+    if (key === "t") timestamp = value;
+    if (key === "v1" && value) signatures.push(value);
+  }
+  if (!timestamp || !/^\d+$/.test(timestamp) || signatures.length === 0) return false;
+  if (Math.abs(nowSeconds - Number(timestamp)) > TOLERANCE_SECONDS) return false;
+  const expected = createHmac2("sha256", secret).update(`${timestamp}.${rawBody}`).digest();
+  return signatures.some((signature) => {
+    if (!/^[0-9a-f]{64}$/i.test(signature)) return false;
+    return timingSafeEqual3(Buffer.from(signature, "hex"), expected);
+  });
+}
+function subscriptionRecord(subscription, userId) {
+  const item = subscription.items?.data?.[0];
+  const interval = item?.price?.recurring?.interval;
+  const periodEnd = subscription.current_period_end ?? item?.current_period_end;
+  return {
+    user_id: userId,
+    plan: subscription.metadata?.plan === "team" ? "team" : "pro",
+    status: subscription.status.slice(0, 40),
+    billing_cycle: interval === "year" ? "yearly" : interval === "month" ? "monthly" : null,
+    seats: Math.min(5e3, Math.max(1, item?.quantity ?? 1)),
+    current_period_end: typeof periodEnd === "number" ? new Date(periodEnd * 1e3).toISOString() : null,
+    cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+    stripe_customer_id: typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
+    stripe_subscription_id: subscription.id
+  };
+}
+function chargedAmountMatches(subscription, record) {
+  const amount = subscription.items?.data?.[0]?.price?.unit_amount;
+  if (typeof amount !== "number" || !record.billing_cycle) return true;
+  return amount === PLANS[record.plan].price[record.billing_cycle];
+}
+
+// server/routes/billing.ts
+var STRIPE_API = "https://api.stripe.com/v1";
+var defaults = {
+  settings: () => billingSettings(),
+  database: () => adminClient(),
+  verify: verifyAccessToken,
+  http: (...args) => fetch(...args)
+};
+var checkoutInput = z5.object({ plan: z5.literal("pro"), cycle: z5.enum(["monthly", "yearly"]) });
+var off = () => json({ error: "Checkout is not open yet." }, { status: 503 });
+function siteOrigin(request, settings) {
+  if (settings.siteUrl) return settings.siteUrl;
+  const origin = request.headers.get("origin");
+  return origin && /^https?:\/\//.test(origin) ? origin : null;
+}
+function billingRoutes(overrides = {}) {
+  const deps = { ...defaults, ...overrides };
+  async function stripe(settings, method, path, fields) {
+    const response = await deps.http(`${STRIPE_API}${path}`, {
+      method,
+      headers: { authorization: `Bearer ${settings.secretKey}`, ...fields ? { "content-type": "application/x-www-form-urlencoded" } : {} },
+      ...fields ? { body: formEncode(fields) } : {}
+    });
+    if (!response.ok) {
+      console.error("[CalculixHub] Stripe request failed", { path: path.split("/")[1], status: response.status });
+      return null;
+    }
+    return await response.json();
+  }
+  const config3 = () => json({ checkout: Boolean(deps.settings() && deps.database()) });
+  const checkout = async (ctx) => {
+    const settings = deps.settings();
+    const database = deps.database();
+    if (!settings || !database) return off();
+    const user = await deps.verify(ctx.request.headers.get("authorization"));
+    if (!user) return json({ error: "Sign in to upgrade." }, { status: 401 });
+    const body = await readJsonBody(ctx.request, ctx.config.maxBodyBytes);
+    if (!body.ok) return body.response;
+    const input = checkoutInput.safeParse(body.value);
+    if (!input.success) return json({ error: "Choose monthly or yearly." }, { status: 400 });
+    const origin = siteOrigin(ctx.request, settings);
+    if (!origin) return json({ error: "Checkout could not be started from here." }, { status: 400 });
+    const { data: existing } = await database.from("subscriptions").select("status,cancel_at_period_end,stripe_customer_id").eq("user_id", user.id).maybeSingle();
+    if (existing && ACTIVE_STATUSES.includes(existing.status) && !existing.cancel_at_period_end) {
+      return json({ error: "You already have Pro. Manage it from the Plan page." }, { status: 409 });
+    }
+    const session = await stripe(settings, "POST", "/checkout/sessions", {
+      mode: "subscription",
+      "line_items[0][price]": settings.prices[input.data.cycle],
+      "line_items[0][quantity]": 1,
+      success_url: `${origin}/?tab=plan&checkout=success`,
+      cancel_url: `${origin}/?tab=plan&checkout=cancelled`,
+      client_reference_id: user.id,
+      // A returning customer keeps one Stripe record, so their invoices stay together.
+      ...existing?.stripe_customer_id ? { customer: existing.stripe_customer_id } : { customer_email: user.email },
+      "subscription_data[metadata][user_id]": user.id,
+      "subscription_data[metadata][plan]": input.data.plan,
+      allow_promotion_codes: true
+    });
+    return session?.url ? json({ url: session.url }) : json({ error: "Checkout is unavailable right now. Please try again shortly." }, { status: 502 });
+  };
+  const portal = async (ctx) => {
+    const settings = deps.settings();
+    const database = deps.database();
+    if (!settings || !database) return off();
+    const user = await deps.verify(ctx.request.headers.get("authorization"));
+    if (!user) return json({ error: "Sign in to manage your plan." }, { status: 401 });
+    const origin = siteOrigin(ctx.request, settings);
+    const { data: row } = await database.from("subscriptions").select("stripe_customer_id").eq("user_id", user.id).maybeSingle();
+    if (!origin || !row?.stripe_customer_id) return json({ error: "There is no subscription to manage." }, { status: 404 });
+    const session = await stripe(settings, "POST", "/billing_portal/sessions", { customer: row.stripe_customer_id, return_url: `${origin}/?tab=plan` });
+    return session?.url ? json({ url: session.url }) : json({ error: "The billing page is unavailable right now. Please try again shortly." }, { status: 502 });
+  };
+  const webhook = async (ctx) => {
+    const settings = deps.settings();
+    const database = deps.database();
+    if (!settings || !database) return off();
+    const raw = await ctx.request.text();
+    if (!verifyStripeSignature(raw, ctx.request.headers.get("stripe-signature"), settings.webhookSecret)) {
+      return json({ error: "Signature check failed." }, { status: 400 });
+    }
+    let event;
+    try {
+      event = JSON.parse(raw);
+    } catch {
+      return json({ error: "Malformed event." }, { status: 400 });
+    }
+    const object = event.data?.object ?? {};
+    let subscriptionId;
+    let userId;
+    if (event.type === "checkout.session.completed") {
+      if (object.mode !== "subscription") return json({ received: true });
+      subscriptionId = typeof object.subscription === "string" ? object.subscription : void 0;
+      userId = typeof object.client_reference_id === "string" ? object.client_reference_id : void 0;
+    } else if (event.type?.startsWith("customer.subscription.")) {
+      subscriptionId = typeof object.id === "string" ? object.id : void 0;
+    } else {
+      return json({ received: true });
+    }
+    if (!subscriptionId || !/^sub_[A-Za-z0-9]+$/.test(subscriptionId)) return json({ received: true });
+    const subscription = await stripe(settings, "GET", `/subscriptions/${subscriptionId}`);
+    if (!subscription) return json({ error: "Could not read the subscription." }, { status: 502 });
+    userId ??= subscription.metadata?.user_id;
+    if (!userId || !z5.string().uuid().safeParse(userId).success) {
+      const { data: known } = await database.from("subscriptions").select("user_id").eq("stripe_subscription_id", subscription.id).maybeSingle();
+      userId = known?.user_id;
+    }
+    if (!userId) {
+      console.error("[CalculixHub] Subscription event with no learner attached", { subscription: subscription.id });
+      return json({ received: true });
+    }
+    const record = subscriptionRecord(subscription, userId);
+    if (!chargedAmountMatches(subscription, record)) {
+      console.error("[CalculixHub] Stripe price does not match shared/plans.ts", { plan: record.plan, cycle: record.billing_cycle });
+    }
+    const { error } = await database.from("subscriptions").upsert(record, { onConflict: "user_id" });
+    if (error) {
+      console.error("[CalculixHub] Could not record subscription", { code: error.code });
+      return json({ error: "Could not record the subscription." }, { status: 500 });
+    }
+    return json({ received: true });
+  };
+  return [
+    { method: "GET", path: "/api/billing/config", routeClass: "read", handler: config3 },
+    { method: "POST", path: "/api/billing/checkout", routeClass: "read", handler: checkout },
+    { method: "POST", path: "/api/billing/portal", routeClass: "read", handler: portal },
+    { method: "POST", path: "/api/billing/webhook", routeClass: "read", handler: webhook }
+  ];
+}
+
 // server/app.ts
 function buildApp(options = {}) {
   const config3 = options.config ?? config();
@@ -2055,6 +2290,7 @@ function buildApp(options = {}) {
     ...adminRoutes(),
     ...arenaRoutes(),
     ...emailRoutes(),
+    ...billingRoutes(),
     // Paid routes. The `ai` class carries the tighter allowance.
     { method: "POST", path: "/api/chat", routeClass: "ai", handler: createChatHandler({ model }) },
     { method: "POST", path: "/api/evaluate", routeClass: "ai", handler: createEvaluateHandler({ model }) },

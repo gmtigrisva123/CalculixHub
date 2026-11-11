@@ -96,20 +96,22 @@ interface SplitTextProps {
   stagger?: number;
   /** Rise when mounted (the hero) or when scrolled into view (everything else). */
   trigger?: 'mount' | 'view';
+  /** With `trigger="mount"`: hold the words down until this turns true. */
+  play?: boolean;
 }
 
 /**
  * The words are real text in the heading, separated by real spaces, so the
  * accessible name is the sentence as written and nothing needs an aria-label.
  */
-export function SplitText({ text, as = 'h2', className, id, delay = 0, stagger = 0.055, trigger = 'view' }: SplitTextProps) {
+export function SplitText({ text, as = 'h2', className, id, delay = 0, stagger = 0.055, trigger = 'view', play: playing = true }: SplitTextProps) {
   const Tag = m[as];
   const lines = splitEmphasis(text);
   // Once the last word has landed the masks are lifted, so no descender or italic overhang is ever clipped.
   const [settled, setSettled] = useState(false);
   const lastLine = lines.length - 1;
   const lastWord = lines[lastLine].length - 1;
-  const play = trigger === 'mount' ? { animate: 'shown' } : { whileInView: 'shown', viewport: { once: true, amount: 0.5 } };
+  const play = trigger === 'mount' ? { animate: playing ? 'shown' : 'hidden' } : { whileInView: 'shown', viewport: { once: true, amount: 0.5 } };
   const classes = ['lx-split', className, settled && 'is-settled'].filter(Boolean).join(' ');
   return (
     <Tag id={id} className={classes} initial="hidden" {...play} variants={lineContainer} custom={{ delay, stagger }}>
@@ -237,6 +239,8 @@ interface CountUpProps {
   value: number;
   delay?: number;
   className?: string;
+  /** Hold at zero until this turns true. */
+  start?: boolean;
 }
 
 /**
@@ -244,7 +248,7 @@ interface CountUpProps {
  * the animated digits are hidden from assistive technology, and swapped for
  * zero only once script is running and motion is allowed.
  */
-export function CountUp({ value, delay = 0, className }: CountUpProps) {
+export function CountUp({ value, delay = 0, className, start = true }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
   const inView = useInView(ref, { once: true, amount: 0.8 });
@@ -254,7 +258,7 @@ export function CountUp({ value, delay = 0, className }: CountUpProps) {
   }, [reduce]);
 
   useEffect(() => {
-    if (reduce || !inView) return;
+    if (reduce || !inView || !start) return;
     const node = ref.current;
     const controls = animate(0, value, {
       duration: 1.9,
@@ -263,11 +267,18 @@ export function CountUp({ value, delay = 0, className }: CountUpProps) {
       onUpdate: latest => { if (node) node.textContent = grouped(latest); },
     });
     return () => controls.stop();
-  }, [inView, reduce, value, delay]);
+  }, [inView, reduce, value, delay, start]);
+
+  // Hold the settled figure's width from the start, so counting up from 0
+  // never pushes its neighbours along. Digits are tabular (1ch each); a
+  // grouping comma is about a third of that.
+  const settled = grouped(value);
+  const commas = settled.split(',').length - 1;
+  const reserve = { display: 'inline-block', minWidth: `${(settled.length - commas * 0.68).toFixed(2)}ch` } as const;
 
   return (
     <span className={className}>
-      <span ref={ref} aria-hidden="true" className="lx-tabular">{grouped(value)}</span>
+      <span ref={ref} aria-hidden="true" className="lx-tabular" style={reserve}>{grouped(value)}</span>
       <span className="sr-only">{grouped(value)}</span>
     </span>
   );

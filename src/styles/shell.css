@@ -94,7 +94,7 @@
  * findable; it does not need to pulse to be seen.
  * ------------------------------------------------------------------------ */
 
-.tutor-fab { border: 1px solid color-mix(in srgb, #e6bd73 28%, transparent); background: linear-gradient(170deg, #1f3640, #0f1d23); color: #f1ece2; font-family: 'Geist', 'DM Sans', sans-serif; font-weight: 600; letter-spacing: -.01em; box-shadow: 0 16px 34px -16px #0b161bcc, 0 2px 6px -2px #0b161b66; transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s; }
+.tutor-fab { border: 1px solid color-mix(in srgb, #e6bd73 28%, transparent); background: linear-gradient(170deg, #1f3640, #0f1d23); color: #f1ece2; font-family: 'Geist', sans-serif; font-weight: 600; letter-spacing: -.01em; box-shadow: 0 16px 34px -16px #0b161bcc, 0 2px 6px -2px #0b161b66; transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s; }
 .tutor-fab:hover { transform: translateY(-2px); box-shadow: 0 22px 40px -18px #0b161bcc, 0 2px 6px -2px #0b161b66; }
 .tutor-fab-spark { color: #e6bd73; }
 .tutor-fab-dot { display: none; }
@@ -116,3 +116,19 @@
   .ws-notice p { flex-basis: calc(100% - 30px); }
   .ws-notice :is(a, button) { margin-left: 28px; }
 }
+
+/* --------------------------------------------------------------------------
+ * A page on its way (ScreenSkeleton.tsx). Hidden for the first fifth of a
+ * second, so a page that arrives quickly is not preceded by a flash of grey.
+ * ------------------------------------------------------------------------ */
+
+.ws-skeleton { display: grid; gap: 22px; opacity: 0; animation: ws-skeleton-in .3s ease .2s forwards; }
+.ws-skeleton i, .ws-skeleton-panel { display: block; border-radius: 14px; background: var(--sf-sunken); }
+.ws-skeleton-head { display: grid; gap: 12px; }
+.ws-skeleton-head i:first-child { width: min(420px, 70%); height: 38px; }
+.ws-skeleton-head i:last-child { width: min(560px, 90%); height: 16px; border-radius: 8px; }
+.ws-skeleton-panel { height: clamp(220px, 34vh, 340px); border-radius: 24px; }
+.ws-skeleton-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ws-skeleton-row i { height: 132px; border-radius: 18px; }
+@keyframes ws-skeleton-in { to { opacity: 1; } }
+@media (max-width: 767px) { .ws-skeleton-row { grid-template-columns: 1fr; } .ws-skeleton-row i:nth-child(n + 2) { display: none; } }

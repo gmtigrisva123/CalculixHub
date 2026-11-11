@@ -16,6 +16,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
 import { Arrow, BrandMark, GLIDE } from './kit';
 import { scrollToTarget, setScrollLocked } from './smoothScroll';
+import { whenChapters } from './chapters';
 
 /** The chapters worth a jump, numbered as the page numbers them. */
 export const NAV_LINKS = [
@@ -34,19 +35,24 @@ export function scrollToSection(id: string) {
   if (target) scrollToTarget(target, { offset: JUMP_OFFSET });
 }
 
-/** An in-page link, travelled smoothly instead of jumped. */
+/**
+ * An in-page link, travelled smoothly instead of jumped. A chapter that has
+ * not been mounted yet is asked for, and the journey starts once it exists.
+ */
 export function jumpTo(event: MouseEvent<HTMLAnchorElement>, id: string) {
-  if (!document.getElementById(id)) return;
   event.preventDefault();
-  scrollToSection(id);
+  if (document.getElementById(id)) { scrollToSection(id); return; }
+  void whenChapters().then(() => requestAnimationFrame(() => scrollToSection(id)));
 }
 
 interface LandingNavProps {
   onSignIn: () => void;
   onRegister: () => void;
+  /** Whether the chapters below the hero are in the document yet. */
+  chapters: boolean;
 }
 
-export default function LandingNav({ onSignIn, onRegister }: LandingNavProps) {
+export default function LandingNav({ onSignIn, onRegister, chapters }: LandingNavProps) {
   const [hidden, setHidden] = useState(false);
   const [tone, setTone] = useState<'ink' | 'paper'>('ink');
   const [active, setActive] = useState<string | null>(null);
@@ -114,7 +120,7 @@ export default function LandingNav({ onSignIn, onRegister }: LandingNavProps) {
       window.removeEventListener('resize', onResize);
       observers.forEach(observer => observer.disconnect());
     };
-  }, []);
+  }, [chapters]);
 
   useEffect(() => {
     setScrollLocked(open);
@@ -136,7 +142,7 @@ export default function LandingNav({ onSignIn, onRegister }: LandingNavProps) {
     event.preventDefault();
     setOpen(false);
     setScrollLocked(false);
-    requestAnimationFrame(() => scrollToSection(id));
+    void whenChapters().then(() => requestAnimationFrame(() => scrollToSection(id)));
   };
 
   return (
