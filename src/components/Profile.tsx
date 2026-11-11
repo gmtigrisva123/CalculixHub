@@ -236,6 +236,8 @@ interface Rhythm {
   longestRun: number;
   /** 0 is Sunday. Null until there are at least three active days to judge by. */
   favourite: number | null;
+  /** Active days on each weekday, Sunday first. */
+  weekdays: number[];
 }
 
 function readRhythm(timeline: UserStats['learningTimeline']): Rhythm {
@@ -257,7 +259,7 @@ function readRhythm(timeline: UserStats['learningTimeline']): Rhythm {
     weekdays[new Date(key * DAY).getUTCDay()] += 1;
   });
   const top = Math.max(...weekdays);
-  return { gains, best, longestRun, favourite: keys.length >= 3 && weekdays.filter(count => count === top).length === 1 ? weekdays.indexOf(top) : null };
+  return { gains, best, longestRun, weekdays, favourite: keys.length >= 3 && weekdays.filter(count => count === top).length === 1 ? weekdays.indexOf(top) : null };
 }
 
 /* --------------------------------------------------------------------------
@@ -284,26 +286,40 @@ function ActivityGrid({ gains, streak }: { gains: Map<number, number>; streak: n
   const activeDays = [...gains.keys()].filter(key => key >= first).length;
   const describe = (key: number) => {
     const gain = gains.get(key);
-    return `${formatDay(key * DAY)} · ${gain === undefined ? 'no practice' : gain > 0 ? `+${grouped(gain)} pts` : 'practised'}`;
+    return gain === undefined ? 'No practice' : gain > 0 ? `+${grouped(gain)} pts` : 'Practised, no points';
+  };
+
+  // The day under the pointer, and where its square sits inside the card.
+  const frame = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<{ key: number; x: number; y: number } | null>(null);
+  const point = (event: React.PointerEvent | React.FocusEvent) => {
+    const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-key]');
+    const box = frame.current?.getBoundingClientRect();
+    if (!cell || !box) return;
+    const at = cell.getBoundingClientRect();
+    setTip({ key: Number(cell.dataset.key), x: at.left + at.width / 2 - box.left, y: at.top - box.top });
   };
 
   // On a narrow screen the grid scrolls; open it on this week, not on six months ago.
   const scroller = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { const node = scroller.current; if (node) node.scrollLeft = node.scrollWidth; }, []);
 
-  return <div className="pf-activity">
-    <div className="pf-activity-scroll" ref={scroller}>
+  return <div className="pf-activity" ref={frame}>
+    <div className="pf-activity-scroll" ref={scroller} onScroll={() => setTip(null)}>
       <div className="pf-activity-grid" style={{ '--weeks': WEEKS } as Vars} role="img" aria-label={`${plural(activeDays, 'active day')} in the last ${WEEKS} weeks`}>
         <div className="pf-activity-months" aria-hidden="true">{months.map(month => <span key={month.column} style={{ gridColumn: month.column + 1 }}>{month.label}</span>)}</div>
         <div className="pf-activity-days" aria-hidden="true"><span>Mon</span><span>Wed</span><span>Fri</span></div>
-        <div className="pf-activity-cells">
+        <div className="pf-activity-cells" onPointerOver={point} onPointerLeave={() => setTip(null)}>
           {Array.from({ length: WEEKS * 7 }, (_, index) => {
             const key = first + Math.floor(index / 7) * 7 + (index % 7);
-            return <i key={index} className={key > today ? 'is-future' : key === today ? 'is-today' : undefined} data-level={level(key)} title={key > today ? undefined : describe(key)} />;
+            return <i key={index} className={key > today ? 'is-future' : key === today ? 'is-today' : undefined} data-level={level(key)} data-key={key > today ? undefined : key} style={{ '--c': Math.floor(index / 7) } as Vars} />;
           })}
         </div>
       </div>
     </div>
+    {tip && <div className={`pf-day-tip${tip.x < 90 ? ' is-right' : tip.x > (frame.current?.clientWidth ?? 0) - 90 ? ' is-left' : ''}`} style={{ left: tip.x, top: tip.y }} role="status">
+      <span>{new Date(tip.key * DAY).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}</span><b>{describe(tip.key)}</b>
+    </div>}
     <div className="pf-activity-foot">
       <span><b>{plural(activeDays, 'active day')}</b> in {WEEKS} weeks{streak > 0 && <> · on a <b>{streak}-day</b> streak</>}</span>
       <span className="pf-legend" aria-hidden="true">Less{[0, 1, 2, 3, 4].map(n => <i key={n} data-level={n} />)}More</span>
@@ -318,19 +334,64 @@ function ActivityGrid({ gains, streak }: { gains: Map<number, number>; streak: n
 const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#209d8c', Combinatorics: '#8b5cf6', 'Number Theory': '#0484c0' };
 const standing = (value: number) => value <= 0 ? 'Not started' : value < 35 ? 'Finding your feet' : value < 70 ? 'Getting solid' : 'Strong';
 
+/* Four topics, four corners. The shape is the profile at a glance; the rows below carry the numbers. */
+const CORNER: Record<Topic, readonly [x: number, y: number, short: string]> = { Algebra: [0, -1, 'ALG'], Geometry: [1, 0, 'GEO'], Combinatorics: [0, 1, 'COM'], 'Number Theory': [-1, 0, 'NT'] };
+
+function TopicShape({ skills, hot, onHot }: { skills: UserStats['skills']; hot: Topic | null; onHot: (topic: Topic | null) => void }) {
+  const reach = 74, centre = 100;
+  const at = (topic: Topic, share: number) => [centre + CORNER[topic][0] * reach * share, centre + CORNER[topic][1] * reach * share] as const;
+  const ring = (share: number) => TOPIC_LIST.map(topic => at(topic, share).join(',')).join(' ');
+  const shape = TOPIC_LIST.map(topic => at(topic, Math.max(skills[topic] ?? 0, 4) / 100).join(',')).join(' ');
+  return <svg className="pf-shape" viewBox="0 0 200 200" role="img" aria-label={`Mastery by topic: ${TOPIC_LIST.map(topic => `${topic} ${Math.round(skills[topic] ?? 0)}%`).join(', ')}`}>
+    {[.25, .5, .75, 1].map(share => <polygon key={share} className="pf-shape-ring" points={ring(share)} />)}
+    {TOPIC_LIST.map(topic => <line key={topic} className={`pf-shape-axis${hot === topic ? ' is-hot' : ''}`} x1={centre} y1={centre} x2={at(topic, 1)[0]} y2={at(topic, 1)[1]} style={{ '--hue': TOPIC_HUE[topic] } as Vars} />)}
+    <polygon className="pf-shape-area" points={shape} />
+    {TOPIC_LIST.map(topic => {
+      const [x, y] = at(topic, Math.max(skills[topic] ?? 0, 4) / 100), [lx, ly] = at(topic, 1.2);
+      return <g key={topic} className={`pf-shape-corner${hot === topic ? ' is-hot' : ''}`} style={{ '--hue': TOPIC_HUE[topic] } as Vars} onPointerEnter={() => onHot(topic)} onPointerLeave={() => onHot(null)}>
+        <circle className="pf-shape-hit" cx={x} cy={y} r={16} />
+        <circle className="pf-shape-dot" cx={x} cy={y} r={4.5} />
+        <text x={lx} y={ly + 3.5} textAnchor="middle">{CORNER[topic][2]}</text>
+      </g>;
+    })}
+  </svg>;
+}
+
 function TopicBars({ skills, solved, onPractise }: { skills: UserStats['skills']; solved: Record<Topic, number>; onPractise?: (topic: Topic) => void }) {
-  return <ul className="pf-topics">{TOPIC_LIST.map(topic => {
-    const value = Math.round(skills[topic] ?? 0);
-    return <li key={topic} style={{ '--hue': TOPIC_HUE[topic], '--v': `${value}%` } as Vars}>
-      <button type="button" onClick={() => onPractise?.(topic)} aria-label={`Practise ${topic}: ${value}% mastery, ${standing(value).toLowerCase()}`}>
-        <span className="pf-topic-name"><i aria-hidden="true" />{topic}</span>
-        <span className="pf-topic-value">{value}<small>%</small></span>
-        <span className="pf-topic-track" aria-hidden="true"><span /></span>
-        <span className="pf-topic-note">{standing(value)}{solved[topic] > 0 && <> · {solved[topic]} solved</>}</span>
-        <span className="pf-topic-go" aria-hidden="true">Practise<ArrowRight size={13} /></span>
-      </button>
-    </li>;
-  })}</ul>;
+  const [hot, setHot] = useState<Topic | null>(null);
+  return <>
+    <TopicShape skills={skills} hot={hot} onHot={setHot} />
+    <ul className="pf-topics">{TOPIC_LIST.map(topic => {
+      const value = Math.round(skills[topic] ?? 0);
+      return <li key={topic} className={hot === topic ? 'is-hot' : undefined} style={{ '--hue': TOPIC_HUE[topic], '--v': `${value}%` } as Vars}>
+        <button type="button" onClick={() => onPractise?.(topic)} onPointerEnter={() => setHot(topic)} onPointerLeave={() => setHot(null)} onFocus={() => setHot(topic)} onBlur={() => setHot(null)} aria-label={`Practise ${topic}: ${value}% mastery, ${standing(value).toLowerCase()}`}>
+          <span className="pf-topic-name"><i aria-hidden="true" />{topic}</span>
+          <span className="pf-topic-value">{value}<small>%</small></span>
+          <span className="pf-topic-track" aria-hidden="true"><span /></span>
+          <span className="pf-topic-note">{standing(value)}{solved[topic] > 0 && <> · {solved[topic]} solved</>}</span>
+          <span className="pf-topic-go" aria-hidden="true">Practise<ArrowRight size={13} /></span>
+        </button>
+      </li>;
+    })}</ul>
+  </>;
+}
+
+/* --------------------------------------------------------------------------
+ * A small drawing beside each of the five figures
+ * ------------------------------------------------------------------------ */
+
+function Spark({ timeline }: { timeline: UserStats['learningTimeline'] }) {
+  const days = timeline.map(day => ({ time: dayOf(day.date), points: day.points })).filter(day => Number.isFinite(day.time)).sort((a, b) => a.time - b.time).slice(-24);
+  if (days.length < 2) return null;
+  const low = days[0].points, span = Math.max(days[days.length - 1].points - low, 1);
+  const path = days.map((day, index) => `${index ? 'L' : 'M'}${(index / (days.length - 1) * 60 + 2).toFixed(1)},${(22 - (day.points - low) / span * 18).toFixed(1)}`).join(' ');
+  return <svg className="pf-mini" viewBox="0 0 64 26" aria-hidden="true"><path className="pf-mini-line" d={path} pathLength={1} /></svg>;
+}
+
+function Dial({ share }: { share: number }) {
+  return <svg className="pf-mini is-dial" viewBox="0 0 30 30" aria-hidden="true" style={{ '--p': share } as Vars}>
+    <circle cx="15" cy="15" r="12" /><circle cx="15" cy="15" r="12" pathLength={1} />
+  </svg>;
 }
 
 /* --------------------------------------------------------------------------
@@ -383,6 +444,12 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
   // What is still missing from the public profile, in the order worth filling in.
   const missing = profile ? [!profile.avatar_url && 'a photo', !profile.bio && 'a short bio', !profile.country && 'your country'].filter(Boolean) as string[] : [];
+
+  // Monday first, for the two small charts that read as a week.
+  const byWeekday = [1, 2, 3, 4, 5, 6, 0].map(day => rhythm.weekdays[day]);
+  const busiest = Math.max(1, ...byWeekday);
+  const todayKey = Math.floor(Date.now() / DAY);
+  const lastWeek = Array.from({ length: 7 }, (_, index) => rhythm.gains.has(todayKey - 6 + index));
 
   const NearestIcon = nearest ? BADGE_ICON[nearest.id] ?? Trophy : Trophy;
 
@@ -438,11 +505,14 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
         </aside>
 
         <dl className="pf-stats">
-          <div><dt>Points</dt><dd><AnimatedNumber value={userStats.points} format={grouped} /></dd></div>
-          <div><dt>Solved</dt><dd><AnimatedNumber value={solvedCount} /></dd></div>
-          <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} /><small>%</small></span> : <span className="is-none">—</span>}</dd></div>
-          <div><dt>Streak</dt><dd><AnimatedNumber value={userStats.streak} /><small>{userStats.streak === 1 ? 'day' : 'days'}</small></dd></div>
-          <div><dt>Active days</dt><dd><AnimatedNumber value={activeDays} /></dd></div>
+          <div><dt>Points</dt><dd><AnimatedNumber value={userStats.points} format={grouped} /></dd><Spark timeline={userStats.learningTimeline} /></div>
+          <div><dt>Solved</dt><dd><AnimatedNumber value={solvedCount} /></dd>
+            {solvedCount > 0 && <span className="pf-mini is-split" aria-hidden="true">{TOPIC_LIST.map(topic => solvedByTopic[topic] > 0 && <i key={topic} style={{ flexGrow: solvedByTopic[topic], background: TOPIC_HUE[topic] }} />)}</span>}</div>
+          <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} /><small>%</small></span> : <span className="is-none">—</span>}</dd>{hasAnswers && <Dial share={userStats.accuracy / 100} />}</div>
+          <div><dt>Streak</dt><dd><AnimatedNumber value={userStats.streak} /><small>{userStats.streak === 1 ? 'day' : 'days'}</small></dd>
+            <span className="pf-mini is-week" aria-hidden="true">{lastWeek.map((on, index) => <i key={index} className={on ? 'is-on' : undefined} />)}</span></div>
+          <div><dt>Active days</dt><dd><AnimatedNumber value={activeDays} /></dd>
+            {activeDays > 0 && <span className="pf-mini is-bars" aria-hidden="true">{byWeekday.map((count, index) => <i key={index} style={{ height: `${Math.max(count / busiest, .12) * 100}%` }} />)}</span>}</div>
         </dl>
       </section>
 
@@ -517,7 +587,15 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
               <div><dt>Usual day</dt><dd>{rhythm.favourite != null ? WEEKDAYS[rhythm.favourite] : <span className="is-none">—</span>}</dd></div>
               <div><dt>Time practising</dt><dd>{userStats.timeSpent > 0 ? formatMinutes(Math.round(userStats.timeSpent)) : <span className="is-none">—</span>}</dd></div>
             </dl>
-            {activeDays === 0 && <p className="pf-records-note">These fill in from your first saved answer.</p>}
+            {activeDays === 0
+              ? <p className="pf-records-note">These fill in from your first saved answer.</p>
+              : <div className="pf-week" role="img" aria-label={`Active days by weekday: ${byWeekday.map((count, index) => `${WEEKDAYS[(index + 1) % 7].slice(0, -1)} ${count}`).join(', ')}`}>
+                  {byWeekday.map((count, index) => (
+                    <div key={index} className={rhythm.favourite === (index + 1) % 7 ? 'is-top' : undefined}>
+                      <b>{count}</b><i style={{ '--h': Math.max(count / busiest, .06) } as Vars} /><small>{WEEKDAYS[(index + 1) % 7].slice(0, 1)}</small>
+                    </div>
+                  ))}
+                </div>}
           </section>
         </aside>
       </div>
@@ -532,13 +610,16 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             const Icon = BADGE_ICON[badge.id] ?? Trophy;
             return (
               <li key={badge.id} className={`pf-medal${badge.unlocked ? ' is-unlocked' : ''}`}>
-                <span className="pf-coin" aria-hidden="true"><Icon size={20} strokeWidth={1.8} />{!badge.unlocked && <span className="pf-coin-lock"><Lock size={10} strokeWidth={2.4} /></span>}</span>
+                <span className="pf-coin-wrap" aria-hidden="true" style={{ '--p': badge.share } as Vars}>
+                  {!badge.unlocked && badge.progress && <svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="27" /><circle cx="29" cy="29" r="27" pathLength={1} /></svg>}
+                  <span className="pf-coin"><Icon size={20} strokeWidth={1.8} />{!badge.unlocked && <span className="pf-coin-lock"><Lock size={10} strokeWidth={2.4} /></span>}</span>
+                </span>
                 <div>
                   <h3>{badge.title}</h3>
                   <p>{badge.desc}</p>
                   {badge.unlocked
                     ? <span className="pf-medal-state"><Check size={12} strokeWidth={3} aria-hidden="true" />Earned</span>
-                    : badge.progress && <span className="pf-medal-progress"><span className="pf-meter" style={{ '--p': badge.share } as Vars} aria-hidden="true"><span /></span>{grouped(Math.min(badge.progress.now, badge.progress.goal))}/{grouped(badge.progress.goal)}</span>}
+                    : badge.progress && <span className="pf-medal-progress">{grouped(Math.min(badge.progress.now, badge.progress.goal))} of {grouped(badge.progress.goal)}{badge.progress.unit.startsWith('%') ? '' : ' '}{badge.progress.unit}</span>}
                 </div>
               </li>
             );
