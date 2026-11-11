@@ -18,7 +18,7 @@ const FAQS: [string, string][] = [
   ['What does Pro add, and what does it cost?', `${dollars(PLANS.pro.price.monthly)} a month, or ${dollars(PLANS.pro.price.yearly)} a year. It adds a week-by-week plan up to your contest date, printable progress reports and every share-card design. Anything still being built is marked on the pricing table.`],
   ['Can I cancel?', 'Any time, from the Plan page. You keep Pro until the period you paid for ends.'],
   ['What if I get stuck?', 'Take a hint first. When you’re ready, read the full solution. You can come back to any problem.'],
-  ['How do the AI explanations work?', 'You add your own Gemini API key in Settings. Any usage is billed by Google, not by us.'],
+  ['How do the AI explanations work?', 'The tutor answers with Google’s Gemini. In Settings, under Live tutor, three steps walk you through getting a free key from your own Google account. Google’s free allowance covers normal practice, and anything beyond it is between you and Google, not us.'],
   ['Can I take my data with me, or delete it?', 'Both. Settings has a download of everything stored about you, and a delete-account button that removes it for good.'],
 ];
 

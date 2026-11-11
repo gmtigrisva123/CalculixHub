@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generateWithKey, normalizeGeminiKey } from './geminiClient';
+import { generateWithKey, maskKey, modelLabel, normalizeGeminiKey } from './geminiClient';
 
 const json = (status: number, body: unknown) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
@@ -7,6 +7,16 @@ const json = (status: number, body: unknown) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe('geminiClient', () => {
+  it('names a model the way a learner would', () => {
+    expect(modelLabel('gemini-flash-latest')).toBe('Gemini Flash');
+    expect(modelLabel('models/gemini-2.5-flash-lite')).toBe('Gemini 2.5 Flash Lite');
+  });
+
+  it('shows enough of a key to recognise it and no more', () => {
+    expect(maskKey('AIzaSyD4xExampleExampleExampleExample3kQ9')).toBe('AIza••••••••3kQ9');
+    expect(maskKey('short')).toBe('•••••');
+  });
+
   it('cleans pasted keys', () => {
     expect(normalizeGeminiKey('  "AIzaABC 123"\n')).toBe('AIzaABC123');
     expect(normalizeGeminiKey('GEMINI_API_KEY=AIzaXYZ')).toBe('AIzaXYZ');

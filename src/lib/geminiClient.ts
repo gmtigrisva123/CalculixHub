@@ -77,7 +77,30 @@ export function storeGeminiKey(key: string): void {
   } catch {
     /* storage unavailable: the key just won't persist */
   }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(TUTOR_KEY_EVENT));
 }
+
+/**
+ * The model this key last answered with, or null when it has never worked.
+ * Saving a different key clears it, so a value here means "this key is live".
+ */
+export function connectedModel(): string | null {
+  return readStoredGeminiKey() ? readCachedModel() : null;
+}
+
+/** `gemini-flash-latest` as a learner would say it: "Gemini Flash". */
+export function modelLabel(model: string): string {
+  const words = model.replace(/^models\//, '').split('-').filter(part => !/^(latest|preview|exp|\d{2,4})$/.test(part));
+  return words.map(part => (/^\d/.test(part) ? part : part[0].toUpperCase() + part.slice(1))).join(' ');
+}
+
+/** Enough of a key to recognise it, never enough to copy it. */
+export function maskKey(key: string): string {
+  return key.length <= 10 ? '•'.repeat(key.length) : `${key.slice(0, 4)}${'•'.repeat(8)}${key.slice(-4)}`;
+}
+
+/** Fired on `window` whenever the stored key changes, so every open surface agrees. */
+export const TUTOR_KEY_EVENT = 'calculix:tutor-key';
 
 function readCachedModel(): string | null {
   try {
@@ -88,12 +111,14 @@ function readCachedModel(): string | null {
 }
 
 function cacheModel(model: string | null): void {
+  const before = readCachedModel();
   try {
     if (model) localStorage.setItem(MODEL_CACHE_STORAGE, model);
     else localStorage.removeItem(MODEL_CACHE_STORAGE);
   } catch {
     /* ignore */
   }
+  if (before !== model && typeof window !== 'undefined') window.dispatchEvent(new Event(TUTOR_KEY_EVENT));
 }
 
 interface GoogleErrorBody {
