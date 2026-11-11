@@ -7,7 +7,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import WorkspaceShell, { type WorkspaceNotice } from './WorkspaceShell';
 import { Problem, UserStats, WeeklyChallenge, Contest, Topic, Level } from '../../shared/types';
 import { apiUrl, apiFetch, isNativePlatform } from '../services/apiBase';
-import { remindersEnabled, enableReminders, disableReminders, syncReminders } from '../platform/reminders';
+import { remindersEnabled, enableReminders, disableReminders, syncReminders, reminderHour } from '../platform/reminders';
 import { useOnlineStatus } from '../platform/offline';
 import PullToRefresh from './PullToRefresh';
 import { type TabKey } from '../lib/navigation';
@@ -82,8 +82,8 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
   const [achievementQueue, setAchievementQueue] = useState<Achievement[]>([]);
   const [scratchOpen, setScratchOpen] = useState(false);
   const [learnVisit, setLearnVisit] = useState(0);
-  const [tutorRequest, setTutorRequest] = useState<{ id: number; userId: string; prompt?: string } | null>(null);
-  const openTutor = (prompt?: string) => { setOverlays(true); setTutorRequest(previous => ({ id: (previous?.id ?? 0) + 1, userId: profile?.id ?? 'guest', prompt })); };
+  const [tutorRequest, setTutorRequest] = useState<{ id: number; userId: string; prompt?: string; label?: string } | null>(null);
+  const openTutor = (prompt?: string, label?: string) => { setOverlays(true); setTutorRequest(previous => ({ id: (previous?.id ?? 0) + 1, userId: profile?.id ?? 'guest', prompt, label })); };
 
   const queueAchievements = (newlyUnlocked: Achievement[]) => {
     if (newlyUnlocked.length > 0) {
@@ -194,7 +194,7 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
    * unsolicited prompts, and iOS only offers notifications to an installed PWA
    * at all — so a refusal needs explaining rather than silently failing.
    */
-  const handleToggleReminders = async (enabled: boolean) => {
+  const handleToggleReminders = async (enabled: boolean, hour?: number) => {
     if (!enabled) {
       await disableReminders();
       setStudyReminders(false);
@@ -202,7 +202,7 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
       return;
     }
 
-    const result = await enableReminders();
+    const result = await enableReminders(hour ?? reminderHour());
 
     if (result === 'granted') {
       setStudyReminders(true);
@@ -391,6 +391,7 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
               onLogout={handleLogout}
               onTriggerAlert={(badge) => queueAchievements([badge])}
               onSeePlans={() => selectTab('plan')}
+              onPractise={(topic) => { setLearnVisit(count => count + 1); navigateWithFilters('learn', topic ? { topic } : undefined); }}
             />
           )}
 

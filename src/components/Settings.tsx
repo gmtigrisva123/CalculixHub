@@ -5,12 +5,14 @@
 
 import React, { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { Bell, Check, Download, Eraser, Eye, EyeOff, Flag, KeyRound, LogOut, Mail, Monitor, Moon, Palette, RefreshCw, RotateCcw, Save, ShieldAlert, Sun, Target, Timer, Trash2, UserRound, type LucideIcon } from 'lucide-react';
+import { Bell, Check, Command, Download, Eraser, FileJson, Flag, KeyRound, LogOut, Mail, Monitor, Moon, Palette, RotateCcw, Save, ShieldAlert, Sparkles, Sun, Target, Timer, Trash2, UserRound, type LucideIcon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { reminderHour } from '../platform/reminders';
 import type { ThemePreference } from '../lib/theme';
-import { normalizeGeminiKey, readStoredGeminiKey, storeGeminiKey, testGeminiKey } from '../lib/geminiClient';
+import { COACHING_STYLES, storeCoachingStyle, storeRemembersChats, useTutorKey, useTutorPrefs } from '../lib/tutor';
+import TutorConnect from './tutor/TutorConnect';
 import { useAuth } from '../context/AuthContext';
+import MathText from './MathText';
 import UserAvatar from './UserAvatar';
 import { clearLocalData, deleteMyAccount, downloadJson, exportMyData, resetMyProgress, signOutEverywhere, updateProfile, type AccountResult } from '../services/data/account';
 import '../styles/settings.css';
@@ -24,7 +26,8 @@ interface SettingsProps {
   /** Goal and pace save as they are chosen; there is no separate save step. */
   onChangePreferences: (next: { goal: string; pace: string }) => Promise<SaveOutcome>;
   studyReminders: boolean;
-  onToggleReminders: (enabled: boolean) => void;
+  /** `hour` is the hour of the day, 0 to 23, the reminder should arrive at. */
+  onToggleReminders: (enabled: boolean, hour?: number) => void;
   reminderNotice: string | null;
   onLogout: () => void;
   /** Called after the practice record has been cleared, so every figure on screen is re-read. */
@@ -71,7 +74,8 @@ const GROUPS: readonly { id: string; label: string; items: readonly { id: string
   ] },
   { id: 'device', label: 'This device', items: [
     { id: 'appearance', label: 'Appearance', Icon: Palette },
-    { id: 'tutor', label: 'AI tutor key', Icon: KeyRound },
+    { id: 'tutor', label: 'Live tutor', Icon: Sparkles },
+    { id: 'shortcuts', label: 'Shortcuts', Icon: Command },
   ] },
   { id: 'account', label: 'Account', items: [
     { id: 'account', label: 'Profile & sign-in', Icon: UserRound },
@@ -80,6 +84,36 @@ const GROUPS: readonly { id: string; label: string; items: readonly { id: string
   ] },
 ];
 const SECTIONS = GROUPS.flatMap(group => group.items);
+
+/* The hours a school day leaves free, morning to late evening. */
+const REMINDER_HOURS = [7, 12, 16, 17, 18, 19, 20, 21];
+const hourLabel = (hour: number) => new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+/* Every key the workspace listens for, so none of them has to be discovered by accident. */
+const SHORTCUTS: readonly { id: string; keys: readonly string[]; then?: boolean; does: string }[] = [
+  { id: 'search', keys: ['Ctrl', 'K'], does: 'Search, or jump to any page' },
+  { id: 'goto', keys: ['G', 'L'], then: true, does: 'Go to Learn. H is Home, P is Progress, A is Arena, R is the leaderboard' },
+  { id: 'scratch', keys: ['S'], does: 'Open or close scratch paper' },
+  { id: 'rail', keys: ['['], does: 'Fold or unfold the side rail' },
+  { id: 'send', keys: ['Enter'], does: 'Send a message to the tutor' },
+  { id: 'newline', keys: ['Shift', 'Enter'], does: 'New line in a message' },
+  { id: 'close', keys: ['Esc'], does: 'Close whatever is open on top' },
+];
+
+/* The keyboard drawn beside the list: four rows, each key with the width a real one has. */
+const KEY_ROWS: readonly (readonly [label: string, width?: number])[][] = [
+  [['Esc', 1.4], ['Q'], ['W'], ['E'], ['R'], ['T'], ['Y'], ['U'], ['I'], ['O'], ['P'], ['[']],
+  [['Ctrl', 1.7], ['A'], ['S'], ['D'], ['F'], ['G'], ['H'], ['J'], ['K'], ['L'], ['Enter', 1.7]],
+  [['Shift', 2.2], ['Z'], ['X'], ['C'], ['V'], ['B'], ['N'], ['M'], [',', 1], ['.', 1], ['', 1.2]],
+];
+
+/* One question, answered three ways, so the choice of help can be seen before it is made. */
+const SAMPLE_QUESTION = 'How do I find the last two digits of $7^{2024}$?';
+const SAMPLE_REPLY: Record<string, string> = {
+  nudge: 'Try the first few powers of $7$ modulo $100$. What do you notice by the fourth?',
+  guide: 'Last two digits means working modulo $100$. What are $7^1$, $7^2$, $7^3$ and $7^4$ there? Once you have them, what does $7^4$ tell you about $7^{2024}$?',
+  solve: '**1.** Work modulo $100$: $7^2 = 49$ and $7^4 = 2401 \\equiv 1$.\n**2.** Since $2024 = 4 \\cdot 506$, we get $7^{2024} = (7^4)^{506} \\equiv 1$.\n**3.** The last two digits are $01$.',
+};
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const minutesOf = (pace: string) => PACES.find(p => p.value === pace)?.minutes ?? (Number(pace.match(/\d+/)?.[0]) || 30);
@@ -198,19 +232,20 @@ export default function Settings({
   const [dataNotice, setDataNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [working, setWorking] = useState<'profile' | 'reset-link' | 'everywhere' | 'export' | null>(null);
   const [confirming, setConfirming] = useState<'reset' | 'delete' | 'device' | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [showKey, setShowKey] = useState<boolean>(false);
-  const [testingKey, setTestingKey] = useState<boolean>(false);
-  const [keyNotice, setKeyNotice] = useState<{ text: string; success: boolean } | null>(null);
-  const [keyState, setKeyState] = useState<'none' | 'saved' | 'verified'>('none');
+  const [hour, setHour] = useState<number>(reminderHour);
+  const [lit, setLit] = useState<string>('search');
   const [active, setActive] = useState<string>('goal');
   const { preference, resolved, setPreference } = useTheme();
+  const tutorKey = useTutorKey();
+  const tutorPrefs = useTutorPrefs();
+  const keyState = tutorKey.key ? (tutorKey.model ? 'verified' : 'saved') : 'none';
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-  useEffect(() => {
-    const savedKey = readStoredGeminiKey();
-    setApiKey(savedKey);
-    setKeyState(savedKey ? 'saved' : 'none');
-  }, []);
+  const chooseHour = (next: number) => {
+    setHour(next);
+    // Already on: move the reminder. Off: remembered for when it is switched on.
+    if (studyReminders) onToggleReminders(true, next);
+  };
 
   // The form follows the profile, including after a save refreshes it.
   useEffect(() => {
@@ -287,55 +322,20 @@ export default function Settings({
     return () => observer.disconnect();
   }, []);
 
-  const handleSaveApiKey = () => {
-    const trimmed = normalizeGeminiKey(apiKey);
-    storeGeminiKey(trimmed);
-    setApiKey(trimmed);
-    if (!trimmed) {
-      setKeyState('none');
-      setKeyNotice({ text: 'API Key removed. AI Assistant will use default engine.', success: true });
-      return;
-    }
-    setKeyState('saved');
-    setKeyNotice({ text: 'Gemini API Key saved. Press "Test" to verify it works.', success: true });
-  };
-
-  const handleTestApiKey = async () => {
-    const trimmed = normalizeGeminiKey(apiKey);
-    if (!trimmed) {
-      setKeyNotice({ text: 'Please enter a Gemini API Key to test.', success: false });
-      return;
-    }
-
-    setTestingKey(true);
-    setKeyNotice(null);
-
-    try {
-      storeGeminiKey(trimmed);
-      setApiKey(trimmed);
-      const { model } = await testGeminiKey(trimmed);
-      setKeyState('verified');
-      setKeyNotice({ text: `API Key verified with ${model}. Live Gemini AI Tutor is ready.`, success: true });
-    } catch (err: unknown) {
-      setKeyState('saved');
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
-      setKeyNotice({ text: `Connection failed: ${errorMessage}`, success: false });
-    } finally {
-      setTestingKey(false);
-    }
-  };
-
-  const handleClearApiKey = () => {
-    setApiKey('');
-    storeGeminiKey('');
-    setKeyState('none');
-    setKeyNotice({ text: 'API Key cleared.', success: true });
-  };
-
   const goalIndex = GOALS.findIndex(g => g.value === customGoal);
   const goal = GOALS[goalIndex];
   const minutes = minutesOf(studyPace);
-  const reminderTime = new Date(2000, 0, 1, reminderHour()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const reminderTime = hourLabel(hour);
+  const tierOfGoal = goal?.short ?? 'Custom';
+  const now: Record<string, string> = {
+    goal: tierOfGoal,
+    pace: `${minutes} min`,
+    reminders: studyReminders ? reminderTime : 'Off',
+    appearance: THEMES.find(theme => theme.value === preference)?.label ?? '',
+    tutor: keyState === 'verified' ? 'On' : 'Off',
+  };
+  const today = (new Date().getDay() + 6) % 7;
+  const litKeys = SHORTCUTS.find(shortcut => shortcut.id === lit)?.keys ?? [];
   const jump = (id: string) => { setActive(id); document.getElementById(`se-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   const chooseTheme = (value: ThemePreference) => (event: React.MouseEvent<HTMLButtonElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -355,7 +355,7 @@ export default function Settings({
         <figure className="se-rhythm" aria-label={`${duration(minutes * 7)} of practice a week`}>
           <div className="se-rhythm-bars" aria-hidden="true">
             {DAYS.map((day, index) => (
-              <div key={day} className="se-beat" style={{ '--fill': minutes / 60, '--i': index } as Vars}>
+              <div key={day} className={`se-beat${index === today ? ' is-today' : ''}`} style={{ '--fill': minutes / 60, '--i': index } as Vars}>
                 <span className="se-beat-track"><span className="se-beat-fill" />{studyReminders && <i className="se-beat-bell" />}</span>
                 <small>{day}</small>
               </div>
@@ -371,7 +371,7 @@ export default function Settings({
             <React.Fragment key={group.id}>
               <p className="se-index-label">{group.label}</p>
               {group.items.map(({ id, label, Icon }) => (
-                <button key={id} type="button" className={id === 'danger' ? 'is-danger' : undefined} aria-current={active === id ? 'true' : undefined} onClick={() => jump(id)}><Icon size={16} />{label}</button>
+                <button key={id} type="button" className={id === 'danger' ? 'is-danger' : undefined} aria-current={active === id ? 'true' : undefined} onClick={() => jump(id)}><Icon size={16} /><span>{label}</span>{now[id] && <small>{now[id]}</small>}</button>
               ))}
             </React.Fragment>
           ))}
@@ -425,7 +425,7 @@ export default function Settings({
             <div className="se-card-head">
               <span className="se-card-icon" aria-hidden="true"><Bell size={18} /></span>
               <div><h2 id="se-reminders-title">Daily reminders</h2><p>A nudge each day to keep your problem-solving streak going.</p></div>
-              <button type="button" role="switch" aria-checked={studyReminders} aria-labelledby="se-reminders-title" className="se-switch" onClick={() => onToggleReminders(!studyReminders)}><span /></button>
+              <button type="button" role="switch" aria-checked={studyReminders} aria-labelledby="se-reminders-title" className="se-switch" onClick={() => onToggleReminders(!studyReminders, hour)}><span /></button>
             </div>
             <div className={`se-notification${studyReminders ? ' is-on' : ''}`} aria-hidden="true">
               <span className="se-notification-app">c<span>·</span></span>
@@ -435,7 +435,12 @@ export default function Settings({
                 <p className="se-notification-body">One problem is enough to hold today. Your weakest domain is waiting.</p>
               </div>
             </div>
-            <p className="se-hint">{studyReminders ? `On. You will be reminded every day at ${reminderTime}.` : 'Off. Turn it on and your device will ask for permission once.'}</p>
+            <div className="se-times" role="radiogroup" aria-label="Reminder time">
+              {REMINDER_HOURS.map(option => (
+                <button key={option} type="button" role="radio" aria-checked={hour === option} onClick={() => chooseHour(option)}>{hourLabel(option)}</button>
+              ))}
+            </div>
+            <p className="se-hint">{studyReminders ? `On. You will be reminded every day at ${reminderTime}.` : `Off. Turn it on and your device will ask for permission once. It will arrive at ${reminderTime}.`}</p>
             {reminderNotice && <p className="se-notice is-warning" role="status">{reminderNotice}</p>}
           </section>
 
@@ -458,24 +463,65 @@ export default function Settings({
 
           <section id="se-tutor" className="se-card" aria-labelledby="se-tutor-title">
             <div className="se-card-head">
-              <span className="se-card-icon" aria-hidden="true"><KeyRound size={18} /></span>
-              <div><h2 id="se-tutor-title">Gemini API key for the math assistant</h2><p>Use your own Google Gemini API key for live explanations. Your Google account's usage limits and charges may apply.</p></div>
-              <span className={`se-key-state is-${keyState}`}>{keyState === 'verified' ? 'Verified' : keyState === 'saved' ? 'Key saved' : 'Not set'}</span>
+              <span className="se-card-icon" aria-hidden="true"><Sparkles size={18} /></span>
+              <div><h2 id="se-tutor-title">Live tutor</h2><p>The tutor answers with Google’s Gemini. Connect it once with a free key from your own Google account and it will work through your actual question, not a ready-made hint.</p></div>
+              <span className={`se-key-state is-${keyState}`}>{keyState === 'verified' ? 'On' : keyState === 'saved' ? 'Not checked' : 'Off'}</span>
             </div>
-            <div className="se-key">
-              <KeyRound size={16} aria-hidden="true" />
-              <input type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="AIzaSy..." aria-label="Gemini API key" autoComplete="off" spellCheck={false} />
-              <button type="button" onClick={() => setShowKey(!showKey)} aria-label={showKey ? 'Hide key' : 'Show key'}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            <TutorConnect />
+
+            <div className="se-rows">
+              <div className="se-row is-stacked">
+                <div><b id="se-style-label">How much help it gives</b><p>You can change this for a single question from the tutor itself.</p></div>
+                <div className="se-help">
+                  <div className="se-choices" role="radiogroup" aria-labelledby="se-style-label">
+                    {COACHING_STYLES.map(option => (
+                      <button key={option.value} type="button" role="radio" aria-checked={tutorPrefs.style === option.value} onClick={() => storeCoachingStyle(option.value)}>
+                        <b>{option.label}</b><small>{option.note}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <figure className="se-sample" aria-label={`An example of a ${COACHING_STYLES.find(option => option.value === tutorPrefs.style)?.label} answer`}>
+                    <figcaption>For example</figcaption>
+                    <p className="se-sample-ask"><MathText text={SAMPLE_QUESTION} /></p>
+                    <div className="se-sample-reply" key={tutorPrefs.style}><MathText text={SAMPLE_REPLY[tutorPrefs.style]} as="div" /></div>
+                  </figure>
+                </div>
+              </div>
+              <div className="se-row">
+                <div><b id="se-remember-label">Pick up where you left off</b><p>Keeps your last conversation in this browser so it is still there tomorrow. Turning this off deletes what is saved.</p></div>
+                <button type="button" role="switch" aria-checked={tutorPrefs.remember} aria-labelledby="se-remember-label" className="se-switch" onClick={() => storeRemembersChats(!tutorPrefs.remember)}><span /></button>
+              </div>
             </div>
-            <p className="se-hint">Stored in this browser only, not in your account. Remove it here before using a shared device.</p>
-            <div className="se-key-actions">
-              <m.button type="button" onClick={handleSaveApiKey} whileTap={{ scale: 0.96 }} className="se-btn is-quiet"><Save size={15} /> Save key</m.button>
-              <m.button type="button" onClick={handleTestApiKey} disabled={testingKey || !apiKey.trim()} whileTap={{ scale: 0.96 }} className="se-btn is-quiet">
-                {testingKey ? <><RefreshCw size={15} className="se-spin" /> Testing…</> : <><Check size={15} /> Test connection</>}
-              </m.button>
-              {apiKey.trim() && <m.button type="button" onClick={handleClearApiKey} whileTap={{ scale: 0.96 }} className="se-btn is-danger"><Trash2 size={15} /> Clear</m.button>}
+          </section>
+
+          <section id="se-shortcuts" className="se-card" aria-labelledby="se-shortcuts-title">
+            <div className="se-card-head">
+              <span className="se-card-icon" aria-hidden="true"><Command size={18} /></span>
+              <div><h2 id="se-shortcuts-title">Keyboard shortcuts</h2><p>For when your hands are already on the keys.</p></div>
             </div>
-            {keyNotice && <p className={`se-notice ${keyNotice.success ? 'is-ok' : 'is-error'}`} role="status">{keyNotice.text}</p>}
+            <div className="se-keys">
+              <dl className="se-shortcuts" onMouseLeave={() => setLit('search')}>
+                {SHORTCUTS.map(shortcut => (
+                  <div key={shortcut.id} className={lit === shortcut.id ? 'is-lit' : undefined} tabIndex={0} onMouseEnter={() => setLit(shortcut.id)} onFocus={() => setLit(shortcut.id)}>
+                    <dt>{shortcut.keys.map((key, index) => (
+                      <React.Fragment key={key}>{index > 0 && <i>{shortcut.then ? 'then' : '+'}</i>}<kbd>{key === 'Ctrl' && isMac ? '⌘' : key}</kbd></React.Fragment>
+                    ))}</dt>
+                    <dd>{shortcut.does}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="se-board" aria-hidden="true">
+                {KEY_ROWS.map((row, index) => (
+                  <div key={index} style={{ '--inset': index * 0.35 } as Vars}>
+                    {row.map(([label, width = 1], column) => {
+                      const order = litKeys.indexOf(label);
+                      return <span key={column} className={label && order >= 0 ? 'is-lit' : undefined} style={{ '--w': width, '--o': Math.max(order, 0) } as Vars}>{label === 'Ctrl' && isMac ? '⌘' : label}</span>;
+                    })}
+                  </div>
+                ))}
+                <div style={{ '--inset': 1.05 } as Vars}><span style={{ '--w': 1.6 } as Vars} /><span style={{ '--w': 6.4 } as Vars} /><span style={{ '--w': 1.6 } as Vars} /></div>
+              </div>
+            </div>
           </section>
 
           <p className="se-group">Account</p>
@@ -502,11 +548,11 @@ export default function Settings({
                 </form>
                 <div className="se-rows">
                   <div className="se-row">
-                    <div><b>Password</b><p>We’ll email you a link to choose a new one.</p></div>
+                    <span className="se-row-mark" aria-hidden="true"><KeyRound size={16} /></span><div><b>Password</b><p>We’ll email you a link to choose a new one.</p></div>
                     <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-quiet" onClick={sendResetLink} disabled={!user.email || working === 'reset-link'}><KeyRound size={15} /> {working === 'reset-link' ? 'Sending…' : 'Email a reset link'}</m.button>
                   </div>
                   <div className="se-row">
-                    <div><b>Sign out</b><p>Of this browser, or of every device at once if one has gone missing.</p></div>
+                    <span className="se-row-mark" aria-hidden="true"><LogOut size={16} /></span><div><b>Sign out</b><p>Of this browser, or of every device at once if one has gone missing.</p></div>
                     <div className="se-row-actions">
                       <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-quiet" onClick={onLogout}><LogOut size={15} /> Sign out</m.button>
                       <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-quiet" onClick={leaveEverywhere} disabled={working === 'everywhere'}>{working === 'everywhere' ? 'Signing out…' : 'Everywhere'}</m.button>
@@ -528,15 +574,22 @@ export default function Settings({
               <span className="se-card-icon" aria-hidden="true"><Download size={18} /></span>
               <div><h2 id="se-data-title">Your data</h2><p>It’s yours. Take a copy whenever you like.</p></div>
             </div>
+            {user && (
+              <div className="se-export" aria-hidden="true">
+                <ul>{['Profile', 'Answers', 'Posts', 'Messages', 'Settings'].map((part, index) => <li key={part} style={{ '--i': index } as Vars}>{part}</li>)}</ul>
+                <span className="se-export-flow" />
+                <span className="se-export-file"><FileJson size={16} />calculixhub-{profile?.username ?? 'my'}-data.json</span>
+              </div>
+            )}
             <div className="se-rows">
               {user && (
                 <div className="se-row">
-                  <div><b>Download everything</b><p>Your profile, every answer you’ve given, posts, messages and settings, in one JSON file.</p></div>
+                  <span className="se-row-mark" aria-hidden="true"><Download size={16} /></span><div><b>Download everything</b><p>Your profile, every answer you’ve given, posts, messages and settings, in one JSON file.</p></div>
                   <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-quiet" onClick={downloadData} disabled={working === 'export'}><Download size={15} /> {working === 'export' ? 'Gathering…' : 'Download my data'}</m.button>
                 </div>
               )}
               <div className="se-row">
-                <div><b>Forget this device</b><p>Clears what this browser remembers: theme, scratch paper, your contest date and any saved API key. Your account is untouched.</p></div>
+                <span className="se-row-mark" aria-hidden="true"><Eraser size={16} /></span><div><b>Forget this device</b><p>Clears what this browser remembers: theme, scratch paper, your contest date, tutor conversations and your tutor key. Your account is untouched.</p></div>
                 <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-quiet" onClick={() => setConfirming('device')}><Eraser size={15} /> Clear this browser</m.button>
               </div>
             </div>
@@ -551,11 +604,11 @@ export default function Settings({
               </div>
               <div className="se-rows">
                 <div className="se-row">
-                  <div><b>Reset my progress</b><p>Clears your answers, points, streak and topic mastery. Your account, posts and Arena results stay.</p></div>
+                  <span className="se-row-mark" aria-hidden="true"><RotateCcw size={16} /></span><div><b>Reset my progress</b><p>Clears your answers, points, streak and topic mastery. Your account, posts and Arena results stay.</p></div>
                   <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-danger" onClick={() => setConfirming('reset')}><RotateCcw size={15} /> Reset progress</m.button>
                 </div>
                 <div className="se-row">
-                  <div><b>Delete my account</b><p>Removes your account and everything attached to it, for good. Download your data first if you want a copy.</p></div>
+                  <span className="se-row-mark" aria-hidden="true"><Trash2 size={16} /></span><div><b>Delete my account</b><p>Removes your account and everything attached to it, for good. Download your data first if you want a copy.</p></div>
                   <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-destructive" onClick={() => setConfirming('delete')}><Trash2 size={15} /> Delete account</m.button>
                 </div>
               </div>
@@ -569,7 +622,7 @@ export default function Settings({
       <ConfirmDialog open={confirming === 'delete'} title="Delete your account?" phrase={profile?.username ?? 'delete'} action="Delete my account" busyAction="Deleting…" onConfirm={confirmDelete} onClose={() => setConfirming(null)}
         consequences={['Your profile, progress, posts, comments and messages are permanently deleted.', 'Your username becomes available to someone else.', 'There is no way to bring any of it back.']} />
       <ConfirmDialog open={confirming === 'device'} title="Clear this browser?" action="Clear and reload" busyAction="Clearing…" onConfirm={confirmDevice} onClose={() => setConfirming(null)}
-        consequences={['Theme, scratch paper, contest date and any saved API key are removed from this browser.', 'Nothing in your account changes.']} />
+        consequences={['Theme, scratch paper, contest date, tutor conversations and your tutor key are removed from this browser.', 'Nothing in your account changes.']} />
     </div>
   );
 }

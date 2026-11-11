@@ -52,7 +52,7 @@ interface LearnProps {
   completedProblems: string[];
   userStats: UserStats;
   onSolveProblem: (id: string, isCorrect: boolean, scorePoints: number) => void;
-  onOpenTutor: (prompt?: string) => void;
+  onOpenTutor: (prompt?: string, label?: string) => void;
   savedAttempts?: Record<string,{count:number;finished:boolean;forfeited:boolean}>;
   initialFilters?: { topic?: Topic; level?: Level };
   /** Goes up each time Learn is chosen from the navigation, including while it is already open. */
@@ -238,6 +238,7 @@ export default function Learn({
         `Correct answer: ${activeProblem.correctAnswer}`,
         `Worked solution: ${activeProblem.solution}`,
       ].join('\n\n'),
+      `Explain “${activeProblem.title}” to me`,
     );
   };
 

@@ -1,448 +1,370 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * The tutor: one panel, opened from the corner or from a problem.
+ *
+ * On a desktop it floats beside the page and leaves the page usable, because
+ * the thing being asked about is usually the problem still on screen. On a
+ * phone there is no beside, so it rises as a sheet.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { Sparkles, Send, X, Bot, HelpCircle, Key, Check } from 'lucide-react';
+import { ArrowUp, Check, ChevronDown, Copy, Maximize2, Minimize2, RotateCcw, Sigma, Sparkles, Square, SquarePen, TriangleAlert, X, Zap } from 'lucide-react';
 import MathText from './MathText';
+import TutorConnect from './tutor/TutorConnect';
 import { apiUrl } from '../services/apiBase';
-import { backdrop, duration, ease, spring, travel } from '../lib/motion';
+import { backdrop, spring } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
-import { useIsDesktop } from '../hooks/useBreakpoint';
-import { generateWithKey, normalizeGeminiKey, readStoredGeminiKey, storeGeminiKey } from '../lib/geminiClient';
-
-const TUTOR_SYSTEM_INSTRUCTION =
-  'You are the Calculix AI Tutor: a warm but rigorous mathematics teacher for a secondary-school student. Teach by the Socratic method. Draw the next step out of the learner rather than handing over the answer. Write clear English with academic substance and LaTeX notation ($x^2$, $\\frac{a}{b}$). Be concise and precise.';
-
-interface ChatMessage {
-  id: string;
-  sender: 'user' | 'tutor';
-  text: string;
-  timestamp: Date;
-}
+import { useMediaQuery } from '../hooks/useBreakpoint';
+import { useAuth } from '../context/AuthContext';
+import { generateWithKey, modelLabel } from '../lib/geminiClient';
+import { COACHING_STYLES, readChat, storeChat, storeCoachingStyle, styleNote, tutorInstruction, useTutorKey, useTutorPrefs, type TutorMessage } from '../lib/tutor';
+import '../styles/tutor.css';
 
 interface AITutorChatProps {
-  /** A new request opens the single tutor, optionally with problem context. */
-  request?: { id: number; prompt?: string } | null;
+  /** A new request opens the single tutor, optionally with problem context. `label` is what the learner sees in place of the full prompt. */
+  request?: { id: number; prompt?: string; label?: string } | null;
+}
+
+type Shown = TutorMessage;
+
+const STARTERS: readonly { topic: string; hue: string; title: string; prompt: string }[] = [
+  { topic: 'Algebra', hue: '#c8842a', title: 'When does AM-GM give the minimum?', prompt: 'How do I know when AM-GM gives the minimum of an expression, and how do I check the equality case?' },
+  { topic: 'Geometry', hue: '#209d8c', title: 'Spotting a cyclic quadrilateral', prompt: 'What are the quickest ways to spot that four points lie on a circle in a geometry problem?' },
+  { topic: 'Combinatorics', hue: '#8b5cf6', title: 'Why the handshake count is n(n-1)/2', prompt: 'Walk me through why the number of handshakes among $n$ people is $\\frac{n(n-1)}{2}$.' },
+  { topic: 'Number Theory', hue: '#0484c0', title: 'Last two digits of a big power', prompt: 'How do I find the last two digits of $7^{2024}$ without a calculator?' },
+];
+
+/* What a learner reaches for most, in the order a solution tends to need them. */
+const SYMBOLS: readonly { face: string; name: string; before: string; after?: string }[] = [
+  { face: 'x²', name: 'power', before: '^{', after: '}' },
+  { face: 'a⁄b', name: 'fraction', before: '\\frac{', after: '}{}' },
+  { face: '√', name: 'square root', before: '\\sqrt{', after: '}' },
+  { face: '≤', name: 'at most', before: '\\le ' },
+  { face: '≥', name: 'at least', before: '\\ge ' },
+  { face: '≠', name: 'not equal', before: '\\ne ' },
+  { face: '≡', name: 'congruent', before: '\\equiv ' },
+  { face: 'π', name: 'pi', before: '\\pi ' },
+  { face: '∠', name: 'angle', before: '\\angle ' },
+  { face: '∑', name: 'sum', before: '\\sum_{i=1}^{n} ' },
+  { face: 'nCk', name: 'choose', before: '\\binom{n}{', after: '}' },
+];
+
+const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+/* A displayed formula already sits on its own line; the blank lines a model puts round it would double the gap. */
+const tidy = (text: string) => text.replace(/\n*(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\])\n*/g, '$1').replace(/\n{3,}/g, '\n\n');
+const hasMath = (text: string) => /\$[^$\n]+\$|\\\(|\\\[/.test(text);
+
+/* Used only when the server cannot be reached at all. */
+function offlineHint(message: string): string {
+  const text = message.toLowerCase();
+  if (text.includes('handshake')) {
+    return 'With $n$ people, the first shakes hands with $n-1$ others, the second with $n-2$ who are left, and so on. Adding those up gives $\\frac{n(n-1)}{2}$. For $n=10$ that is $\\frac{10 \\times 9}{2} = 45$.';
+  }
+  if (text.includes('am-gm') || text.includes('cauchy') || text.includes('inequality')) {
+    return 'For positive reals, AM-GM says $\\frac{x_1 + x_2 + \\dots + x_n}{n} \\ge \\sqrt[n]{x_1 x_2 \\dots x_n}$, with equality exactly when every term is equal. So the first thing to check is whether the equality case can actually happen under your constraint.';
+  }
+  return 'A few places to start:\n- **Algebra**: look for symmetry, then try factoring.\n- **Geometry**: draw one extra line and chase the angles.\n- **Combinatorics**: count a small case by hand and look for the pattern.';
 }
 
 export default function AITutorChat({ request }: AITutorChatProps) {
+  const { profile } = useAuth();
+  const owner = profile?.id ?? 'guest';
+  const { key, model } = useTutorKey();
+  const { style } = useTutorPrefs();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [userApiKey, setUserApiKey] = useState('');
-  const [hasSavedApiKey, setHasSavedApiKey] = useState(false);
-  const [pendingPrompt, setPendingPrompt] = useState('');
-  const promptSentRef = useRef(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init',
-      sender: 'tutor',
-      text: "Hello! I'm your Calculix Math Coach. I help you work through challenging competition problems step-by-step through guided reasoning. What concept or problem would you like to explore today?",
-      timestamp: new Date(),
-    },
-  ]);
-  const [inputVal, setInputVal] = useState('');
+  const [view, setView] = useState<'chat' | 'connect'>('chat');
+  const [messages, setMessages] = useState<Shown[]>(() => readChat(owner));
+  const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(false);
+  const [symbols, setSymbols] = useState(false);
+  const [styleMenu, setStyleMenu] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ prompt: string; label?: string } | null>(null);
 
+  const floats = useMediaQuery('(min-width: 64rem)');
   const sparkleRef = useAmbient<SVGSVGElement>();
-  const pingRef = useAmbient<HTMLDivElement>();
-  const statusDotRef = useAmbient<HTMLSpanElement>();
+  const scroller = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const abort = useRef<AbortController | null>(null);
+  const styleRef = useRef<HTMLDivElement>(null);
 
-  const isDesktop = useIsDesktop();
-
-  useEffect(() => {
-    const saved = readStoredGeminiKey();
-    setUserApiKey(saved);
-    setHasSavedApiKey(Boolean(saved));
-    if (saved) setShowKeyModal(false);
-  }, [isOpen]);
+  useEffect(() => { storeChat(owner, messages); }, [messages, owner]);
 
   useEffect(() => {
     if (!request) return;
-    setPendingPrompt(request.prompt ?? '');
-    promptSentRef.current = false;
+    setPending(request.prompt ? { prompt: request.prompt, label: request.label } : null);
     setIsOpen(true);
   }, [request?.id]);
 
+  /* Keep the newest line in view, and the field ready on a desktop. */
   useEffect(() => {
-    if (chatBottomRef.current) {
-      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    const node = scroller.current;
+    if (node) node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [messages, loading, isOpen, view]);
+  useEffect(() => { if (isOpen && floats && view === 'chat') input.current?.focus({ preventScroll: true }); }, [isOpen, floats, view]);
+
+  /* The field grows with what is typed, up to a third of the panel. */
+  useLayoutEffect(() => {
+    const node = input.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${Math.min(node.scrollHeight, 168)}px`;
+  }, [draft, isOpen, view]);
+
+  const ask = useCallback(async (history: readonly Shown[], signal: AbortSignal): Promise<Shown> => {
+    const said = history.filter(message => !message.kind);
+    const last = said[said.length - 1];
+    const reply = (text: string, kind?: TutorMessage['kind']): Shown => ({ id: newId(), sender: 'tutor', text, at: Date.now(), kind });
+
+    if (key) {
+      // Straight to Google with the learner's own key; it never reaches our server.
+      try {
+        const { text } = await generateWithKey(key, said.map(message => ({ role: message.sender === 'user' ? 'user' as const : 'model' as const, text: message.text })), { systemInstruction: tutorInstruction(style), signal });
+        return reply(text);
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') throw error;
+        return reply(error instanceof Error ? error.message : String(error), 'error');
+      }
     }
-  }, [messages, isOpen]);
-
-  const handleSaveInlineKey = (key: string) => {
-    const trimmed = normalizeGeminiKey(key);
-    storeGeminiKey(trimmed);
-    setUserApiKey(trimmed);
-    setHasSavedApiKey(Boolean(trimmed));
-    setShowKeyModal(false);
-  };
-
-function getSmartFallbackReply(message: string): string {
-  const normalized = message.toLowerCase();
-
-  if (normalized.includes('handshake')) {
-    return `Let's break down the Handshake Problem. With $n$ people, the first shakes hands with $n-1$ others, the second with $n-2$ remaining, and so on.
-The general formula is $S = \\frac{n(n-1)}{2}$. For $n=10$: $\\frac{10 \\times 9}{2} = 45$. That's the elegance of combinatorics!`;
-  }
-
-  if (normalized.includes('am-gm') || normalized.includes('cauchy') || normalized.includes('inequality')) {
-    return `Great question! The AM-GM inequality for positive reals $x_1, x_2, \\dots, x_n$ states:
-$\\frac{x_1 + x_2 + \\dots + x_n}{n} \\ge \\sqrt[n]{x_1 x_2 \\dots x_n}$
-Equality holds exactly when all terms are equal. In the classic minimisation $P = 1/a + 1/b + 1/c$ with $a+b+c=1$, equality at $a=b=c=1/3$ gives the minimum value of 9!`;
-  }
-
-  return `Hi! I'm your Calculix AI Tutor.
-Let's work through this step-by-step:
-- For **Algebra**, examine symmetric expressions and factorizations.
-- For **Geometry**, try drawing auxiliary lines or using angle chasing.
-- For **Combinatorics**, look for recurrence relations or invariants.`;
-}
-
-  const handleSendMessage = async (e?: React.FormEvent, overrideText?: string) => {
-    if (e) e.preventDefault();
-    const textToSend = overrideText || inputVal;
-    if (!textToSend.trim() || loading) return;
-
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: textToSend,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    if (!overrideText) setInputVal('');
-    setLoading(true);
 
     try {
-      const savedKey = readStoredGeminiKey();
-
-      if (savedKey) {
-        // Direct call to Gemini with the learner's own key. The key never
-        // reaches our server; model choice and error wording live in geminiClient.
-        try {
-          const { text } = await generateWithKey(
-            savedKey,
-            [
-              ...messages
-                .filter((m) => m.id !== 'init')
-                .map((m) => ({ role: m.sender === 'user' ? ('user' as const) : ('model' as const), text: m.text })),
-              { role: 'user', text: userMsg.text },
-            ],
-            { systemInstruction: TUTOR_SYSTEM_INSTRUCTION },
-          );
-          setMessages((prev) => [
-            ...prev,
-            { id: (Date.now() + 1).toString(), sender: 'tutor', text, timestamp: new Date() },
-          ]);
-        } catch (keyErr) {
-          const reason = keyErr instanceof Error ? keyErr.message : String(keyErr);
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              sender: 'tutor',
-              text: `⚠️ **Gemini API error:** ${reason}\n\nYou can update the key in Settings or with the 🔑 icon above.`,
-              timestamp: new Date(),
-            },
-          ]);
-        }
-        return;
+      const response = await fetch(apiUrl('/api/chat'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal,
+        body: JSON.stringify({ message: styleNote(style) + last.text, history: said.slice(0, -1).slice(-20).map(message => ({ role: message.sender, content: message.text })) }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return reply(data.reply || 'I didn’t quite follow that. Could you put it another way?', data.isFallback ? 'canned' : undefined);
       }
+    } catch (error) {
+      if ((error as Error)?.name === 'AbortError') throw error;
+    }
+    return reply(offlineHint(last.text), 'canned');
+  }, [key, style]);
 
-      // Default backend route call
-      try {
-        const response = await fetch(apiUrl('/api/chat'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: userMsg.text,
-            history: messages.map((m) => ({ role: m.sender, content: m.text })),
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          let replyText = data.reply || "I didn't quite follow that — could you rephrase it?";
-          if (data.isFallback) {
-            replyText += '\n\n💡 *Tip: Add your Gemini API key in Settings for live explanations; Google usage limits may apply.*';
-          }
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              sender: 'tutor',
-              text: replyText,
-              timestamp: new Date(),
-            },
-          ]);
-          return;
-        }
-      } catch (backendErr) {
-        console.warn('Backend API /api/chat unreachable, serving smart fallback engine.', backendErr);
-      }
-
-      // Smart fallback reply when backend/network is unavailable
-      const fallbackText = getSmartFallbackReply(userMsg.text);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'tutor',
-          text: fallbackText + '\n\n💡 *Tip: Enter your personal Gemini API Key using the 🔑 key icon above for live AI Tutor responses!*',
-          timestamp: new Date(),
-        },
-      ]);
-    } catch (err) {
-      console.error('Chat error:', err);
-      const fallbackText = getSmartFallbackReply(userMsg.text);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'tutor',
-          text: fallbackText,
-          timestamp: new Date(),
-        },
-      ]);
+  const run = async (history: Shown[]) => {
+    setMessages(history);
+    setLoading(true);
+    const controller = new AbortController();
+    abort.current = controller;
+    try {
+      const answer = await ask(history, controller.signal);
+      setMessages(current => [...current, answer]);
+    } catch {
+      /* Stopped by the learner: the question stays, nothing is added. */
     } finally {
+      if (abort.current === controller) abort.current = null;
       setLoading(false);
     }
   };
 
-  // A contextual explanation waits for the learner to press Save in the key
-  // panel. Typing into the password field alone never activates the request.
-  useEffect(() => {
-    if (!isOpen || !pendingPrompt || promptSentRef.current || loading) return;
-    if (!hasSavedApiKey) {
-      setShowKeyModal(true);
-      return;
-    }
-
-    promptSentRef.current = true;
-    const prompt = pendingPrompt;
-    setPendingPrompt('');
-    void handleSendMessage(undefined, prompt);
-  }, [hasSavedApiKey, isOpen, loading, pendingPrompt]);
-
-  // Quick suggestions
-  const sendQuickOption = (promptText: string) => {
-    void handleSendMessage(undefined, promptText);
+  const send = (text: string, label?: string) => {
+    const clean = text.trim();
+    if (!clean || loading) return;
+    void run([...messages, { id: newId(), sender: 'user', text: clean, at: Date.now(), label }]);
   };
+  const submit = (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (!draft.trim() || loading) return;
+    send(draft);
+    setDraft('');
+    setSymbols(false);
+  };
+  const retry = () => {
+    if (loading) return;
+    let cut = messages.length;
+    while (cut > 0 && messages[cut - 1].sender === 'tutor') cut--;
+    if (cut > 0) void run(messages.slice(0, cut));
+  };
+  const stop = () => abort.current?.abort();
+  const startOver = () => { stop(); setMessages([]); setDraft(''); setPending(null); setView('chat'); };
+
+  /* An explanation asked for from a problem needs the live tutor, so it waits for a key. */
+  useEffect(() => {
+    if (!isOpen || !pending || loading) return;
+    if (!key) { setView('connect'); return; }
+    const { prompt, label } = pending;
+    setPending(null);
+    setView('chat');
+    send(prompt, label);
+  }, [key, isOpen, loading, pending]);
+
+  const copy = async (message: Shown) => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setCopied(message.id);
+      window.setTimeout(() => setCopied(current => (current === message.id ? null : current)), 1600);
+    } catch { /* the clipboard is not available here */ }
+  };
+
+  const insert = (before: string, after = '') => {
+    const node = input.current;
+    if (!node) return;
+    const start = node.selectionStart ?? draft.length, end = node.selectionEnd ?? draft.length;
+    // Open a maths span if the caret is not already inside one.
+    const outside = (draft.slice(0, start).match(/\$/g)?.length ?? 0) % 2 === 0;
+    const head = `${outside ? '$' : ''}${before}`, tail = `${after}${outside ? '$' : ''}`;
+    const selected = draft.slice(start, end);
+    setDraft(draft.slice(0, start) + head + selected + tail + draft.slice(end));
+    const caret = start + head.length + selected.length;
+    requestAnimationFrame(() => { node.focus(); node.setSelectionRange(caret, caret); });
+  };
+
+  /* Escape closes the innermost thing that is open. */
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (styleMenu) setStyleMenu(false);
+      else if (view === 'connect') setView('chat');
+      else if (!floats || document.getElementById('panel-ai-tutor')?.contains(document.activeElement)) setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, styleMenu, view, floats]);
+  useEffect(() => {
+    if (!styleMenu) return;
+    const away = (event: PointerEvent) => { if (!styleRef.current?.contains(event.target as Node)) setStyleMenu(false); };
+    window.addEventListener('pointerdown', away);
+    return () => window.removeEventListener('pointerdown', away);
+  }, [styleMenu]);
+
+  const lastCanned = [...messages].reverse().find(message => message.sender === 'tutor')?.kind === 'canned';
+  const status = key
+    ? model ? { tone: 'live', text: `Live · ${modelLabel(model)}` } : { tone: 'idle', text: 'Key saved, not checked yet' }
+    : lastCanned ? { tone: 'warn', text: 'Ready-made hints only' } : { tone: 'idle', text: 'Turn on live answers' };
+  const lastTutor = [...messages].reverse().find(message => message.sender === 'tutor')?.id;
+  const current = COACHING_STYLES.find(item => item.value === style)!;
 
   return (
     <>
-      {/* Floating Chat Button */}
-      <m.button
-        id="btn-ai-tutor-toggle"
-        aria-label={isOpen ? 'Close Math Assistant' : 'Ask Math Assistant'}
-        onClick={() => setIsOpen(!isOpen)}
-        whileTap={{ scale: 0.95 }}
-        transition={spring.press}
-        className="tutor-fab fixed right-3.5 md:right-6 bottom-20 md:bottom-6 top-auto h-auto max-h-12 z-50 flex items-center gap-2.5 font-semibold text-xs px-4 md:px-5 py-3 rounded-full group cursor-pointer"
-      >
-        <Sparkles
-          ref={sparkleRef}
-          className="tutor-fab-spark w-4 h-4 group-hover:rotate-12 transition-transform duration-300"
-        />
-        <span className="tutor-fab-label text-xs md:text-sm">Ask the tutor</span>
-        <div
-          ref={pingRef}
-          className="tutor-fab-dot"
-        />
-      </m.button>
-
-      {/* Slide-out Sidebar Drawer for Chat */}
-      <AnimatePresence>
-      {isOpen && (
-        <m.div
-          variants={backdrop}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          className="fixed inset-0 z-50 flex flex-col md:flex-row md:justify-end bg-black/40 backdrop-blur-xs"
-        >
-          <div className="flex-1" onClick={() => setIsOpen(false)} />
-
-          <m.div
-            id="panel-ai-tutor"
-            initial={isDesktop ? { x: '100%' } : { y: '100%' }}
-            animate={isDesktop ? { x: 0 } : { y: 0 }}
-            exit={isDesktop ? { x: '100%' } : { y: '100%' }}
-            transition={spring.gentle}
-            className="w-full md:max-w-md h-[80%] md:h-full bg-surface-raised shadow-2xl flex flex-col relative border-l border-line rounded-t-3xl md:rounded-none overflow-hidden"
-          >
-            {/* Grab handle: the affordance that says this panel is dismissable. */}
-            <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1 rounded-full bg-line z-10" />
-            
-            <div className="ramp-static bg-ink-950 text-white p-4 flex items-center justify-between border-b border-ink-800">
-              <div className="flex items-center gap-2.5">
-                <div className="material-accent p-2 rounded-control"><Bot className="w-5 h-5 text-white" /></div>
-                <div>
-                  <h3 className="font-bold text-sm tracking-wide">Calculix AI Tutor</h3>
-                  <p className="text-[12px] text-emerald-400 font-medium flex items-center gap-1">
-                    <span
-                      ref={statusDotRef}
-                      className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
-                    />{' '}
-                    {userApiKey ? '🔑 Custom API Key' : 'Socratic math coach'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  title="Configure Gemini API Key"
-                  aria-label="Configure Gemini API Key"
-                  onClick={() => setShowKeyModal(!showKeyModal)}
-                  className={`p-2 rounded-full transition-colors cursor-pointer ${
-                    userApiKey ? 'text-amber-400 hover:bg-ink-800' : 'text-stone-400 hover:text-white hover:bg-ink-800'
-                  }`}
-                >
-                  <Key className="w-4 h-4" />
-                </button>
-                <button type="button" id="btn-close-ai-tutor" aria-label="Close Math Assistant" onClick={() => setIsOpen(false)} className="hover:bg-ink-800 p-2 rounded-full transition-colors text-stone-400 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Inline Key Configuration Modal */}
-            {showKeyModal && (
-              <div className="bg-surface-sunken p-4 border-b border-line space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-content flex items-center gap-1.5 font-mono">
-                    <Key className="w-4 h-4 text-amber-500" /> Enter Gemini API Key
-                  </span>
-                  <button type="button" aria-label="Close Gemini API Key form" onClick={() => setShowKeyModal(false)} className="text-content-subtle hover:text-content text-xs">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <input
-                  type="password"
-                  aria-label="Gemini API Key"
-                  value={userApiKey}
-                  onChange={(e) => setUserApiKey(e.target.value)}
-                  placeholder="AIzaSy..."
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-surface text-content text-xs font-mono"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSaveInlineKey('')}
-                    className="px-3 py-1 rounded text-xs text-rose-500 hover:bg-rose-500/10 font-mono"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveInlineKey(userApiKey)}
-                    className="px-3 py-1 rounded bg-indigo-600 text-white text-xs font-mono font-semibold flex items-center gap-1"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Save
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-indigo-500/10 border-b border-indigo-500/20 p-3 text-xs text-indigo-400 flex items-start gap-2">
-              <HelpCircle className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-              <span><strong>Tip:</strong> Ask about a theorem, an inequality, or paste your own approach for feedback.</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-surface-sunken/60">
-              {messages.map((msg) => (
-                <m.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: travel.sm, x: msg.sender === 'user' ? travel.md : -travel.md }}
-                  animate={{ opacity: 1, y: 0, x: 0 }}
-                  transition={spring.smooth}
-                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                    {msg.sender === 'tutor' && (
-                      <div className="bg-surface-sunken p-1.5 rounded-lg shrink-0 border border-line"><Bot className="w-4 h-4 text-indigo-500" /></div>
-                    )}
-                    <div className={`rounded-xl p-3.5 text-xs leading-relaxed font-mono shadow-sm ${msg.sender === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-surface-raised text-content rounded-tl-none border border-line'}`}>
-                      <MathText text={msg.text} as="div" />
-                      <span className="text-[10px] block text-right mt-1.5 opacity-60">
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
-                </m.div>
-              ))}
-
-              <AnimatePresence>
-                {loading && (
-                  <m.div
-                    key="thinking"
-                    initial={{ opacity: 0, y: travel.sm, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.96, transition: { duration: duration.instant, ease: ease.exit } }}
-                    transition={spring.snappy}
-                    className="flex justify-start"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="bg-surface-sunken p-1.5 rounded-lg border border-line"><Bot className="w-4 h-4 text-indigo-500 animate-bounce" /></div>
-                      <div className="bg-surface-raised text-content-muted text-xs px-4 py-2.5 rounded-xl rounded-tl-none border border-line shadow-sm flex items-center gap-1.5 italic font-mono">
-                        <span className="animate-bounce">&bull;</span>
-                        <span className="animate-bounce delay-75">&bull;</span>
-                        <span className="animate-bounce delay-150">&bull;</span>
-                        Thinking...
-                      </div>
-                    </div>
-                  </m.div>
-                )}
-              </AnimatePresence>
-              <div ref={chatBottomRef} />
-            </div>
-
-            <div className="px-4 py-2 bg-surface-raised border-t border-line flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar scroll-smooth">
-              <m.button onClick={() => sendQuickOption('Walk me through the handshake lemma')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-surface-sunken hover:bg-surface-sunken/80 text-content-muted px-3 py-1.5 rounded-lg border border-line transition-colors duration-160 ease-standard shrink-0 cursor-pointer font-mono">
-                Handshake lemma
-              </m.button>
-              <m.button onClick={() => sendQuickOption('How do I apply the AM-GM inequality?')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-surface-sunken hover:bg-surface-sunken/80 text-content-muted px-3 py-1.5 rounded-lg border border-line transition-colors duration-160 ease-standard shrink-0 cursor-pointer font-mono">
-                AM-GM inequality
-              </m.button>
-              <m.button onClick={() => sendQuickOption('Give me a hint on combinatorial geometry')} whileTap={{ scale: 0.94 }} transition={spring.press} className="text-xs bg-surface-sunken hover:bg-surface-sunken/80 text-content-muted px-3 py-1.5 rounded-lg border border-line transition-colors duration-160 ease-standard shrink-0 cursor-pointer font-mono">
-                Combinatorial geometry
-              </m.button>
-            </div>
-
-            <form onSubmit={handleSendMessage} className="p-3 bg-surface-raised border-t border-line flex gap-2">
-              <input
-                id="field-chat-input"
-                aria-label="Message to Math Assistant"
-                type="text"
-                placeholder="Ask about inequalities, remainders, derivatives..."
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                disabled={loading}
-                className="flex-1 bg-surface-sunken border border-line focus:border-indigo-500 rounded-xl px-4 py-3 text-xs outline-hidden text-content disabled:opacity-55 placeholder:text-content-subtle font-mono"
-              />
-              <m.button
-                id="btn-send-chat"
-                aria-label="Send message to Math Assistant"
-                type="submit"
-                disabled={!inputVal.trim() || loading}
-                whileTap={{ scale: 0.92 }}
-                transition={spring.press}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl shadow-md transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shrink-0 w-11 h-11"
-              >
-                <Send className="w-4 h-4" />
-              </m.button>
-            </form>
-          </m.div>
-        </m.div>
+      {!isOpen && (
+        <m.button id="btn-ai-tutor-toggle" aria-label="Ask the tutor" onClick={() => setIsOpen(true)} whileTap={{ scale: 0.95 }} transition={spring.press}
+          className="tutor-fab fixed right-3.5 md:right-6 bottom-20 md:bottom-6 top-auto h-auto max-h-12 z-50 flex items-center gap-2.5 font-semibold text-xs px-4 md:px-5 py-3 rounded-full group cursor-pointer">
+          <Sparkles ref={sparkleRef} className="tutor-fab-spark w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
+          <span className="tutor-fab-label text-xs md:text-sm">Ask the tutor</span>
+          {messages.length > 0 && <span className="tu-fab-note" aria-label="Conversation in progress" />}
+        </m.button>
       )}
+
+      <AnimatePresence>
+        {isOpen && !floats && <m.div key="scrim" className="tu-scrim" variants={backdrop} initial="hidden" animate="visible" exit="exit" onClick={() => setIsOpen(false)} />}
+        {isOpen && (
+          <m.aside key="panel" id="panel-ai-tutor" className={`tu${floats ? ' is-floating' : ' is-sheet'}${wide && floats ? ' is-wide' : ''}`} role={floats ? 'complementary' : 'dialog'} aria-modal={floats ? undefined : true} aria-label="Tutor"
+            initial={floats ? { opacity: 0, x: 28, scale: 0.985 } : { y: '100%' }} animate={floats ? { opacity: 1, x: 0, scale: 1 } : { y: 0 }} exit={floats ? { opacity: 0, x: 20, scale: 0.985, transition: { duration: 0.16 } } : { y: '100%' }} transition={spring.gentle}>
+            {!floats && <span className="tu-grab" aria-hidden="true" />}
+
+            <header className="tu-head">
+              <span className="tu-mark" aria-hidden="true"><Sparkles size={17} /></span>
+              <div className="tu-title">
+                <h2>Tutor</h2>
+                <button type="button" className={`tu-status is-${status.tone}`} onClick={() => setView(view === 'connect' ? 'chat' : 'connect')} aria-expanded={view === 'connect'}>
+                  <i aria-hidden="true" />{status.text}
+                </button>
+              </div>
+              <div className="tu-tools">
+                <button type="button" onClick={startOver} disabled={messages.length === 0 && !draft} aria-label="Start a new conversation" title="New conversation"><SquarePen size={17} /></button>
+                {floats && <button type="button" onClick={() => setWide(!wide)} aria-label={wide ? 'Make the tutor narrower' : 'Make the tutor wider'} aria-pressed={wide} title={wide ? 'Narrower' : 'Wider'}>{wide ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>}
+                <button type="button" id="btn-close-ai-tutor" onClick={() => setIsOpen(false)} aria-label="Close the tutor" title="Close"><X size={18} /></button>
+              </div>
+            </header>
+
+            {view === 'connect' ? (
+              <div className="tu-body tu-connect" ref={scroller}>
+                <div className="tu-connect-head">
+                  <p className="tu-kicker">Live tutor</p>
+                  <h3>{pending ? 'This explanation needs the live tutor' : key && model ? 'You’re connected' : 'Get real answers, not ready-made hints'}</h3>
+                  <p>{pending ? 'Connect once and the explanation you asked for starts straight away.' : 'The tutor answers with Google’s Gemini. It needs a free key from your own Google account, which takes about a minute to get.'}</p>
+                </div>
+                <TutorConnect compact onConnected={() => setView('chat')} />
+                <button type="button" className="tu-back" onClick={() => { setPending(null); setView('chat'); }}>{key && model ? 'Back to the conversation' : 'Not now'}</button>
+              </div>
+            ) : (
+              <>
+                <div className="tu-body" ref={scroller}>
+                  {messages.length === 0 && !loading ? (
+                    <div className="tu-empty">
+                      <h3>What are you <em>stuck on?</em></h3>
+                      <p>Paste a problem, or your own attempt at one. Type maths between dollar signs, like <code>$x^2$</code>, and it is typeset as you write.</p>
+                      <p className="tu-kicker">Or start from one of these</p>
+                      <ul className="tu-starters">
+                        {STARTERS.map(starter => (
+                          <li key={starter.topic}>
+                            <button type="button" onClick={() => send(starter.prompt)} style={{ '--hue': starter.hue } as React.CSSProperties}>
+                              <i aria-hidden="true" /><span><small>{starter.topic}</small>{starter.title}</span><ArrowUp size={15} aria-hidden="true" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <ol className="tu-thread">
+                      {messages.map(message => message.sender === 'user' ? (
+                        <li key={message.id} className="tu-msg is-user"><div className="tu-bubble">{message.label ? <span className="tu-context">{message.label}</span> : <MathText text={message.text} as="div" />}</div></li>
+                      ) : message.kind === 'error' ? (
+                        <li key={message.id} className="tu-msg is-error">
+                          <TriangleAlert size={16} aria-hidden="true" />
+                          <div><b>The live tutor couldn’t answer</b><p>{message.text}</p>
+                            <div className="tu-msg-actions is-shown"><button type="button" onClick={() => setView('connect')}>Check the connection</button><button type="button" onClick={retry}><RotateCcw size={13} aria-hidden="true" />Try again</button></div>
+                          </div>
+                        </li>
+                      ) : (
+                        <li key={message.id} className="tu-msg is-tutor">
+                          <MathText text={tidy(message.text)} as="div" className="tu-prose" />
+                          {message.kind === 'canned' && !key && <button type="button" className="tu-upsell" onClick={() => setView('connect')}><Zap size={14} aria-hidden="true" /><span>That was a ready-made hint. <b>Turn on live answers</b> to have your actual question worked through.</span></button>}
+                          <div className={`tu-msg-actions${message.id === lastTutor ? ' is-shown' : ''}`}>
+                            <button type="button" onClick={() => void copy(message)}>{copied === message.id ? <><Check size={13} aria-hidden="true" />Copied</> : <><Copy size={13} aria-hidden="true" />Copy</>}</button>
+                            {message.id === lastTutor && !loading && <button type="button" onClick={retry}><RotateCcw size={13} aria-hidden="true" />Try again</button>}
+                            <time dateTime={new Date(message.at).toISOString()}>{new Date(message.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time>
+                          </div>
+                        </li>
+                      ))}
+                      {loading && <li className="tu-msg is-thinking" role="status"><span aria-hidden="true"><i /><i /><i /></span>Working on it</li>}
+                    </ol>
+                  )}
+                </div>
+
+                <form className="tu-composer" onSubmit={submit}>
+                  {hasMath(draft) && <div className="tu-preview" aria-label="How your message will look"><MathText text={draft} as="div" /></div>}
+                  {symbols && (
+                    <div className="tu-symbols" role="toolbar" aria-label="Insert a symbol">
+                      {SYMBOLS.map(symbol => <button key={symbol.name} type="button" onClick={() => insert(symbol.before, symbol.after)} aria-label={`Insert ${symbol.name}`} title={symbol.name}>{symbol.face}</button>)}
+                    </div>
+                  )}
+                  <textarea id="field-chat-input" ref={input} rows={1} value={draft} placeholder="Ask about a problem…" aria-label="Message to the tutor" enterKeyHint="send"
+                    onChange={event => setDraft(event.target.value)}
+                    onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
+                  <div className="tu-composer-row">
+                    <div className="tu-style" ref={styleRef}>
+                      <button type="button" className="tu-chip" onClick={() => setStyleMenu(!styleMenu)} aria-haspopup="menu" aria-expanded={styleMenu} title="How much help the tutor gives">{current.label}<ChevronDown size={14} aria-hidden="true" /></button>
+                      {styleMenu && (
+                        <div className="tu-menu" role="menu" aria-label="How much help">
+                          {COACHING_STYLES.map(item => (
+                            <button key={item.value} type="button" role="menuitemradio" aria-checked={item.value === style} onClick={() => { storeCoachingStyle(item.value); setStyleMenu(false); input.current?.focus(); }}>
+                              <span><b>{item.label}</b><small>{item.note}</small></span>{item.value === style && <Check size={15} aria-hidden="true" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button type="button" className="tu-chip is-icon" onClick={() => setSymbols(!symbols)} aria-pressed={symbols} aria-label="Maths symbols" title="Maths symbols"><Sigma size={15} /></button>
+                    <span className="tu-keys" aria-hidden="true"><kbd>Enter</kbd> to send</span>
+                    {loading
+                      ? <button type="button" className="tu-send is-stop" onClick={stop} aria-label="Stop"><Square size={13} fill="currentColor" /></button>
+                      : <button type="submit" id="btn-send-chat" className="tu-send" disabled={!draft.trim()} aria-label="Send"><ArrowUp size={18} strokeWidth={2.4} /></button>}
+                  </div>
+                </form>
+              </>
+            )}
+          </m.aside>
+        )}
       </AnimatePresence>
     </>
   );

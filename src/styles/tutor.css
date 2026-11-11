@@ -1,0 +1,183 @@
+/*
+ * The tutor panel.
+ *
+ * Paper, ink and one brass spark, like the button that opens it. The learner's
+ * own lines sit in ink bubbles on the right; the tutor's are set straight on
+ * the paper, the way a worked solution is, because they are the thing being
+ * read and maths needs the full width.
+ *
+ * Namespaced `tu-`. The launcher keeps its own rules in styles/shell.css.
+ */
+.tu {
+  --tu-night: #14262e;
+  --tu-night-ink: #f4f1e8;
+  --tu-brass: #a8742a;
+  --tu-spark: #e6bd73;
+  --tu-good: var(--pf, #2d7858);
+  --tu-warn: #b7791f;
+  --tu-bad: #b13a26;
+  --tu-ease: cubic-bezier(.22, 1, .36, 1);
+  --tu-pad: 20px;
+
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ln);
+  background: var(--sf-raised);
+  color: var(--ct);
+  font-family: 'Geist', system-ui, sans-serif;
+}
+:root[data-theme='dark'] .tu { --tu-brass: #e6bd73; --tu-warn: #e1ad66; --tu-bad: #f0957c; }
+.tu :is(h2, h3, p, ol, ul) { margin: 0; }
+.tu :is(ol, ul) { padding: 0; list-style: none; }
+.tu :is(button, textarea, a, summary):focus-visible { outline: 2px solid var(--tu-brass); outline-offset: 2px; }
+.tu code { padding: 1px 5px; border-radius: 5px; background: color-mix(in srgb, var(--ct) 7%, transparent); font: 500 .92em/1.4 'Geist Mono', ui-monospace, monospace; }
+
+.tu.is-floating { top: 12px; right: 12px; bottom: 12px; width: min(440px, calc(100vw - 24px)); border-radius: 22px; box-shadow: 0 32px 72px -28px #14242c80, 0 6px 18px -6px #14242c26; transition: width .4s var(--tu-ease); }
+.tu.is-floating.is-wide { width: min(680px, calc(100vw - 24px)); }
+:root[data-theme='dark'] .tu.is-floating { border-color: var(--ln-strong); box-shadow: 0 32px 72px -20px #000d; }
+.tu.is-sheet { inset: auto 0 0; height: min(88dvh, 760px); border-width: 1px 0 0; border-radius: 24px 24px 0 0; box-shadow: 0 -18px 48px -20px #14242c66; --tu-pad: 16px; }
+.tu-scrim { position: fixed; inset: 0; z-index: 50; background: #0d191ed9; opacity: .55; }
+.tu-grab { position: absolute; top: 7px; left: 50%; width: 38px; height: 4px; translate: -50% 0; border-radius: 999px; background: var(--ln-strong); }
+.tu-fab-note { position: absolute; top: 2px; right: 2px; width: 9px; height: 9px; border: 2px solid #14262e; border-radius: 50%; background: #e6bd73; }
+
+/* --------------------------------------------------------------------------
+ * Header
+ * ------------------------------------------------------------------------ */
+
+.tu-head { display: flex; align-items: center; gap: 12px; flex: none; padding: 14px 12px 14px var(--tu-pad); border-bottom: 1px solid var(--ln-faint); }
+.tu.is-sheet .tu-head { padding-top: 20px; }
+.tu-mark { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; background: linear-gradient(165deg, #1f3640, #0f1d23); color: var(--tu-spark); box-shadow: inset 0 0 0 1px #e6bd7333; }
+.tu-title { flex: 1; min-width: 0; }
+.tu-title h2 { font-size: 15.5px; font-weight: 620; letter-spacing: -.02em; line-height: 1.2; }
+.tu-status { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; margin-top: 1px; padding: 0; border: 0; background: none; color: var(--ct-muted); font: 500 12.5px/1.4 'Geist', system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.tu-status:hover { color: var(--ct); text-decoration: underline; text-decoration-color: var(--ln-strong); text-underline-offset: 3px; }
+.tu-status i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--ct-subtle); }
+.tu-status.is-live i { background: var(--tu-good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tu-good) 20%, transparent); }
+.tu-status.is-warn i { background: var(--tu-warn); }
+.tu-status.is-idle { color: var(--ac-text, var(--ct)); }
+.tu-tools { display: flex; gap: 2px; }
+.tu-tools button { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 10px; background: none; color: var(--ct-muted); cursor: pointer; transition: background-color .16s, color .16s; }
+.tu-tools button:hover:not(:disabled) { background: color-mix(in srgb, var(--ct) 6%, transparent); color: var(--ct); }
+.tu-tools button:disabled { opacity: .35; cursor: default; }
+
+/* --------------------------------------------------------------------------
+ * Body
+ * ------------------------------------------------------------------------ */
+
+.tu-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--tu-pad); scrollbar-width: thin; }
+.tu-kicker { color: var(--ct-subtle); font: 500 10.5px/1 'Geist Mono', ui-monospace, monospace; letter-spacing: .11em; text-transform: uppercase; }
+
+/* Nothing asked yet */
+.tu-empty { display: grid; align-content: end; gap: 10px; min-height: 100%; }
+.tu-empty h3 { font: 560 27px/1.1 'Geist', system-ui, sans-serif; letter-spacing: -.04em; }
+.tu-empty h3 em { color: var(--ac-text); font: italic 400 1.07em/1 'Newsreader', Georgia, serif; letter-spacing: -.02em; }
+.tu-empty > p:not(.tu-kicker) { max-width: 40ch; color: var(--ct-muted); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+.tu-empty .tu-kicker { margin-top: 16px; }
+.tu-starters { display: grid; border-top: 1px solid var(--ln-faint); }
+.tu-starters button { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 12px 6px 12px 2px; border: 0; border-bottom: 1px solid var(--ln-faint); background: none; color: var(--ct); font: 500 14px/1.35 'Geist', system-ui, sans-serif; text-align: left; cursor: pointer; transition: background-color .16s, padding .25s var(--tu-ease); }
+.tu-starters button i { width: 8px; height: 8px; border-radius: 3px; background: var(--hue); }
+.tu-starters button small { display: block; margin-bottom: 2px; color: var(--ct-subtle); font-size: 12px; font-weight: 500; }
+.tu-starters button svg { color: var(--ct-subtle); rotate: 45deg; opacity: 0; transition: opacity .16s, translate .25s var(--tu-ease); translate: -4px 0; }
+.tu-starters button:hover { padding-left: 8px; background: color-mix(in srgb, var(--ct) 3%, transparent); }
+.tu-starters button:hover svg, .tu-starters button:focus-visible svg { opacity: 1; translate: 0 0; }
+
+/* The thread */
+.tu-thread { display: grid; gap: 18px; }
+.tu-msg { min-width: 0; animation: tu-in .32s var(--tu-ease) both; }
+.tu-msg.is-user { display: flex; justify-content: flex-end; }
+.tu-bubble { max-width: 86%; padding: 10px 14px; border-radius: 18px 18px 5px 18px; background: var(--tu-night); color: var(--tu-night-ink); font-size: 14.5px; line-height: 1.55; overflow-wrap: anywhere; }
+:root[data-theme='dark'] .tu-bubble { background: var(--sf-overlay); box-shadow: inset 0 0 0 1px var(--ln-strong); color: var(--ct); }
+.tu-bubble code { background: #ffffff1f; }
+.tu-context { display: block; font-style: italic; }
+.tu-prose { font-size: 14.5px; line-height: 1.68; color: var(--ct); overflow-wrap: anywhere; }
+.tu-prose strong { font-weight: 620; }
+.tu-prose .katex-display { margin: .5em 0; }
+.tu-prose .katex { font-size: 1.06em; }
+
+.tu-msg-actions { display: flex; align-items: center; gap: 4px; margin: 6px 0 0 -8px; opacity: 0; transition: opacity .16s; }
+.tu-msg-actions:not(.is-shown) { margin-bottom: -24px; }
+.tu-msg:hover .tu-msg-actions, .tu-msg:focus-within .tu-msg-actions, .tu-msg-actions.is-shown { opacity: 1; }
+.tu-msg-actions button { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--ct-subtle); font: 500 12.5px/1 'Geist', system-ui, sans-serif; cursor: pointer; }
+.tu-msg-actions button:hover { background: color-mix(in srgb, var(--ct) 6%, transparent); color: var(--ct); }
+.tu-msg-actions time { margin-left: auto; color: var(--ct-subtle); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+@media (hover: none) { .tu-msg-actions { opacity: 1; } }
+
+.tu-upsell { display: flex; align-items: flex-start; gap: 10px; width: 100%; margin-top: 12px; padding: 11px 13px; border: 1px dashed color-mix(in srgb, var(--tu-brass) 55%, var(--ln)); border-radius: 13px; background: color-mix(in srgb, var(--tu-brass) 6%, transparent); color: var(--ct-muted); font: 400 13.5px/1.5 'Geist', system-ui, sans-serif; text-align: left; cursor: pointer; transition: background-color .16s; }
+.tu-upsell:hover { background: color-mix(in srgb, var(--tu-brass) 11%, transparent); }
+.tu-upsell svg { flex: none; margin-top: 3px; color: var(--tu-brass); }
+.tu-upsell b { color: var(--ct); font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--tu-brass) 60%, transparent); text-underline-offset: 3px; }
+
+.tu-msg.is-error { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; padding: 13px 14px; border: 1px solid color-mix(in srgb, var(--tu-bad) 28%, var(--ln)); border-radius: 14px; background: color-mix(in srgb, var(--tu-bad) 5%, var(--sf-raised)); }
+.tu-msg.is-error > svg { margin-top: 2px; color: var(--tu-bad); }
+.tu-msg.is-error b { font-size: 14px; font-weight: 600; }
+.tu-msg.is-error p { margin-top: 3px; color: var(--ct-muted); font-size: 13.5px; line-height: 1.55; overflow-wrap: anywhere; }
+.tu-msg.is-error .tu-msg-actions { margin-top: 8px; }
+.tu-msg.is-error .tu-msg-actions button { color: var(--ct); font-weight: 600; }
+
+.tu-msg.is-thinking { display: flex; align-items: center; gap: 10px; color: var(--ct-subtle); font-size: 13.5px; }
+.tu-msg.is-thinking span { display: inline-flex; gap: 4px; }
+.tu-msg.is-thinking i { width: 6px; height: 6px; border-radius: 50%; background: var(--tu-brass); animation: tu-dot 1.2s ease-in-out infinite; }
+.tu-msg.is-thinking i:nth-child(2) { animation-delay: .15s; }
+.tu-msg.is-thinking i:nth-child(3) { animation-delay: .3s; }
+
+/* Connecting */
+.tu-connect { display: grid; align-content: start; gap: 22px; }
+.tu-connect-head { display: grid; gap: 8px; }
+.tu-connect-head h3 { font: 560 22px/1.18 'Geist', system-ui, sans-serif; letter-spacing: -.035em; text-wrap: balance; }
+.tu-connect-head p:not(.tu-kicker) { color: var(--ct-muted); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+.tu-back { justify-self: start; padding: 0; border: 0; background: none; color: var(--ct-muted); font: 500 13.5px/1.4 'Geist', system-ui, sans-serif; text-decoration: underline; text-decoration-color: var(--ln-strong); text-underline-offset: 3px; cursor: pointer; }
+.tu-back:hover { color: var(--ct); }
+
+/* --------------------------------------------------------------------------
+ * Composer
+ * ------------------------------------------------------------------------ */
+
+.tu-composer { flex: none; margin: 0 12px 12px; border: 1px solid var(--ln); border-radius: 18px; background: var(--sf); transition: border-color .16s, box-shadow .16s; }
+.tu.is-sheet .tu-composer { margin-bottom: max(12px, env(safe-area-inset-bottom)); }
+.tu-composer:focus-within { border-color: color-mix(in srgb, var(--tu-brass) 70%, var(--ln)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tu-brass) 14%, transparent); }
+.tu .tu-composer textarea { display: block; width: 100%; min-height: 46px; max-height: 168px; padding: 13px 16px 4px; border: 0; outline: 0; resize: none; background: none; color: var(--ct); font: 400 15px/1.5 'Geist', system-ui, sans-serif; }
+.tu-composer textarea::placeholder { color: var(--ct-subtle); }
+.tu-preview { max-height: 120px; overflow: auto; margin: 8px 8px 0; padding: 9px 12px; border-radius: 12px; background: var(--sf-raised); box-shadow: inset 0 0 0 1px var(--ln-faint); color: var(--ct); font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+.tu-symbols { display: flex; gap: 4px; margin: 8px 8px 0; overflow-x: auto; scrollbar-width: none; }
+.tu-symbols::-webkit-scrollbar { display: none; }
+.tu-symbols button { flex: none; min-width: 36px; height: 34px; padding: 0 9px; border: 1px solid var(--ln); border-radius: 9px; background: var(--sf-raised); color: var(--ct); font: 400 15px/1 'Newsreader', Georgia, serif; cursor: pointer; transition: border-color .16s, transform .16s var(--tu-ease); }
+.tu-symbols button:hover { border-color: var(--ln-strong); }
+.tu-symbols button:active { transform: scale(.94); }
+.tu-composer-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px 8px; }
+.tu-style { position: relative; }
+.tu-chip { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 9px 0 11px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ct-muted); font: 550 13px/1 'Geist', system-ui, sans-serif; cursor: pointer; transition: background-color .16s, color .16s, border-color .16s; }
+.tu-chip:hover, .tu-chip[aria-expanded='true'] { background: color-mix(in srgb, var(--ct) 6%, transparent); color: var(--ct); }
+.tu-chip.is-icon { width: 32px; padding: 0; justify-content: center; }
+.tu-chip[aria-pressed='true'] { border-color: var(--ln); background: var(--sf-raised); color: var(--tu-brass); }
+.tu-menu { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 2; display: grid; width: 268px; padding: 5px; border: 1px solid var(--ln); border-radius: 14px; background: var(--sf-overlay, var(--sf-raised)); box-shadow: 0 18px 40px -16px #14242c66, 0 2px 8px -2px #14242c1f; animation: tu-pop .18s var(--tu-ease); transform-origin: bottom left; }
+.tu-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 0; border-radius: 10px; background: none; color: var(--ct); text-align: left; cursor: pointer; }
+.tu-menu button:hover { background: color-mix(in srgb, var(--ct) 6%, transparent); }
+.tu-menu b { display: block; font-size: 13.5px; font-weight: 600; }
+.tu-menu small { display: block; margin-top: 1px; color: var(--ct-muted); font-size: 12.5px; line-height: 1.35; }
+.tu-menu svg { flex: none; color: var(--tu-brass); }
+.tu-keys { margin-left: auto; color: var(--ct-subtle); font-size: 12px; white-space: nowrap; }
+.tu-keys kbd { padding: 2px 5px; border: 1px solid var(--ln); border-radius: 5px; background: var(--sf-raised); font: 500 10.5px/1 'Geist Mono', ui-monospace, monospace; }
+.tu-send { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--tu-night); color: var(--tu-night-ink); cursor: pointer; transition: transform .16s var(--tu-ease), opacity .16s, background-color .16s; }
+:root[data-theme='dark'] .tu-send { background: var(--tu-spark); color: #17130b; }
+.tu-send:hover:not(:disabled) { transform: translateY(-1px); }
+.tu-send:active:not(:disabled) { transform: scale(.93); }
+.tu-send:disabled { opacity: .28; cursor: default; }
+.tu-send.is-stop { background: none; box-shadow: inset 0 0 0 1.5px var(--ct); color: var(--ct); }
+
+@keyframes tu-in { from { opacity: 0; translate: 0 6px; } }
+@keyframes tu-pop { from { opacity: 0; scale: .96; } }
+@keyframes tu-dot { 0%, 60%, 100% { opacity: .3; translate: 0 0; } 30% { opacity: 1; translate: 0 -3px; } }
+
+@media (max-width: 63.99rem) {
+  .tu-keys { display: none; }
+  .tu-composer-row .tu-send { margin-left: auto; }
+  .tu-bubble { max-width: 90%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tu-msg, .tu-menu { animation: none; }
+  .tu-msg.is-thinking i { animation: none; opacity: .7; }
+  .tu.is-floating, .tu-starters button, .tu-starters button svg { transition: none; }
+}

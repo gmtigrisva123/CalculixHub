@@ -118,7 +118,7 @@
 .se-card { min-width: 0; padding: clamp(20px, 2.6vw, 30px); border: 1px solid var(--se-line); border-radius: 26px; background: var(--se-surface); box-shadow: var(--ev-2); scroll-margin-top: 90px; }
 .se-card-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
 .se-card-head > div { flex: 1; min-width: 0; }
-.se-card-head h2 { font: 400 clamp(24px, 2.2vw, 30px)/1.1 var(--se-serif); letter-spacing: -.025em; }
+.se-card-head h2 { font: 560 clamp(20px, 2vw, 23px)/1.2 var(--se-sans); letter-spacing: -.03em; }
 .se-card-head p { margin-top: 6px; max-width: 58ch; font-size: 14px; line-height: 1.55; color: var(--se-muted); }
 .se-card-icon { display: grid; flex: none; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--se-tone-soft); color: var(--se-tone); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--se-tone) 22%, transparent); }
 .se-hint { margin-top: 12px; font-size: 13px; color: var(--se-subtle); }
@@ -189,6 +189,87 @@
 .se-notification-title { margin-top: 3px; font-size: 14px; font-weight: 650; }
 .se-notification-body { margin-top: 1px; font-size: 13.5px; line-height: 1.45; color: var(--se-muted); }
 
+/* When the reminder arrives. */
+.se-times { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.se-times button { height: 34px; padding: 0 12px; border: 1px solid var(--se-line); border-radius: 999px; background: none; color: var(--se-muted); font: 500 13px/1 var(--se-sans); font-variant-numeric: tabular-nums; cursor: pointer; transition: border-color .2s, background .2s, color .2s, transform .16s var(--se-ease); }
+.se-times button:hover { border-color: var(--se-line-strong, var(--ln-strong)); color: var(--se-ink); }
+.se-times button:active { transform: scale(.96); }
+.se-times button[aria-checked='true'] { border-color: color-mix(in srgb, var(--se-tone) 55%, var(--se-line)); background: var(--se-tone-soft); color: var(--se-ink); font-weight: 600; }
+
+/* Live tutor: the connection, then how it behaves. */
+.tk + .se-rows { margin-top: 22px; border-top: 1px solid var(--se-line-faint); }
+.se-row.is-stacked { flex-direction: column; align-items: stretch; gap: 12px; }
+.se-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.se-choices button { display: grid; gap: 3px; align-content: start; min-width: 0; padding: 12px 14px; border: 1px solid var(--se-line); border-radius: 14px; background: var(--se-surface); text-align: left; cursor: pointer; transition: border-color .2s, background .2s, transform .16s var(--se-ease); }
+.se-choices button:hover { border-color: var(--se-line-strong, var(--ln-strong)); }
+.se-choices button:active { transform: scale(.985); }
+.se-choices button[aria-checked='true'] { border-color: color-mix(in srgb, var(--se-tone) 55%, var(--se-line)); background: var(--se-tone-soft); }
+.se-choices b { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.se-choices b::before { content: ''; flex: none; width: 14px; height: 14px; border: 1.5px solid var(--se-line-strong, var(--ln-strong)); border-radius: 50%; transition: border-color .2s, box-shadow .2s; }
+.se-choices button[aria-checked='true'] b::before { border-color: var(--se-tone); box-shadow: inset 0 0 0 3px var(--se-tone-soft), inset 0 0 0 8px var(--se-tone); }
+.se-choices small { font-size: 12.5px; line-height: 1.4; color: var(--se-muted); }
+.se-row .se-switch { margin-top: 0; }
+
+/* The index says what each setting is set to. */
+.se-index button > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.se-index button > small { flex: none; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--se-subtle); font: 500 11px/1 var(--se-mono); font-variant-numeric: tabular-nums; transition: color .2s; }
+.se-index button[aria-current='true'] > small { color: var(--se-tone); }
+
+/* Today, on the week in the hero. */
+.se-beat.is-today small { color: var(--se-brass); }
+.se-beat.is-today .se-beat-track { box-shadow: inset 0 0 0 1px #e6bd7366; }
+
+/* Help level: the three choices, and one question answered the chosen way. */
+.se-help { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 14px; align-items: stretch; }
+.se-help .se-choices { grid-template-columns: minmax(0, 1fr); align-content: start; }
+.se-sample { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; margin: 0; padding: 16px 18px 18px; overflow: hidden; border: 1px solid var(--se-line); border-radius: 16px; background-color: var(--sf, var(--se-sunken)); background-image: linear-gradient(color-mix(in srgb, var(--se-ink) 5%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--se-ink) 5%, transparent) 1px, transparent 1px); background-size: 22px 22px; background-position: -1px -1px; }
+.se-sample figcaption { color: var(--se-subtle); font: 500 10px/1 var(--se-mono); letter-spacing: .12em; text-transform: uppercase; }
+.settings-page .se-row .se-sample-ask { margin: 0; max-width: 92%; align-self: flex-end; max-width: 92%; padding: 9px 13px; border-radius: 16px 16px 5px 16px; background: #14262e; color: #f4f1e8; font-size: 13.5px; line-height: 1.5; }
+:root[data-theme='dark'] .settings-page .se-row .se-sample-ask { background: var(--sf-overlay); box-shadow: inset 0 0 0 1px var(--ln-strong); color: var(--se-ink); }
+.se-sample-reply { padding: 10px 13px; border-radius: 12px; background: var(--se-surface); box-shadow: 0 0 0 1px var(--se-line-faint), 0 8px 18px -14px #14242c59; color: var(--se-ink); font-size: 13.5px; line-height: 1.65; animation: se-answer .45s var(--se-ease) both; }
+.se-sample-reply strong { font-weight: 650; color: var(--se-tone); }
+
+/* Shortcuts: the list, and the keys it means lit on a drawn keyboard. */
+.se-keys { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 28px; align-items: center; }
+.se-shortcuts { display: grid; margin: 0 -10px; }
+.se-shortcuts > div { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 9px 10px; border-radius: 11px; outline-offset: -2px; transition: background .2s; }
+.se-shortcuts > div.is-lit { background: var(--se-tone-soft); }
+.se-shortcuts dt { display: flex; align-items: center; gap: 5px; flex: none; min-width: 112px; }
+.se-shortcuts dd { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--se-muted); text-wrap: pretty; }
+.se-shortcuts > div.is-lit dd { color: var(--se-ink); }
+.se-shortcuts kbd, .se-board span { display: inline-grid; place-items: center; border: 1px solid var(--se-line); border-bottom-width: 2px; border-radius: 7px; background: var(--sf, var(--se-sunken)); color: var(--se-ink); font: 500 11.5px/1 var(--se-mono); }
+.se-shortcuts kbd { min-width: 26px; height: 26px; padding: 0 7px; }
+.se-shortcuts i { font: 400 11.5px/1 var(--se-sans); font-style: normal; color: var(--se-subtle); }
+.se-board { display: grid; gap: 5px; padding: 14px; border: 1px solid var(--se-line); border-radius: 18px; background: linear-gradient(180deg, var(--se-surface), var(--se-sunken)); box-shadow: inset 0 1px 0 #ffffff80, 0 18px 30px -24px #14242c80; }
+:root[data-theme='dark'] .se-board { box-shadow: inset 0 1px 0 #ffffff0d, 0 18px 30px -22px #000; }
+.se-board > div { display: flex; gap: 5px; padding-left: calc(var(--inset) * 7%); }
+.se-board span { flex: var(--w) 1 0; min-width: 0; height: 30px; color: var(--se-subtle); font-size: 10px; transition: background .25s, color .25s, border-color .25s, translate .3s var(--se-ease), box-shadow .3s; transition-delay: calc(var(--o, 0) * 90ms); }
+.se-board span.is-lit { border-color: #b98432; background: linear-gradient(180deg, #f2d498, #dcab58); color: #2a1d08; translate: 0 1px; border-bottom-width: 1px; margin-bottom: 1px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--se-tone) 20%, transparent); }
+
+/* Rows that start with what they are about. */
+.se-row-mark { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; background: var(--se-sunken); color: var(--se-muted); box-shadow: inset 0 0 0 1px var(--se-line-faint); }
+.se-row-mark + div { flex: 1; min-width: 0; }
+.se-card.is-danger .se-row-mark { background: color-mix(in srgb, var(--se-bad) 9%, transparent); color: var(--se-bad); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--se-bad) 18%, transparent); }
+
+/* What the download holds: five parts, one file. */
+.se-export { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; padding: 14px 16px; border: 1px solid var(--se-line-faint); border-radius: 16px; background: var(--sf, var(--se-sunken)); }
+.se-export ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.se-export li { height: 26px; padding: 0 10px; border: 1px solid var(--se-line); border-radius: 8px; background: var(--se-surface); color: var(--se-muted); font: 500 12px/24px var(--se-sans); }
+.se-export-flow { flex: 1; min-width: 28px; height: 1px; background: repeating-linear-gradient(90deg, var(--se-tone) 0 5px, transparent 5px 11px); background-size: 22px 1px; animation: se-flow 1.4s linear infinite; }
+.se-export-file { display: inline-flex; align-items: center; gap: 8px; flex: none; max-width: 46%; height: 34px; padding: 0 12px; overflow: hidden; border-radius: 10px; background: var(--se-night); color: var(--se-chalk); font: 500 11.5px/1 var(--se-mono); white-space: nowrap; text-overflow: ellipsis; box-shadow: inset 0 0 0 1px #e6bd7333; }
+.se-export-file svg { flex: none; color: var(--se-brass); }
+
+/* Cards settle in as they are scrolled to, where the browser can do that without script. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .se-sections > .se-card { animation: se-settle linear both; animation-timeline: view(); animation-range: entry 0% entry 38%; }
+  }
+}
+.se-card { transition: border-color .3s, box-shadow .3s; }
+.se-card:hover { border-color: var(--se-line-strong, var(--ln-strong)); }
+.se-card:hover .se-card-icon { background: color-mix(in srgb, var(--se-tone) 20%, var(--se-surface)); }
+.se-card-icon { transition: background .3s; }
+
 /* Appearance: the page each choice paints. */
 .se-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .se-theme { display: grid; gap: 10px; min-width: 0; padding: 10px 10px 14px; border: 1px solid var(--se-line); border-radius: 20px; background: var(--se-surface); text-align: left; cursor: pointer; transition: border-color .25s, box-shadow .25s, translate .25s var(--se-ease); }
@@ -214,13 +295,6 @@
 .se-key-state { flex: none; margin-top: 4px; padding: 4px 10px; border-radius: 999px; background: var(--se-sunken); font: 600 10px/1.4 var(--se-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--se-subtle); white-space: nowrap; }
 .se-key-state.is-saved { background: var(--se-tone-soft); color: var(--se-tone); }
 .se-key-state.is-verified { background: color-mix(in srgb, var(--se-good) 14%, transparent); color: var(--se-good); }
-.se-key { display: flex; align-items: center; gap: 12px; padding: 0 8px 0 16px; border: 1px solid var(--se-line); border-radius: 14px; background: var(--sf, var(--se-sunken)); color: var(--se-subtle); transition: border-color .2s, box-shadow .2s; }
-.se-key:focus-within { border-color: var(--se-tone); box-shadow: 0 0 0 4px color-mix(in srgb, var(--se-tone) 16%, transparent); }
-.se-key input { flex: 1; min-width: 0; height: 48px; border: 0 !important; outline: none; background: transparent; color: var(--se-ink); font: 500 14px var(--se-mono); letter-spacing: .04em; }
-.settings-page .se-key input:focus-visible { outline: none; }
-.se-key button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--se-subtle); cursor: pointer; }
-.se-key button:hover { background: var(--se-sunken); color: var(--se-ink); }
-.se-key-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
 .se-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 16px; border: 1px solid transparent; border-radius: 12px; font: 600 13.5px/1 var(--se-sans); white-space: nowrap; cursor: pointer; transition: background .2s, border-color .2s, box-shadow .2s; }
 .se-btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -248,6 +322,9 @@
 @keyframes se-grow { from { scale: 1 0; } }
 @keyframes se-plant { from { scale: 0; translate: -50% 10px; } }
 @keyframes se-spin { to { rotate: 360deg; } }
+@keyframes se-answer { from { opacity: 0; translate: 0 6px; } }
+@keyframes se-flow { to { background-position: 22px 0; } }
+@keyframes se-settle { from { opacity: .35; translate: 0 22px; scale: .985; } }
 @keyframes se-pulse { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--se-tone) 8%, transparent); } }
 
 @media (max-width: 1100px) {
@@ -289,4 +366,21 @@
 
 @media (prefers-reduced-motion: reduce) {
   .se-hero-copy, .se-rhythm, .se-beat-fill, .se-step-flag, .se-savebar p i { animation: none !important; }
+}
+@media (max-width: 1100px) {
+  .se-keys { grid-template-columns: minmax(0, 1fr); }
+  .se-board { max-width: 460px; }
+  .se-index button > small { display: none; }
+}
+@media (max-width: 760px) {
+  .se-help { grid-template-columns: minmax(0, 1fr); }
+  .se-row:has(> .se-switch) { flex-direction: row; align-items: center; }
+  .se-row-mark { display: none; }
+  .se-export { flex-direction: column; align-items: flex-start; }
+  .se-export-flow { display: none; }
+  .se-export-file { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .se-sample-reply, .se-export-flow { animation: none; }
+  .se-board span { transition: none; }
 }

@@ -44,6 +44,7 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
         </p>
 
         <div className="lx-footer-bottom lx-wrap">
+          <a className="lx-top" href="/?preview=ios">The iPhone experience <Arrow size={13} /></a>
           <button type="button" className="lx-top" onClick={() => scrollToTarget(0)}>
             Back to top <Arrow direction="up" size={13} />
           </button>

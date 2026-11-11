@@ -13,6 +13,8 @@ export interface Achievement {
   desc: string;
   icon: string;
   condition: (stats: UserStats, completedCount: number) => boolean;
+  /** How far along a learner is, for badges that are counted towards. */
+  progress?: (stats: UserStats, completedCount: number) => { now: number; goal: number; unit: string };
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -29,6 +31,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: 'Reach 50 total points in problem solving',
     icon: '📐',
     condition: (stats) => (stats?.points ?? 0) >= 50,
+    progress: (stats) => ({ now: stats?.points ?? 0, goal: 50, unit: 'points' }),
   },
   {
     id: 'b3',
@@ -36,6 +39,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: 'Master discrete math (60%+ skill rating)',
     icon: '🎲',
     condition: (stats) => (stats?.skills?.Combinatorics ?? 0) >= 60,
+    progress: (stats) => ({ now: Math.round(stats?.skills?.Combinatorics ?? 0), goal: 60, unit: '% in Combinatorics' }),
   },
   {
     id: 'b4',
@@ -43,6 +47,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: 'Cross 250 cumulative points',
     icon: '🏆',
     condition: (stats) => (stats?.points ?? 0) >= 250,
+    progress: (stats) => ({ now: stats?.points ?? 0, goal: 250, unit: 'points' }),
   },
   {
     id: 'b5',
@@ -50,6 +55,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: 'Hit a 3-day consecutive activity streak',
     icon: '🔥',
     condition: (stats) => (stats?.streak ?? 0) >= 3,
+    progress: (stats) => ({ now: stats?.streak ?? 0, goal: 3, unit: 'days in a row' }),
   },
   {
     id: 'b6',
@@ -57,6 +63,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: 'Solve 5 competition problems correctly',
     icon: '⚡',
     condition: (stats, completedCount) => (completedCount ?? 0) >= 5 || (stats?.completedCount ?? 0) >= 5,
+    progress: (stats, completedCount) => ({ now: Math.max(completedCount ?? 0, stats?.completedCount ?? 0), goal: 5, unit: 'solved' }),
   },
   {
     id: 'b7',
@@ -64,6 +71,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     desc: 'Cross 500 cumulative points on the ladder',
     icon: '👑',
     condition: (stats) => (stats?.points ?? 0) >= 500,
+    progress: (stats) => ({ now: stats?.points ?? 0, goal: 500, unit: 'points' }),
   },
 ];
 
