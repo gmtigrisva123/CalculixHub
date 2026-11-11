@@ -310,8 +310,10 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
     <>
       <WorkspaceShell activeTab={activeTab} onSelect={selectTab}
         name={profile?.display_name ?? profile?.username ?? 'Curious learner'}
-        points={userStats.points} streak={userStats.streak} online={online}
-        pendingGrades={pendingGrades} notices={notices} onOpenScratch={() => { setOverlays(true); setScratchOpen(open => !open); }}>
+        streak={userStats.streak} online={online} pendingGrades={pendingGrades}
+        arenaLive={contests.some(contest => contest.status === 'ongoing')}
+        notices={notices} onLogout={() => void handleLogout()}
+        onOpenScratch={() => { setOverlays(true); setScratchOpen(open => !open); }}>
         <PullToRefresh onRefresh={handleRefresh}>
           <TabTransition tabKey={activeTab}>
           <Suspense fallback={<ScreenSkeleton />}>

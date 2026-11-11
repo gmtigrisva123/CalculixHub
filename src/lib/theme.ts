@@ -34,8 +34,8 @@ const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 /** Browser chrome colour per theme, mirroring the workspace desk in styles/shell.css and the boot cover in index.html. */
 const THEME_COLOR: Record<ResolvedTheme, string> = {
-  light: '#f1eee6',
-  dark: '#151f24',
+  light: '#efece4',
+  dark: '#141d22',
 };
 
 const isPreference = (value: unknown): value is ThemePreference =>

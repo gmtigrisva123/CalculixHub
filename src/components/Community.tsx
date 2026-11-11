@@ -22,7 +22,6 @@ import {
   Link2,
   ListFilter,
   MessageCircle,
-  MessageSquare,
   PenLine,
   RefreshCw,
   Sigma,
@@ -467,11 +466,9 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
     <NowContext.Provider value={now}>
       <div className="cm-root">
         <header className="cm-hero">
-          <p className="cm-eyebrow">Mathematical Forum &amp; Discussions</p>
-          <h1>
-            <MessageSquare size={26} aria-hidden="true" /> Community Solutions
-          </h1>
-          <p className="cm-lede">Share approaches, ask for a nudge, and react to each other&rsquo;s solutions.</p>
+          <p className="pg-eyebrow">Community Solutions</p>
+          <h1 className="pg-title">Work it out <em>together.</em></h1>
+          <p className="pg-lede">Share an approach, ask for a nudge, and see how other people got there.</p>
           <AnimatePresence>
             {present.length > 0 && (
               <m.p

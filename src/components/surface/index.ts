@@ -13,3 +13,4 @@
 
 export { default as Panel } from './Panel';
 export { default as TiltCard, TiltLayer } from './TiltCard';
+export { default as PageHead, Tally } from './PageHead';

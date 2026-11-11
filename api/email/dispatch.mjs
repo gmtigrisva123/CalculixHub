@@ -385,7 +385,7 @@ async function checkRateLimit(store, clientKey2, routeClass, policy) {
 // server/security.ts
 var API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 var GEMINI_ORIGIN = "https://generativelanguage.googleapis.com";
-var THEME_BOOT_SCRIPT_HASH = "'sha256-qUAu6B5XhzfQTFZiZADlDbPG3YUgtu1Ir8P18qIAI58='";
+var THEME_BOOT_SCRIPT_HASH = "'sha256-0R2f3BewG9QeV0msArT8ZOcfIz57ij6i1nSbYJZcfHA='";
 var DOCUMENT_CSP = [
   "default-src 'self'",
   `script-src 'self' ${THEME_BOOT_SCRIPT_HASH}`,

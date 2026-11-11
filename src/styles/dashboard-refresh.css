@@ -139,15 +139,13 @@
 .dh-title {
   margin: 12px 0 10px;
   min-width: 0;
-  font-family: var(--dh-display);
-  font-size: clamp(2rem, 1.25rem + 2.4cqi, 3.05rem);
-  font-weight: 650;
-  line-height: 1.05;
-  letter-spacing: -.045em;
+  /* The same heading voice as every other page (styles/page.css): Geist, with the phrase that matters in italic serif. */
+  font: 560 clamp(30px, 3.3vw, 44px)/1.05 var(--dh-display);
+  letter-spacing: -.042em;
   color: var(--dh-ink);
-  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
-.dh-title-accent { position: relative; display: inline-block; color: var(--dh-accent-text); }
+.dh-title-accent { position: relative; display: inline-block; color: var(--dh-accent-text); font: italic 400 1.07em/1 var(--dh-math); letter-spacing: -.022em; }
 .dh-title-underline { position: absolute; left: 0; bottom: -.1em; width: 100%; height: .28em; overflow: visible; }
 .dh-title-underline path { fill: none; stroke: var(--dh-underline); stroke-width: 2.4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .dh-sub { margin: 0; max-width: 46ch; color: var(--dh-ink-2); font-size: 15.5px; line-height: 1.6; }

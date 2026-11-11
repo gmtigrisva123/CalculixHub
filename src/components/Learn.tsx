@@ -5,18 +5,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { CheckCircle, HelpCircle, GraduationCap, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Award, Sparkles, BookOpenCheck, Filter } from 'lucide-react';
-import { Problem, Topic, Level, CompetitionLevel, SmartFeedback, UserStats } from '../../shared/types';
-import { TOPIC_META, TOPIC_LIST, LEVEL_LIST, LEVEL_META, COMPETITION_LIST } from '../lib/topics';
+import { CheckCircle, HelpCircle, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Sparkles, BookOpenCheck } from 'lucide-react';
+import { Problem, Topic, Level, SmartFeedback, UserStats } from '../../shared/types';
 import NumericAnswerGrid from './NumericAnswerGrid';
 import GeometryDiagram from './GeometryDiagram';
 import { useAuth } from '../context/AuthContext';
 import MathText from './MathText';
+import LearnCatalog, { INITIAL_VIEW, type CatalogView } from './LearnCatalog';
+import { TOPIC_META } from '../lib/topics';
 import { apiUrl, apiFetch } from '../services/apiBase';
 import { gradeLocally } from '../platform/offline';
 import { duration, ease, spring, travel } from '../lib/motion';
 import { useAmbient } from '../hooks/useAmbient';
-import { Collapse, StaggerItem } from './motion';
+import { Collapse } from './motion';
 import { EMPTY_PRACTICE, submitPractice } from '../../shared/practiceRules';
 
 /** Why a signed-in submission could not be saved, phrased for the learner. */
@@ -64,9 +65,8 @@ export default function Learn({
   initialFilters,
   savedAttempts,
 }: LearnProps) {
-  const [selectedTopic, setSelectedTopic] = useState<Topic | 'All'>('All');
-  const [selectedLevel, setSelectedLevel] = useState<Level | 'All'>('All');
-  const [selectedCompetition, setSelectedCompetition] = useState<CompetitionLevel | 'All'>('All');
+  // Kept here rather than in the catalog, so the list is as the learner left it when they come back from a question.
+  const [view, setView] = useState<CatalogView>(INITIAL_VIEW);
   const { user } = useAuth();
   const started=useRef(performance.now());
   const currentUser=useRef(user?.id);currentUser.current=user?.id;
@@ -108,19 +108,15 @@ export default function Learn({
   const [revealedWithoutScore, setRevealedWithoutScore] = useState(false);
 
   useEffect(() => {
-    if (initialFilters) {
-      if (initialFilters.topic) setSelectedTopic(initialFilters.topic);
-      if (initialFilters.level) setSelectedLevel(initialFilters.level);
-    }
+    if (initialFilters) setView({ ...INITIAL_VIEW, topic: initialFilters.topic ?? 'All', level: initialFilters.level ?? 'All' });
   }, [initialFilters]);
 
-  const filteredProblems = problems.filter((prob) => {
-    const matchTopic = selectedTopic === 'All' || prob.topic === selectedTopic;
-    const matchLevel = selectedLevel === 'All' || prob.level === selectedLevel;
-    return matchTopic && matchLevel && (selectedCompetition === 'All' || prob.competition === selectedCompetition);
-  });
+  // Where the list was scrolled to when a question was opened, so "back" returns to the same card.
+  const listScroll = useRef(0);
 
   const handleSelectProblem = (prob: Problem) => {
+    listScroll.current = window.scrollY;
+    window.scrollTo({ top: 0, behavior: 'instant' });
     started.current=performance.now();
     setActiveProblem(prob);
     setAnswerInput('');
@@ -262,145 +258,8 @@ export default function Learn({
             transition={spring.smooth}
             className="space-y-6"
           >
-            {/* Header */}
-            <header className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="type-eyebrow text-indigo-500 font-mono text-xs uppercase">Make a little room to think</p>
-                <h1 className="type-title text-2xl font-bold text-content mt-1">Find a question worth your time</h1>
-              </div>
-              <span className="text-xs font-mono text-content-subtle">
-                {completedProblems.length} of {problems.length} solved
-              </span>
-            </header>
-            <p className="text-sm text-content-muted">Competition preparation, from short answers to proof techniques. These are training questions and variants, not official contest papers. Proof submissions will open with Pro.</p>
-
-            {/* Filter Bar */}
-            <div className="cx-glass-panel p-5 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-content-subtle tracking-wider">
-                <Filter className="w-4 h-4 text-indigo-500" /> Filter Problems
-              </div>
-
-              {/* Topics */}
-              <div className="space-y-2">
-                <span className="text-xs text-content-subtle font-semibold">Domain Topic</span>
-                <div className="flex flex-wrap gap-2">
-                  <m.button
-                    onClick={() => setSelectedTopic('All')}
-                    whileTap={{ scale: 0.95 }}
-                    className={`cx-chip text-xs px-3.5 py-1.5 rounded-lg border font-medium ${
-                      selectedTopic === 'All'
-                        ? 'border-indigo-500 bg-indigo-500/15 text-indigo-500'
-                        : 'border-line bg-surface-sunken/40 text-content-muted hover:border-line-strong'
-                    }`}
-                  >
-                    All Topics
-                  </m.button>
-
-                  {TOPIC_LIST.map((topic) => (
-                    <m.button
-                      key={topic}
-                      onClick={() => setSelectedTopic(topic)}
-                      whileTap={{ scale: 0.95 }}
-                      className={`cx-chip text-xs px-3.5 py-1.5 rounded-lg border font-medium ${
-                        selectedTopic === topic
-                          ? 'border-indigo-500 bg-indigo-500/15 text-indigo-500'
-                          : 'border-line bg-surface-sunken/40 text-content-muted hover:border-line-strong'
-                      }`}
-                    >
-                      {TOPIC_META[topic].label}
-                    </m.button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tiers */}
-              <div className="space-y-2">
-                <span className="text-xs text-content-subtle font-semibold">Tier Difficulty</span>
-                <div className="flex flex-wrap gap-2">
-                  <m.button
-                    onClick={() => setSelectedLevel('All')}
-                    whileTap={{ scale: 0.95 }}
-                    className={`cx-chip text-xs px-3.5 py-1.5 rounded-lg border font-medium ${
-                      selectedLevel === 'All'
-                        ? 'border-cyan-500 bg-cyan-500/15 text-cyan-500'
-                        : 'border-line bg-surface-sunken/40 text-content-muted hover:border-line-strong'
-                    }`}
-                  >
-                    All Tiers
-                  </m.button>
-
-                  {LEVEL_LIST.map((level) => (
-                    <m.button
-                      key={level}
-                      onClick={() => setSelectedLevel(level)}
-                      whileTap={{ scale: 0.95 }}
-                      className={`cx-chip text-xs px-3.5 py-1.5 rounded-lg border font-medium ${
-                        selectedLevel === level
-                          ? 'border-cyan-500 bg-cyan-500/15 text-cyan-500'
-                          : 'border-line bg-surface-sunken/40 text-content-muted hover:border-line-strong'
-                      }`}
-                    >
-                      {LEVEL_META[level].label}
-                    </m.button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Problem Cards Grid */}
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Competition level">
-              {(['All', ...COMPETITION_LIST] as const).map(contest => <button key={contest}
-                aria-pressed={selectedCompetition === contest} onClick={() => setSelectedCompetition(contest)}
-                className={'cx-chip px-4 py-2 border rounded-xl ' + (selectedCompetition === contest ? 'border-indigo-500 text-indigo-500' : 'border-line text-content-muted')}>
-                {contest === 'All' ? 'All competitions' : contest}
-              </button>)}
-            </div>
-            {filteredProblems.length === 0 && <div className="cx-glass-panel p-7 space-y-3" role="status">
-              <h3 className="type-title text-xl text-content">No questions in this selection yet.</h3>
-              <p className="text-sm text-content-muted leading-relaxed">Try another tier or clear the filters to explore the full question library.</p>
-              <button type="button" className="cx-btn cx-btn-secondary px-4 py-2 rounded-lg text-sm" onClick={() => { setSelectedTopic('All'); setSelectedLevel('All'); setSelectedCompetition('All'); }}>Show all questions</button>
-            </div>}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredProblems.map((prob, index) => {
-                const isSolved = completedProblems.includes(prob.id);
-                return (
-                    <button type="button" className="text-left" key={prob.id} onClick={() => handleSelectProblem(prob)}>
-                    <StaggerItem
-                        index={Math.min(index, 7)}
-                      className="cx-card-quantum p-5 space-y-3 flex flex-col justify-between hover:border-indigo-500/50 cursor-pointer transition-colors h-full"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="cx-tag cx-tag-accent text-[10px]">{prob.topic}</span>
-                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-sunken border border-line text-content-subtle">
-                              {prob.competition ?? prob.level}{prob.proOnly ? ' · Pro locked' : ''}
-                            </span>
-                          </div>
-                          {isSolved && (
-                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-500">
-                              <CheckCircle className="w-4 h-4" /> Solved
-                            </span>
-                          )}
-                        </div>
-
-                        <h3 className="font-semibold text-content text-base line-clamp-1">{prob.title}</h3>
-                        <div className="text-xs text-content-muted line-clamp-2">
-                          <MathText text={prob.question} />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-line text-xs font-mono text-content-subtle">
-                        <span>{prob.points} Points</span>
-                        <span className="flex items-center gap-1 text-indigo-500 hover:underline font-semibold">
-                          Solve Problem <ChevronRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                    </StaggerItem>
-                  </button>
-                );
-              })}
-            </div>
+            <LearnCatalog problems={problems} completed={completedProblems} attempts={attempts} maxAttempts={maxAttempts}
+              view={view} onView={setView} onOpen={handleSelectProblem} restoreScroll={listScroll} />
           </m.div>
         ) : (
           /* Focus-Mode Problem Workspace */
@@ -410,90 +269,92 @@ export default function Learn({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -travel.sm }}
             transition={spring.smooth}
-            className="space-y-6"
+            className="ls"
           >
-            {/* Top Workspace Bar */}
-            <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
-              <m.button
-                onClick={handleCloseWorkspace}
-                whileTap={{ scale: 0.95 }}
-                className="cx-btn cx-btn-secondary px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-4 h-4" /> Back to Problem List
+            {/* Where this question sits: the way back, and what kind of question it is. */}
+            <div className="ls-bar">
+              <m.button type="button" onClick={handleCloseWorkspace} whileTap={{ scale: 0.96 }} className="ls-back">
+                <ArrowLeft size={16} aria-hidden="true" /> Back to Problem List
               </m.button>
-
-              <div className="flex items-center gap-2">
-                <span className="cx-tag cx-tag-accent text-xs">{activeProblem.topic}</span>
-                <span className="text-xs font-mono px-2.5 py-1 rounded bg-surface-sunken border border-line text-content-subtle">
-                  {activeProblem.level}
-                </span>
-                <span className="text-xs font-bold font-mono text-amber-500">{activeProblem.points} Pts</span>
-              </div>
+              <p className="ls-facts" style={TOPIC_META[activeProblem.topic].vars}>
+                <span className="ls-topic"><i aria-hidden="true" />{activeProblem.topic}</span>
+                {activeProblem.competition && <span>{activeProblem.competition}</span>}
+                <span>{activeProblem.level}</span>
+                <strong>{activeProblem.points} pts</strong>
+              </p>
             </div>
 
-            {/* Main Problem View */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Problem Canvas */}
-              <div className="lg:col-span-7 space-y-5 cx-glass-panel p-6 sm:p-8">
-                <h2 className="text-xl font-bold text-content font-serif">{activeProblem.title}</h2>
-                
-                <div className="text-sm leading-relaxed text-content space-y-4">
-                  <MathText text={activeProblem.question} />
-                </div>
-                {activeProblem.figure && <GeometryDiagram figure={activeProblem.figure}/>}
-
-                {/* Hint Drawer */}
-                {activeProblem.hint && (
-                  <div className="pt-4 border-t border-line space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowHint(!showHint)}
-                      className="text-xs font-semibold text-amber-500 hover:underline flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <HelpCircle className="w-4 h-4" /> {showHint ? 'Hide Hint' : 'Need a Hint?'}
-                    </button>
-
-                    <Collapse open={showHint}>
-                      <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-                        <MathText text={activeProblem.hint} />
-                      </div>
-                    </Collapse>
+            <div className="ls-grid">
+              <div className="ls-main">
+                {/* The question, set at reading size on its own sheet. */}
+                <article className="ls-sheet">
+                  <h2 className="ls-title">{activeProblem.title}</h2>
+                  <div className="ls-statement">
+                    <MathText text={activeProblem.question} />
                   </div>
+                  {activeProblem.figure && <GeometryDiagram figure={activeProblem.figure}/>}
+
+                  {activeProblem.hint && (
+                    <div className="ls-hint">
+                      <button type="button" onClick={() => setShowHint(!showHint)} aria-expanded={showHint}>
+                        <HelpCircle size={16} aria-hidden="true" /> {showHint ? 'Hide Hint' : 'Need a Hint?'}
+                      </button>
+                      <Collapse open={showHint}>
+                        <div className="ls-hint-body">
+                          <MathText text={activeProblem.hint} />
+                        </div>
+                      </Collapse>
+                    </div>
+                  )}
+                </article>
+
+                {showFullSolution && activeProblem.solution && (
+                  <article className="ls-sheet ls-solution">
+                    <h3><BookOpenCheck size={16} aria-hidden="true" /> Worked Solution</h3>
+                    <div className="ls-statement">
+                      <MathText text={activeProblem.solution} />
+                    </div>
+                  </article>
                 )}
               </div>
 
-              {/* Response & Grading Panel */}
-              <div className="lg:col-span-5 space-y-5">
-                {activeProblem.proOnly ? <section className="cx-glass-panel p-6 space-y-3">
-                  <h3 className="font-semibold text-content">Proof practice · Pro</h3>
-                  <p className="text-content-muted">Written proofs and detailed grading are coming with Pro. This problem is currently locked.</p>
-                  <button disabled className="cx-btn w-full opacity-60">Pro coming soon</button>
-                </section> : <form onSubmit={handleSubmitAnswer} className="cx-glass-panel p-6 space-y-4">
-                  <h3 className="font-semibold text-sm text-content">Submit Your Answer</h3>
-                  <p className="text-sm text-content-subtle">{Math.min(attempt?.count ?? 0, 3)} of 3 attempts used{attempt?.forfeited ? ' · No points available' : ''}</p>
+              {/* Answering: stays beside the question while a long statement or solution scrolls. */}
+              <div className="ls-side">
+                {activeProblem.proOnly ? <section className="ls-panel">
+                  <h3>Proof practice · Pro</h3>
+                  <p className="ls-count">Written proofs and detailed grading are coming with Pro. This problem is currently locked.</p>
+                  <button disabled className="ls-submit">Pro coming soon</button>
+                </section> : <form onSubmit={handleSubmitAnswer} className="ls-panel">
+                  <div className="ls-panel-head">
+                    <h3>Submit Your Answer</h3>
+                    <p className="ls-count">
+                      <span className="ls-tries" aria-hidden="true">{[1, 2, 3].map(step => <i key={step} data-used={step <= Math.min(attempt?.count ?? 0, 3)} />)}</span>
+                      {Math.min(attempt?.count ?? 0, 3)} of 3 attempts used{attempt?.forfeited ? ' · No points available' : ''}
+                    </p>
+                  </div>
 
                   <div className="space-y-2">
                     {activeProblem.answerMode === 'numeric-grid' && activeProblem.answerDigits ? <NumericAnswerGrid
                       digits={activeProblem.answerDigits} value={answerInput} onChange={setAnswerInput} disabled={evaluating || locked}
-                    /> : activeProblem.options?.length ? <div className="space-y-2">{activeProblem.options.map((option, index) => <button
+                    /> : activeProblem.options?.length ? <div className="space-y-2 ls-options">{activeProblem.options.map((option, index) => <button
                       type="button" key={option} disabled={evaluating || locked} aria-pressed={answerInput === option}
-                      onClick={() => setAnswerInput(option)} className={'w-full text-left p-3 border rounded-xl ' + (answerInput === option ? 'border-indigo-500 bg-indigo-500/10' : 'border-line')}>
-                      <span className="mr-3">{String.fromCharCode(65 + index)}.</span><MathText text={option}/>
+                      onClick={() => setAnswerInput(option)}>
+                      <span className="ls-letter">{String.fromCharCode(65 + index)}</span><MathText text={option}/>
                     </button>)}</div> : <input
                       type="text"
                       value={answerInput}
                       onChange={(e) => setAnswerInput(e.target.value)}
                       placeholder="Enter numerical or algebraic answer..."
                       disabled={evaluating || locked}
-                      className="w-full px-4 py-3 rounded-xl border border-line bg-surface-sunken text-content font-mono text-sm focus:outline-hidden focus:border-indigo-500"
+                      className="ls-input"
                     />}
                   </div>
 
                   <m.button
                     type="submit"
                     disabled={!answerInput.trim() || answerInput.includes('_') || evaluating || locked}
-                    whileTap={{ scale: 0.96 }}
-                    className="w-full cx-btn cx-btn-fill py-3 rounded-xl font-medium bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-2"
+                    whileTap={{ scale: 0.97 }}
+                    className="ls-submit"
                   >
                     {evaluating ? (
                       <>
@@ -505,100 +366,46 @@ export default function Learn({
                   </m.button>
                 </form>}
 
-                {!showFullSolution && !activeProblem.proOnly && (
-                  <m.button
-                    type="button"
-                    onClick={handleRevealSolution}
-                    disabled={evaluating}
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-left text-xs text-amber-800 transition-colors hover:bg-amber-500/15 dark:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 font-semibold">
-                        <BookOpenCheck className="h-4 w-4 shrink-0" />
-                        I can&apos;t solve this — show me
-                      </span>
-                      <span className="font-mono text-[10px] uppercase tracking-wider opacity-75">No points</span>
-                    </span>
-                  </m.button>
+                {/* Save failure: not a verdict on the answer, so it is styled and worded apart from one. */}
+                {saveError && (
+                  <div role="alert" className="ls-verdict is-unsaved">
+                    <strong><RefreshCw size={17} aria-hidden="true" /> {saveError.title}</strong>
+                    <p>{saveError.detail}</p>
+                  </div>
                 )}
 
+                {smartFeedback && (
+                  <div className={`ls-verdict ${smartFeedback.correct ? 'is-right' : 'is-wrong'}`}>
+                    <strong>
+                      {smartFeedback.correct
+                        ? <><CheckCircle size={17} aria-hidden="true" /> Correct!</>
+                        : <><AlertCircle size={17} aria-hidden="true" /> Not quite correct</>}
+                    </strong>
+                    <MathText as="p" text={smartFeedback.explanation} />
+                    {smartFeedback.guidance && <MathText as="p" className="ls-verdict-note" text={smartFeedback.guidance} />}
+                  </div>
+                )}
+
+                <div className="ls-help">
+                  <m.button type="button" onClick={() => onOpenTutor()} whileTap={{ scale: 0.97 }} className="ls-help-item">
+                    <Sparkles ref={idleSparkleRef} size={17} aria-hidden="true" />
+                    <span>Ask Socratic AI Tutor about this problem<small>It asks you questions; it does not hand over the answer.</small></span>
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </m.button>
+                  {!showFullSolution && !activeProblem.proOnly && (
+                    <m.button type="button" onClick={handleRevealSolution} disabled={evaluating} whileTap={{ scale: 0.97 }} className="ls-help-item is-reveal">
+                      <BookOpenCheck size={17} aria-hidden="true" />
+                      <span>I can&apos;t solve this — show me<small>Opens the worked solution. This problem then earns no points.</small></span>
+                      <em>No points</em>
+                    </m.button>
+                  )}
+                </div>
+
                 {revealedWithoutScore && (
-                  <p className="text-[11px] leading-relaxed text-content-subtle">
+                  <p className="ls-fineprint">
                     The solution is open for learning. This problem will not add points or count as solved.
                   </p>
                 )}
-
-                {/* Save failure: not a verdict on the answer, so it is styled and worded apart from one. */}
-                {saveError && (
-                  <div role="alert" className="p-6 rounded-2xl border space-y-2 border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200">
-                    <div className="flex items-center gap-2 font-bold text-sm">
-                      <RefreshCw className="w-5 h-5 text-amber-500" /> {saveError.title}
-                    </div>
-                    <p className="text-xs leading-relaxed font-medium">{saveError.detail}</p>
-                  </div>
-                )}
-
-                {/* Smart Feedback Banner */}
-                {smartFeedback && (
-                  <div
-                    className={`p-6 rounded-2xl border space-y-3 ${
-                      smartFeedback.correct
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200'
-                        : 'border-rose-500/40 bg-rose-500/10 text-rose-900 dark:text-rose-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 font-bold text-sm">
-                      {smartFeedback.correct ? (
-                        <>
-                          <CheckCircle className="w-5 h-5 text-emerald-500" /> Correct!
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="w-5 h-5 text-rose-500" /> Not quite correct
-                        </>
-                      )}
-                    </div>
-                    <MathText
-                      as="p"
-                      className="text-xs leading-relaxed font-medium"
-                      text={smartFeedback.explanation}
-                    />
-                    {smartFeedback.guidance && (
-                      <MathText
-                        as="p"
-                        className="text-[11px] opacity-80 leading-relaxed font-mono"
-                        text={smartFeedback.guidance}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Solution View */}
-                {showFullSolution && activeProblem.solution && (
-                  <div className="cx-glass-panel p-6 space-y-3">
-                    <h4 className="font-semibold text-xs uppercase tracking-wider text-content-subtle">
-                      Worked Solution
-                    </h4>
-                    <div className="text-xs leading-relaxed text-content font-mono">
-                      <MathText text={activeProblem.solution} />
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Tutor Trigger Button */}
-                <m.button
-                  type="button"
-                  onClick={() => onOpenTutor()}
-                  whileTap={{ scale: 0.96 }}
-                  className="w-full p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 font-semibold text-xs flex items-center justify-between gap-3 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Sparkles ref={idleSparkleRef} className="w-4 h-4 text-indigo-500" />
-                    <span>Ask Socratic AI Tutor about this problem</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4" />
-                </m.button>
               </div>
             </div>
 

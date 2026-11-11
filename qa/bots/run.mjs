@@ -58,7 +58,10 @@ const visible = (locator) => locator.first().isVisible().catch(() => false);
 async function navigate(page, label) {
   const sidebar = page.locator('aside[aria-label="Main navigation"]');
   if (await visible(sidebar)) {
-    await sidebar.getByRole('button', { name: label, exact: true }).click();
+    const item = sidebar.getByRole('button', { name: label, exact: true });
+    // Profile, Plan and Settings are in the menu under the learner's name.
+    if (!(await visible(item))) await sidebar.getByRole('button', { name: /^Account menu/ }).click();
+    await item.click();
   } else {
     const quick = page.getByRole('navigation', { name: 'Quick navigation' });
     const tab = quick.getByRole('button', { name: NAV[label], exact: true });
@@ -196,13 +199,13 @@ async function runBot(person, browser) {
           answered += 1;
           await sleep(400 + random() * 900);
         }
-        await page.locator('aside[aria-label="Main navigation"], nav[aria-label="Quick navigation"]').first().waitFor({ timeout: 30_000 });
+        await page.locator('aside[aria-label="Main navigation"]:visible, nav[aria-label="Quick navigation"]:visible').first().waitFor({ timeout: 30_000 });
         return `${answered} answers`;
       }, { critical: true });
     }
 
     await step('dashboard', async () => {
-      await page.locator('aside[aria-label="Main navigation"], nav[aria-label="Quick navigation"]').first().waitFor({ timeout: 30_000 });
+      await page.locator('aside[aria-label="Main navigation"]:visible, nav[aria-label="Quick navigation"]:visible').first().waitFor({ timeout: 30_000 });
       await settle(page, 800);
       return await page.locator('main h1, main h2').first().innerText().catch(() => '');
     });
@@ -225,7 +228,7 @@ async function runBot(person, browser) {
           const options = page.locator('main .space-y-2 > button');
           if (await options.count()) await options.nth(Math.floor(random() * (await options.count()))).click();
         }
-        await page.getByRole('button', { name: /Submit Your Answer/ }).click();
+        await page.getByRole('button', { name: /^Submit (Your )?Answer/ }).click();
         await settle(page, 900);
         outcomes.push((await page.locator('[role=status], [role=alert]').allInnerTexts().catch(() => [])).join(' ').slice(0, 120) || 'submitted');
         await navigate(page, 'Learn');
@@ -341,7 +344,7 @@ async function waitForAuthOutcome(page) {
   while (Date.now() < deadline) {
     if (await visible(page.getByText('Check your inbox'))) return 'verify';
     if (await visible(page.locator('[aria-label="Placement test window"]'))) return 'placement';
-    if (await visible(page.locator('aside[aria-label="Main navigation"], nav[aria-label="Quick navigation"]'))) return 'workspace';
+    if (await visible(page.locator('aside[aria-label="Main navigation"]:visible, nav[aria-label="Quick navigation"]:visible'))) return 'workspace';
     const alert = page.locator('[role=alert]');
     if (await visible(alert)) {
       const text = (await alert.first().innerText()).trim();

@@ -250,7 +250,7 @@
 
 /* Preview */
 .ad-preview-label { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; color: var(--ad-muted); }
-.ad-preview-card { position: sticky; top: 16px; padding: 18px; border: 1px solid var(--ad-faint); border-radius: 14px; background: var(--ad-ground); }
+.ad-preview-card { position: sticky; top: var(--ws-sticky, 16px); padding: 18px; border: 1px solid var(--ad-faint); border-radius: 14px; background: var(--ad-ground); }
 .ad-preview-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ad-muted); }
 .ad-preview-meta span:first-child { display: inline-flex; align-items: center; gap: 6px; }
 .ad-preview-card h4 { margin: 10px 0 8px; font-size: 17px; font-weight: 650; }

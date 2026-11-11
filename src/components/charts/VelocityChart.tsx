@@ -36,8 +36,8 @@ export default function VelocityChart({ data, color = '#c8842a', unit = 'pts' }:
 
   if (data.length < 2) {
     return (
-      <div className="w-full h-64 border border-stone-100 rounded-card bg-stone-50/50 flex items-center justify-center text-center px-6">
-        <p className="text-xs text-stone-400 max-w-xs">
+      <div className="w-full h-full min-h-44 rounded-[14px] border border-dashed border-line-strong bg-surface-sunken/50 flex items-center justify-center text-center px-6">
+        <p className="text-[13.5px] leading-relaxed text-content-subtle max-w-xs">
           Not enough history yet &mdash; solve a few more problems across different sessions and your progress trend will appear here.
         </p>
       </div>
@@ -57,7 +57,7 @@ export default function VelocityChart({ data, color = '#c8842a', unit = 'pts' }:
   const gridLines = [0, 0.25, 0.5, 0.75, 1];
 
   return (
-    <div className="w-full h-64 border border-stone-100 rounded-card bg-stone-50/50 p-4 relative">
+    <div className="w-full h-full min-h-44 rounded-[14px] border border-line-faint bg-surface-sunken/40 p-4 relative">
       <svg className="w-full h-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
         {/*
           Grid and axes read from the line tokens rather than from literals.

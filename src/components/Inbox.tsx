@@ -148,7 +148,16 @@ export default function Inbox() {
   const errors = [error, notifications.error, conversations.error, messages.error].filter(Boolean);
   const mailbox = maskEmail(user?.email);
 
-  if (!user) return <section className="ib"><div className="ib-signedout"><Mail size={22} /><h1>Inbox</h1><p>Sign in to read your private inbox.</p></div></section>;
+  if (!user) return (
+    <section className="ib">
+      <div className="pg-empty">
+        <span className="pg-empty-mark"><Mail size={22} strokeWidth={1.8} aria-hidden="true" /></span>
+        <h1>Your inbox comes with an account.</h1>
+        <p>Replies to your posts, contest results and private messages arrive here, and each one is copied to your email.</p>
+        <a className="pg-btn is-primary" href="/?auth=signup">Create a free account</a>
+      </div>
+    </section>
+  );
 
   return <section className="ib" aria-labelledby="ib-title">
     <header className="ib-head">
