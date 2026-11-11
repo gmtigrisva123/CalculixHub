@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
-import { ArrowUpRight, Check } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check } from 'lucide-react';
 import '../../styles/iphone-prototype.css';
-const GLYPHS = [
- {c:'∫',x:'4%',y:'12%',s:'120px',d:1.2,t:0},{c:'π',x:'44%',y:'7%',s:'84px',d:.7,t:1.4},{c:'∑',x:'38%',y:'78%',s:'110px',d:1,t:2.2},
- {c:'√',x:'91%',y:'10%',s:'96px',d:.9,t:.8},{c:'∞',x:'88%',y:'80%',s:'100px',d:1.3,t:3},{c:'Δ',x:'3%',y:'74%',s:'72px',d:.6,t:1.8},
- {c:'θ',x:'60%',y:'46%',s:'64px',d:.5,t:2.6},{c:'≈',x:'24%',y:'92%',s:'60px',d:.8,t:.4},
-];
-/** The phone hosts the real app, sharing the same account, database and live subscriptions. */
 export default function IPhonePrototype() {
  const [scale,setScale]=useState(1);
  const stage=useRef<HTMLElement>(null);
@@ -16,10 +10,14 @@ export default function IPhonePrototype() {
  return <main className="iphone-presentation" ref={stage} onPointerMove={track} onPointerLeave={rest}>
   <div className="ip-bg" aria-hidden="true">
    <span className="ip-aurora ip-aurora-lime"/><span className="ip-aurora ip-aurora-teal"/><span className="ip-aurora ip-aurora-mint"/>
-   <span className="ip-grid"/>
-   {GLYPHS.map((g,i)=><span key={i} className="ip-glyph" style={{left:g.x,top:g.y,fontSize:g.s,'--depth':g.d,'--delay':`${g.t}s`} as CSSProperties}>{g.c}</span>)}
+   <span className="ip-spot"/><span className="ip-grid"/>
+   <svg className="ip-plot" viewBox="0 0 1200 400" preserveAspectRatio="none">
+    <path pathLength={1} d="M-20 300 C 120 300, 160 120, 300 120 S 480 300, 620 300 S 800 60, 940 60 S 1120 250, 1220 250"/>
+    <path pathLength={1} d="M-20 220 C 100 220, 180 340, 320 340 S 520 150, 660 150 S 860 330, 1000 330 S 1160 180, 1220 180"/>
+   </svg>
    <span className="ip-vignette"/><span className="ip-grain"/>
   </div>
+  <a className="ip-back-website" href="/"><ArrowLeft size={15} strokeWidth={1.9} aria-hidden="true"/>Back to CalculixHub</a>
   <section className="ip-presentation-copy">
    <div className="ip-presentation-eyebrow ip-rise" style={{'--i':0} as CSSProperties}><i className="ip-status-dot"/>THE CALCULIXHUB MOBILE EXPERIENCE</div>
    <h1><span className="ip-rise" style={{'--i':1} as CSSProperties}>Big ideas.</span><span className="ip-rise ip-h1-accent" style={{'--i':2} as CSSProperties}>Pocket size.</span></h1>
@@ -36,6 +34,12 @@ export default function IPhonePrototype() {
   <div className="ip-device-area ip-rise" style={{'--i':3} as CSSProperties}>
    <div className="ip-mobile-preview-label">iPhone 16 · Live workspace</div>
    <div className="ip-stage-glow" aria-hidden="true"/>
+   <svg className="ip-orbits" viewBox="0 0 400 400" aria-hidden="true">
+    <circle cx="200" cy="200" r="118"/><circle className="is-dashed" cx="200" cy="200" r="156"/><circle cx="200" cy="200" r="196"/>
+    <g style={{'--t':'34s'} as CSSProperties}><circle className="ip-orbit-dot" cx="318" cy="200" r="3.2"/></g>
+    <g className="is-back" style={{'--t':'52s'} as CSSProperties}><circle className="ip-orbit-dot is-mint" cx="200" cy="44" r="2.8"/></g>
+    <g style={{'--t':'76s'} as CSSProperties}><circle className="ip-orbit-dot is-chalk" cx="61" cy="339" r="2.4"/></g>
+   </svg>
    <div className="ip-float">
     <span className="ip-chip ip-chip-live" aria-hidden="true"><i className="ip-chip-dot"/><b>Live arenas</b><small>Compete in real time</small></span>
     <span className="ip-chip ip-chip-sync" aria-hidden="true"><span className="ip-chip-icon"><Check size={13} strokeWidth={2}/></span><b>Progress synced</b><small>Same account, any screen</small></span>
