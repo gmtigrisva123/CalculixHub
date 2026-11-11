@@ -158,13 +158,16 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  const toggleRail = () => setCollapsed(current => { rememberRail(!current); return !current; });
+  const toggleRail = () => {
+    rememberRail(!collapsed);
+    setCollapsed(!collapsed);
+  };
 
-  const dismiss = (text: string) => setDismissed(current => {
-    const next = [...current, text];
+  const dismiss = (text: string) => {
+    const next = [...dismissed, text];
     try { sessionStorage.setItem(DISMISSED, JSON.stringify(next)); } catch { /* it comes back on reload, which is fine */ }
-    return next;
-  });
+    setDismissed(next);
+  };
 
   // ---------------------------------------------------------------- palette
 

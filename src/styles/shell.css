@@ -70,6 +70,12 @@ body:has(.ws) { background: var(--ws-desk); }
   font: 400 14px/1.5 'Geist', system-ui, sans-serif;
   letter-spacing: -.006em;
 }
+/*
+ * The desk is a cutting mat: a faint grid of dots, the kind a geometry set
+ * lives on. It is one small gradient repeated, drawn once and never moved, and
+ * it thins out toward the foot so the account button sits on plain ground.
+ */
+.ws-rail::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--ct) 13%, transparent) 1px, transparent 1.4px); background-size: 18px 18px; mask-image: linear-gradient(#000 0%, #0009 45%, transparent 82%); }
 .ws :focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
 
 .ws-skip { position: fixed; left: 16px; top: -80px; z-index: 100; padding: 10px 14px; border-radius: 10px; background: var(--ct); color: var(--sf); font-weight: 600; }
