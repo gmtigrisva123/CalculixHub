@@ -118,7 +118,7 @@
 .se-card { min-width: 0; padding: clamp(20px, 2.6vw, 30px); border: 1px solid var(--se-line); border-radius: 26px; background: var(--se-surface); box-shadow: var(--ev-2); scroll-margin-top: 90px; }
 .se-card-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
 .se-card-head > div { flex: 1; min-width: 0; }
-.se-card-head h2 { font: 400 clamp(24px, 2.2vw, 30px)/1.1 var(--se-serif); letter-spacing: -.025em; }
+.se-card-head h2 { font: 560 clamp(20px, 2vw, 23px)/1.2 var(--se-sans); letter-spacing: -.03em; }
 .se-card-head p { margin-top: 6px; max-width: 58ch; font-size: 14px; line-height: 1.55; color: var(--se-muted); }
 .se-card-icon { display: grid; flex: none; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: var(--se-tone-soft); color: var(--se-tone); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--se-tone) 22%, transparent); }
 .se-hint { margin-top: 12px; font-size: 13px; color: var(--se-subtle); }
@@ -189,6 +189,36 @@
 .se-notification-title { margin-top: 3px; font-size: 14px; font-weight: 650; }
 .se-notification-body { margin-top: 1px; font-size: 13.5px; line-height: 1.45; color: var(--se-muted); }
 
+/* When the reminder arrives. */
+.se-times { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.se-times button { height: 34px; padding: 0 12px; border: 1px solid var(--se-line); border-radius: 999px; background: none; color: var(--se-muted); font: 500 13px/1 var(--se-sans); font-variant-numeric: tabular-nums; cursor: pointer; transition: border-color .2s, background .2s, color .2s, transform .16s var(--se-ease); }
+.se-times button:hover { border-color: var(--se-line-strong, var(--ln-strong)); color: var(--se-ink); }
+.se-times button:active { transform: scale(.96); }
+.se-times button[aria-checked='true'] { border-color: color-mix(in srgb, var(--se-tone) 55%, var(--se-line)); background: var(--se-tone-soft); color: var(--se-ink); font-weight: 600; }
+
+/* Live tutor: the connection, then how it behaves. */
+.tk + .se-rows { margin-top: 22px; border-top: 1px solid var(--se-line-faint); }
+.se-row.is-stacked { flex-direction: column; align-items: stretch; gap: 12px; }
+.se-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.se-choices button { display: grid; gap: 3px; align-content: start; min-width: 0; padding: 12px 14px; border: 1px solid var(--se-line); border-radius: 14px; background: var(--se-surface); text-align: left; cursor: pointer; transition: border-color .2s, background .2s, transform .16s var(--se-ease); }
+.se-choices button:hover { border-color: var(--se-line-strong, var(--ln-strong)); }
+.se-choices button:active { transform: scale(.985); }
+.se-choices button[aria-checked='true'] { border-color: color-mix(in srgb, var(--se-tone) 55%, var(--se-line)); background: var(--se-tone-soft); }
+.se-choices b { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.se-choices b::before { content: ''; flex: none; width: 14px; height: 14px; border: 1.5px solid var(--se-line-strong, var(--ln-strong)); border-radius: 50%; transition: border-color .2s, box-shadow .2s; }
+.se-choices button[aria-checked='true'] b::before { border-color: var(--se-tone); box-shadow: inset 0 0 0 3px var(--se-tone-soft), inset 0 0 0 8px var(--se-tone); }
+.se-choices small { font-size: 12.5px; line-height: 1.4; color: var(--se-muted); }
+.se-row .se-switch { margin-top: 0; }
+
+/* Shortcuts */
+.se-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 0; }
+.se-shortcuts > div { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 11px 0; border-top: 1px solid var(--se-line-faint); }
+.se-shortcuts > div:nth-child(-n + 2) { border-top: 0; padding-top: 0; }
+.se-shortcuts dt { display: flex; align-items: center; gap: 5px; flex: none; min-width: 118px; }
+.se-shortcuts dd { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--se-muted); text-wrap: pretty; }
+.se-shortcuts kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; border: 1px solid var(--se-line); border-bottom-width: 2px; border-radius: 7px; background: var(--sf, var(--se-sunken)); color: var(--se-ink); font: 500 11.5px/1 var(--se-mono); }
+.se-shortcuts i { font: 400 11.5px/1 var(--se-sans); font-style: normal; color: var(--se-subtle); }
+
 /* Appearance: the page each choice paints. */
 .se-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .se-theme { display: grid; gap: 10px; min-width: 0; padding: 10px 10px 14px; border: 1px solid var(--se-line); border-radius: 20px; background: var(--se-surface); text-align: left; cursor: pointer; transition: border-color .25s, box-shadow .25s, translate .25s var(--se-ease); }
@@ -214,13 +244,6 @@
 .se-key-state { flex: none; margin-top: 4px; padding: 4px 10px; border-radius: 999px; background: var(--se-sunken); font: 600 10px/1.4 var(--se-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--se-subtle); white-space: nowrap; }
 .se-key-state.is-saved { background: var(--se-tone-soft); color: var(--se-tone); }
 .se-key-state.is-verified { background: color-mix(in srgb, var(--se-good) 14%, transparent); color: var(--se-good); }
-.se-key { display: flex; align-items: center; gap: 12px; padding: 0 8px 0 16px; border: 1px solid var(--se-line); border-radius: 14px; background: var(--sf, var(--se-sunken)); color: var(--se-subtle); transition: border-color .2s, box-shadow .2s; }
-.se-key:focus-within { border-color: var(--se-tone); box-shadow: 0 0 0 4px color-mix(in srgb, var(--se-tone) 16%, transparent); }
-.se-key input { flex: 1; min-width: 0; height: 48px; border: 0 !important; outline: none; background: transparent; color: var(--se-ink); font: 500 14px var(--se-mono); letter-spacing: .04em; }
-.settings-page .se-key input:focus-visible { outline: none; }
-.se-key button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--se-subtle); cursor: pointer; }
-.se-key button:hover { background: var(--se-sunken); color: var(--se-ink); }
-.se-key-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
 .se-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 16px; border: 1px solid transparent; border-radius: 12px; font: 600 13.5px/1 var(--se-sans); white-space: nowrap; cursor: pointer; transition: background .2s, border-color .2s, box-shadow .2s; }
 .se-btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -289,4 +312,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .se-hero-copy, .se-rhythm, .se-beat-fill, .se-step-flag, .se-savebar p i { animation: none !important; }
+}
+@media (max-width: 760px) {
+  .se-choices { grid-template-columns: minmax(0, 1fr); }
+  .se-shortcuts { grid-template-columns: minmax(0, 1fr); }
+  .se-shortcuts > div:nth-child(2) { border-top: 1px solid var(--se-line-faint); padding-top: 11px; }
+  .se-row:has(> .se-switch) { flex-direction: row; align-items: center; }
 }

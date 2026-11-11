@@ -5,11 +5,12 @@
 
 import React, { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { Bell, Check, Download, Eraser, Eye, EyeOff, Flag, KeyRound, LogOut, Mail, Monitor, Moon, Palette, RefreshCw, RotateCcw, Save, ShieldAlert, Sun, Target, Timer, Trash2, UserRound, type LucideIcon } from 'lucide-react';
+import { Bell, Check, Command, Download, Eraser, Flag, KeyRound, LogOut, Mail, Monitor, Moon, Palette, RotateCcw, Save, ShieldAlert, Sparkles, Sun, Target, Timer, Trash2, UserRound, type LucideIcon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { reminderHour } from '../platform/reminders';
 import type { ThemePreference } from '../lib/theme';
-import { normalizeGeminiKey, readStoredGeminiKey, storeGeminiKey, testGeminiKey } from '../lib/geminiClient';
+import { COACHING_STYLES, storeCoachingStyle, storeRemembersChats, useTutorKey, useTutorPrefs } from '../lib/tutor';
+import TutorConnect from './tutor/TutorConnect';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from './UserAvatar';
 import { clearLocalData, deleteMyAccount, downloadJson, exportMyData, resetMyProgress, signOutEverywhere, updateProfile, type AccountResult } from '../services/data/account';
@@ -24,7 +25,8 @@ interface SettingsProps {
   /** Goal and pace save as they are chosen; there is no separate save step. */
   onChangePreferences: (next: { goal: string; pace: string }) => Promise<SaveOutcome>;
   studyReminders: boolean;
-  onToggleReminders: (enabled: boolean) => void;
+  /** `hour` is the hour of the day, 0 to 23, the reminder should arrive at. */
+  onToggleReminders: (enabled: boolean, hour?: number) => void;
   reminderNotice: string | null;
   onLogout: () => void;
   /** Called after the practice record has been cleared, so every figure on screen is re-read. */
@@ -71,7 +73,8 @@ const GROUPS: readonly { id: string; label: string; items: readonly { id: string
   ] },
   { id: 'device', label: 'This device', items: [
     { id: 'appearance', label: 'Appearance', Icon: Palette },
-    { id: 'tutor', label: 'AI tutor key', Icon: KeyRound },
+    { id: 'tutor', label: 'Live tutor', Icon: Sparkles },
+    { id: 'shortcuts', label: 'Shortcuts', Icon: Command },
   ] },
   { id: 'account', label: 'Account', items: [
     { id: 'account', label: 'Profile & sign-in', Icon: UserRound },
@@ -80,6 +83,21 @@ const GROUPS: readonly { id: string; label: string; items: readonly { id: string
   ] },
 ];
 const SECTIONS = GROUPS.flatMap(group => group.items);
+
+/* The hours a school day leaves free, morning to late evening. */
+const REMINDER_HOURS = [7, 12, 16, 17, 18, 19, 20, 21];
+const hourLabel = (hour: number) => new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+/* Every key the workspace listens for, so none of them has to be discovered by accident. */
+const SHORTCUTS: readonly { keys: readonly string[]; then?: boolean; does: string }[] = [
+  { keys: ['Ctrl', 'K'], does: 'Search, or jump to any page' },
+  { keys: ['G', 'L'], then: true, does: 'Go to Learn. H is Home, P is Progress, A is Arena, R is the leaderboard' },
+  { keys: ['S'], does: 'Open or close scratch paper' },
+  { keys: ['['], does: 'Fold or unfold the side rail' },
+  { keys: ['Enter'], does: 'Send a message to the tutor' },
+  { keys: ['Shift', 'Enter'], does: 'New line in a message' },
+  { keys: ['Esc'], does: 'Close whatever is open on top' },
+];
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const minutesOf = (pace: string) => PACES.find(p => p.value === pace)?.minutes ?? (Number(pace.match(/\d+/)?.[0]) || 30);
@@ -198,19 +216,19 @@ export default function Settings({
   const [dataNotice, setDataNotice] = useState<{ text: string; success: boolean } | null>(null);
   const [working, setWorking] = useState<'profile' | 'reset-link' | 'everywhere' | 'export' | null>(null);
   const [confirming, setConfirming] = useState<'reset' | 'delete' | 'device' | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [showKey, setShowKey] = useState<boolean>(false);
-  const [testingKey, setTestingKey] = useState<boolean>(false);
-  const [keyNotice, setKeyNotice] = useState<{ text: string; success: boolean } | null>(null);
-  const [keyState, setKeyState] = useState<'none' | 'saved' | 'verified'>('none');
+  const [hour, setHour] = useState<number>(reminderHour);
   const [active, setActive] = useState<string>('goal');
   const { preference, resolved, setPreference } = useTheme();
+  const tutorKey = useTutorKey();
+  const tutorPrefs = useTutorPrefs();
+  const keyState = tutorKey.key ? (tutorKey.model ? 'verified' : 'saved') : 'none';
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-  useEffect(() => {
-    const savedKey = readStoredGeminiKey();
-    setApiKey(savedKey);
-    setKeyState(savedKey ? 'saved' : 'none');
-  }, []);
+  const chooseHour = (next: number) => {
+    setHour(next);
+    // Already on: move the reminder. Off: remembered for when it is switched on.
+    if (studyReminders) onToggleReminders(true, next);
+  };
 
   // The form follows the profile, including after a save refreshes it.
   useEffect(() => {
@@ -287,55 +305,10 @@ export default function Settings({
     return () => observer.disconnect();
   }, []);
 
-  const handleSaveApiKey = () => {
-    const trimmed = normalizeGeminiKey(apiKey);
-    storeGeminiKey(trimmed);
-    setApiKey(trimmed);
-    if (!trimmed) {
-      setKeyState('none');
-      setKeyNotice({ text: 'API Key removed. AI Assistant will use default engine.', success: true });
-      return;
-    }
-    setKeyState('saved');
-    setKeyNotice({ text: 'Gemini API Key saved. Press "Test" to verify it works.', success: true });
-  };
-
-  const handleTestApiKey = async () => {
-    const trimmed = normalizeGeminiKey(apiKey);
-    if (!trimmed) {
-      setKeyNotice({ text: 'Please enter a Gemini API Key to test.', success: false });
-      return;
-    }
-
-    setTestingKey(true);
-    setKeyNotice(null);
-
-    try {
-      storeGeminiKey(trimmed);
-      setApiKey(trimmed);
-      const { model } = await testGeminiKey(trimmed);
-      setKeyState('verified');
-      setKeyNotice({ text: `API Key verified with ${model}. Live Gemini AI Tutor is ready.`, success: true });
-    } catch (err: unknown) {
-      setKeyState('saved');
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
-      setKeyNotice({ text: `Connection failed: ${errorMessage}`, success: false });
-    } finally {
-      setTestingKey(false);
-    }
-  };
-
-  const handleClearApiKey = () => {
-    setApiKey('');
-    storeGeminiKey('');
-    setKeyState('none');
-    setKeyNotice({ text: 'API Key cleared.', success: true });
-  };
-
   const goalIndex = GOALS.findIndex(g => g.value === customGoal);
   const goal = GOALS[goalIndex];
   const minutes = minutesOf(studyPace);
-  const reminderTime = new Date(2000, 0, 1, reminderHour()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const reminderTime = hourLabel(hour);
   const jump = (id: string) => { setActive(id); document.getElementById(`se-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   const chooseTheme = (value: ThemePreference) => (event: React.MouseEvent<HTMLButtonElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -425,7 +398,7 @@ export default function Settings({
             <div className="se-card-head">
               <span className="se-card-icon" aria-hidden="true"><Bell size={18} /></span>
               <div><h2 id="se-reminders-title">Daily reminders</h2><p>A nudge each day to keep your problem-solving streak going.</p></div>
-              <button type="button" role="switch" aria-checked={studyReminders} aria-labelledby="se-reminders-title" className="se-switch" onClick={() => onToggleReminders(!studyReminders)}><span /></button>
+              <button type="button" role="switch" aria-checked={studyReminders} aria-labelledby="se-reminders-title" className="se-switch" onClick={() => onToggleReminders(!studyReminders, hour)}><span /></button>
             </div>
             <div className={`se-notification${studyReminders ? ' is-on' : ''}`} aria-hidden="true">
               <span className="se-notification-app">c<span>·</span></span>
@@ -435,7 +408,12 @@ export default function Settings({
                 <p className="se-notification-body">One problem is enough to hold today. Your weakest domain is waiting.</p>
               </div>
             </div>
-            <p className="se-hint">{studyReminders ? `On. You will be reminded every day at ${reminderTime}.` : 'Off. Turn it on and your device will ask for permission once.'}</p>
+            <div className="se-times" role="radiogroup" aria-label="Reminder time">
+              {REMINDER_HOURS.map(option => (
+                <button key={option} type="button" role="radio" aria-checked={hour === option} onClick={() => chooseHour(option)}>{hourLabel(option)}</button>
+              ))}
+            </div>
+            <p className="se-hint">{studyReminders ? `On. You will be reminded every day at ${reminderTime}.` : `Off. Turn it on and your device will ask for permission once. It will arrive at ${reminderTime}.`}</p>
             {reminderNotice && <p className="se-notice is-warning" role="status">{reminderNotice}</p>}
           </section>
 
@@ -458,24 +436,45 @@ export default function Settings({
 
           <section id="se-tutor" className="se-card" aria-labelledby="se-tutor-title">
             <div className="se-card-head">
-              <span className="se-card-icon" aria-hidden="true"><KeyRound size={18} /></span>
-              <div><h2 id="se-tutor-title">Gemini API key for the math assistant</h2><p>Use your own Google Gemini API key for live explanations. Your Google account's usage limits and charges may apply.</p></div>
-              <span className={`se-key-state is-${keyState}`}>{keyState === 'verified' ? 'Verified' : keyState === 'saved' ? 'Key saved' : 'Not set'}</span>
+              <span className="se-card-icon" aria-hidden="true"><Sparkles size={18} /></span>
+              <div><h2 id="se-tutor-title">Live tutor</h2><p>The tutor answers with Google’s Gemini. Connect it once with a free key from your own Google account and it will work through your actual question, not a ready-made hint.</p></div>
+              <span className={`se-key-state is-${keyState}`}>{keyState === 'verified' ? 'On' : keyState === 'saved' ? 'Not checked' : 'Off'}</span>
             </div>
-            <div className="se-key">
-              <KeyRound size={16} aria-hidden="true" />
-              <input type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="AIzaSy..." aria-label="Gemini API key" autoComplete="off" spellCheck={false} />
-              <button type="button" onClick={() => setShowKey(!showKey)} aria-label={showKey ? 'Hide key' : 'Show key'}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            <TutorConnect />
+
+            <div className="se-rows">
+              <div className="se-row is-stacked">
+                <div><b id="se-style-label">How much help it gives</b><p>You can change this for a single question from the tutor itself.</p></div>
+                <div className="se-choices" role="radiogroup" aria-labelledby="se-style-label">
+                  {COACHING_STYLES.map(option => (
+                    <button key={option.value} type="button" role="radio" aria-checked={tutorPrefs.style === option.value} onClick={() => storeCoachingStyle(option.value)}>
+                      <b>{option.label}</b><small>{option.note}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="se-row">
+                <div><b id="se-remember-label">Pick up where you left off</b><p>Keeps your last conversation in this browser so it is still there tomorrow. Turning this off deletes what is saved.</p></div>
+                <button type="button" role="switch" aria-checked={tutorPrefs.remember} aria-labelledby="se-remember-label" className="se-switch" onClick={() => storeRemembersChats(!tutorPrefs.remember)}><span /></button>
+              </div>
             </div>
-            <p className="se-hint">Stored in this browser only, not in your account. Remove it here before using a shared device.</p>
-            <div className="se-key-actions">
-              <m.button type="button" onClick={handleSaveApiKey} whileTap={{ scale: 0.96 }} className="se-btn is-quiet"><Save size={15} /> Save key</m.button>
-              <m.button type="button" onClick={handleTestApiKey} disabled={testingKey || !apiKey.trim()} whileTap={{ scale: 0.96 }} className="se-btn is-quiet">
-                {testingKey ? <><RefreshCw size={15} className="se-spin" /> Testing…</> : <><Check size={15} /> Test connection</>}
-              </m.button>
-              {apiKey.trim() && <m.button type="button" onClick={handleClearApiKey} whileTap={{ scale: 0.96 }} className="se-btn is-danger"><Trash2 size={15} /> Clear</m.button>}
+          </section>
+
+          <section id="se-shortcuts" className="se-card" aria-labelledby="se-shortcuts-title">
+            <div className="se-card-head">
+              <span className="se-card-icon" aria-hidden="true"><Command size={18} /></span>
+              <div><h2 id="se-shortcuts-title">Keyboard shortcuts</h2><p>For when your hands are already on the keys.</p></div>
             </div>
-            {keyNotice && <p className={`se-notice ${keyNotice.success ? 'is-ok' : 'is-error'}`} role="status">{keyNotice.text}</p>}
+            <dl className="se-shortcuts">
+              {SHORTCUTS.map(shortcut => (
+                <div key={shortcut.does}>
+                  <dt>{shortcut.keys.map((key, index) => (
+                    <React.Fragment key={key}>{index > 0 && <i>{shortcut.then ? 'then' : '+'}</i>}<kbd>{key === 'Ctrl' && isMac ? '⌘' : key}</kbd></React.Fragment>
+                  ))}</dt>
+                  <dd>{shortcut.does}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
           <p className="se-group">Account</p>
@@ -536,7 +535,7 @@ export default function Settings({
                 </div>
               )}
               <div className="se-row">
-                <div><b>Forget this device</b><p>Clears what this browser remembers: theme, scratch paper, your contest date and any saved API key. Your account is untouched.</p></div>
+                <div><b>Forget this device</b><p>Clears what this browser remembers: theme, scratch paper, your contest date, tutor conversations and your tutor key. Your account is untouched.</p></div>
                 <m.button type="button" whileTap={{ scale: 0.96 }} className="se-btn is-quiet" onClick={() => setConfirming('device')}><Eraser size={15} /> Clear this browser</m.button>
               </div>
             </div>
@@ -569,7 +568,7 @@ export default function Settings({
       <ConfirmDialog open={confirming === 'delete'} title="Delete your account?" phrase={profile?.username ?? 'delete'} action="Delete my account" busyAction="Deleting…" onConfirm={confirmDelete} onClose={() => setConfirming(null)}
         consequences={['Your profile, progress, posts, comments and messages are permanently deleted.', 'Your username becomes available to someone else.', 'There is no way to bring any of it back.']} />
       <ConfirmDialog open={confirming === 'device'} title="Clear this browser?" action="Clear and reload" busyAction="Clearing…" onConfirm={confirmDevice} onClose={() => setConfirming(null)}
-        consequences={['Theme, scratch paper, contest date and any saved API key are removed from this browser.', 'Nothing in your account changes.']} />
+        consequences={['Theme, scratch paper, contest date, tutor conversations and your tutor key are removed from this browser.', 'Nothing in your account changes.']} />
     </div>
   );
 }
