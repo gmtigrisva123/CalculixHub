@@ -352,6 +352,9 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
                         </button>
                       ))}
                     </div>
+                    <div className="ws-menu-list">
+                      <a className="ws-menu-item" href="/?preview=ios" title="The iPhone prototype"><Smartphone size={17} strokeWidth={1.85} aria-hidden="true" /><span>iPhone preview<small>CalculixHub in your pocket</small></span></a>
+                    </div>
                     <div className="ws-menu-row"><span>Appearance</span><ThemeSwitch /></div>
                     <div className="ws-menu-list">
                       {signedIn
