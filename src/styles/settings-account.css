@@ -4,8 +4,8 @@
  */
 
 /* Group labels: in the index, and as quiet rules between runs of cards. */
-.se-index-label { margin: 12px 12px 4px; font: 600 10px/1.2 var(--se-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--se-subtle); }
-.se-index-label:first-child { margin-top: 6px; }
+.settings-page .se-index-label { margin: 14px 12px 6px; font: 600 10px/1.2 var(--se-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--se-subtle); }
+.settings-page .se-index-label:first-child { margin-top: 6px; }
 .se-index button.is-danger[aria-current='true'] { background: color-mix(in srgb, var(--se-bad) 9%, var(--se-surface)); }
 .se-index button.is-danger[aria-current='true']::before { background: var(--se-bad); }
 .se-index button.is-danger[aria-current='true'] svg { color: var(--se-bad); }
