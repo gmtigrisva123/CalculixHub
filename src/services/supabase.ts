@@ -41,6 +41,9 @@ const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
  */
 export const isBackendConfigured = Boolean(url && anonKey);
 
+/** Where the browser keeps the signed-in session. A credential: never export it. */
+export const AUTH_STORAGE_KEY = 'calculixhub.auth';
+
 if (!isBackendConfigured && import.meta.env.PROD) {
   console.warn(
     '[CalculixHub] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set. ' +
@@ -92,7 +95,7 @@ export const supabase: SupabaseClient | null = isBackendConfigured
         autoRefreshToken: true,
         detectSessionInUrl: true,
         flowType: 'pkce',
-        storageKey: 'calculixhub.auth',
+        storageKey: AUTH_STORAGE_KEY,
       },
       realtime: {
         // Caps how fast this client will process broadcasts. Without it a busy

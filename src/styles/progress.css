@@ -1,0 +1,14 @@
+/* Progress: the page header. The cards below it keep their own styles. */
+.pg-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 22px; border-bottom: 1px solid var(--ln); }
+.pg-head p, .pg-head h1 { margin: 0; }
+.pg-eyebrow { display: flex; align-items: center; gap: 10px; font: 600 11px/1.3 'Geist Mono', ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--ct-subtle); }
+.pg-eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: #c8973a; box-shadow: 0 0 0 4px #c8973a26; }
+.pg-head h1 { margin-top: 12px; font: 400 clamp(32px, 3.6vw, 48px)/1.02 'Newsreader', Georgia, serif; letter-spacing: -.035em; color: var(--ct); text-wrap: balance; }
+.pg-head h1 em { font-style: italic; font-weight: 350; color: var(--ac-text); }
+.pg-summary { margin-top: 10px !important; max-width: 58ch; font-size: 15px; line-height: 1.55; color: var(--ct-muted); }
+.pg-summary b { font-weight: 600; color: var(--ct); }
+.pg-print { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--ln); border-radius: 12px; background: var(--sf-raised); color: var(--ct); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s, transform .16s; }
+.pg-print:hover { background: var(--sf-sunken); }
+.pg-print:active { transform: scale(.97); }
+.pg-print small { padding: 2px 7px; border-radius: 999px; font: 600 10px/1.4 'Geist Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; background: color-mix(in srgb, #c8973a 18%, transparent); color: #8a6417; }
+[data-theme='dark'] .pg-print small { color: #e6bd73; }

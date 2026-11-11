@@ -1,0 +1,38 @@
+/* The share-card dialog. Namespaced `sc-`; uses the workspace's theme tokens. */
+.sc-dialog { width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--ln); border-radius: 26px; background: var(--sf-raised); color: var(--ct); box-shadow: 0 40px 100px -30px #000000a6; font-family: 'Geist', 'DM Sans', system-ui, sans-serif; }
+.sc-dialog::backdrop { background: #0b161b99; backdrop-filter: blur(6px); }
+.sc-dialog[open] { display: grid; gap: 18px; padding: 24px; animation: sc-in .3s cubic-bezier(.22, 1, .36, 1); }
+@keyframes sc-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.sc-dialog :is(h2, p) { margin: 0; }
+.sc-dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sc-dialog h2 { font: 400 28px/1.1 'Newsreader', Georgia, serif; letter-spacing: -.025em; }
+.sc-dialog header p { margin-top: 6px; max-width: 52ch; font-size: 14px; line-height: 1.5; color: var(--ct-muted); }
+.sc-close { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 11px; color: var(--ct-muted); cursor: pointer; }
+.sc-close:hover { background: var(--sf-sunken); color: var(--ct); }
+.sc-canvas { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; border-radius: 16px; box-shadow: 0 0 0 1px var(--ln), 0 24px 44px -28px #0b161b80; }
+
+.sc-designs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sc-designs [role='radio'] { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 10px; border: 1px solid var(--ln); border-radius: 999px; font-size: 13.5px; font-weight: 550; color: var(--ct-muted); cursor: pointer; transition: border-color .2s, color .2s, background .2s; }
+.sc-designs [role='radio'][aria-checked='true'] { border-color: var(--ct); color: var(--ct); background: var(--sf-sunken); }
+.sc-designs [role='radio']:disabled { opacity: .6; cursor: not-allowed; }
+.sc-designs i { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px #00000026; }
+.sc-designs .is-night i { background: linear-gradient(135deg, #1b3039, #0c181d); }
+.sc-designs .is-paper i { background: linear-gradient(135deg, #fdfcf7, #e9e3d2); }
+.sc-designs .is-brass i { background: linear-gradient(135deg, #f2d498, #d39f47); }
+.sc-upsell { margin-left: auto; padding: 8px 4px; font-size: 13px; font-weight: 600; color: var(--ac-text); cursor: pointer; }
+
+.sc-dialog footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.sc-dialog footer p { margin-right: auto; font-size: 13.5px; color: var(--ct-muted); }
+.sc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 1px solid var(--ln); border-radius: 12px; background: var(--sf-raised); color: var(--ct); font: 600 14px/1 inherit; cursor: pointer; transition: transform .16s, background .2s, filter .2s; }
+.sc-btn:hover { background: var(--sf-sunken); }
+.sc-btn:active { transform: scale(.97); }
+.sc-btn.is-solid { border-color: transparent; background: var(--ct); color: var(--sf); }
+.sc-btn.is-solid:hover { background: var(--ct); filter: brightness(1.18); }
+.sc-dialog :is(button):focus-visible { outline: 2px solid var(--ac); outline-offset: 3px; }
+
+@media (max-width: 560px) {
+  .sc-dialog[open] { padding: 18px; border-radius: 22px; }
+  .sc-dialog h2 { font-size: 23px; }
+  .sc-dialog footer .sc-btn { flex: 1; }
+  .sc-upsell { margin-left: 0; }
+}

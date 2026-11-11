@@ -1,0 +1,145 @@
+/*
+ * The landing page's motion layer. Loaded last, so what it says about how
+ * things move wins over the older per-section rules.
+ *
+ *   1. Springs for CSS: two easings sampled from a real damped spring.
+ *   2. The ground: full-screen tone layers the scroll cross-fades between.
+ *   3. Hover and press: every control answers the pointer and the finger.
+ *   4. Repairs: places that animated layout or paint, moved onto transforms.
+ *
+ * The rule throughout: only `transform` and `opacity` (and their shorthands
+ * `translate`, `scale`, `rotate`) are animated while the page scrolls. Those
+ * are the properties a browser can animate on the compositor, without laying
+ * the page out again or repainting it. Colour changes on hover are the one
+ * allowance: they repaint a single small control, once, when the pointer
+ * arrives, and never during a scroll.
+ */
+
+/* --------------------------------------------------------------------------
+ * 1. Springs
+ *
+ * `linear()` takes a list of sampled positions, which is enough to describe a
+ * spring's overshoot and settle: something no cubic-bezier can draw. Both
+ * lists below are the step response of a damped spring (damping ratio 0.62
+ * and 0.5), sampled at 45 points. A browser too old for `linear()` ignores the
+ * declaration and keeps the glide curve declared before it.
+ * ------------------------------------------------------------------------ */
+
+.lx {
+  /* Settles 8% past its target, then back: for things that arrive. */
+  --lx-spring: linear(0, 0.024, 0.086, 0.174, 0.277, 0.388, 0.499, 0.606, 0.704, 0.791, 0.866, 0.929, 0.979, 1.018, 1.047, 1.066, 1.078, 1.083, 1.083, 1.079, 1.073, 1.065, 1.056, 1.047, 1.038, 1.029, 1.021, 1.014, 1.009, 1.004, 1, 0.997, 0.995, 0.994, 0.993, 0.993, 0.993, 0.994, 0.994, 0.995, 0.996, 0.996, 0.997, 0.998, 1);
+  /* Carries 16% past: for things released from under a pointer or a finger. */
+  --lx-spring-snap: linear(0, 0.036, 0.131, 0.262, 0.412, 0.566, 0.713, 0.843, 0.951, 1.037, 1.099, 1.138, 1.159, 1.163, 1.155, 1.138, 1.116, 1.091, 1.066, 1.042, 1.022, 1.005, 0.992, 0.982, 0.977, 0.974, 0.974, 0.975, 0.978, 0.982, 0.986, 0.99, 0.994, 0.997, 1, 1.002, 1.003, 1.004, 1.004, 1.004, 1.004, 1.003, 1.003, 1.002, 1);
+}
+
+/* --------------------------------------------------------------------------
+ * 2. The ground
+ *
+ * One sticky, screen-sized box at the top of the content sheet, pulled out of
+ * the flow by a negative margin so it takes up no room. Because it is sticky
+ * it stays with the viewport for the whole length of the sheet, and because
+ * its z-index is -1 inside the sheet's own stacking context it paints above
+ * the sheet's paper and below every section. GroundTones.tsx sets each
+ * layer's opacity from the scroll position; nothing else here changes.
+ * ------------------------------------------------------------------------ */
+
+.lx-ground { position: sticky; top: 0; z-index: -1; height: 100lvh; margin-bottom: -100lvh; overflow: hidden; pointer-events: none; contain: strict; }
+/*
+ * Hidden until the script says a tone is present. A hidden tone has nothing to
+ * draw, so it holds no texture. A present one is promoted to its own layer
+ * (`will-change`), painted once, and from then on the compositor only blends
+ * it at a new opacity; without the hint each step of a fade repainted the
+ * whole screen behind the text.
+ */
+.lx-ground-tone { position: absolute; inset: 0; opacity: 0; visibility: hidden; will-change: opacity; }
+
+/*
+ * The tones. Every one is the page's own warm paper, leaned a little one way:
+ * a touch cooler, a touch more golden, a touch greener. Lightness stays within
+ * two points of the paper and chroma under 0.03, so body text keeps its
+ * contrast on all of them and none reads as a block of colour. (A first pass
+ * used sky blue and peach. On cream paper they looked like stickers.) Each is
+ * a wash from the top of the screen that thins toward the foot.
+ */
+.lx-ground-tone.is-morning { background: radial-gradient(130% 95% at 50% -10%, oklch(95.6% 0.01 205), oklch(96.5% 0.008 150) 60%, oklch(96.9% 0.011 84 / 0)); }
+.lx-ground-tone.is-parchment { background: radial-gradient(130% 95% at 30% -10%, oklch(95.2% 0.026 82), oklch(96.3% 0.018 84) 60%, oklch(96.9% 0.011 84 / 0)); }
+.lx-ground-tone.is-sage { background: radial-gradient(130% 95% at 70% -10%, oklch(95.4% 0.017 148), oklch(96.4% 0.012 120) 60%, oklch(96.9% 0.011 84 / 0)); }
+.lx-ground-tone.is-cream { background: radial-gradient(130% 95% at 50% -10%, oklch(95.6% 0.03 92), oklch(96.5% 0.02 90) 60%, oklch(96.9% 0.011 84 / 0)); }
+/* The two that gather around a night stage: the paper dims, as a room does when the lamp is the only light. */
+.lx-ground-tone.is-dusk { background: linear-gradient(oklch(93.4% 0.012 230), oklch(94.2% 0.012 250)); }
+.lx-ground-tone.is-lamplight { background: linear-gradient(oklch(94% 0.024 78), oklch(93.6% 0.014 60)); }
+
+/*
+ * The two short night stages scale in as they arrive (kit.tsx, useStageArrival),
+ * growing from their top edge so the edge the reader is watching leads.
+ * `will-change` tells the browser to keep each one as a single texture and
+ * move that, rather than re-drawing the stage at every size on the way up.
+ * The topics stage is left alone on purpose: it is three screens tall and full
+ * of chalk filters, and a layer that size is too much to keep or to re-draw.
+ */
+.lx-desk-stage, .lx-final-stage { transform-origin: 50% 0%; will-change: transform; }
+.lx-engine-stage { border-radius: var(--lx-stage-r); }
+
+/* --------------------------------------------------------------------------
+ * 3. Hover and press
+ *
+ * A control leans toward the pointer on a spring and gives under a press. The
+ * press is quick on the way down (you should feel it land) and springs back
+ * on release. Hover effects are behind `(hover: hover)` so a phone never gets
+ * a control stuck in its hovered state after a tap.
+ * ------------------------------------------------------------------------ */
+
+.lx-btn { transition: transform 0.6s var(--lx-glide), background-color 0.35s ease, color 0.35s ease, box-shadow 0.5s var(--lx-glide); transition: transform 0.6s var(--lx-spring-snap), background-color 0.35s ease, color 0.35s ease, box-shadow 0.5s var(--lx-glide); }
+.lx-btn:active { transform: scale(0.965); transition-duration: 0.1s, 0.35s, 0.35s, 0.5s; transition-timing-function: ease-out; }
+.lx-btn-icon { transition: transform 0.6s var(--lx-glide), background-color 0.35s ease; transition: transform 0.6s var(--lx-spring-snap), background-color 0.35s ease; }
+
+/*
+ * Cards and small controls. Each rule below lists the control's colour fades as
+ * they were and adds the spring for its movement, so nothing loses a fade it
+ * had. Where a rule is written twice, the first line is for browsers without
+ * `linear()` and the second replaces it everywhere else.
+ */
+.lx-plan-inner { transition: transform 0.7s var(--lx-glide); transition: transform 0.7s var(--lx-spring); }
+.lx-path { transition: background-color 0.4s ease, transform 0.7s var(--lx-glide); transition: background-color 0.4s ease, transform 0.7s var(--lx-spring); }
+.lx-top { transition: background-color 0.3s ease, color 0.3s ease, transform 0.5s var(--lx-glide); transition: background-color 0.3s ease, color 0.3s ease, transform 0.5s var(--lx-spring-snap); }
+.lx-cycle button { transition: color 0.3s, transform 0.5s var(--lx-glide); transition: color 0.3s, transform 0.5s var(--lx-spring-snap); }
+.lx-desk-tools [role='radio'] { transition: background 0.25s, transform 0.5s var(--lx-glide); transition: background 0.25s, transform 0.5s var(--lx-spring-snap); }
+.lx-desk-clear { transition: color 0.25s, transform 0.5s var(--lx-glide); transition: color 0.25s, transform 0.5s var(--lx-spring-snap); }
+.lx-faq-sign { transition: background-color 0.4s ease, box-shadow 0.4s ease, color 0.4s ease, scale 0.4s var(--lx-glide); transition: background-color 0.4s ease, box-shadow 0.4s ease, color 0.4s ease, scale 0.5s var(--lx-spring-snap); }
+
+/* The press: quick on the way down, so it is felt; the release rides the spring above. */
+.lx-plan-inner:active, .lx-path:active { transform: scale(0.985); transition-duration: 0.12s; transition-timing-function: ease-out; }
+.lx-cycle button:active, .lx-top:active, .lx-desk-clear:active { transform: scale(0.96); transition-duration: 0.1s; transition-timing-function: ease-out; }
+.lx-desk-tools [role='radio']:active { scale: 1; transform: scale(0.88); transition-duration: 0.1s; transition-timing-function: ease-out; }
+.lx-faq-item h3 button:active .lx-faq-sign { scale: 0.9; }
+.lx-link:active { translate: 0 1px; }
+
+/* The two desk objects straighten on a spring, the way a sheet settles when you square it up. */
+.lx-desk-sheet, .lx-desk-card { transition: rotate 0.8s var(--lx-glide), translate 0.8s var(--lx-glide); transition: rotate 0.8s var(--lx-spring), translate 0.8s var(--lx-spring); }
+
+@media (hover: hover) and (pointer: fine) {
+  .lx-plan-inner:hover { transform: translateY(-5px); }
+  .lx-plan.is-featured .lx-plan-inner:hover { transform: translateY(-7px); }
+  .lx-desk-sheet:hover, .lx-desk-card:hover { translate: 0 -4px; }
+  .lx-desk-tools [role='radio']:hover { transform: scale(1.1); }
+  .lx-cycle button:hover:not([aria-checked='true']) { color: var(--lx-ink); }
+  .lx-faq-item h3 button:hover .lx-faq-sign { scale: 1.08; }
+}
+
+/* --------------------------------------------------------------------------
+ * 4. Repairs
+ * ------------------------------------------------------------------------ */
+
+/* The countdown's week track re-divides at once when the date changes. Animating
+   flex-grow laid the card out again on every frame for a bar ten pixels tall. */
+.lx-desk-track li { transition: none; }
+
+/* --------------------------------------------------------------------------
+ * Reduced motion: everything above that moves, stops. Fades are kept.
+ * ------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-btn, .lx-btn-icon, .lx-plan-inner, .lx-path, .lx-desk-sheet, .lx-desk-card, .lx-desk-tools [role='radio'], .lx-cycle button, .lx-top, .lx-faq-sign, .lx-desk-clear { transition-property: background, background-color, color, box-shadow, opacity; }
+  .lx-plan-inner:hover, .lx-plan.is-featured .lx-plan-inner:hover { transform: none; }
+  .lx-desk-sheet:hover, .lx-desk-card:hover { translate: none; }
+}

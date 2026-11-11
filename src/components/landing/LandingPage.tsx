@@ -7,14 +7,19 @@ import ChordPlayground from './ChordPlayground';
 import TopicsChapter from './TopicsChapter';
 import ArchiveLadder from './ArchiveLadder';
 import JourneyStack from './JourneyStack';
+import DeskSection from './DeskSection';
 import PlansSection from './PlansSection';
 import FaqSection from './FaqSection';
 import FinalStage from './FinalStage';
 import LandingFooter from './LandingFooter';
 import MarginRails from './MarginRails';
+import GroundTones from './GroundTones';
 import { scrollToTarget, useSmoothScroll } from './smoothScroll';
 import '../../styles/landing-experience.css';
 import '../../styles/landing-frame.css';
+import '../../styles/landing-desk.css';
+import '../../styles/landing-plans.css';
+import '../../styles/landing-motion.css';
 
 interface LandingPageProps {
   liveStats: { registeredUsers: number; testsCompleted: number; problemsSolved: number };
@@ -48,6 +53,7 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
       <a className="lx-skip" href="#idea">Skip to the content</a>
       <LandingNav onSignIn={onSignIn} onRegister={onRegister} />
       <div className="lx-content" ref={contentRef}>
+        <GroundTones />
         <MarginRails />
         <main className="lx-main">
           <Opening onRegister={onRegister} />
@@ -56,6 +62,7 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
           <TopicsChapter onRegister={onRegister} />
           <ArchiveLadder />
           <JourneyStack onRegister={onRegister} />
+          <DeskSection onRegister={onRegister} />
           <PlansSection onRegister={onRegister} />
           <FaqSection />
           <FinalStage onRegister={onRegister} />

@@ -46,6 +46,10 @@ It's a single web app (React) that runs most of the smart stuff — the skill es
 
 The one piece of code that matters most, if you want to actually understand how this works, is [`src/domain/irt.ts`](src/domain/irt.ts). That's the whole estimation engine in one file. Everything else is scaffolding around it.
 
+## Plans and billing
+
+There are three plans (Free, Pro, Team), defined in [`shared/plans.ts`](shared/plans.ts). Checkout is off until Stripe is configured, and until then every account gets Pro's features in a preview that says so. [`docs/business-model.md`](docs/business-model.md) explains the model and what has to happen before anyone is charged; [`docs/billing-setup.md`](docs/billing-setup.md) is the setup.
+
 ## Contributing
 
 Branch off `main`, make your change, run `npm run lint && npm run build` to make sure nothing's broken, then open a pull request. Keep commits small and focused — one real change per commit is easier for everyone to review.

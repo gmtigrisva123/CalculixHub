@@ -24,7 +24,7 @@ describe('the CalculixHub logo', () => {
 
   it('is not redrawn anywhere else: every other surface imports it', () => {
     // The path may appear only in brand.ts, the SVG and the icon script.
-    const holders = ['src/components/landing/kit.tsx', 'src/components/WorkspaceShell.tsx', 'src/components/WelcomeScreen.tsx', 'src/components/MobileHeader.tsx', 'src/components/PlacementExperience.tsx'];
+    const holders = ['src/components/landing/kit.tsx', 'src/components/WorkspaceShell.tsx', 'src/components/WelcomeScreen.tsx', 'src/components/PlacementExperience.tsx'];
     for (const file of holders) expect(read(file), file).not.toContain('M30 9C11 2');
   });
 

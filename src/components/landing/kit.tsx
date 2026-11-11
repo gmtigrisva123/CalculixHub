@@ -10,15 +10,40 @@
  * script runs (the settled value, always).
  */
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { animate, m, useInView, useReducedMotion, useSpring, type Variants } from 'motion/react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { animate, m, useInView, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue, type Variants } from 'motion/react';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
 import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from '../brand';
 
-/** The page's signature curve: a fast departure that glides into place. */
+/** The page's signature curve: a fast departure that glides into place. Used for fades, where a spring has nothing to say. */
 export const GLIDE = [0.16, 1, 0.3, 1] as const;
 /** For things that travel on screen rather than arrive. */
 export const SWEEP = [0.65, 0, 0.35, 1] as const;
+
+/**
+ * The page's springs.
+ *
+ * Anything that moves through space is on one of these rather than on a timed
+ * curve. A timed curve always takes its full duration and always ends dead on
+ * its target; a spring carries its own momentum, so it can be interrupted and
+ * redirected mid-flight without a jump, and it settles the way a real object
+ * does. `visualDuration` is how long it appears to take to arrive, `bounce`
+ * how far it carries past before settling (0 is none).
+ *
+ *   arrive   text coming to rest: light, with a breath of overshoot
+ *   settle   cards and panels: heavier, and barely past the line
+ *   press    things under a pointer or a finger: quick and a little elastic
+ *   follow   a value chasing the scroll position: close behind, never rubbery
+ */
+export const SPRING = {
+  arrive: { type: 'spring', visualDuration: 0.8, bounce: 0.12 },
+  settle: { type: 'spring', visualDuration: 0.9, bounce: 0.06 },
+  press: { type: 'spring', visualDuration: 0.28, bounce: 0.28 },
+  follow: { stiffness: 170, damping: 26, mass: 0.5 },
+} as const;
+
+/** Opacity is not a position, so it fades on a curve while the transform springs. */
+export const fade = (delay = 0) => ({ duration: 0.55, ease: GLIDE, delay });
 
 export const useFinePointer = () => useMediaQuery('(hover: hover) and (pointer: fine)');
 
@@ -57,7 +82,7 @@ const lineContainer: Variants = {
 
 const wordRise: Variants = {
   hidden: { y: '112%', rotate: 2.5 },
-  shown: { y: '0%', rotate: 0, transition: { duration: 1.05, ease: GLIDE } },
+  shown: { y: '0%', rotate: 0, transition: SPRING.arrive },
 };
 
 interface SplitTextProps {
@@ -125,28 +150,81 @@ interface RiseProps {
   amount?: number;
   id?: string;
   /**
-   * Blur on the way in. Right for text, where it softens the moment the words
-   * appear; wrong for a large panel, where a filter over that much area costs a
-   * weak GPU frames for an effect nobody can see at that size.
+   * A card or panel rather than a line of text: it lands on the heavier spring.
+   * Panels are deliberately not scaled on the way in. Many of them hold SVG
+   * drawings, and an SVG under a changing scale is laid out and re-drawn on
+   * every frame; measured on the topic boards, that alone quadrupled the time
+   * the page spent in long tasks during a scroll.
    */
-  blur?: boolean;
+  panel?: boolean;
 }
 
-/** A heavy fade-up, with a little blur for text-sized things. */
-export function Rise({ children, className, delay = 0, y = 34, as = 'div', amount = 0.25, id, blur = true }: RiseProps) {
+/**
+ * Something settling into place as it is scrolled to.
+ *
+ * Only transform and opacity move, so the browser can run the whole entrance
+ * on the compositor without re-laying-out or repainting anything. (Entrances
+ * used to soften in through a blur filter; a filter has to be re-rasterised on
+ * every frame, across the element's whole area, which is the first thing to
+ * cost a mid-range phone its frame rate.)
+ */
+export function Rise({ children, className, delay = 0, y = 34, as = 'div', amount = 0.25, id, panel = false }: RiseProps) {
   const Tag = m[as];
   return (
     <Tag
       id={id}
       className={className}
-      initial={blur ? { opacity: 0, y, filter: 'blur(6px)' } : { opacity: 0, y }}
-      whileInView={blur ? { opacity: 1, y: 0, filter: 'blur(0px)' } : { opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount }}
-      transition={{ duration: 1, ease: GLIDE, delay, opacity: { duration: 0.7, ease: GLIDE, delay } }}
+      transition={{ ...(panel ? SPRING.settle : SPRING.arrive), delay, opacity: fade(delay) }}
     >
       {children}
     </Tag>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Groups that arrive one after another
+// ---------------------------------------------------------------------------
+
+const staggerGroup: Variants = {
+  hidden: {},
+  shown: (custom: { gap: number; delay: number }) => ({ transition: { staggerChildren: custom.gap, delayChildren: custom.delay } }),
+};
+
+const staggerChild: Variants = {
+  hidden: (y: number) => ({ opacity: 0, y }),
+  shown: { opacity: 1, y: 0, transition: { ...SPRING.arrive, opacity: fade() } },
+};
+
+interface StaggerProps {
+  children: ReactNode;
+  className?: string;
+  as?: 'div' | 'ul' | 'ol';
+  /** Seconds between one child and the next. */
+  gap?: number;
+  delay?: number;
+  amount?: number;
+}
+
+/**
+ * A list whose items rise in turn. The group decides when to start (once it
+ * is on screen) and how far apart the items are; each `StaggerItem` brings its
+ * own spring. One observer for the group rather than one per item.
+ */
+export function Stagger({ children, className, as = 'div', gap = 0.07, delay = 0, amount = 0.2 }: StaggerProps) {
+  const Tag = m[as];
+  return (
+    <Tag className={className} initial="hidden" whileInView="shown" viewport={{ once: true, amount }} variants={staggerGroup} custom={{ gap, delay }}>
+      {children}
+    </Tag>
+  );
+}
+
+export function StaggerItem({ children, className, as = 'div', y = 22 }: { children: ReactNode; className?: string; as?: 'div' | 'li' | 'article'; y?: number }) {
+  const Tag = m[as];
+  return <Tag className={className} variants={staggerChild} custom={y}>{children}</Tag>;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,6 +271,29 @@ export function CountUp({ value, delay = 0, className }: CountUpProps) {
       <span className="sr-only">{grouped(value)}</span>
     </span>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Stages that come forward as they are scrolled to
+// ---------------------------------------------------------------------------
+
+/**
+ * A night stage arriving: it starts a little small and a little low, and grows
+ * to full size as its top edge travels up the screen.
+ *
+ * The scroll position sets where it should be; a spring carries it there. So
+ * the stage follows the scroll exactly while the reader is scrolling, and
+ * eases to rest when they stop, instead of freezing mid-way. Scale and
+ * translate only: the stage is one composited layer being moved, and nothing
+ * inside it is laid out again.
+ */
+export function useStageArrival(ref: RefObject<HTMLElement | null>): { scale: MotionValue<number>; y: MotionValue<number> } | undefined {
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 0.3'] });
+  const eased = useSpring(scrollYProgress, SPRING.follow);
+  const scale = useTransform(eased, [0, 1], [0.94, 1]);
+  const y = useTransform(eased, [0, 1], [56, 0]);
+  return reduce ? undefined : { scale, y };
 }
 
 // ---------------------------------------------------------------------------

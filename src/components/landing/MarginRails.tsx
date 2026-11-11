@@ -30,7 +30,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import katex from 'katex';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
-import { GLIDE } from './kit';
+import { GLIDE, SPRING, fade } from './kit';
 import { scrollToTarget } from './smoothScroll';
 import { FIGURE_POINTS, figure, type FigureName } from './marginFigures';
 import '../../styles/landing-margins.css';
@@ -44,6 +44,10 @@ interface Chapter {
   note: string;
 }
 
+/** How far each margin pattern travels before it repeats, in px. Must match landing-margins.css. */
+const GRID_PERIOD = 110;
+const RULER_PERIOD = 50;
+
 const CHAPTERS: Chapter[] = [
   { id: 'top', label: 'Opening', title: 'Stay with the question', fig: 'lorenz', figName: 'Lorenz attractor', note: 'never repeats, never gets lost' },
   { id: 'idea', label: 'The idea', title: 'Just right', fig: 'bell', figName: 'A Gaussian bell', note: 'the sweet spot sits in the middle' },
@@ -52,7 +56,7 @@ const CHAPTERS: Chapter[] = [
   { id: 'topics', label: 'Topics', title: 'Four rooms', fig: 'trefoil', figName: 'Trefoil knot', note: 'the simplest knot that won’t undo' },
   { id: 'archive', label: 'Past papers', title: 'Since 1959', fig: 'helix', figName: 'Double helix', note: 'one more rung every year' },
   { id: 'workspace', label: 'Practise', title: 'Get unstuck', fig: 'mobius', figName: 'Möbius strip', note: 'one side, one edge — keep going' },
-  { id: 'plans', label: 'Plans', title: 'Free to start', fig: 'tesseract', figName: 'Tesseract', note: 'a cube, one dimension further' },
+  { id: 'plans', label: 'Pricing', title: 'Free to practise', fig: 'tesseract', figName: 'Tesseract', note: 'a cube, one dimension further' },
   { id: 'faq', label: 'Questions', title: 'Answered', fig: 'torus', figName: 'Torus', note: 'every loop comes back around' },
   { id: 'begin', label: 'Begin', title: 'You’re allowed', fig: 'sphere', figName: 'Sphere', note: 'start anywhere, it’s all the same' },
 ];
@@ -126,8 +130,12 @@ function Rails() {
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const sections = CHAPTERS.map(c => document.getElementById(c.id));
+    // The drifting patterns, and the last value written to each thing that is only touched on change.
+    const grids = Array.from(root.querySelectorAll<HTMLElement>('.mr-grid > i'));
+    const rulers = Array.from(root.querySelectorAll<HTMLElement>('.mr-ruler > i'));
+    const written = { arrive: '', tail: '', reading: '', heading: '', moving: false };
     // The ink stages, and the archive's full-bleed marquee. Where one reaches into a margin, the margin steps aside for it.
-    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-final-stage, .lx-marquee'));
+    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee'));
     const hero = document.querySelector<HTMLElement>('.lx-hero-stage');
     const masks = ['', ''];
     type Box = { top: number; bottom: number; left: number; right: number };
@@ -410,20 +418,41 @@ function Rails() {
       // The rails arrive as the hero is covered.
       const ideaTop = tops[1];
       const arrive = Number.isFinite(ideaTop) ? clamp((vh - ideaTop) / (vh * 0.7)) : 1;
-      root.style.setProperty('--mr-in', arrive.toFixed(3));
-      root.style.setProperty('--mr-y', String(Math.round(y)));
-      root.style.setProperty('--mr-v', clamp(Math.abs(vel) / 40).toFixed(3));
+      /*
+       * Everything below is written as a transform, or only when its value has
+       * actually changed. This loop runs on every frame of a scroll, so a
+       * property that needs layout or paint here is paid for sixty or more
+       * times a second: the patterns used to drift by `background-position`
+       * (a repaint of both rails per frame) and the comet by `top` (a layout).
+       */
+      const arrived = arrive.toFixed(3);
+      if (arrived !== written.arrive) { written.arrive = arrived; root.style.setProperty('--mr-in', arrived); }
+
+      // Graph paper drifts at a third of the scroll, the ruler with it; each wraps at its own period.
+      const gridShift = `translate3d(0,${(-((y * 0.3) % GRID_PERIOD)).toFixed(1)}px,0)`;
+      const rulerShift = `translate3d(0,${(-(y % RULER_PERIOD)).toFixed(1)}px,0)`;
+      for (const node of grids) node.style.transform = gridShift;
+      for (const node of rulers) node.style.transform = rulerShift;
+
+      const speed = clamp(Math.abs(vel) / 40);
+      const tail = speed.toFixed(2);
+      if (tail !== written.tail && cometRef.current) { written.tail = tail; cometRef.current.style.setProperty('--mr-v', tail); }
+      // The numeral inks in while the page is moving. A switch with some slack either side, so it does not flicker at the threshold.
+      const moving = written.moving ? speed > 0.04 : speed > 0.12;
+      if (moving !== written.moving) { written.moving = moving; root.toggleAttribute('data-moving', moving); }
 
       if (fillRef.current) fillRef.current.style.transform = `scaleY(${along})`;
-      if (cometRef.current) cometRef.current.style.top = `${along * 100}%`;
+      if (cometRef.current) cometRef.current.style.transform = `translate3d(0,${(along * 100).toFixed(3)}%,0)`;
       const doc = document.documentElement.scrollHeight - vh;
       const pct = Math.round(clamp(doc > 0 ? y / doc : 0) * 100);
       if (pct !== shownPct && pctRef.current) {
         shownPct = pct;
         pctRef.current.textContent = String(pct).padStart(3, '0');
       }
-      if (velRef.current) velRef.current.textContent = Math.abs(vel).toFixed(1).padStart(4, '0');
-      if (arrowRef.current) arrowRef.current.dataset.dir = Math.abs(vel) < 0.3 ? 'still' : vel > 0 ? 'down' : 'up';
+      const reading = Math.abs(vel).toFixed(1).padStart(4, '0');
+      if (reading !== written.reading && velRef.current) { written.reading = reading; velRef.current.textContent = reading; }
+      const heading = Math.abs(vel) < 0.3 ? 'still' : vel > 0 ? 'down' : 'up';
+      if (heading !== written.heading && arrowRef.current) { written.heading = heading; arrowRef.current.dataset.dir = heading; }
 
       const rects: Box[] = stages.map(st => {
         const r = st.getBoundingClientRect();
@@ -470,8 +499,8 @@ function Rails() {
       {/* ---------------------------------------------------------- left */}
       <div className="mr-rail mr-left" ref={leftRef}>
         <canvas className="mr-flow" ref={flowLeftRef} />
-        <div className="mr-grid" />
-        <div className="mr-ruler" />
+        <div className="mr-grid"><i /></div>
+        <div className="mr-ruler"><i /></div>
 
         <div className="mr-left-inner">
           <div className="mr-chapter">
@@ -499,10 +528,10 @@ function Rails() {
               <AnimatePresence initial={false}>
                 <m.p
                   key={chapter.id}
-                  initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, y: -10, filter: 'blur(6px)' }}
-                  transition={{ duration: 0.8, ease: GLIDE }}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ ...SPRING.arrive, opacity: fade() }}
                 >
                   {chapter.title}
                 </m.p>
@@ -552,8 +581,8 @@ function Rails() {
       {/* --------------------------------------------------------- right */}
       <div className="mr-rail mr-right" ref={rightRef}>
         <canvas className="mr-flow" ref={flowRightRef} />
-        <div className="mr-grid" />
-        <div className="mr-ruler" />
+        <div className="mr-grid"><i /></div>
+        <div className="mr-ruler"><i /></div>
 
         <div className="mr-stream" ref={streamRef}>
           {Array.from({ length: SLOTS }, (_, i) => <div className="mr-formula" key={i} />)}
@@ -626,7 +655,7 @@ function Rails() {
 }
 
 const digitRoll = {
-  enter: (d: number) => ({ y: d > 0 ? '100%' : '-100%', opacity: 0, filter: 'blur(8px)' }),
-  center: { y: '0%', opacity: 1, filter: 'blur(0px)' },
-  exit: (d: number) => ({ y: d > 0 ? '-100%' : '100%', opacity: 0, filter: 'blur(8px)' }),
+  enter: (d: number) => ({ y: d > 0 ? '100%' : '-100%', opacity: 0 }),
+  center: { y: '0%', opacity: 1 },
+  exit: (d: number) => ({ y: d > 0 ? '-100%' : '100%', opacity: 0 }),
 };

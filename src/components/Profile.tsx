@@ -5,7 +5,7 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { CalendarDays, Camera, Check, Flame, Lock, LogOut, MapPin, Target, Trophy, Users } from 'lucide-react';
+import { CalendarDays, Camera, Check, Flame, Lock, LogOut, MapPin, Share2, Target, Trophy, Users } from 'lucide-react';
 import { UserStats, Problem, Topic } from '../../shared/types';
 import { RANK_TIERS, TOPIC_LIST, getRankForPoints, nextRankFor } from '../lib/topics';
 import { AnimatedNumber, StaggerItem } from './motion';
@@ -14,6 +14,8 @@ import { ACHIEVEMENTS } from '../domain/achievements';
 import { ACCEPTED_IMAGE_TYPES } from '../services/data/media';
 import { clearAvatar, saveAvatar, type AvatarResult } from '../services/data/avatar';
 import UserAvatar from './UserAvatar';
+import ShareCard from './ShareCard';
+import { usePlan } from '../services/data/plan';
 import '../styles/profile.css';
 
 interface ProfileProps {
@@ -22,6 +24,7 @@ interface ProfileProps {
   problems: Problem[];
   onLogout: () => void;
   onTriggerAlert?: (achievement: any) => void;
+  onSeePlans?: () => void;
 }
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
@@ -233,7 +236,7 @@ function TopicBars({ skills }: { skills: UserStats['skills'] }) {
  * The page
  * ------------------------------------------------------------------------ */
 
-export default function Profile({ userStats, completedProblems, problems, onLogout }: ProfileProps) {
+export default function Profile({ userStats, completedProblems, problems, onLogout, onSeePlans }: ProfileProps) {
   const solvedQuestions = problems.filter((p) => completedProblems.includes(p.id));
   const rank = getRankForPoints(userStats.points);
   const nextTier = nextRankFor(userStats.points);
@@ -242,13 +245,15 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
 
   const { profile, refreshProfile } = useAuth();
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const plan = usePlan(profile?.id ?? null);
   const badges = ACHIEVEMENTS.map((a) => ({
     ...a,
     unlocked: Boolean(profile) && a.condition(userStats, solvedQuestions.length),
   }));
   const unlockedCount = badges.filter((b) => b.unlocked).length;
 
-  const displayName = profile?.display_name || profile?.username || 'Calculix Learner';
+  const displayName = profile?.display_name || profile?.username || 'Guest learner';
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : null;
   const hasAnswers = userStats.completedCount > 0 || userStats.accuracy > 0;
   const activeDays = userStats.learningTimeline.length;
@@ -277,6 +282,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
                 <p className="pf-handle">{profile?.username ? `@${profile.username}` : 'No username yet'}<span className="pf-chip is-level">{userStats.level || 'Unplaced'}</span><span className="pf-chip is-tier"><Trophy size={12} aria-hidden="true" />{rank.name}</span></p>
               </div>
               <div className="pf-header-actions">
+                {profile && <button type="button" className="pf-btn" onClick={() => setShareOpen(true)}><Share2 size={15} aria-hidden="true" />Share card</button>}
                 {profile && <button type="button" className="pf-btn" onClick={() => setPhotoOpen(true)}><Camera size={15} aria-hidden="true" />{profile.avatar_url ? 'Change photo' : 'Add photo'}</button>}
                 <m.button onClick={onLogout} whileTap={{ scale: 0.96 }} className="pf-btn is-quiet"><LogOut size={15} aria-hidden="true" />Sign out</m.button>
               </div>
@@ -345,6 +351,8 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
         </div>
       </section>
 
+      {profile && <ShareCard open={shareOpen} onClose={() => setShareOpen(false)} allDesigns={plan.can('share-designs')} onSeePlans={() => { setShareOpen(false); onSeePlans?.(); }}
+        data={{ name: displayName, handle: profile.username, tier: rank.name, level: userStats.level ?? null, points: userStats.points, solved: solvedQuestions.length, streak: userStats.streak, accuracy: hasAnswers ? userStats.accuracy : null, skills: userStats.skills }} />}
       {profile && <PhotoDialog open={photoOpen} onClose={() => setPhotoOpen(false)} userId={profile.id} current={profile.avatar_url} onSaved={refreshProfile} />}
     </div>
   );

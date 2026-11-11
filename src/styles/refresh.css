@@ -78,22 +78,12 @@ button:not(:disabled), a, summary, select { cursor: pointer; }
 .workspace-logo { width: 32px; height: 34px; background: #ccff7b; color: #174e36; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; }
 .workspace-logo > svg { width: 24px; height: 24px; }
 .cx-mark-glyph { width: 22px; height: 22px; }
-.workspace-space { display: flex; align-items: center; gap: 9px; padding: 15px 8px 20px; margin-top: 26px; border-bottom: 1px solid var(--ln); }
-.workspace-space-icon { height: 34px; width: 34px; display: grid; place-items: center; background: var(--sf-sunken); border-radius: 10px; color: var(--ac); }
-.workspace-space strong { display: block; font-size: 11px; font-weight: 650; }
-.workspace-space small { display: block; color: var(--ct-subtle); font-size: 9px; margin-top: 3px; }
-.workspace-space > svg { margin-left: auto; color: var(--ac); }
 .workspace-nav-label { margin: 24px 12px 10px; font-size: 9px; font-weight: 600; letter-spacing: .14em; color: var(--ct-subtle); }
 .workspace-nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin: 3px 0; border-radius: 11px; color: var(--ct-muted); text-align: left; font-size: 12px; font-weight: 550; transition: background .16s, color .16s; }
 .workspace-nav-item:hover { background: var(--sf-sunken); color: var(--ct); }
 .workspace-nav-item[aria-current='page'] { background: #e9f3df; color: #245739; font-weight: 650; }
 [data-theme='dark'] .workspace-nav-item[aria-current='page'] { background: #31462b; color: #ccff7b; }
 .workspace-active-dot { height: 6px; width: 6px; border-radius: 50%; background: #497247; margin-left: auto; }
-.workspace-pocket { margin: 28px 3px 18px; background: #edf4e5; border: 1px solid #dfebd5; border-radius: 16px; padding: 17px 15px; text-decoration: none; color: #245739; }
-.workspace-pocket > span { display: flex; justify-content: space-between; margin-bottom: 16px; }
-.workspace-pocket strong { font-size: 13px; font-weight: 650; letter-spacing: -.3px; }
-.workspace-pocket p { font-size: 10px; line-height: 1.6; margin: 5px 0 14px; color: #607653; }
-.workspace-pocket small { display: flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 650; }
 .workspace-sidebar-bottom { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--ln); }
 .workspace-user { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 4px 8px; }
 .workspace-avatar { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: #ede3d4; color: #715c43; display: grid; place-items: center; font-size: 11px; font-weight: 650; }
@@ -169,7 +159,6 @@ button:not(:disabled), a, summary, select { cursor: pointer; }
 body { font-family:'DM Sans','Geist',sans-serif; }
 .workspace-refresh { font-family:'DM Sans','Geist',sans-serif; }
 .workspace-logo,.cx-mark { background:#dce7e8; color:#426c7b; }
-.workspace-pocket { background:#e7edeb; border-color:#dce5e3; color:#42656c; }.workspace-pocket p { color:#697d7b; }
 .workspace-nav-item[aria-current='page'] { background:#e5ebea; color:#3d6470; }[data-theme='dark'] .workspace-nav-item[aria-current='page'] { background:#30464e; color:#bad3db; }
 .workspace-active-dot { background:#618695; }
 .workspace-content .type-title { font-family:'Manrope','Geist',sans-serif; font-weight:500; }
@@ -179,13 +168,8 @@ body { font-family:'DM Sans','Geist',sans-serif; }
 /* Readability pass for the authenticated workspace. The original refresh
    treatment used editorial micro-type; these sizes keep the same hierarchy
    while making the main screen comfortable at normal viewing distance. */
-.workspace-space strong { font-size:14px; }
-.workspace-space small { font-size:12px; }
 .workspace-nav-label { font-size:10px; }
 .workspace-nav-item { font-size:14px; }
-.workspace-pocket strong { font-size:14px; }
-.workspace-pocket p { font-size:12px; }
-.workspace-pocket small { font-size:11px; }
 .workspace-user strong { font-size:14px; }
 .workspace-user small { font-size:12px; }
 .workspace-breadcrumb { font-size:14px; }

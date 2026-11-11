@@ -1,0 +1,133 @@
+/*
+ * "Your desk": a night stage with two objects lying on it.
+ *
+ * The scratch sheet and the index card are paper in every theme, because they
+ * are things on the desk rather than panels of the page. Each sits a degree or
+ * two off square and straightens under the pointer, the way you would
+ * straighten a sheet before writing on it.
+ */
+.lx-desk { padding: 0 var(--lx-frame); }
+.lx-desk-stage {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--lx-stage-r);
+  color: var(--lx-on-night);
+  padding: var(--lx-section) 0;
+  background:
+    radial-gradient(46% 60% at 76% 46%, oklch(34% 0.06 76 / 0.34), transparent 72%),
+    radial-gradient(40% 50% at 0% 0%, oklch(28% 0.05 250 / 0.5), transparent 70%),
+    linear-gradient(170deg, var(--lx-night-1), var(--lx-night-0));
+}
+/* The grain of the desk: a few long, faint lines, lit by the lamp on the right. */
+.lx-desk-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: repeating-linear-gradient(96deg, oklch(100% 0 0 / 0.022) 0 1px, transparent 1px 86px, oklch(100% 0 0 / 0.012) 86px 87px, transparent 87px 210px);
+  -webkit-mask-image: radial-gradient(70% 80% at 72% 50%, #000, transparent);
+  mask-image: radial-gradient(70% 80% at 72% 50%, #000, transparent);
+}
+.lx-desk-grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 7fr); gap: clamp(36px, 5vw, 90px); align-items: center; }
+.lx-desk-copy .lx-h2 { margin: 22px 0 26px; font-size: clamp(44px, 5.4vw, 88px); }
+.lx-desk-points { display: grid; gap: 14px; margin: clamp(26px, 4vh, 40px) 0 0; padding: 0; list-style: none; max-width: 46ch; }
+.lx-desk-points li { position: relative; padding-left: 26px; font-size: 16px; line-height: 1.55; color: var(--lx-on-night-body); }
+.lx-desk-points li::before { content: ''; position: absolute; left: 2px; top: 0.72em; width: 12px; height: 1.5px; background: var(--lx-brass); }
+.lx-desk-points b { font-weight: 560; color: var(--lx-on-night); }
+
+.lx-desk-objects { position: relative; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: clamp(14px, 1.6vw, 26px); align-items: end; }
+
+/* ---- The sheet ---------------------------------------------------------- */
+.lx-desk-sheet { position: relative; rotate: -1.6deg; transition: rotate 0.7s var(--lx-glide); }
+.lx-desk-paper {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 3px;
+  background-color: #fdfbf4;
+  background-image:
+    linear-gradient(#2c4a5726 1px, transparent 1px), linear-gradient(90deg, #2c4a5726 1px, transparent 1px),
+    linear-gradient(#2c4a5712 1px, transparent 1px), linear-gradient(90deg, #2c4a5712 1px, transparent 1px);
+  background-size: 20% 26.667%, 20% 26.667%, 4% 5.333%, 4% 5.333%;
+  box-shadow: 0 1px 0 #fff inset, 0 2px 3px oklch(4% 0.02 230 / 0.4), 0 34px 60px -24px oklch(4% 0.02 230 / 0.75);
+}
+.lx-desk-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.lx-desk-canvas.is-eraser { cursor: cell; }
+.lx-desk-tape { position: absolute; z-index: 2; top: -12px; left: 50%; width: 104px; height: 27px; margin-left: -52px; rotate: 2deg; background: oklch(88% 0.07 92 / 0.72); box-shadow: 0 1px 3px oklch(4% 0.02 230 / 0.35); clip-path: polygon(0 0, 100% 0, 97% 25%, 100% 50%, 97% 75%, 100% 100%, 0 100%, 3% 75%, 0 50%, 3% 25%); }
+.lx-desk-labels { position: absolute; inset: 0; pointer-events: none; }
+.lx-desk-labels span { position: absolute; font-family: var(--lx-hand); font-size: clamp(22px, 2.3vw, 34px); font-weight: 600; line-height: 1; color: #22333b; opacity: 0; translate: 0 6px; transition: opacity 0.6s var(--lx-glide), translate 0.6s var(--lx-glide); }
+.lx-desk-labels span.is-red { color: #c2552d; }
+.lx-desk-labels.is-shown span { opacity: 1; translate: 0 0; }
+.lx-desk-labels.is-shown span:nth-child(2) { transition-delay: 0.1s; }
+.lx-desk-labels.is-shown span:nth-child(3) { transition-delay: 0.2s; }
+.lx-desk-labels.is-shown span:nth-child(4) { transition-delay: 0.45s; }
+
+.lx-desk-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 0 2px; }
+.lx-desk-tools > div { display: flex; gap: 6px; padding: 5px; border-radius: 999px; background: oklch(100% 0 0 / 0.07); box-shadow: 0 0 0 1px var(--lx-night-rule) inset; }
+.lx-desk-tools [role='radio'] { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; transition: background 0.25s, scale 0.25s var(--lx-press); }
+.lx-desk-tools [role='radio']:active { scale: 0.9; }
+.lx-desk-tools [role='radio'][aria-checked='true'] { background: oklch(100% 0 0 / 0.16); }
+.lx-desk-tools i { width: 16px; height: 16px; border-radius: 50%; background: #f1ece2; box-shadow: 0 0 0 1px oklch(0% 0 0 / 0.25) inset; }
+.lx-desk-tools .is-accent i { background: #e2785a; }
+.lx-desk-tools .is-mark i { background: #e2a93b; border-radius: 4px; }
+.lx-desk-tools .is-eraser i { background: transparent; box-shadow: 0 0 0 2px var(--lx-on-night-muted) inset; }
+.lx-desk-clear { padding: 8px 4px; font-family: var(--lx-mono); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lx-on-night-muted); cursor: pointer; transition: color 0.25s; }
+.lx-desk-clear:disabled { opacity: 0.4; cursor: default; }
+.lx-desk-nudge { position: absolute; right: 6%; top: 9%; margin: 0; display: flex; align-items: flex-start; gap: 4px; font-family: var(--lx-hand); font-size: clamp(19px, 1.7vw, 25px); font-weight: 600; color: #7d8d8f; rotate: 3deg; pointer-events: none; animation: lx-desk-nudge 0.8s var(--lx-glide) 0.8s both; }
+.lx-desk-nudge svg { width: 44px; height: 30px; margin-top: 14px; }
+@keyframes lx-desk-nudge { from { opacity: 0; translate: 0 -8px; } }
+
+/* ---- The index card ----------------------------------------------------- */
+.lx-desk-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  padding: clamp(20px, 2vw, 28px);
+  rotate: 1.4deg;
+  border-radius: 4px;
+  color: var(--lx-ink);
+  background: linear-gradient(#f8f4e8, #f3eedf);
+  /* The card's ruled lines. */
+  background-image: repeating-linear-gradient(transparent 0 31px, #2c4a5714 31px 32px), linear-gradient(#f8f4e8, #f3eedf);
+  box-shadow: 0 2px 3px oklch(4% 0.02 230 / 0.4), 0 30px 54px -24px oklch(4% 0.02 230 / 0.75);
+  transition: rotate 0.7s var(--lx-glide);
+}
+.lx-desk-pin { position: absolute; top: -9px; left: 50%; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #f4a58c, #c2552d 55%, #7d2f14); box-shadow: 0 5px 6px -2px oklch(4% 0.02 230 / 0.6); }
+.lx-desk-date { display: grid; gap: 6px; width: 100%; font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lx-muted); }
+.lx-desk-date input { width: 100%; min-height: 42px; padding: 0 10px; border: 1px solid #2c4a5733; border-radius: 6px; background: #fffdf6; color: var(--lx-ink); font: 500 15px var(--lx-sans); letter-spacing: 0; color-scheme: light; }
+.lx-desk-count { display: grid; gap: 2px; margin: 0; }
+.lx-desk-count strong { font-family: var(--lx-serif); font-size: clamp(60px, 6vw, 92px); font-weight: 400; line-height: 0.9; letter-spacing: -0.05em; }
+.lx-desk-count span { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--lx-pencil); }
+.lx-desk-track { display: flex; gap: 3px; width: 100%; height: 10px; margin: 2px 0 0; padding: 0; list-style: none; }
+.lx-desk-track li { flex: var(--span) 1 0; min-width: 3px; border-radius: 3px; background: #7a97a0; transition: flex-grow 0.5s var(--lx-glide); }
+.lx-desk-track li.is-build { background: #209d8c; }
+.lx-desk-track li.is-sharpen { background: #c8842a; }
+.lx-desk-legend { display: flex; align-items: center; gap: 5px; margin: -6px 0 0; font-size: 12px; color: var(--lx-muted); }
+.lx-desk-legend i { width: 8px; height: 8px; margin-left: 8px; border-radius: 2px; background: #7a97a0; }
+.lx-desk-legend i:first-child { margin-left: 0; }
+.lx-desk-legend i.is-build { background: #209d8c; }
+.lx-desk-legend i.is-sharpen { background: #c8842a; }
+.lx-desk-week { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--lx-body); }
+.lx-desk-week b { font-weight: 600; color: var(--lx-ink); }
+.lx-desk-card .lx-btn { min-height: 46px; font-size: 15px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .lx-desk-sheet:hover, .lx-desk-card:hover { rotate: 0deg; }
+  .lx-desk-clear:hover:not(:disabled) { color: var(--lx-on-night); }
+}
+
+@media (max-width: 1180px) {
+  .lx-desk-grid { grid-template-columns: minmax(0, 1fr); }
+  .lx-desk-copy { max-width: 720px; }
+}
+@media (max-width: 720px) {
+  .lx-desk-objects { grid-template-columns: minmax(0, 1fr); gap: 34px; }
+  .lx-desk-sheet { rotate: -1deg; }
+  .lx-desk-card { rotate: 0.8deg; }
+  .lx-desk-nudge { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-desk-sheet, .lx-desk-card, .lx-desk-labels span { transition: none; }
+  .lx-desk-nudge { animation: none; }
+}

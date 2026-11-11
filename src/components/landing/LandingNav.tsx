@@ -23,7 +23,7 @@ export const NAV_LINKS = [
   { id: 'playground', label: 'Try one', chapter: '03' },
   { id: 'topics', label: 'Topics', chapter: '04' },
   { id: 'archive', label: 'Past papers', chapter: '05' },
-  { id: 'plans', label: 'Plans', chapter: '07' },
+  { id: 'plans', label: 'Pricing', chapter: '08' },
 ] as const;
 
 /** Where a jump lands relative to its section, so a heading never hides under the island. */

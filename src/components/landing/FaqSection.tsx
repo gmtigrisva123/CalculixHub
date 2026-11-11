@@ -8,15 +8,18 @@
 
 import { useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { Arrow, Eyebrow, GLIDE, Rise, SplitText } from './kit';
+import { PLANS, dollars } from '../../../shared/plans';
+import { Arrow, Eyebrow, GLIDE, Rise, SPRING, SplitText, fade } from './kit';
 
 const FAQS: [string, string][] = [
   ['What is CalculixHub?', 'A place to practise contest maths: find your level, solve real past problems, and learn from full solutions.'],
   ['Do I need to be an Olympiad student?', 'No. The quiz finds a good starting point for you, from AMC up to IMO.'],
+  ['Is Free really free?', 'Yes. Placement, practice, every past paper and the Arena are free, with no trial clock and no adverts.'],
+  ['What does Pro add, and what does it cost?', `${dollars(PLANS.pro.price.monthly)} a month, or ${dollars(PLANS.pro.price.yearly)} a year. It adds a week-by-week plan up to your contest date, printable progress reports and every share-card design. Anything still being built is marked on the pricing table.`],
+  ['Can I cancel?', 'Any time, from the Plan page. You keep Pro until the period you paid for ends.'],
   ['What if I get stuck?', 'Take a hint first. When you’re ready, read the full solution. You can come back to any problem.'],
-  ['When can I see a solution?', 'Once you solve it, after three wrong tries, or whenever you ask for help. Asking for help means no points for that problem.'],
   ['How do the AI explanations work?', 'You add your own Gemini API key in Settings. Any usage is billed by Google, not by us.'],
-  ['Can I buy Pro or Max now?', 'Not yet. They’re still being built and have no price.'],
+  ['Can I take my data with me, or delete it?', 'Both. Settings has a download of everything stored about you, and a delete-account button that removes it for good.'],
 ];
 
 export default function FaqSection() {
@@ -25,7 +28,7 @@ export default function FaqSection() {
     <section className="lx-faq" id="faq" data-tone="paper" aria-labelledby="lx-faq-title">
       <div className="lx-wrap lx-faq-grid">
         <header className="lx-faq-head">
-          <Eyebrow index="08">FAQ</Eyebrow>
+          <Eyebrow index="09">FAQ</Eyebrow>
           <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={'Questions,\n*answered.*'} />
           <Rise delay={0.12}>
             <a className="lx-link" href="/?auth=signup&tab=community">Ask in the community <Arrow size={15} /></a>
@@ -39,7 +42,7 @@ export default function FaqSection() {
                 key={question}
                 className="lx-faq-item"
                 data-open={expanded || undefined}
-                variants={{ hidden: { opacity: 0, y: 22 }, shown: { opacity: 1, y: 0, transition: { duration: 0.7, ease: GLIDE } } }}
+                variants={{ hidden: { opacity: 0, y: 22 }, shown: { opacity: 1, y: 0, transition: { ...SPRING.arrive, opacity: fade() } } }}
               >
                 <h3>
                   <button type="button" onClick={() => setOpen(expanded ? null : index)} aria-expanded={expanded} aria-controls={`lx-faq-${index}`} id={`lx-faq-q-${index}`}>

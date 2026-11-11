@@ -1,0 +1,114 @@
+/*
+ * Settings: the grouped index, and the Account group (profile and sign-in,
+ * your data, the danger zone). Builds on settings.css and uses its tokens.
+ */
+
+/* Group labels: in the index, and as quiet rules between runs of cards. */
+.se-index-label { margin: 12px 12px 4px; font: 600 10px/1.2 var(--se-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--se-subtle); }
+.se-index-label:first-child { margin-top: 6px; }
+.se-index button.is-danger[aria-current='true'] { background: color-mix(in srgb, var(--se-bad) 9%, var(--se-surface)); }
+.se-index button.is-danger[aria-current='true']::before { background: var(--se-bad); }
+.se-index button.is-danger[aria-current='true'] svg { color: var(--se-bad); }
+
+.se-group { display: flex; align-items: center; gap: 14px; margin: 14px 4px 0; font: 600 11px/1.2 var(--se-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--se-subtle); }
+.se-group::after { content: ''; flex: 1; height: 1px; background: var(--se-line); }
+.se-group:first-child { margin-top: 0; }
+
+.se-key-state { display: inline-flex; align-items: center; gap: 5px; }
+.se-key-state.is-error { background: color-mix(in srgb, var(--se-bad) 12%, transparent); color: var(--se-bad); }
+
+/* --------------------------------------------------------------------------
+ * Profile & sign-in
+ * ------------------------------------------------------------------------ */
+
+.se-identity { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--se-line-faint); border-radius: 18px; background: var(--se-sunken); }
+.se-identity-face { flex: none; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--se-surface); box-shadow: 0 0 0 1px var(--se-line); }
+.se-identity > div { display: grid; gap: 2px; min-width: 0; }
+.se-identity b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.se-identity > div span { font: 500 12.5px/1.3 var(--se-mono); color: var(--se-subtle); }
+.se-identity-mail { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; min-width: 0; font-size: 13.5px; color: var(--se-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.se-identity-mail svg { flex: none; }
+
+.se-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; margin-top: 18px; }
+.se-field { display: grid; gap: 7px; min-width: 0; }
+.se-field.is-wide { grid-column: 1 / -1; }
+.se-field > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--se-ink); }
+.se-field small { font-size: 12px; font-weight: 400; color: var(--se-subtle); font-variant-numeric: tabular-nums; }
+.settings-page .se-field :is(input, textarea) { width: 100%; padding: 12px 14px; border: 1px solid var(--se-line); border-radius: 12px; background: var(--sf, var(--se-sunken)); color: var(--se-ink); font: 400 14.5px/1.5 var(--se-sans); resize: vertical; transition: border-color .2s, box-shadow .2s; }
+.settings-page .se-field :is(input, textarea):focus-visible { outline: none; border-color: var(--se-tone); box-shadow: 0 0 0 4px color-mix(in srgb, var(--se-tone) 16%, transparent); }
+.se-fields-foot { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.se-fields-foot span { font-size: 13.5px; }
+.se-fields-foot .is-ok { color: var(--se-good); }
+.se-fields-foot .is-error { color: var(--se-bad); }
+
+/* --------------------------------------------------------------------------
+ * Rows: a thing you can do, and the button that does it
+ * ------------------------------------------------------------------------ */
+
+.se-rows { display: grid; margin-top: 6px; }
+.se-fields + .se-rows { margin-top: 22px; border-top: 1px solid var(--se-line-faint); }
+.se-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 0; }
+.se-row + .se-row { border-top: 1px solid var(--se-line-faint); }
+.se-row:last-child { padding-bottom: 0; }
+.se-row > div:first-child { min-width: 0; }
+.se-row b { font-size: 14.5px; font-weight: 600; }
+.settings-page .se-row p { margin-top: 3px; max-width: 54ch; font-size: 13.5px; line-height: 1.5; color: var(--se-muted); text-wrap: pretty; }
+.se-row .se-btn { flex: none; }
+.se-row-actions { display: flex; gap: 8px; flex: none; }
+
+.se-guest { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding: 18px; border: 1px dashed var(--se-line); border-radius: 18px; }
+.se-guest p { font-size: 14px; color: var(--se-muted); }
+.se-guest .se-btn { text-decoration: none; }
+
+/* --------------------------------------------------------------------------
+ * Danger zone
+ * ------------------------------------------------------------------------ */
+
+.se-card.is-danger { position: relative; overflow: hidden; border-color: color-mix(in srgb, var(--se-bad) 34%, var(--se-line)); background: color-mix(in srgb, var(--se-bad) 3%, var(--se-surface)); }
+/* A hazard tape along the top edge: the one place on the page that is meant to look unlike the rest. */
+.se-card.is-danger::before { content: ''; position: absolute; inset: 0 0 auto; height: 5px; background: repeating-linear-gradient(-45deg, var(--se-bad) 0 10px, transparent 10px 20px); opacity: .55; }
+.se-card.is-danger .se-card-icon { background: color-mix(in srgb, var(--se-bad) 11%, var(--se-surface)); color: var(--se-bad); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--se-bad) 24%, transparent); }
+.se-btn.is-destructive { background: var(--se-bad); color: #fff; box-shadow: 0 10px 22px -14px var(--se-bad); }
+:root[data-theme='dark'] .se-btn.is-destructive { color: #2a0d05; }
+.se-btn.is-destructive:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* --------------------------------------------------------------------------
+ * The typed confirmation
+ * ------------------------------------------------------------------------ */
+
+.se-confirm { width: min(460px, calc(100vw - 32px)); margin: auto; padding: 0; border: 1px solid var(--ln); border-radius: 24px; background: var(--sf-raised); color: var(--ct); box-shadow: 0 40px 100px -30px #000000a6; font-family: 'Geist', 'DM Sans', system-ui, sans-serif; }
+.se-confirm::backdrop { background: #0b161b99; backdrop-filter: blur(6px); }
+.se-confirm[open] { animation: se-confirm-in .28s cubic-bezier(.22, 1, .36, 1); }
+@keyframes se-confirm-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+.se-confirm form { display: grid; gap: 16px; padding: 26px; }
+.se-confirm-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: color-mix(in srgb, #b13a26 12%, transparent); color: #b13a26; }
+:root[data-theme='dark'] .se-confirm-mark { color: #f0957c; }
+.se-confirm h2 { margin: 0; font: 400 26px/1.15 'Newsreader', Georgia, serif; letter-spacing: -.02em; }
+.se-confirm ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.se-confirm li { position: relative; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--ct-muted); }
+.se-confirm li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
+.se-confirm-field { display: grid; gap: 8px; font-size: 13.5px; color: var(--ct-muted); }
+.se-confirm-field b { font-family: 'Geist Mono', ui-monospace, monospace; font-weight: 600; color: var(--ct); }
+.se-confirm-field input { padding: 12px 14px; border: 1px solid var(--ln-strong); border-radius: 12px; background: var(--sf); color: var(--ct); font: 500 15px 'Geist Mono', ui-monospace, monospace; }
+.se-confirm-field input:focus-visible { outline: 2px solid #b13a26; outline-offset: 2px; }
+.se-confirm .se-notice { margin: 0; padding: 12px 14px; border: 1px solid color-mix(in srgb, #b13a26 35%, transparent); border-radius: 14px; background: color-mix(in srgb, #b13a26 8%, transparent); color: #b13a26; font-size: 13.5px; }
+:root[data-theme='dark'] .se-confirm .se-notice { color: #f0957c; }
+.se-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.se-confirm .se-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 1px solid transparent; border-radius: 12px; font: 600 14px/1 inherit; cursor: pointer; transition: filter .2s, background .2s, transform .16s; }
+.se-confirm .se-btn:active:not(:disabled) { transform: scale(.97); }
+.se-confirm .se-btn:disabled { opacity: .4; cursor: not-allowed; }
+.se-confirm .se-btn.is-quiet { border-color: var(--ln); background: var(--sf-raised); color: var(--ct); }
+.se-confirm .se-btn.is-quiet:hover:not(:disabled) { background: var(--sf-sunken); }
+.se-confirm .se-btn.is-destructive { background: #b13a26; color: #fff; }
+.se-confirm .se-btn.is-destructive:hover:not(:disabled) { filter: brightness(1.1); }
+
+@media (max-width: 1100px) {
+  .se-index-label { display: none; }
+}
+@media (max-width: 640px) {
+  .se-identity { flex-wrap: wrap; }
+  .se-identity-mail { margin-left: 0; flex-basis: 100%; }
+  .se-fields { grid-template-columns: minmax(0, 1fr); }
+  .se-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .se-confirm-actions .se-btn { flex: 1; }
+}

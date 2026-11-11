@@ -11,8 +11,6 @@
   /* One rail is whatever the column leaves over on its side. */
   --mr-rail: calc((100% - min(var(--lx-max), 100% - 2 * var(--lx-gutter))) / 2);
   --mr-in: 0;
-  --mr-y: 0;
-  --mr-v: 0;
   --mr-ink: oklch(38% 0.07 222);
   --mr-ink-soft: oklch(38% 0.07 222 / 0.62);
   --mr-ink-faint: oklch(38% 0.07 222 / 0.2);
@@ -53,37 +51,54 @@
   mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%);
 }
 
-/* Graph paper, drifting at a third of the scroll so it reads as a layer under the page. */
+/*
+ * Graph paper, drifting at a third of the scroll so it reads as a layer under
+ * the page. The pattern lives on a child one period taller than the rail, and
+ * the script slides that child with a transform, wrapping every period. The
+ * mask stays on the parent, so the fade at the edges holds still while the
+ * paper moves beneath it.
+ */
 .mr-grid {
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(circle at 1px 1px, var(--mr-ink-faint) 1px, transparent 1.4px),
-    linear-gradient(var(--mr-ink-faint) 1px, transparent 1px);
-  background-size: 22px 22px, 100% 110px;
-  background-position: 0 calc(var(--mr-y) * -0.3px), 0 calc(var(--mr-y) * -0.3px);
+  overflow: hidden;
   opacity: 0.55;
   -webkit-mask-image: radial-gradient(70% 60% at 50% 50%, #000, transparent 100%);
   mask-image: radial-gradient(70% 60% at 50% 50%, #000, transparent 100%);
 }
+.mr-grid > i {
+  position: absolute;
+  inset: 0 0 -110px;
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--mr-ink-faint) 1px, transparent 1.4px),
+    linear-gradient(var(--mr-ink-faint) 1px, transparent 1px);
+  background-size: 22px 22px, 100% 110px;
+  will-change: transform;
+}
 
-/* A ruler down the edge nearest the column, ticking past with the page. */
+/* A ruler down the edge nearest the column, ticking past with the page. Moved the same way. */
 .mr-ruler {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 14px;
+  overflow: hidden;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(180deg, transparent 4%, #000 22%, #000 78%, transparent 96%);
+  mask-image: linear-gradient(180deg, transparent 4%, #000 22%, #000 78%, transparent 96%);
+}
+.mr-ruler > i {
+  position: absolute;
+  inset: 0 0 -50px;
   background:
     repeating-linear-gradient(180deg, var(--mr-ink-soft) 0 1px, transparent 1px 10px),
     repeating-linear-gradient(180deg, var(--mr-ink) 0 1px, transparent 1px 50px);
   background-size: 6px 100%, 14px 100%;
   background-repeat: repeat-y;
-  background-position: 0 calc(var(--mr-y) * -1px), 0 calc(var(--mr-y) * -1px);
-  opacity: 0.32;
-  -webkit-mask-image: linear-gradient(180deg, transparent 4%, #000 22%, #000 78%, transparent 96%);
-  mask-image: linear-gradient(180deg, transparent 4%, #000 22%, #000 78%, transparent 96%);
+  will-change: transform;
 }
-.mr-left .mr-ruler { right: 10px; background-position: right 0 top calc(var(--mr-y) * -1px), right 0 top calc(var(--mr-y) * -1px); }
+.mr-left .mr-ruler { right: 10px; }
+.mr-left .mr-ruler > i { background-position: right 0 top 0, right 0 top 0; }
 .mr-right .mr-ruler { left: 10px; }
 
 /* ---------------------------------------------------------------------------
@@ -140,9 +155,12 @@
   font-variant-numeric: tabular-nums;
   color: transparent;
   -webkit-text-stroke: 1.2px var(--mr-ink);
-  /* the fill follows the scroll speed: still → outline, moving → ink */
-  text-shadow: 0 0 calc(var(--mr-v) * 18px) oklch(38% 0.07 222 / calc(var(--mr-v) * 0.5));
+  /* Still, an outline; moving, it inks in. Switched once when the scroll starts and once when it stops,
+     rather than recomputed from the speed on every frame, so the glow is painted twice, not continuously. */
+  text-shadow: 0 0 14px oklch(38% 0.07 222 / 0);
+  transition: text-shadow 0.5s ease;
 }
+.mr[data-moving] .mr-numeral { text-shadow: 0 0 14px oklch(38% 0.07 222 / 0.42); }
 .mr-digit {
   position: relative;
   display: inline-grid;
@@ -189,11 +207,14 @@
   background: linear-gradient(180deg, var(--mr-ink), var(--mr-brass));
 }
 .mr-comet {
+  /* As tall as the spine, so translating it by a percentage carries the head from the top to the foot. */
+  --mr-v: 0;
   position: absolute;
   left: 0.5px;
   top: 0;
+  bottom: 0;
   width: 0;
-  height: 0;
+  will-change: transform;
 }
 .mr-comet i {
   position: absolute;
@@ -210,12 +231,15 @@
   content: '';
   position: absolute;
   left: -1px;
-  bottom: 0;
+  bottom: 100%;
   width: 2px;
-  height: calc(12px + var(--mr-v) * 90px);
+  /* Full height always; the scroll speed scales it. Changing `height` instead laid the rail out on every frame. */
+  height: 102px;
   border-radius: 2px;
   background: linear-gradient(0deg, var(--mr-brass), transparent);
-  transition: height 0.25s ease-out;
+  transform-origin: 50% 100%;
+  transform: scaleY(calc(0.118 + var(--mr-v) * 0.882));
+  transition: transform 0.25s ease-out;
 }
 
 .mr-node {
@@ -269,7 +293,7 @@
   color: var(--mr-ink-soft);
   opacity: 0.7;
   transform: translateX(-6px);
-  transition: opacity 0.5s ease, transform 0.7s var(--lx-glide), color 0.4s ease, letter-spacing 0.7s var(--lx-glide);
+  transition: opacity 0.5s ease, transform 0.7s var(--lx-glide), color 0.4s ease;
 }
 .mr-node[data-state='past'] .mr-dot::after { transform: scale(1); }
 .mr-node[data-state='past'] .mr-node-label { opacity: 0.55; }
