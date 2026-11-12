@@ -1,29 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { ArrowLeft, ArrowUpRight, MessagesSquare, Pencil, Swords } from 'lucide-react';
 import '../../styles/iphone-prototype.css';
 
 /* The outer size of the handset, in CSS pixels, before it is scaled to fit. */
 const DEVICE_W = 420;
 const DEVICE_H = 892;
 
-/* The curve drawn across the stage, and its derivative. */
-const f = (x: number) => Math.sin(x) + x / 4;
-const df = (x: number) => Math.cos(x) + 0.25;
-
-const TICKS: Array<[number, string]> = [
-  [-1.5, '−3π/2'], [-1, '−π'], [-0.5, '−π/2'], [0.5, 'π/2'], [1, 'π'], [1.5, '3π/2'],
+/* What the three main tabs of the app are for, in the order the app shows them. */
+const INSIDE = [
+  { icon: Pencil, name: 'Learn', what: 'Practice questions, with help when you get stuck.' },
+  { icon: Swords, name: 'Arena', what: 'Race other students on the same problems, live.' },
+  { icon: MessagesSquare, name: 'Community', what: 'Ask a question and talk it through.' },
 ];
-
-type Size = { w: number; h: number };
-
-/* Maps the function's own coordinates onto the stage. */
-function plotFrame({ w, h }: Size) {
-  const half = w >= 900 ? 2 * Math.PI : Math.PI;
-  const ux = w / (2 * half);
-  const uy = Math.min(h * 0.05, 54);
-  const y0 = h * 0.8;
-  return { half, ux, uy, y0, px: (x: number) => w / 2 + x * ux, py: (x: number) => y0 - f(x) * uy };
-}
 
 function clock() {
   const d = new Date();
@@ -31,26 +19,21 @@ function clock() {
 }
 
 export default function IPhonePrototype() {
-  const stage = useRef<HTMLElement>(null);
   const slot = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
-  const tangent = useRef<SVGGElement>(null);
-  const pointerX = useRef<number | null>(null);
-  const [size, setSize] = useState<Size>({ w: 1440, h: 900 });
+  const [touched, setTouched] = useState(false);
   const [scale, setScale] = useState(1);
   const [time, setTime] = useState(clock);
   const [chrome, setChrome] = useState({ bg: '#0d1b21', dark: true });
 
-  /* The stage and the phone's slot both drive layout that CSS cannot express. */
+  /* The handset is scaled to whatever room its slot has been given. */
   useEffect(() => {
     const measure = () => {
-      const s = stage.current, d = slot.current;
-      if (s) setSize({ w: s.clientWidth, h: s.clientHeight });
+      const d = slot.current;
       if (d) setScale(Math.max(0.4, Math.min(1, d.clientWidth / DEVICE_W, d.clientHeight / DEVICE_H)));
     };
     measure();
     const ro = new ResizeObserver(measure);
-    if (stage.current) ro.observe(stage.current);
     if (slot.current) ro.observe(slot.current);
     return () => ro.disconnect();
   }, []);
@@ -85,91 +68,26 @@ export default function IPhonePrototype() {
     return () => window.clearInterval(id);
   }, []);
 
-  const plot = useMemo(() => {
-    const p = plotFrame(size);
-    let d = '';
-    for (let i = 0; i <= 240; i++) {
-      const x = -p.half + (i / 240) * 2 * p.half;
-      d += `${i ? 'L' : 'M'}${p.px(x).toFixed(1)} ${p.py(x).toFixed(1)}`;
-    }
-    return { ...p, d };
-  }, [size]);
-
-  /* The tangent follows the pointer; left alone, it wanders along the curve. */
+  /* Focus moving into the frame is the only sign, from out here, that the phone was tapped. */
   useEffect(() => {
-    const g = tangent.current;
-    if (!g) return;
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const p = plotFrame(size);
-    const [line, drop, dot, label] = Array.from(g.children) as SVGElement[];
-    let x = p.half * 0.3, phase = 0.42, raf = 0, last = performance.now();
-    const draw = () => {
-      const cx = p.px(x), cy = p.py(x), m = df(x);
-      const dx = p.ux, dy = -m * p.uy, len = Math.hypot(dx, dy), r = Math.min(150, size.w * 0.16);
-      line.setAttribute('x1', String(cx - (dx / len) * r)); line.setAttribute('y1', String(cy - (dy / len) * r));
-      line.setAttribute('x2', String(cx + (dx / len) * r)); line.setAttribute('y2', String(cy + (dy / len) * r));
-      drop.setAttribute('x1', String(cx)); drop.setAttribute('x2', String(cx));
-      drop.setAttribute('y1', String(cy)); drop.setAttribute('y2', String(p.y0));
-      dot.setAttribute('cx', String(cx)); dot.setAttribute('cy', String(cy));
-      /* The label sits on the side the line falls away from, and stays on the stage. */
-      const before = cx > size.w - 170 || (m > 0 && cx > 170);
-      label.setAttribute('x', String(cx + (before ? -14 : 14)));
-      label.setAttribute('y', String(cy - 16));
-      label.setAttribute('text-anchor', before ? 'end' : 'start');
-      label.textContent = `f′(${x.toFixed(2).replace('-', '−')}) = ${m.toFixed(2).replace('-', '−')}`;
-    };
-    const tick = (now: number) => {
-      const dt = Math.min(64, now - last); last = now;
-      let target: number;
-      if (pointerX.current !== null) target = (pointerX.current - size.w / 2) / p.ux;
-      else { phase += dt * 0.00022; target = p.half * 0.78 * Math.sin(phase); }
-      x += (target - x) * (still ? 1 : Math.min(1, dt * 0.006));
-      draw();
-      raf = requestAnimationFrame(tick);
-    };
-    draw();
-    if (!still) raf = requestAnimationFrame(tick);
-    const onMove = still ? (e: PointerEvent) => { x = (e.clientX - size.w / 2) / p.ux; draw(); } : null;
-    if (onMove) window.addEventListener('pointermove', onMove);
-    return () => { cancelAnimationFrame(raf); if (onMove) window.removeEventListener('pointermove', onMove); };
-  }, [size]);
+    const onBlur = () => { if (document.activeElement === frame.current) setTouched(true); };
+    window.addEventListener('blur', onBlur);
+    return () => window.removeEventListener('blur', onBlur);
+  }, []);
 
   return (
-    <main
-      className="iphone-presentation"
-      ref={stage}
-      onPointerMove={e => { if (e.pointerType === 'mouse') pointerX.current = e.clientX - (stage.current?.getBoundingClientRect().left ?? 0); }}
-      onPointerLeave={() => { pointerX.current = null; }}
-    >
-      <svg className="ip-plot" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`} aria-hidden="true">
-        <line className="ip-axis" x1="0" x2={size.w} y1={plot.y0} y2={plot.y0} />
-        {TICKS.filter(([k]) => Math.abs(k * Math.PI) < plot.half && Math.abs(k * Math.PI) * plot.ux > 250).map(([k, name]) => (
-          <g key={name} transform={`translate(${plot.px(k * Math.PI)} ${plot.y0})`}>
-            <line className="ip-axis" y1="-4" y2="4" />
-            <text className="ip-tick" y="22" textAnchor="middle">{name}</text>
-          </g>
-        ))}
-        <path className="ip-curve" d={plot.d} pathLength={1} />
-        <text className="ip-fn" x={Math.max(18, Math.min(52, size.w * 0.034))} y={size.h - 30}>f(x) = sin x + x/4</text>
-        <g className="ip-tangent" ref={tangent}>
-          <line className="ip-tangent-line" />
-          <line className="ip-tangent-drop" />
-          <circle className="ip-tangent-dot" r="5" />
-          <text className="ip-tangent-label" />
-        </g>
-      </svg>
-
+    <main className="iphone-presentation">
       <header className="ip-bar">
         <a className="ip-back" href="/"><ArrowLeft size={15} strokeWidth={1.8} aria-hidden="true" />CalculixHub</a>
-        <p className="ip-model"><i aria-hidden="true" />iPhone 18 Pro <span>· running live</span></p>
+        <p className="ip-model"><i aria-hidden="true" />iPhone 18 Pro <span>· live demo</span></p>
       </header>
 
       <div className="ip-layout">
         <section className="ip-col ip-col-lead">
-          <h1 className="ip-word ip-word-lead" aria-label="Calculus, in hand.">Calculus,</h1>
+          <h1 className="ip-word ip-word-lead" aria-label="Try it right here.">Try it</h1>
           <div className="ip-settle" style={{ '--i': 1 } as CSSProperties}>
-            <p className="ip-lede">This phone is running the real CalculixHub, not a recording. Tap through it the way you would on your own.</p>
-            <a className="ip-cta" href="/?demo=1">Open the full workspace<ArrowUpRight size={17} strokeWidth={1.8} aria-hidden="true" /></a>
+            <p className="ip-lede">This is CalculixHub on a phone. Tap the screen and use it. No download, no sign-up.</p>
+            <a className="ip-cta" href="/?demo=1">Open it full screen<ArrowUpRight size={17} strokeWidth={1.8} aria-hidden="true" /></a>
           </div>
         </section>
 
@@ -197,14 +115,22 @@ export default function IPhonePrototype() {
             </div>
           </div>
           <span className="ip-contact" aria-hidden="true" />
+          <p className="ip-hint" data-gone={touched || undefined} aria-hidden="true">
+            Tap it, it works
+            <svg viewBox="0 0 120 60" width="120" height="60"><path d="M4 12C40 2 84 12 108 44" /><path d="M92 42l17 4 2-18" /></svg>
+          </p>
         </div>
 
         <section className="ip-col ip-col-tail">
-          <p className="ip-word ip-word-tail" aria-hidden="true">in hand.</p>
-          <dl className="ip-facts ip-settle" style={{ '--i': 2 } as CSSProperties}>
-            <div><dt>Same account</dt><dd>Saved questions and progress carry over from any screen.</dd></div>
-            <div><dt>Same arenas</dt><dd>Live rounds and conversations, as they happen.</dd></div>
-          </dl>
+          <p className="ip-word ip-word-tail" aria-hidden="true">right here.</p>
+          <div className="ip-settle" style={{ '--i': 2 } as CSSProperties}>
+            <h2 className="ip-inside-title">What you can do in it</h2>
+            <ul className="ip-inside">
+              {INSIDE.map(({ icon: Icon, name, what }) => (
+                <li key={name}><span className="ip-inside-icon"><Icon size={19} strokeWidth={1.7} aria-hidden="true" /></span><div><b>{name}</b><p>{what}</p></div></li>
+              ))}
+            </ul>
+          </div>
         </section>
       </div>
     </main>

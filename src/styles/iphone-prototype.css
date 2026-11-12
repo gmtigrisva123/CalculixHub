@@ -1,6 +1,6 @@
 /*
- * The iPhone preview: a studio stage. One handset stands at the origin of a
- * plotted curve; the headline is split either side of it and reads across it.
+ * The iPhone preview: a studio stage. One handset stands in the middle; the
+ * headline is split either side of it and reads across it.
  */
 .iphone-presentation {
   --porcelain: #e6eae8;
@@ -25,18 +25,6 @@
   -webkit-font-smoothing: antialiased;
 }
 .iphone-presentation *, .iphone-presentation *::before, .iphone-presentation *::after { box-sizing: border-box; }
-
-/* The plot */
-.ip-plot { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.ip-axis { stroke: var(--rule); stroke-width: 1; }
-.ip-tick { font: 500 11px 'Geist Mono Variable', 'Geist Mono', ui-monospace, monospace; fill: #7d8c8f; letter-spacing: .02em; }
-.ip-curve { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ip-draw 1.9s cubic-bezier(.6, 0, .2, 1) .5s forwards; }
-.ip-fn { font: italic 400 19px 'Newsreader Variable', 'Newsreader', Georgia, serif; fill: var(--slate); animation: ip-fade .8s var(--ease) 1.2s backwards; }
-.ip-tangent { animation: ip-fade .7s var(--ease) 2.1s backwards; }
-.ip-tangent-line { stroke: var(--brass-lit); stroke-width: 1.6; stroke-linecap: round; }
-.ip-tangent-drop { stroke: var(--brass-lit); stroke-width: 1; stroke-dasharray: 2 5; opacity: .7; }
-.ip-tangent-dot { fill: var(--porcelain-lit); stroke: var(--brass); stroke-width: 2; }
-.ip-tangent-label { font: 500 12px 'Geist Mono Variable', 'Geist Mono', ui-monospace, monospace; fill: var(--brass); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--porcelain); stroke-width: 5px; stroke-linejoin: round; }
 
 /* Top bar */
 .ip-bar { position: relative; z-index: 3; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px var(--pad) 0; }
@@ -64,11 +52,17 @@
 .ip-cta:hover svg { transform: translate(3px, -3px); }
 .ip-cta:active { transform: scale(.98); }
 .ip-back:focus-visible, .ip-cta:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
-.ip-facts { max-width: 36ch; margin: clamp(20px, 3.2vh, 34px) 0 0; }
-.ip-facts div { padding: 14px 0; border-top: 1px solid var(--rule); }
-.ip-facts div:last-child { border-bottom: 1px solid var(--rule); }
-.ip-facts dt { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
-.ip-facts dd { margin: 3px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--slate); }
+.ip-inside-title { margin: clamp(22px, 3.4vh, 38px) 0 0; font-size: 13px; font-weight: 500; color: var(--slate); letter-spacing: 0; }
+.ip-inside { list-style: none; max-width: 380px; margin: 10px 0 0; padding: 0; }
+.ip-inside li { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--rule); }
+.ip-inside-icon { flex: none; width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: #ffffffb8; color: var(--ink); box-shadow: 0 0 0 1px #0c1a1f14, 0 6px 14px -8px #0c1a1f40; }
+.ip-inside b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.ip-inside p { margin: 2px 0 0; font-size: 14.5px; line-height: 1.45; color: var(--slate); }
+
+/* A handwritten nudge beside the handset; it leaves once the phone has been tapped. */
+.ip-hint { position: absolute; right: calc(100% - 6px); top: 66%; margin: 0; padding-right: 110px; white-space: nowrap; font: 600 30px/1 'Caveat', cursive; color: var(--brass); rotate: -4deg; transition: opacity .5s var(--ease), translate .5s var(--ease); animation: ip-fade .8s var(--ease) 1.3s backwards; pointer-events: none; }
+.ip-hint svg { position: absolute; right: -20px; top: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ip-hint[data-gone] { opacity: 0; translate: 0 8px; }
 
 /* The handset */
 .ip-slot { position: relative; z-index: 2; align-self: stretch; width: min(420px, 100vw - 32px); display: flex; align-items: center; justify-content: center; animation: ip-stand 1s var(--ease) backwards; }
@@ -97,12 +91,11 @@
 .ip-home span { width: 140px; height: 5px; border-radius: 999px; background: currentColor; opacity: .92; }
 .ip-contact { position: absolute; left: 50%; bottom: -14px; width: 120%; height: 56px; bottom: -30px; transform: translateX(-50%); background: radial-gradient(closest-side, #0c1a1f47, #0c1a1f1c 45%, transparent); pointer-events: none; }
 
-/* One arrival: the handset stands, the headline comes out from behind it, the curve is drawn. */
+/* One arrival: the handset stands, the headline comes out from behind it. */
 @keyframes ip-stand { from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.985); } to { opacity: 1; transform: none; } }
 @keyframes ip-emerge-lead { from { opacity: 0; transform: translate3d(26%, 0, 0); } to { opacity: 1; transform: none; } }
 @keyframes ip-emerge-tail { from { opacity: 0; transform: translate3d(-26%, 0, 0); } to { opacity: 1; transform: none; } }
 @keyframes ip-settle { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
-@keyframes ip-draw { to { stroke-dashoffset: 0; } }
 @keyframes ip-fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Narrower than the composition needs: the headline goes above, the action below. */
@@ -114,7 +107,7 @@
   .ip-word-tail { justify-self: center; transform: translateX(calc(50% + .12em)); font-size: clamp(32px, 6.9vw, 58px); animation: none; }
   .ip-slot { grid-row: 2; grid-column: 1; }
   .ip-settle { grid-row: 3; grid-column: 1; }
-  .ip-lede, .ip-facts, .ip-fn { display: none; }
+  .ip-lede, .ip-col-tail .ip-settle, .ip-hint { display: none; }
   .ip-cta { margin-top: 0; height: 48px; font-size: 15px; }
 }
 @media (max-width: 520px) {
@@ -122,7 +115,6 @@
   .ip-bar { padding-top: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ip-word, .ip-settle, .ip-slot, .ip-fn, .ip-tangent { animation: none; }
-  .ip-curve { animation: none; stroke-dashoffset: 0; }
+  .ip-word, .ip-settle, .ip-slot, .ip-hint { animation: none; }
   .ip-back, .ip-back svg, .ip-cta, .ip-cta svg { transition: none; }
 }
