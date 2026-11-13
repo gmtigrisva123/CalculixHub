@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Lock, MousePointerClick, Smartphone } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, ChevronUp, Lock, MousePointerClick, Smartphone } from 'lucide-react';
+import BrandLogo from '../BrandLogo';
 import { SCREEN_PX, createStage, screenCentre, type Shot, type StageHandle } from './macbookStage';
 import '../../styles/macbook-prototype.css';
 
@@ -13,9 +14,14 @@ const SCENES: Array<{ id: string; name: string; shot: Shot }> = [
   { id: 'screen', name: 'Screen', shot: { az: 0, el: 8, dist: 68, target: screenCentre(98), lid: 98, shift: [0, 0.1], shiftTall: [0, 0.16], span: 20, spanTall: 20 } },
   { id: 'keyboard', name: 'Keyboard', shot: { az: -12, el: 66, dist: 80, target: [0, 0, 0.5], lid: 108, shift: [-0.36, -0.08], shiftTall: [0, -0.4], span: 21, spanTall: 27, keys: 1 } },
   { id: 'specs', name: 'Specs', shot: { az: 88, el: 3, dist: 86, target: [0, 8, -2.5], lid: 100, shift: [0.2, -0.04], shiftTall: [0, -0.62], span: 15, spanTall: 30 } },
-  { id: 'open', name: 'Open it', shot: { az: 30, el: 11, dist: 112, target: [0, 7, -2], lid: 108, shift: [0, 0.22], shiftTall: [0, 0.2], span: 25, spanTall: 27 } },
+  { id: 'yours', name: 'Yours', shot: { az: 30, el: 11, dist: 112, target: [0, 7, -2], lid: 108, shift: [0, 0.22], shiftTall: [0, 0.2], span: 25, spanTall: 27 } },
 ];
 const SHOTS = SCENES.map(s => s.shot);
+/* Before the film: the laptop shut, seen from in front and above, with room beneath it for one button. */
+const GATE: Shot = { az: -22, el: 32, dist: 76, target: [0, -0.4, 0.5], lid: 0, shift: [0, 0.17], shiftTall: [0, 0.2], span: 24, spanTall: 26.5 };
+
+/* The page waits shut, opens once when asked, and only then becomes a page that scrolls. */
+type Phase = 'shut' | 'opening' | 'open';
 const SCREEN = 1;
 
 /* The top configuration of the 16-inch MacBook Pro introduced in 2026. */
@@ -45,6 +51,32 @@ export default function MacBookPrototype() {
   const [ready, setReady] = useState(false);
   const [flat, setFlat] = useState(false);
   const [time, setTime] = useState(clock);
+  const [phase, setPhaseState] = useState<Phase>('shut');
+  const phaseNow = useRef<Phase>('shut');
+  const opener = useRef<HTMLButtonElement>(null);
+  const gate = useRef<HTMLDivElement>(null);
+  const hover = useRef({ laptop: false, button: false, knockedAt: 0 });
+
+  const setPhase = useCallback((next: Phase) => { phaseNow.current = next; setPhaseState(next); }, []);
+
+  const open = useCallback(() => {
+    if (phaseNow.current !== 'shut') return;
+    setPhase('opening');
+    if (stage.current) stage.current.open(); else setPhase('open');
+  }, [setPhase]);
+
+  /* A scroll before the laptop is open goes nowhere, so it is answered: the lid stirs and the button asks again. */
+  const knock = useCallback(() => {
+    const now = performance.now();
+    if (phaseNow.current !== 'shut' || now - hover.current.knockedAt < 520) return;
+    hover.current.knockedAt = now;
+    stage.current?.nudge();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      opener.current?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.07)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'cubic-bezier(.2,.7,.2,1)' });
+    }
+  }, []);
+
+  const peek = () => stage.current?.setPeek(hover.current.laptop || hover.current.button ? 1 : 0);
 
   /* The display's contents live in an element of our own, so three.js can move it without React noticing. */
   const screen = useMemo(() => {
@@ -57,13 +89,13 @@ export default function MacBookPrototype() {
     if (!canvas.current || !layer.current) return;
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     try {
-      stage.current = createStage({ canvas: canvas.current, layer: layer.current, screen, shots: SHOTS, still, onReady: () => setReady(true) });
+      stage.current = createStage({ canvas: canvas.current, layer: layer.current, screen, shots: SHOTS, gate: GATE, still, onReady: () => setReady(true), onOpened: () => { scroller.current?.scrollTo(0, 0); setPhase('open'); } });
     } catch {
-      /* No WebGL: the app is still shown, flat, in a plain frame. */
-      setFlat(true); setReady(true);
+      /* No WebGL: there is no lid to lift, so the app is shown at once, flat, in a plain frame. */
+      setFlat(true); setReady(true); setPhase('open');
     }
     return () => { stage.current?.dispose(); stage.current = null; };
-  }, [screen]);
+  }, [screen, setPhase]);
 
   useEffect(() => {
     const el = flatHost.current;
@@ -96,7 +128,7 @@ export default function MacBookPrototype() {
 
   const go = (i: number) => {
     const el = scroller.current;
-    if (!el) return;
+    if (!el || phaseNow.current !== 'open') return;
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollTo({ top: Math.max(0, Math.min(SCENES.length - 1, i)) * el.clientHeight, behavior: still ? 'auto' : 'smooth' });
   };
@@ -113,7 +145,9 @@ export default function MacBookPrototype() {
     let held = false, heldAt = 0, lastWheel = 0, lastScroll = 0;
     const onScroll = () => { lastScroll = performance.now(); };
     const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+      if (e.ctrlKey) return;
+      if (phaseNow.current !== 'open') { e.preventDefault(); knock(); return; }
+      if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
       e.preventDefault();
       const now = performance.now();
       /* The gesture is over once the page has stopped moving and the wheel has been quiet for a moment. */
@@ -126,10 +160,13 @@ export default function MacBookPrototype() {
       held = true; heldAt = now; lastScroll = now;
       go(next);
     };
+    /* A finger dragged up the screen is the same request as the wheel. */
+    const onTouch = () => { if (phaseNow.current === 'shut') knock(); };
     el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => { el.removeEventListener('wheel', onWheel); el.removeEventListener('scroll', onScroll); };
-  }, []);
+    el.addEventListener('touchmove', onTouch, { passive: true });
+    return () => { el.removeEventListener('wheel', onWheel); el.removeEventListener('scroll', onScroll); el.removeEventListener('touchmove', onTouch); };
+  }, [knock]);
 
   /* The page scrolls inside this component, so the keys that scroll a page are wired by hand. */
   useEffect(() => {
@@ -138,6 +175,12 @@ export default function MacBookPrototype() {
       const onControl = e.target instanceof HTMLElement && e.target.closest('a, button, input, textarea');
       const el = scroller.current;
       if (!el) return;
+      if (phaseNow.current !== 'open') {
+        /* Shut: Enter opens it from anywhere, and the keys that would scroll get the same answer as the wheel. */
+        if (e.key === 'Enter' && !onControl) { e.preventDefault(); open(); }
+        else if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(e.key) || (e.key === ' ' && !onControl)) { e.preventDefault(); knock(); }
+        return;
+      }
       const now = Math.round(el.scrollTop / Math.max(1, el.clientHeight));
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey && !onControl)) { e.preventDefault(); go(now + 1); }
       else if (e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey && !onControl)) { e.preventDefault(); go(now - 1); }
@@ -146,7 +189,7 @@ export default function MacBookPrototype() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [knock, open]);
 
   /* The app only takes the pointer while its shot is on screen; anywhere else the page must scroll. */
   useEffect(() => { if (scene !== SCREEN) setLive(false); }, [scene]);
@@ -160,7 +203,7 @@ export default function MacBookPrototype() {
   const host = typeof window === 'undefined' ? 'calculixhub.com' : window.location.host;
 
   return (
-    <main className="macbook-presentation" ref={scroller} data-scene={SCENES[scene].id} data-ready={ready || undefined} data-flat={flat || undefined}>
+    <main className="macbook-presentation" ref={scroller} data-scene={SCENES[scene].id} data-ready={ready || undefined} data-flat={flat || undefined} data-phase={phase}>
       <div className="mb-stage" aria-hidden={flat ? undefined : 'true'}>
         <div className="mb-layer" ref={layer} />
         <canvas className="mb-canvas" ref={canvas} />
@@ -169,6 +212,7 @@ export default function MacBookPrototype() {
 
       {createPortal(
         <div className="mb-display" style={{ width: SCREEN_PX.w, height: SCREEN_PX.h }}>
+          <div className="mb-boot" aria-hidden="true"><BrandLogo /><i><b /></i></div>
           <div className="mb-menubar" aria-hidden="true">
             <b>Safari</b><span>File</span><span>Edit</span><span>View</span><span>History</span><span>Bookmarks</span><span>Window</span><span>Help</span>
             <i className="mb-island" />
@@ -180,7 +224,7 @@ export default function MacBookPrototype() {
             <span className="mb-address"><Lock size={12} strokeWidth={2} />{host}</span>
           </div>
           <div className="mb-page">
-            <iframe title="CalculixHub live workspace" src="/?demo=1" tabIndex={live ? 0 : -1} style={{ pointerEvents: live ? 'auto' : 'none' }} />
+            <iframe title="CalculixHub live workspace" src="/?demo=1" tabIndex={live || flat ? 0 : -1} style={{ pointerEvents: live || flat ? 'auto' : 'none' }} />
             <button type="button" className="mb-cover" data-on={scene === SCREEN && !live ? '' : undefined} tabIndex={scene === SCREEN && !live ? 0 : -1} onClick={() => setLive(true)}>
               <span><MousePointerClick size={30} strokeWidth={1.6} aria-hidden="true" />Click to use the app</span>
             </button>
@@ -194,61 +238,98 @@ export default function MacBookPrototype() {
         <p className="mb-model"><i aria-hidden="true" />MacBook Pro 16″ <span>· M5 Max · live demo</span></p>
       </header>
 
-      <nav className="mb-nav" aria-label="Scenes">
+      <nav className="mb-nav" aria-label="Scenes" inert={phase !== 'open'}>
         {SCENES.map((s, i) => (
           <button key={s.id} type="button" aria-current={i === scene ? 'step' : undefined} onClick={() => go(i)}><span>{s.name}</span><i aria-hidden="true" /></button>
         ))}
       </nav>
 
-      <section className="mb-scene mb-at-left" ref={ref(0)}>
-        <div className="mb-copy">
-          <h1>CalculixHub <em>on a Mac.</em></h1>
-          <p>Scroll down. The camera moves around the laptop and shows you each part.</p>
-          <button type="button" className="mb-scroll" onClick={() => go(1)}><span><ArrowDown size={16} strokeWidth={2} aria-hidden="true" /></span>Scroll, or press ↓</button>
+      <div
+        className="mb-gate"
+        ref={gate}
+        inert={phase !== 'shut'}
+        onPointerMove={e => {
+          if (e.pointerType !== 'mouse') return;
+          const over = !!stage.current?.hit(e.clientX, e.clientY);
+          if (over === hover.current.laptop) return;
+          hover.current.laptop = over;
+          gate.current?.toggleAttribute('data-over', over);
+          peek();
+        }}
+        onPointerLeave={() => { hover.current.laptop = false; gate.current?.removeAttribute('data-over'); peek(); }}
+        onClick={e => { if (stage.current?.hit(e.clientX, e.clientY)) open(); }}
+      >
+        <div className="mb-gate-copy">
+          <p className="mb-gate-line">CalculixHub is <em>inside.</em></p>
+          <button
+            type="button"
+            className="mb-open"
+            ref={opener}
+            autoFocus
+            onClick={e => { e.stopPropagation(); open(); }}
+            onPointerEnter={() => { hover.current.button = true; peek(); }}
+            onPointerLeave={() => { hover.current.button = false; peek(); }}
+            onFocus={() => { hover.current.button = true; peek(); }}
+            onBlur={() => { hover.current.button = false; peek(); }}
+          >
+            <span aria-hidden="true"><ChevronUp size={20} strokeWidth={2.2} /></span>Open it
+          </button>
+          <p className="mb-gate-hint">Or open the laptop itself<span>, or press <kbd>Enter</kbd></span>.</p>
         </div>
-      </section>
+      </div>
 
-      <section className="mb-scene mb-at-bottom" ref={ref(1)}>
-        <div className="mb-copy mb-copy-row">
-          <div>
-            <h2>This screen is <em>the real app.</em></h2>
-            <p>{live ? 'It’s yours. Click, type and scroll inside the screen.' : 'Click it and use it, right here on the page.'}</p>
+      <div className="mb-film" inert={phase !== 'open'}>
+
+        <section className="mb-scene mb-at-left" ref={ref(0)}>
+          <div className="mb-copy">
+            <h1>CalculixHub <em>on a Mac.</em></h1>
+            <p>Scroll down. The camera moves around the laptop and shows you each part.</p>
+            <button type="button" className="mb-scroll" onClick={() => go(1)}><span><ArrowDown size={16} strokeWidth={2} aria-hidden="true" /></span>Scroll, or press ↓</button>
           </div>
-          <button type="button" className="mb-cta" onClick={() => setLive(v => !v)}>{live ? 'Done, keep scrolling' : 'Use the app'}</button>
-        </div>
-      </section>
+        </section>
 
-      <section className="mb-scene mb-at-right" ref={ref(2)}>
-        <div className="mb-copy">
-          <h2>Press <kbd>⌘</kbd><kbd>K</kbd>. <em>Go anywhere.</em></h2>
-          <p>One shortcut finds every page and every action. You never hunt through menus.</p>
-          <ul className="mb-shortcuts">
-            <li><span><kbd>⌘</kbd><kbd>K</kbd></span>Search everything</li>
-            <li><span><kbd>S</kbd></span>Open scratch paper</li>
-            <li><span><kbd>G</kbd><small>then a letter</small></span>Jump to a page</li>
-          </ul>
-        </div>
-      </section>
-
-      <section className="mb-scene mb-at-left" ref={ref(3)}>
-        <div className="mb-copy">
-          <h2>The best MacBook <em>you can buy.</em></h2>
-          <dl className="mb-specs">
-            {SPECS.map(([name, value, note]) => (<div key={name}><dt>{name}</dt><dd><b>{value}</b>{note}</dd></div>))}
-          </dl>
-          <p className="mb-note">You don’t need this one. CalculixHub runs in any browser.</p>
-        </div>
-      </section>
-
-      <section className="mb-scene mb-at-bottom" ref={ref(4)}>
-        <div className="mb-copy mb-copy-centre">
-          <h2>Now open it <em>on yours.</em></h2>
-          <div className="mb-actions">
-            <a className="mb-cta" href="/?demo=1">Open CalculixHub<ArrowUpRight size={17} strokeWidth={1.8} aria-hidden="true" /></a>
-            <a className="mb-link" href="/?preview=ios"><Smartphone size={16} strokeWidth={1.8} aria-hidden="true" />See it on iPhone</a>
+        <section className="mb-scene mb-at-bottom" ref={ref(1)}>
+          <div className="mb-copy mb-copy-row">
+            <div>
+              <h2>This screen is <em>the real app.</em></h2>
+              <p>{live ? 'It’s yours. Click, type and scroll inside the screen.' : 'Click it and use it, right here on the page.'}</p>
+            </div>
+            <button type="button" className="mb-cta" onClick={() => setLive(v => !v)}>{live ? 'Done, keep scrolling' : 'Use the app'}</button>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section className="mb-scene mb-at-right" ref={ref(2)}>
+          <div className="mb-copy">
+            <h2>Press <kbd>⌘</kbd><kbd>K</kbd>. <em>Go anywhere.</em></h2>
+            <p>One shortcut finds every page and every action. You never hunt through menus.</p>
+            <ul className="mb-shortcuts">
+              <li><span><kbd>⌘</kbd><kbd>K</kbd></span>Search everything</li>
+              <li><span><kbd>S</kbd></span>Open scratch paper</li>
+              <li><span><kbd>G</kbd><small>then a letter</small></span>Jump to a page</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="mb-scene mb-at-left" ref={ref(3)}>
+          <div className="mb-copy">
+            <h2>The best MacBook <em>you can buy.</em></h2>
+            <dl className="mb-specs">
+              {SPECS.map(([name, value, note]) => (<div key={name}><dt>{name}</dt><dd><b>{value}</b>{note}</dd></div>))}
+            </dl>
+            <p className="mb-note">You don’t need this one. CalculixHub runs in any browser.</p>
+          </div>
+        </section>
+
+        <section className="mb-scene mb-at-bottom" ref={ref(4)}>
+          <div className="mb-copy mb-copy-centre">
+            <h2>Now open it <em>on yours.</em></h2>
+            <div className="mb-actions">
+              <a className="mb-cta" href="/?demo=1">Open CalculixHub<ArrowUpRight size={17} strokeWidth={1.8} aria-hidden="true" /></a>
+              <a className="mb-link" href="/?preview=ios"><Smartphone size={16} strokeWidth={1.8} aria-hidden="true" />See it on iPhone</a>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
