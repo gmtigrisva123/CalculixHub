@@ -407,8 +407,10 @@ export function createStage(options: {
 
   const frame = (now: number) => {
     raf = requestAnimationFrame(frame);
+    const before = last;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (intro < 1) { intro = Math.min(1, intro + dt / 1.9); dirty = true; }
+    /* The opening keeps to its length even when frames are slow, so the lid is never left part-way. */
+    if (intro < 1) { intro = Math.min(1, intro + Math.min(0.25, (now - before) / 1000) / 1.6); dirty = true; }
     const gap = goal - at;
     if (Math.abs(gap) > 0.0004) { at = still ? goal : at + gap * (1 - Math.exp(-dt * 5.2)); dirty = true; }
     else if (at !== goal) { at = goal; dirty = true; }

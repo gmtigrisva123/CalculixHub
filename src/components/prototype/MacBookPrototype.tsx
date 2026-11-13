@@ -13,7 +13,7 @@ const SCENES: Array<{ id: string; name: string; shot: Shot }> = [
   { id: 'screen', name: 'Screen', shot: { az: 0, el: 8, dist: 68, target: screenCentre(98), lid: 98, shift: [0, 0.1], shiftTall: [0, 0.16], span: 20, spanTall: 20 } },
   { id: 'keyboard', name: 'Keyboard', shot: { az: -12, el: 66, dist: 80, target: [0, 0, 0.5], lid: 108, shift: [-0.36, -0.08], shiftTall: [0, -0.4], span: 21, spanTall: 27, keys: 1 } },
   { id: 'specs', name: 'Specs', shot: { az: 88, el: 3, dist: 86, target: [0, 8, -2.5], lid: 100, shift: [0.2, -0.04], shiftTall: [0, -0.62], span: 15, spanTall: 30 } },
-  { id: 'open', name: 'Open it', shot: { az: 34, el: 8, dist: 88, target: [0, 4, 0], lid: 44, shift: [0, 0.26], shiftTall: [0, 0.22], span: 25, spanTall: 25 } },
+  { id: 'open', name: 'Open it', shot: { az: 30, el: 11, dist: 112, target: [0, 7, -2], lid: 108, shift: [0, 0.22], shiftTall: [0, 0.2], span: 25, spanTall: 27 } },
 ];
 const SHOTS = SCENES.map(s => s.shot);
 const SCREEN = 1;
@@ -110,23 +110,25 @@ export default function MacBookPrototype() {
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    let held = false, lastAt = 0, target = 0;
+    let held = false, heldAt = 0, lastWheel = 0, lastScroll = 0;
+    const onScroll = () => { lastScroll = performance.now(); };
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
       e.preventDefault();
-      /* The gesture is over once the page has arrived and the wheel has been quiet for a moment. */
-      const arrived = Math.abs(el.scrollTop - target * el.clientHeight) < 2;
-      if (held && arrived && e.timeStamp - lastAt > 180) held = false;
-      lastAt = e.timeStamp;
+      const now = performance.now();
+      /* The gesture is over once the page has stopped moving and the wheel has been quiet for a moment. */
+      if (held && now - heldAt > 450 && now - lastScroll > 120 && e.timeStamp - lastWheel > 180) held = false;
+      lastWheel = e.timeStamp;
       if (held || Math.abs(e.deltaY) < 4) return;
-      const now = Math.round(el.scrollTop / Math.max(1, el.clientHeight));
-      target = Math.max(0, Math.min(SCENES.length - 1, now + (e.deltaY > 0 ? 1 : -1)));
-      if (target === now) return;
-      held = true;
-      go(target);
+      const here = Math.round(el.scrollTop / Math.max(1, el.clientHeight));
+      const next = Math.max(0, Math.min(SCENES.length - 1, here + (e.deltaY > 0 ? 1 : -1)));
+      if (next === here) return;
+      held = true; heldAt = now; lastScroll = now;
+      go(next);
     };
+    el.addEventListener('scroll', onScroll, { passive: true });
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    return () => { el.removeEventListener('wheel', onWheel); el.removeEventListener('scroll', onScroll); };
   }, []);
 
   /* The page scrolls inside this component, so the keys that scroll a page are wired by hand. */
