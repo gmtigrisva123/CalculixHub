@@ -1,0 +1,156 @@
+/*
+ * The MacBook preview: a dark studio and one laptop, filmed. The page is five
+ * screens tall; the stage stays put while the words scroll over it, and the
+ * camera follows the scroll from one shot to the next.
+ */
+.macbook-presentation {
+  --night: #060b0e;
+  --night-lit: #13242b;
+  --chalk: #eef2f0;
+  --mist: #9bb0b5;
+  --rule: #ffffff21;
+  --brass: #e9bd6c;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --pad: clamp(18px, 3.4vw, 52px);
+  position: relative;
+  isolation: isolate;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  color: var(--chalk);
+  background: radial-gradient(110% 80% at 50% 108%, var(--night-lit), var(--night) 62%);
+  font-family: 'Geist', -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.macbook-presentation::-webkit-scrollbar { display: none; }
+.macbook-presentation *, .macbook-presentation *::before, .macbook-presentation *::after { box-sizing: border-box; }
+
+/* The stage holds still while the page moves over it. */
+.mb-stage { position: sticky; top: 0; z-index: 0; height: 100dvh; margin-bottom: -100dvh; overflow: hidden; opacity: 0; transition: opacity 1s var(--ease); }
+.macbook-presentation[data-ready] .mb-stage { opacity: 1; }
+.mb-layer, .mb-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mb-canvas { display: block; pointer-events: none; }
+
+/* What the laptop's display shows: a menu bar, a browser, and the live app. */
+.mb-screen { background: #000; border-radius: 17px; overflow: hidden; }
+.mb-display { display: flex; flex-direction: column; background: #101214; color: #e9ecee; font-family: -apple-system, 'Geist', 'Helvetica Neue', sans-serif; }
+.mb-menubar { position: relative; flex: none; height: 34px; display: flex; align-items: center; gap: 22px; padding: 0 22px 0 26px; background: #16181bf2; font-size: 14.5px; letter-spacing: -.005em; }
+.mb-menubar b { font-weight: 700; }
+.mb-menubar em { margin-left: auto; font-style: normal; font-variant-numeric: tabular-nums; white-space: pre; }
+.mb-island { position: absolute; left: 50%; top: 6px; width: 96px; height: 22px; margin-left: -48px; border-radius: 999px; background: #000; box-shadow: inset -22px 0 0 -16px #1c2338; }
+.mb-browser { flex: none; height: 50px; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: #24272b; border-bottom: 1px solid #00000066; color: #c9cfd3; }
+.mb-browser .is-dim { opacity: .35; }
+.mb-lights { display: flex; gap: 8px; margin-right: 14px; }
+.mb-lights i { width: 13px; height: 13px; border-radius: 50%; background: #ff5f57; }
+.mb-lights i:nth-child(2) { background: #febc2e; }
+.mb-lights i:nth-child(3) { background: #28c840; }
+.mb-address { flex: 0 1 620px; margin: 0 auto; height: 32px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 9px; background: #15171a; font-size: 14px; color: #dfe4e7; transform: translateX(-60px); }
+.mb-page { position: relative; flex: 1; min-height: 0; background: #f7f5ef; }
+.mb-page iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.mb-cover { position: absolute; inset: 0; display: grid; place-items: center; border: 0; padding: 0; background: transparent; cursor: default; pointer-events: none; font: inherit; color: inherit; }
+.mb-cover[data-on] { pointer-events: auto; cursor: pointer; }
+.mb-cover span { display: inline-flex; align-items: center; gap: 16px; padding: 22px 34px 22px 28px; border-radius: 999px; background: #0b1418eb; color: #f3f6f4; font-size: 27px; font-weight: 500; letter-spacing: -.01em; box-shadow: 0 0 0 1px #ffffff26, 0 30px 60px -20px #000000b3; opacity: 0; transform: translateY(10px) scale(.97); transition: opacity .3s var(--ease), transform .3s var(--ease); }
+.mb-cover[data-on]:hover span, .mb-cover[data-on]:focus-visible span { opacity: 1; transform: none; }
+.mb-cover:focus-visible { outline: 4px solid var(--brass); outline-offset: -6px; }
+
+/* Without WebGL the app is still there, in a plain frame. */
+.mb-flat { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(var(--s, .5)); border-radius: 26px; padding: 0; box-shadow: 0 0 0 10px #0b0c0d, 0 0 0 12px #3a3c40, 0 60px 90px -40px #000; }
+.macbook-presentation[data-flat] .mb-canvas, .macbook-presentation[data-flat] .mb-layer { display: none; }
+
+/* Top bar */
+.mb-bar { position: fixed; inset: 0 0 auto 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px var(--pad) 0; pointer-events: none; }
+.mb-bar > * { pointer-events: auto; }
+.mb-back { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 10px; margin-left: -10px; border-radius: 999px; color: var(--chalk); font-size: 14px; font-weight: 500; letter-spacing: -.01em; text-decoration: none; background: #060b0e99; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background-color .2s var(--ease); }
+.mb-back svg { transition: transform .25s var(--ease); }
+.mb-back:hover { background: #1a2a30cc; }
+.mb-back:hover svg { transform: translateX(-3px); }
+.mb-model { display: flex; align-items: center; gap: 8px; margin: 0; font: 500 12px 'Geist Mono', ui-monospace, monospace; letter-spacing: .01em; white-space: nowrap; }
+.mb-model span { color: var(--mist); }
+.mb-model i { width: 7px; height: 7px; border-radius: 50%; background: #3ec486; box-shadow: 0 0 0 3px #3ec4862e; }
+
+/* Scene list */
+.mb-nav { position: fixed; right: calc(var(--pad) - 8px); top: 50%; z-index: 4; display: grid; gap: 2px; transform: translateY(-50%); }
+.mb-nav button { display: flex; align-items: center; justify-content: flex-end; gap: 12px; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; background: none; color: var(--mist); font: 500 12px 'Geist Mono', ui-monospace, monospace; cursor: pointer; }
+.mb-nav span { opacity: 0; transform: translateX(6px); transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.mb-nav i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; opacity: .5; transition: height .35s var(--ease), opacity .35s var(--ease), background-color .35s var(--ease); }
+.mb-nav:hover span, .mb-nav button:focus-visible span, .mb-nav button[aria-current] span { opacity: 1; transform: none; }
+.mb-nav button:hover { color: var(--chalk); }
+.mb-nav button[aria-current] { color: var(--chalk); }
+.mb-nav button[aria-current] i { height: 22px; opacity: 1; background: var(--brass); }
+
+/* Scenes: one screen each, words only. */
+.mb-scene { position: relative; z-index: 1; height: 100dvh; display: flex; padding: 96px var(--pad) clamp(28px, 6vh, 64px); scroll-snap-align: start; scroll-snap-stop: always; pointer-events: none; --near: 0; }
+.mb-scene:first-of-type { --near: 1; }
+.mb-copy { max-width: min(540px, 36vw); opacity: var(--near); transform: translate3d(0, calc((1 - var(--near)) * 26px), 0); pointer-events: auto; }
+.mb-at-left { align-items: center; justify-content: flex-start; }
+.mb-at-right { align-items: center; justify-content: flex-end; padding-right: calc(var(--pad) + 96px); }
+.mb-at-bottom { align-items: flex-end; justify-content: center; }
+.mb-copy h1, .mb-copy h2 { margin: 0; font-weight: 600; letter-spacing: -.05em; line-height: .98; text-wrap: balance; }
+.mb-copy h1 { font-size: clamp(44px, 5.7vw, 100px); }
+.mb-copy h2 { font-size: clamp(36px, 4.6vw, 76px); }
+.mb-copy em { display: block; font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: -.035em; font-size: 1.1em; line-height: 1; color: var(--brass); }
+.mb-copy p { max-width: 36ch; margin: clamp(18px, 2.8vh, 30px) 0 0; font-size: clamp(15.5px, 1.2vw, 18.5px); line-height: 1.55; color: var(--mist); text-wrap: pretty; }
+.mb-copy kbd { display: inline-grid; place-items: center; min-width: 1.18em; height: 1.18em; padding: 0 .16em; margin: 0 .05em; vertical-align: .04em; border-radius: .2em; background: var(--brass); color: #1b1407; font: 600 .62em 'Geist', -apple-system, sans-serif; letter-spacing: 0; }
+
+.mb-scroll { display: inline-flex; align-items: center; gap: 12px; margin-top: clamp(24px, 4vh, 42px); padding: 0; border: 0; background: none; color: var(--chalk); font: 500 14.5px 'Geist', sans-serif; cursor: pointer; }
+.mb-scroll span { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1px var(--rule); background: #ffffff0d; }
+.mb-scroll svg { animation: mb-nudge 1.8s var(--ease) infinite; }
+
+.mb-copy-row { max-width: min(880px, 100%); display: flex; align-items: center; gap: clamp(20px, 4vw, 56px); padding: 18px 20px 18px 30px; border-radius: 26px; background: #0b1418cc; box-shadow: inset 0 0 0 1px var(--rule); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.mb-copy-row h2 { font-size: clamp(22px, 2.1vw, 30px); letter-spacing: -.03em; line-height: 1.1; }
+.mb-copy-row em { display: inline; font-size: 1.08em; }
+.mb-copy-row p { margin-top: 6px; font-size: 15px; max-width: none; }
+.mb-copy-centre { max-width: none; text-align: center; }
+.mb-copy-centre em { display: inline; }
+.mb-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 26px; margin-top: clamp(20px, 3.4vh, 34px); }
+
+.mb-cta { flex: none; display: inline-flex; align-items: center; gap: 12px; height: 54px; padding: 0 26px; border: 0; border-radius: 999px; background: var(--chalk); color: #0b1418; font: 500 15.5px 'Geist', sans-serif; letter-spacing: -.01em; text-decoration: none; white-space: nowrap; cursor: pointer; transition: transform .25s var(--ease), background-color .25s var(--ease); }
+.mb-cta svg { transition: transform .3s var(--ease); }
+.mb-cta:hover { background: #fff; }
+.mb-cta:hover svg { transform: translate(3px, -3px); }
+.mb-cta:active { transform: scale(.98); }
+.mb-link { display: inline-flex; align-items: center; gap: 9px; height: 44px; color: var(--chalk); font-size: 15px; font-weight: 500; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .2s var(--ease); }
+.mb-link:hover { border-bottom-color: var(--chalk); }
+.macbook-presentation :is(a, button):focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+
+.mb-shortcuts { list-style: none; margin: clamp(18px, 3vh, 30px) 0 0; padding: 0; max-width: 400px; }
+.mb-shortcuts li { display: grid; grid-template-columns: 150px 1fr; align-items: center; padding: 13px 0; border-top: 1px solid var(--rule); font-size: 15.5px; color: var(--chalk); }
+.mb-shortcuts li:last-child { border-bottom: 1px solid var(--rule); }
+.mb-shortcuts span { display: flex; align-items: center; gap: 5px; }
+.mb-shortcuts kbd { min-width: 30px; height: 30px; margin: 0; border-radius: 8px; background: #ffffff12; color: var(--chalk); box-shadow: inset 0 0 0 1px var(--rule); font-size: 14px; }
+.mb-shortcuts small { margin-left: 4px; font-size: 12.5px; color: var(--mist); }
+
+.mb-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(20px, 3vw, 44px); margin: clamp(20px, 3.4vh, 36px) 0 0; }
+.mb-specs div { padding: 13px 0 14px; border-top: 1px solid var(--rule); }
+.mb-specs dt { font: 500 11.5px 'Geist Mono', ui-monospace, monospace; letter-spacing: .04em; text-transform: uppercase; color: var(--mist); }
+.mb-specs dd { margin: 6px 0 0; font-size: 13.5px; line-height: 1.4; color: var(--mist); }
+.mb-specs b { display: block; font-size: clamp(21px, 1.9vw, 28px); font-weight: 600; letter-spacing: -.035em; line-height: 1.15; color: var(--chalk); }
+.mb-copy .mb-note { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rule); max-width: none; font-size: 14.5px; }
+
+@keyframes mb-nudge { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
+
+/* A frame taller than it is wide: the words go above or below the laptop. */
+@media (max-aspect-ratio: 1/1), (max-width: 760px) {
+  .mb-scene { padding-top: 84px; }
+  .mb-at-left, .mb-at-right { align-items: flex-start; justify-content: flex-start; padding-right: var(--pad); }
+  .mb-copy { max-width: min(560px, 100%); }
+  .mb-copy h1 { font-size: clamp(40px, 11vw, 76px); }
+  .mb-copy h2 { font-size: clamp(32px, 8.6vw, 60px); }
+  .mb-copy-row { flex-direction: column; align-items: stretch; gap: 14px; padding: 18px; border-radius: 22px; }
+  .mb-copy-row h2 { font-size: 22px; }
+  .mb-copy-row .mb-cta { justify-content: center; }
+  .mb-shortcuts { display: none; }
+  .mb-specs div { padding: 9px 0 10px; }
+  .mb-specs dd { font-size: 12.5px; }
+  .mb-nav span { display: none; }
+  .mb-nav { right: 6px; }
+  .mb-model span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mb-stage, .mb-cover span, .mb-nav span, .mb-nav i, .mb-cta, .mb-cta svg, .mb-back, .mb-back svg { transition: none; }
+  .mb-scroll svg { animation: none; }
+  .mb-copy { transform: none; }
+}
