@@ -13,6 +13,7 @@ import BootLift, { BootHold } from './boot/BootLift';
 import Welcome from './components/Welcome';
 
 const IPhonePrototype = lazy(() => import('./components/prototype/IPhonePrototype'));
+const MacBookPrototype = lazy(() => import('./components/prototype/MacBookPrototype'));
 const Workspace = lazyWithPreload(() => import('./components/Workspace'));
 
 /*
@@ -28,9 +29,10 @@ if (bootVariant === 'workspace') {
 }
 
 export default function App() {
-  return new URLSearchParams(window.location.search).get('preview') === 'ios'
-    ? <Suspense fallback={<BootHold label="Opening your pocket-sized learning space…" />}><IPhonePrototype /><BootLift /></Suspense>
-    : <LearningApp />;
+  const preview = new URLSearchParams(window.location.search).get('preview');
+  if (preview === 'ios') return <Suspense fallback={<BootHold label="Opening your pocket-sized learning space…" />}><IPhonePrototype /><BootLift /></Suspense>;
+  if (preview === 'mac') return <Suspense fallback={<BootHold label="Opening CalculixHub on a MacBook…" />}><MacBookPrototype /><BootLift /></Suspense>;
+  return <LearningApp />;
 }
 
 function LearningApp() {

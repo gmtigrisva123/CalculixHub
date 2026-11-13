@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import {
-  ArrowUpRight, Bell, ChevronsUpDown, CornerDownLeft, Flame, Info, LogOut, Menu, Monitor, Moon, NotebookPen, PanelLeft,
+  ArrowUpRight, Bell, ChevronsUpDown, CornerDownLeft, Flame, Info, Laptop, LogOut, Menu, Monitor, Moon, NotebookPen, PanelLeft,
   Search, Smartphone, Sparkles, Sun, TriangleAlert, UserPlus, X, type LucideIcon,
 } from 'lucide-react';
 import { NAV_GROUPS, NAV_ITEMS, RAIL_GROUPS, TAB_BAR_ITEMS, groupOf, itemsIn, pinStaffNav, railCollapsed, rememberRail, staffNavPinned, type NavItem, type TabKey } from '../lib/navigation';
@@ -181,6 +181,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
     { id: 'theme', section: 'Do', label: resolved === 'dark' ? 'Switch to day' : 'Switch to night', hint: 'Change how the page is lit', icon: resolved === 'dark' ? Sun : Moon, run: close(() => setPreference(resolved === 'dark' ? 'light' : 'dark')) },
     ...(compact ? [] : [{ id: 'rail', section: 'Do' as const, label: folded ? 'Open the sidebar' : 'Fold the sidebar', hint: 'More room for the page', icon: PanelLeft, keys: ['['], run: close(toggleRail) }]),
     { id: 'pocket', section: 'Do', label: 'Pocket preview', hint: 'The iPhone prototype', icon: Smartphone, run: () => window.location.assign('/?preview=ios') },
+    { id: 'desk', section: 'Do', label: 'Desk preview', hint: 'The MacBook prototype', icon: Laptop, run: () => window.location.assign('/?preview=mac') },
     signedIn
       ? { id: 'signout', section: 'Do', label: 'Sign out', hint: 'End this session on this device', icon: LogOut, run: close(onLogout) }
       : { id: 'signup', section: 'Do', label: 'Create a free account', hint: 'Keep what you solve', icon: UserPlus, run: () => window.location.assign('/?auth=signup') },
@@ -354,6 +355,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
                     </div>
                     <div className="ws-menu-list">
                       <a className="ws-menu-item" href="/?preview=ios" title="The iPhone prototype"><Smartphone size={17} strokeWidth={1.85} aria-hidden="true" /><span>iPhone preview<small>CalculixHub in your pocket</small></span></a>
+                      <a className="ws-menu-item" href="/?preview=mac" title="The MacBook prototype"><Laptop size={17} strokeWidth={1.85} aria-hidden="true" /><span>MacBook preview<small>CalculixHub on a laptop, filmed</small></span></a>
                     </div>
                     <div className="ws-menu-row"><span>Appearance</span><ThemeSwitch /></div>
                     <div className="ws-menu-list">
