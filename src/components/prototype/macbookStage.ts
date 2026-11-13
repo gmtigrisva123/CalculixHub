@@ -8,19 +8,24 @@
  * the lid, the hinge and anything else in front still cover the page correctly.
  *
  * Everything is measured in centimetres, from Apple's published dimensions.
- * Named three.js imports only, the pixel ratio capped, and nothing is drawn
- * unless the camera, the lid or the size of the stage has changed.
+ * The laptop starts shut. It stays shut, held in its own shot with a line of
+ * light at the seam, until `open()` is called; the lid then lifts, the room
+ * comes up and the camera settles into the first shot of the film.
+ *
+ * Named three.js imports only, the pixel ratio capped, and once the laptop is
+ * open nothing is drawn unless the camera or the size of the stage has changed.
  */
 
 import {
   ACESFilmicToneMapping, AdditiveBlending, AmbientLight, CanvasTexture, CylinderGeometry, DirectionalLight, ExtrudeGeometry, Group,
   Mesh, MeshBasicMaterial, MeshStandardMaterial, NoBlending, PCFSoftShadowMap, Path, PerspectiveCamera, PlaneGeometry,
-  PMREMGenerator, RepeatWrapping, Scene, ShadowMaterial, Shape, ShapeGeometry, SRGBColorSpace, Vector3,
+  PMREMGenerator, Raycaster, RepeatWrapping, Scene, ShadowMaterial, Shape, ShapeGeometry, SRGBColorSpace, Vector2, Vector3,
   WebGLRenderer, type BufferGeometry, type Material,
 } from 'three';
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MARK_DOT, MARK_PATH, MARK_STROKE } from '../brand';
 
 /** One camera position. Angles in degrees; distances in centimetres. */
 export interface Shot {
@@ -47,6 +52,14 @@ export interface Shot {
 export interface StageHandle {
   /** The scroll position, in shots: 1.5 is half-way from the second shot to the third. */
   setProgress(p: number): void;
+  /** Lift the lid. Does nothing once it has been called. */
+  open(): void;
+  /** While shut: raise the lid a crack (1) or let it rest (0), as when the pointer is over it. */
+  setPeek(amount: number): void;
+  /** While shut: one small lift and fall, the answer to a scroll that cannot happen yet. */
+  nudge(): void;
+  /** Whether a point in the window, in client pixels, lies on the laptop. */
+  hit(clientX: number, clientY: number): boolean;
   dispose(): void;
 }
 
@@ -161,6 +174,20 @@ function legends(keys: Key[], lit: boolean): CanvasTexture {
   }
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/** The CalculixHub mark, white on black, for use as an alpha map. */
+function brandMark(): CanvasTexture {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#000'; g.fillRect(0, 0, 512, 512);
+  g.scale(512 / 40, 512 / 40);
+  g.strokeStyle = g.fillStyle = '#fff';
+  g.lineWidth = MARK_STROKE; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.stroke(new Path2D(MARK_PATH));
+  g.beginPath(); g.arc(MARK_DOT.cx, MARK_DOT.cy, MARK_DOT.r, 0, Math.PI * 2); g.fill();
+  const t = new CanvasTexture(c); t.anisotropy = 8;
   return t;
 }
 
@@ -283,11 +310,20 @@ function buildLaptop(screen: HTMLElement) {
   panel.scale.setScalar(SCREEN_W / SCREEN_PX.w);
   lid.add(panel);
 
+  /* The mark on the lid, polished into the anodised surface, upright to someone facing the shut laptop. */
+  const mark = keep(new MeshStandardMaterial({ color: 0x8c9098, metalness: 1, roughness: 0.2, envMapIntensity: 1.7, alphaMap: keep(brandMark()), transparent: true, depthWrite: false }));
+  lid.add(new Mesh(keep(new PlaneGeometry(5.6, 5.6).rotateX(Math.PI).translate(0, D / 2, -LID_T - 0.003)), mark));
+
+  /* Light escaping between lid and base while the laptop is shut: a hairline along the front edge. */
+  const seam = keep(new MeshBasicMaterial({ color: 0xdcecf4, transparent: true, depthWrite: false, toneMapped: false, blending: AdditiveBlending, opacity: 0 }));
+  laptop.add(new Mesh(keep(new PlaneGeometry(W - 3.4, GAP + 0.06).translate(0, GAP / 2, D / 2 - 0.1)), seam));
+
   /* What the display throws onto the deck: brightest under the panel, gone by the trackpad. */
-  const glow = keep(new MeshBasicMaterial({ map: keep(spill()), transparent: true, depthWrite: false, toneMapped: false, blending: AdditiveBlending, opacity: 0 }));
+  const spillMap = keep(spill());
+  const glow = keep(new MeshBasicMaterial({ map: spillMap, transparent: true, depthWrite: false, toneMapped: false, blending: AdditiveBlending, opacity: 0 }));
   laptop.add(new Mesh(keep(new PlaneGeometry(W - 1.2, D - 1).rotateX(-Math.PI / 2).translate(0, 0.13, 0)), glow));
 
-  return { laptop, lid, glow, litKeys, dispose: () => disposables.forEach(d => d.dispose()) };
+  return { laptop, lid, glow, litKeys, seam, spillMap, dispose: () => disposables.forEach(d => d.dispose()) };
 }
 
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -300,11 +336,15 @@ export function createStage(options: {
   /** The display's contents. */
   screen: HTMLElement;
   shots: Shot[];
-  /** Reduced motion: the camera cuts between shots and the lid starts open. */
+  /** Where the camera waits while the laptop is shut. Its `lid` is ignored. */
+  gate: Shot;
+  /** Reduced motion: the camera cuts between shots, and the lid is simply open once asked. */
   still: boolean;
   onReady?: () => void;
+  /** The lid is up and the camera has reached the first shot. */
+  onOpened?: () => void;
 }): StageHandle {
-  const { canvas, layer, screen, shots, still } = options;
+  const { canvas, layer, screen, shots, gate, still } = options;
   const host = canvas.parentElement!;
 
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -324,7 +364,7 @@ export function createStage(options: {
   scene.environmentIntensity = 0.5;
   room.dispose(); pmrem.dispose();
 
-  const { laptop, lid, glow, litKeys, dispose: disposeLaptop } = buildLaptop(screen);
+  const { laptop, lid, glow, litKeys, seam, spillMap, dispose: disposeLaptop } = buildLaptop(screen);
   scene.add(laptop);
 
   /* The desk: a pool of light, and the laptop's shadow in it. */
@@ -334,7 +374,11 @@ export function createStage(options: {
   pool.position.y = floorY - 0.01;
   const shadow = new Mesh(new PlaneGeometry(240, 240).rotateX(-Math.PI / 2), new ShadowMaterial({ opacity: 0.55 }));
   shadow.position.y = floorY; shadow.receiveShadow = true;
-  scene.add(pool, shadow);
+  /* What the seam throws onto the desk in front of the shut laptop. */
+  const leak = new Mesh(new PlaneGeometry(W - 1.5, 12).rotateX(-Math.PI / 2), new MeshBasicMaterial({ map: spillMap, transparent: true, depthWrite: false, toneMapped: false, blending: AdditiveBlending, opacity: 0 }));
+  leak.position.set(0, floorY + 0.012, D / 2 + 5.2);
+  scene.add(pool, shadow, leak);
+  const poolMat = pool.material as MeshBasicMaterial, leakMat = leak.material as MeshBasicMaterial;
 
   scene.add(new AmbientLight(0xffffff, 0.12));
   const key = new DirectionalLight(0xfff4e6, 1.7);
@@ -353,30 +397,54 @@ export function createStage(options: {
   const tanHalf = Math.tan((FOV / 2) * RAD);
   const eye = new Vector3(), look = new Vector3(), right = new Vector3(), up = new Vector3();
 
+  const ray = new Raycaster(), pointer = new Vector2();
+
   let aspect = 1;
-  let goal = 0, at = 0, dirty = true, raf = 0, last = performance.now();
-  /* The opening: the lid lifts and the camera settles. */
-  let intro = still ? 1 : 0;
+  let goal = 0, at = 0, dirty = true, raf = 0, last = performance.now(), clock = 0;
+  /* 0 shut, 1 open: once `opening` is set it runs from one to the other and never back. */
+  let opened = 0, opening = false;
+  /* The lid's small movements while shut: where the pointer wants it, where it is, and a passing knock. */
+  let peekGoal = 0, peek = 0, knock = 0;
   let readyCalled = false;
+
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+  const cubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+  /* A hinge with a little give: it eases up, goes a degree or two past the angle, and comes back onto it. */
+  const hinge = (t: number) => cubic(t) + 0.02 * Math.sin(Math.PI * clamp01((t - 0.72) / 0.28));
 
   const place = () => {
     const i = Math.max(0, Math.min(shots.length - 2, Math.floor(at)));
     const a = shots[i], b = shots[Math.min(shots.length - 1, i + 1)];
-    const t = ease(Math.max(0, Math.min(1, at - i)));
+    const t = ease(clamp01(at - i));
     const tall = aspect < 1;
-    const sa = tall ? a.shiftTall : a.shift, sb = tall ? b.shiftTall : b.shift;
-    const open = ease(intro);
-    const az = mix(a.az, b.az, t) * RAD, el = mix(a.el, b.el, t) * RAD;
+    const shiftOf = (s: Shot) => (tall ? s.shiftTall : s.shift);
     /* Never closer than the shot asks for; further back when the window is too narrow to hold the laptop beside the words. */
     const fit = (s: Shot) => Math.max(s.dist, tall ? s.spanTall / (tanHalf * aspect) : s.span / (tanHalf * aspect * (s.shift[0] ? Math.abs(s.shift[0]) + 0.28 : 1)));
-    const dist = mix(fit(a), fit(b), t) * mix(1.14, 1, open);
-    const lidAngle = mix(a.lid, b.lid, t) * open;
+    /* Where the film has the camera, then how far the opening has carried it there from the gate. */
+    /* The camera leaves first and is nearly home before the lid is far up, so the display rises into a frame that is ready for it. */
+    const cam = 1 - (1 - opened) ** 3;
+    const film = (pick: (s: Shot) => number) => mix(pick(a), pick(b), t);
+    const both = (pick: (s: Shot) => number) => mix(pick(gate), film(pick), cam);
+    const az = both(s => s.az) * RAD, el = both(s => s.el) * RAD, dist = both(fit);
 
+    const lidAngle = film(s => s.lid) * hinge(clamp01((opened - 0.1) / 0.9)) + (1 - opened) ** 2 * Math.min(1.4, peek) * 6.5;
     lid.rotation.x = (90 - lidAngle) * RAD;
-    glow.opacity = 0.16 * Math.max(0, Math.min(1, (lidAngle - 15) / 50));
-    litKeys.opacity = mix(a.keys ?? 0, b.keys ?? 0, t);
+    /* Under a lid that is barely up the display's light is all over the deck; it settles as the lid rises. */
+    glow.opacity = 0.16 * clamp01(lidAngle / 14);
+    litKeys.opacity = film(s => s.keys ?? 0) * cam;
 
-    look.set(mix(a.target[0], b.target[0], t), mix(a.target[1], b.target[1], t), mix(a.target[2], b.target[2], t));
+    /* Shut, the room is low and the seam breathes; as the lid lifts the light moves from the seam to the display. */
+    const wake = ease(clamp01(opened * 1.5));
+    const breath = still ? 0.5 : 0.5 + 0.5 * Math.sin(clock * 1.5);
+    const escaping = clamp01(1 - lidAngle / 30) * (0.3 + 0.22 * breath + 0.5 * Math.min(1, peek));
+    /* The hairline belongs to a shut lid; once there is a gap to see into, the light is inside it. */
+    seam.opacity = escaping * clamp01(1 - lidAngle / 4);
+    leakMat.opacity = escaping * 0.34 + clamp01(lidAngle / 20) * clamp01(1 - lidAngle / 60) * 0.2;
+    key.intensity = 1.7 * mix(0.3, 1, wake);
+    scene.environmentIntensity = 0.5 * mix(0.55, 1, wake);
+    poolMat.opacity = mix(0.4, 1, wake);
+
+    look.set(both(s => s.target[0]), both(s => s.target[1]), both(s => s.target[2]));
     eye.set(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)).multiplyScalar(dist).add(look);
     camera.position.copy(eye);
     camera.up.set(0, 1, 0);
@@ -386,7 +454,7 @@ export function createStage(options: {
     right.setFromMatrixColumn(camera.matrixWorld, 0);
     up.setFromMatrixColumn(camera.matrixWorld, 1);
     const half = dist * tanHalf;
-    camera.position.addScaledVector(right, -mix(sa[0], sb[0], t) * half * aspect).addScaledVector(up, -mix(sa[1], sb[1], t) * half);
+    camera.position.addScaledVector(right, -both(s => shiftOf(s)[0]) * half * aspect).addScaledVector(up, -both(s => shiftOf(s)[1]) * half);
     camera.updateMatrixWorld();
   };
 
@@ -409,8 +477,18 @@ export function createStage(options: {
     raf = requestAnimationFrame(frame);
     const before = last;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    /* The opening keeps to its length even when frames are slow, so the lid is never left part-way. */
-    if (intro < 1) { intro = Math.min(1, intro + Math.min(0.25, (now - before) / 1000) / 1.6); dirty = true; }
+    if (opened < 1) {
+      /* Shut or opening, something is always moving: the seam, the lid under the pointer, the opening itself. */
+      clock += dt;
+      peek += (peekGoal + knock - peek) * (still ? 1 : 1 - Math.exp(-dt * 10));
+      knock *= Math.exp(-dt * 5);
+      dirty = true;
+      if (opening) {
+        /* The opening keeps to its length even when frames are slow, so the lid is never left part-way. */
+        opened = still ? 1 : Math.min(1, opened + Math.min(0.25, (now - before) / 1000) / 3);
+        if (opened === 1) { opening = false; place(); renderer.render(scene, camera); css.render(scene, camera); dirty = false; options.onOpened?.(); return; }
+      }
+    }
     const gap = goal - at;
     if (Math.abs(gap) > 0.0004) { at = still ? goal : at + gap * (1 - Math.exp(-dt * 5.2)); dirty = true; }
     else if (at !== goal) { at = goal; dirty = true; }
@@ -425,6 +503,15 @@ export function createStage(options: {
 
   return {
     setProgress(p) { goal = Math.max(0, Math.min(shots.length - 1, p)); },
+    open() { if (opened < 1) opening = true; },
+    setPeek(amount) { peekGoal = amount; },
+    nudge() { knock = 1.1; },
+    hit(clientX, clientY) {
+      const box = canvas.getBoundingClientRect();
+      pointer.set(((clientX - box.left) / box.width) * 2 - 1, -((clientY - box.top) / box.height) * 2 + 1);
+      ray.setFromCamera(pointer, camera);
+      return ray.intersectObject(laptop, true).length > 0;
+    },
     dispose() {
       cancelAnimationFrame(raf);
       observer.disconnect();
@@ -433,6 +520,7 @@ export function createStage(options: {
       disposeLaptop();
       env.dispose(); poolMap.dispose();
       pool.geometry.dispose(); (pool.material as Material).dispose();
+      leak.geometry.dispose(); (leak.material as Material).dispose();
       shadow.geometry.dispose(); (shadow.material as Material).dispose();
       renderer.dispose();
     },

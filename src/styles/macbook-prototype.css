@@ -1,7 +1,8 @@
 /*
- * The MacBook preview: a dark studio and one laptop, filmed. The page is five
- * screens tall; the stage stays put while the words scroll over it, and the
- * camera follows the scroll from one shot to the next.
+ * The MacBook preview: a dark studio and one laptop, filmed. The laptop starts
+ * shut and the page does not scroll until it has been opened. After that the
+ * page is five screens tall; the stage stays put while the words scroll over
+ * it, and the camera follows the scroll from one shot to the next.
  */
 .macbook-presentation {
   --night: #060b0e;
@@ -26,6 +27,11 @@
   -webkit-font-smoothing: antialiased;
 }
 .macbook-presentation::-webkit-scrollbar { display: none; }
+/* Shut, and while it opens, there is nowhere to scroll to. */
+.macbook-presentation:not([data-phase='open']) { overflow-y: hidden; scroll-snap-type: none; }
+/* The room is low while the laptop sleeps, and comes up as the lid does. */
+.macbook-presentation::before { content: ''; position: fixed; inset: 0; z-index: 0; background: #03070a; opacity: .62; pointer-events: none; transition: opacity 2.4s var(--ease); }
+.macbook-presentation:not([data-phase='shut'])::before { opacity: 0; }
 .macbook-presentation *, .macbook-presentation *::before, .macbook-presentation *::after { box-sizing: border-box; }
 
 /* The stage holds still while the page moves over it. */
@@ -56,9 +62,25 @@
 .mb-cover[data-on]:hover span, .mb-cover[data-on]:focus-visible span { opacity: 1; transform: none; }
 .mb-cover:focus-visible { outline: 4px solid var(--brass); outline-offset: -6px; }
 
+/* The display wakes as the lid lifts: the mark, a bar that fills, then the app. */
+.mb-boot { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 54px; background: #000; color: #f1f4f3; transition: opacity .8s var(--ease) 1.75s, visibility 0s linear 2.6s; }
+.mb-boot svg { width: 170px; height: 170px; }
+.mb-boot i { width: 300px; height: 6px; border-radius: 99px; background: #ffffff26; overflow: hidden; }
+.mb-boot b { display: block; height: 100%; border-radius: inherit; background: #f1f4f3; transform: scaleX(0); transform-origin: 0 50%; }
+.macbook-presentation:not([data-phase='shut']) .mb-boot { opacity: 0; visibility: hidden; }
+.macbook-presentation:not([data-phase='shut']) .mb-boot b { transform: scaleX(1); transition: transform 1.45s cubic-bezier(.3, .1, .2, 1) .3s; }
+
 /* Without WebGL the app is still there, in a plain frame. */
-.mb-flat { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(var(--s, .5)); border-radius: 26px; padding: 0; box-shadow: 0 0 0 10px #0b0c0d, 0 0 0 12px #3a3c40, 0 60px 90px -40px #000; }
+.mb-flat { position: absolute; left: 50%; top: 57%; transform: translate(-50%, -50%) scale(var(--s, .5)); border-radius: 26px; padding: 0; box-shadow: 0 0 0 10px #0b0c0d, 0 0 0 12px #3a3c40, 0 60px 90px -40px #000; }
 .macbook-presentation[data-flat] .mb-canvas, .macbook-presentation[data-flat] .mb-layer { display: none; }
+/* There is no camera to move, so there is one screen: the name above, the app below, and nothing to scroll. */
+.macbook-presentation[data-flat] { overflow-y: hidden; }
+.macbook-presentation[data-flat] :is(.mb-nav, .mb-gate, .mb-scene:not(:first-of-type), .mb-scene p, .mb-scroll) { display: none; }
+.macbook-presentation[data-flat] .mb-scene { align-items: flex-start; justify-content: center; padding-top: 84px; }
+.macbook-presentation[data-flat] .mb-copy { max-width: none; text-align: center; pointer-events: none; }
+.macbook-presentation[data-flat] .mb-copy h1 { font-size: clamp(30px, 4.4vw, 58px); }
+.macbook-presentation[data-flat] .mb-copy em { display: inline; }
+.macbook-presentation[data-flat] .mb-screen { border-radius: 26px; }
 
 /* Top bar */
 .mb-bar { position: fixed; inset: 0 0 auto 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px var(--pad) 0; pointer-events: none; }
@@ -80,6 +102,30 @@
 .mb-nav button:hover { color: var(--chalk); }
 .mb-nav button[aria-current] { color: var(--chalk); }
 .mb-nav button[aria-current] i { height: 22px; opacity: 1; background: var(--brass); }
+
+/* The gate: one line, one button, under the shut laptop. */
+.mb-gate { position: fixed; inset: 0; z-index: 3; display: flex; align-items: flex-end; justify-content: center; padding: 0 var(--pad) clamp(34px, 8.5vh, 92px); opacity: 0; transition: opacity .7s var(--ease), transform .7s var(--ease); }
+.macbook-presentation[data-ready][data-phase='shut'] .mb-gate { opacity: 1; transition-delay: .5s; }
+.macbook-presentation:not([data-phase='shut']) .mb-gate { transform: translate3d(0, 18px, 0); pointer-events: none; transition-duration: .45s; }
+.mb-gate[data-over] { cursor: pointer; }
+.mb-gate-copy { display: grid; justify-items: center; gap: clamp(16px, 2.6vh, 26px); text-align: center; }
+.mb-gate-line { margin: 0; font-size: clamp(24px, 2.7vw, 40px); font-weight: 500; letter-spacing: -.035em; line-height: 1.1; color: var(--chalk); }
+.mb-gate-line em { font-family: 'Newsreader', Georgia, serif; font-style: italic; font-weight: 400; font-size: 1.12em; letter-spacing: -.02em; color: var(--brass); }
+.mb-open { position: relative; display: inline-flex; align-items: center; gap: 14px; height: 66px; padding: 0 34px 0 12px; border: 0; border-radius: 999px; background: var(--chalk); color: #0b1418; font: 600 19px 'Geist', sans-serif; letter-spacing: -.02em; cursor: pointer; box-shadow: 0 0 0 1px #ffffff40, 0 22px 50px -18px #e9bd6c80; transition: background-color .25s var(--ease), box-shadow .3s var(--ease); }
+.mb-open span { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: #0b1418; color: var(--brass); transition: transform .35s var(--ease); }
+.mb-open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 0 #e9bd6c8c; animation: mb-ring 2.6s var(--ease) infinite; pointer-events: none; }
+.mb-open:hover { background: #fff; box-shadow: 0 0 0 1px #ffffff66, 0 26px 60px -16px #e9bd6cb3; }
+.mb-open:hover span, .mb-open:focus-visible span { transform: translateY(-3px); }
+.mb-open:active { background: #dfe6e3; }
+.mb-gate-hint { margin: 0; font: 500 12px 'Geist Mono', ui-monospace, monospace; color: var(--mist); }
+.mb-gate-hint kbd { padding: 2px 7px; border-radius: 6px; background: #ffffff12; box-shadow: inset 0 0 0 1px var(--rule); color: var(--chalk); font: inherit; }
+
+/* The film is not there to be read, or reached, until the laptop is open. */
+/* Opacity only: moving this box would move the points the page snaps to, and the page with them. */
+.mb-film { opacity: 0; visibility: hidden; transition: opacity .9s var(--ease) .15s; }
+.macbook-presentation[data-phase='open'] .mb-film { opacity: 1; visibility: visible; }
+.mb-nav { transition: opacity .7s var(--ease) .3s; }
+.macbook-presentation:not([data-phase='open']) .mb-nav { opacity: 0; pointer-events: none; }
 
 /* Scenes: one screen each, words only. */
 .mb-scene { position: relative; z-index: 1; height: 100dvh; display: flex; padding: 96px var(--pad) clamp(28px, 6vh, 64px); scroll-snap-align: start; scroll-snap-stop: always; pointer-events: none; --near: 0; }
@@ -130,6 +176,7 @@
 .mb-specs b { display: block; font-size: clamp(21px, 1.9vw, 28px); font-weight: 600; letter-spacing: -.035em; line-height: 1.15; color: var(--chalk); }
 .mb-copy .mb-note { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rule); max-width: none; font-size: 14.5px; }
 
+@keyframes mb-ring { 0% { box-shadow: 0 0 0 0 #e9bd6c8c; } 70%, 100% { box-shadow: 0 0 0 22px #e9bd6c00; } }
 @keyframes mb-nudge { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
 
 /* A frame taller than it is wide: the words go above or below the laptop. */
@@ -145,11 +192,15 @@
   .mb-shortcuts { display: none; }
   .mb-specs div { padding: 9px 0 10px; }
   .mb-specs dd { font-size: 12.5px; }
+  .mb-open { height: 60px; font-size: 18px; }
+  .mb-gate-hint span { display: none; }
   .mb-nav span { display: none; }
   .mb-nav { right: 6px; }
   .mb-model span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .mb-open::after { animation: none; }
+  .mb-gate, .mb-film, .macbook-presentation::before, .mb-boot, .mb-boot b { transition-duration: .01s; transition-delay: 0s; }
   .mb-stage, .mb-cover span, .mb-nav span, .mb-nav i, .mb-cta, .mb-cta svg, .mb-back, .mb-back svg { transition: none; }
   .mb-scroll svg { animation: none; }
   .mb-copy { transform: none; }
