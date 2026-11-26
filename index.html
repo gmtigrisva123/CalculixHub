@@ -48,28 +48,30 @@
     <!--
       Webfonts.
 
-      Served from this origin (see src/styles/fonts.css), not from Google. A
-      first visit used to open two more connections, to fonts.googleapis.com
-      and fonts.gstatic.com, and could not draw a word until a stylesheet had
-      come back from the first of them. Now the only thing between the HTML and
-      text on screen is this site's own CSS.
+      Served from this origin (see src/styles/fonts.css), not from a font host,
+      so the only thing between the HTML and text on screen is this site's own
+      CSS.
 
-      The two files below are the faces the landing hero is set in: Geist for
-      "Stay with the", Newsreader's italic for "question". Preloading starts
-      them downloading alongside the stylesheet, so the headline is normally
-      drawn in its real type on the first frame instead of arriving in a
-      fallback and jumping. Everything else (Geist Mono, the upright
-      Newsreader, Caveat) is fetched when a page first uses it.
+      The files below are the faces the first screen is set in: Old Standard TT
+      for headings and anything meant to be read, in its regular and its bold;
+      Archivo for the interface; and Computer Modern's digits, which set every
+      numeral (design.md, "Typography"). Preloading starts them downloading
+      alongside the stylesheet, so the page is normally drawn in its real type
+      on the first frame instead of arriving in a fallback and jumping. The
+      italic, the wider subsets and the rest of KaTeX's faces are fetched when
+      a page first uses them.
     -->
-    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2" />
-    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource/old-standard-tt/files/old-standard-tt-latin-400-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource/old-standard-tt/files/old-standard-tt-latin-700-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2" />
 
     <!--
       The colour the browser tints its own chrome with. Declared before the
       boot script, which corrects it for the night theme: a script cannot
       change a tag that has not been parsed yet.
     -->
-    <meta name="theme-color" content="#f7f5ef" />
+    <meta name="theme-color" content="#f6f4e9" />
 
     <!--
       Boot: the theme, and the first frame.
@@ -129,52 +131,38 @@
       wait for the app's stylesheet.
 
       `#boot` is one fixed element over the page. It is drawn entirely with
-      backgrounds: no images, no fonts, nothing to fetch. Its colours repeat
-      what the real screens use (the landing's night stage in
-      styles/landing-experience.css, the workspace's desk and sheet in
-      styles/shell.css), so when src/boot/boot.ts fades it out, what is
-      underneath is already the same picture.
+      backgrounds and borders: no images, no fonts, nothing to fetch. It is the
+      paper every screen stands on (`--paper` in /tokens.css, written here as
+      sRGB because the tokens have not loaded yet), by day or by night; for a
+      returning learner it also rules off the rail and the top bar, at the
+      widths styles/shell.css gives them. So when src/boot/boot.ts fades it
+      out, what is underneath is already the same picture.
 
       The mark in the middle holds back for a third of a second. On a fast
       connection the app is ready before then and the visitor sees only the
-      ground resolve into the page; the mark is for the slow cases, where it
+      paper resolve into the page; the mark is for the slow cases, where it
       says "this is loading" rather than "this is broken".
     -->
     <style>
-      html { background: #f8f4ed; }
-      html[data-boot='workspace'] { background: #efece4; }
-      html[data-boot='paper'] { background: #f7f5ef; }
-      html[data-theme='dark'][data-boot='workspace'] { background: #141d22; }
-      html[data-theme='dark'][data-boot='paper'] { background: #1b272d; }
+      html { background: #f6f4e9; }
+      html[data-theme='dark'] { background: #08130e; }
       body { margin: 0; }
 
       #boot, .boot-hold { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; }
-      #boot { opacity: 1; transition: opacity .42s cubic-bezier(.4, 0, .2, 1); contain: strict; }
+      #boot { opacity: 1; background: #f6f4e9; transition: opacity .3s cubic-bezier(.16, 1, .3, 1); contain: strict; }
+      html[data-theme='dark'] #boot { background: #08130e; }
       #boot.is-leaving { opacity: 0; pointer-events: none; }
       .boot-hold { position: static; min-height: 100dvh; }
 
-      /* Landing: paper frame, night stage. */
-      #boot { background: #f8f4ed; }
-      .boot-stage { position: absolute; inset: clamp(8px, 1.05vw, 16px); border-radius: clamp(10px, 1.1vw, 16px);
-        background:
-          radial-gradient(26% 34% at 72% 46%, rgba(0, 78, 88, .55), transparent 70%),
-          radial-gradient(52% 62% at 70% 44%, rgba(0, 58, 72, .85), transparent 72%),
-          linear-gradient(170deg, #001822 0%, #000c15 100%); }
+      /* Workspace: the rail's hairline and the top bar's. Widths match styles/shell.css. */
+      .boot-stage { display: none; }
+      html[data-boot='workspace'] .boot-stage { display: block; position: absolute; inset: 0 0 0 256px; border-left: 1px solid #bebfb1; background: linear-gradient(#bebfb1, #bebfb1) 0 56px / 100% 1px no-repeat; }
+      html[data-theme='dark'][data-boot='workspace'] .boot-stage { border-left-color: #344039; background-image: linear-gradient(#344039, #344039); }
+      @media (max-width: 767px) { html[data-boot='workspace'] .boot-stage { inset: 0; border-left: 0; } }
 
-      /* Workspace: the desk, the rail, the sheet. Widths match styles/shell.css. */
-      html[data-boot='workspace'] #boot { background: #efece4; }
-      html[data-boot='workspace'] .boot-stage { inset: 0 0 0 264px; border-radius: 22px 0 0 0; background: #f7f5ef; box-shadow: 0 0 0 1px #e2dfd5; }
-      html[data-boot='paper'] #boot { background: #f7f5ef; }
-      html[data-boot='paper'] .boot-stage { display: none; }
-      html[data-theme='dark'][data-boot='workspace'] #boot { background: #141d22; }
-      html[data-theme='dark'][data-boot='workspace'] .boot-stage { background: #1b272d; box-shadow: 0 0 0 1px #384950; }
-      html[data-theme='dark'][data-boot='paper'] #boot { background: #1b272d; }
-      @media (max-width: 767px) { html[data-boot='workspace'] .boot-stage { inset: 0; border-radius: 0; } }
-
-      .boot-mark { position: relative; width: 44px; height: 44px; color: #7ddfee; opacity: 0; animation: boot-in .5s .34s ease forwards; }
-      html[data-boot='workspace'] .boot-mark, html[data-boot='paper'] .boot-mark, .boot-hold .boot-mark { color: #426c7b; }
-      html[data-theme='dark'][data-boot='workspace'] .boot-mark, html[data-theme='dark'][data-boot='paper'] .boot-mark, html[data-theme='dark'] .boot-hold .boot-mark { color: #afcbd3; }
-      @media (min-width: 768px) { html[data-boot='workspace'] #boot .boot-mark { left: 132px; } }
+      .boot-mark { position: relative; width: 44px; height: 44px; color: #0b1c15; opacity: 0; animation: boot-in .4s .34s ease-out forwards; }
+      html[data-theme='dark'] .boot-mark { color: #ece8d9; }
+      @media (min-width: 768px) { html[data-boot='workspace'] #boot .boot-mark { left: 128px; } }
       .boot-mark svg { display: block; width: 100%; height: 100%; }
       .boot-mark path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: boot-draw 1.5s .34s cubic-bezier(.65, 0, .35, 1) infinite alternate; }
       .boot-mark circle { opacity: .9; }

@@ -1,289 +1,183 @@
 /**
- * Typography.
+ * Typography: three voices, each with one job (design.md, "Typography").
  *
- * Cormorant Garamond over Lora — a Garalde display face above a workhorse text
- * serif, which is the pairing the Classical system is built on. Both are set
- * through the tokens in src/index.css (`--font-serif` for headings,
- * `--font-sans` for body; the second keeps its name and stops being sans, see
- * the note there).
+ *   Reading      Old Standard TT. Headings, problem statements, prose: words
+ *                meant to be read and thought about. Always upright in a
+ *                heading; emphasis is weight.
+ *   Interface    Archivo. Navigation, controls, labels, tables: the instrument
+ *                around the mathematics. Its width axis encodes density.
+ *   Mathematics  Computer Modern, through KaTeX. Formulas, and every numeral
+ *                anywhere in the product ("CM Digits", styles/fonts.css).
  *
- * Two rules run through everything below.
+ * The serif is never set below --fs-md (17 px): its hairlines are too fine.
+ * Anything smaller is the interface face.
  *
- * Bold is avoided. Interface headings cap at semibold, and the *bigger* the
- * text the *lighter* it sets — the hero takes the 300 cut, section displays
- * take 400. That is backwards from most interface type and it is the whole
- * character of the system: at 78px, weight is not what makes a headline
- * command a page, size already did that. Emphasis inside running text is
- * italic, never bold.
- *
- * Figures set tabular wherever they stand as data — the display numerals,
- * table columns, timers, counters — and keep their text figures in running
- * prose, where Lora's tabular feature also widens word-spaces and punctuation
- * and would visibly loosen a paragraph.
- */
-:root {
-  /*
-   * Type scale.
-   *
-   * The sizes are the source design's, not a ratio derived in the abstract:
-   * a 10px tracked kicker, 15px body, and display sizes that run to 78px. The
-   * gap between body and display is deliberately enormous, which is what lets
-   * the page have a loud voice and a quiet one and nothing in between.
-   */
-  --text-caption: 0.75rem;
-  --text-small: 0.8125rem;
-  --text-body: 0.9375rem;
-
-  /*
-   * The four largest roles are fluid, the rest are fixed.
-   *
-   * A named scale is worth having precisely because the ratio is decided once —
-   * but a ratio tuned on a 1280px desktop does not survive a 375px phone. Below
-   * `heading` the sizes stay put: body copy and labels are already at their
-   * comfortable minimum, and scaling them with the viewport only makes small
-   * screens harder to read.
-   */
-  --text-lead: clamp(1rem, 0.95rem + 0.22vw, 1.0625rem);
-  --text-heading: 1.3125rem;
-  --text-title: clamp(1.5rem, 1.25rem + 1.1vw, 2.375rem);
-  --text-display: clamp(2.0625rem, 1.7rem + 1.9vw, 3.5rem);
-  /*
-   * The hero runs to 78px because Cormorant at its 300 cut can carry it. A
-   * high-contrast Garalde needs the size — at 40px the hairlines that make the
-   * face worth loading are barely visible, and it reads as a generic serif.
-   */
-  --text-hero: clamp(2.5rem, 1.6rem + 3.9vw, 4.875rem);
-
-  /*
-   * Measure. Around 66 characters is the long-standing comfortable line, and
-   * prose that ignores it is the most common reason a wide layout is tiring to
-   * read regardless of how good the type is.
-   */
-  --measure: 66ch;
-  --measure-tight: 46ch;
-}
-
-/*
- * Neither face carries an optical-size axis, so there is no
- * `font-optical-sizing` here — it would be a declaration that does nothing.
- * What the headings do need is the figure treatment: a Cormorant heading is
- * where the display numerals live (a rank, a count, a score), and those have to
- * line up in a column.
- */
-h1, h2, h3, h4,
-.font-serif {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-}
-
-/* --------------------------------------------------------------------------
- * Roles
- * ------------------------------------------------------------------------ */
-
-/*
- * Tracking tightens as size grows, which is the one typographic rule that does
- * most of the work. Letter-spacing that looks correct at 14px is visibly loose
- * at 44px, because spacing is optical and does not scale linearly with the
- * glyphs.
+ * `.t-*` are the system's names. The `.type-*` names further down are the ones
+ * older screens were written with; they resolve to the same voices.
  */
 
-/*
- * Weight — the ladder runs *down* as size runs up.
- *
- * 300 at hero, 400 at display, 500 at title, 600 at heading and below. A
- * Garalde's whole value is the contrast between thick and hair strokes, and
- * adding weight is the fastest way to throw that away: at 700 the counters
- * close, the hairlines thicken to match the stems, and an expensive face
- * renders as a cheap one. Small sizes get the weight because they need it to
- * hold up against body copy; large sizes never do.
- */
+/* ------------------------------------------------------------------ reading */
 
-.type-hero {
-  font-family: var(--font-serif);
-  font-size: var(--text-hero);
-  font-weight: 300;
-  line-height: 1.03;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
-
-.type-display {
-  font-family: var(--font-serif);
-  font-size: var(--text-display);
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-stretch: normal;
+  font-style: normal;
   font-weight: 400;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  line-height: var(--lh-display);
+  letter-spacing: var(--track-display);
   text-wrap: balance;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
-
-.type-title {
-  font-family: var(--font-serif);
-  font-size: var(--text-title);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
-}
-
-/*
- * The serif does *not* stop here.
- *
- * In a two-serif system the heading face carries every heading, all the way
- * down to the 13px label — Cormorant and Lora are different enough in colour
- * and width that the change still reads at 21px, which is not true of a
- * serif/sans pair at the same size. Semibold is the ceiling from here down.
- */
-.type-heading {
-  font-family: var(--font-serif);
-  font-size: var(--text-heading);
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.012em;
-  text-wrap: balance;
-}
-
-.type-subheading {
-  font-family: var(--font-serif);
-  font-size: var(--text-lead);
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.008em;
-  text-wrap: balance;
-}
-
-/*
- * Eyebrow labels — tracked-out capitals, and this is a reversal.
- *
- * An earlier build set these as 12px sentence-case body text, on the argument
- * that all-caps removes the ascender/descender pattern word shapes are
- * recognised by and so has to be spelled out letter by letter. That argument is
- * still true, and it is still the reason not to have a hundred of them.
- *
- * It loses here because the kicker is doing a different job in this system.
- * Every section of the source design opens with one — `01 — THE ADAPTIVE
- * ENGINE`, `RANK TIER`, `LEARNING STATUS` — and it is the only piece of
- * furniture holding the editorial structure together above a flush-left display
- * line. Tracked capitals at 10px read as a rule with words in it rather than as
- * text, which is exactly what is wanted: it is a label on a drawer, not a
- * sentence, and nobody reads it twice.
- *
- * The discipline that makes it safe is scarcity: one per section, two or three
- * words, never a paragraph, never nested.
- */
-/*
- * No `color` here, deliberately.
- *
- * These role classes are unlayered CSS and Tailwind's utilities live in
- * `@layer utilities`, so an unlayered declaration wins against a utility no
- * matter what order they appear in. A `color` on this class would silently beat
- * every `text-*` a call site put next to it, and the failure would look like the
- * utility not existing. Callers set their own colour.
- */
-.type-eyebrow {
-  font-family: var(--font-sans);
-  font-size: 0.625rem;
+.t-display-s {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-s);
+  font-stretch: normal;
   font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.t-title {
+  font-family: var(--font-display);
+  font-size: clamp(var(--fs-xl), 1.2vw + 1rem, var(--fs-2xl));
+  font-stretch: normal;
+  font-weight: 400;
+  line-height: var(--lh-heading);
+  letter-spacing: var(--track-heading);
+  text-wrap: balance;
+}
+.t-head {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-stretch: normal;
+  font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--track-heading);
+}
+/* The emphasised phrase in a heading: weight, upright. */
+:is(.t-display, .t-display-s, .t-title) :is(b, strong, em, i) {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.t-reading {
+  max-width: var(--measure);
+  font-family: var(--font-reading);
+  font-size: var(--fs-lg);
+  font-stretch: normal;
+  line-height: var(--lh-reading);
+  letter-spacing: var(--track-reading);
+  text-wrap: pretty;
+}
+.t-lede {
+  max-width: 54ch;
+  color: var(--ink-2);
+  font-family: var(--font-reading);
+  font-size: var(--fs-lg);
+  font-stretch: normal;
+  line-height: 1.5;
+  letter-spacing: var(--track-reading);
+  text-wrap: pretty;
+}
+/* A note in the margin's voice: the serif's true italic, never in a heading. */
+.t-note {
+  color: var(--ink-2);
+  font-family: var(--font-reading);
+  font-size: var(--fs-md);
+  font-stretch: normal;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- interface */
+
+.t-ui {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  line-height: var(--lh-ui);
+}
+.t-ui-strong {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  font-weight: 650;
+  line-height: var(--lh-ui);
+}
+.t-small {
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-stretch: var(--wdth-ui);
+  line-height: 1.45;
+}
+/*
+ * A column head or a field label: the one place small capitals are used, and
+ * only above data or a control. It is never a kicker above a heading.
+ */
+.t-label {
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-2xs);
+  font-stretch: var(--wdth-dense);
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
 }
 
-.type-body {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: 1.75;
-  letter-spacing: 0;
-  text-wrap: pretty;
-  max-width: var(--measure);
-}
+/* -------------------------------------------------------------- mathematics */
 
-.type-lead {
-  font-family: var(--font-sans);
-  font-size: var(--text-lead);
-  line-height: 1.8;
-  letter-spacing: 0;
-  text-wrap: pretty;
-  max-width: var(--measure);
-}
-
-.type-caption {
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  line-height: 1.6;
-  color: var(--ct-subtle);
-}
-
-/*
- * Numeric readouts: scores, timers, ranks, point totals.
- *
- * These set in the display serif rather than a mono face. The system does not
- * load one — a monospace figure in a book-like page reads as a code listing,
- * and Cormorant's own lining figures are drawn to sit beside its capitals. The
- * tabular feature supplies the one thing mono was actually being used for.
- *
- * `tabular-nums` is not decoration. Every counter in this app animates — the
- * dashboard's points, the contest clock — and proportional digits make the
- * number jitter horizontally as it counts, because a `1` is narrower than an
- * `8`. Fixing the advance width is what lets a value change without the layout
- * twitching.
- */
-.type-data {
-  font-family: var(--font-serif);
-  font-weight: 500;
+/* A number standing on its own: a score, a count, a year. */
+.t-num {
+  font-family: var(--font-math);
   font-variant-numeric: tabular-nums lining-nums;
-  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-stretch: normal;
   letter-spacing: 0;
 }
-
-/*
- * Any element carrying a live figure, whether or not it uses the mono face.
- * Applied to the animated counters directly.
- */
+.t-figure {
+  font-family: var(--font-math);
+  font-size: var(--fs-3xl);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
 .tnum {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .measure {
   max-width: var(--measure);
 }
-
 .measure-tight {
-  max-width: var(--measure-tight);
+  max-width: 46ch;
 }
 
-/* --------------------------------------------------------------------------
- * Mathematical notation
- * ------------------------------------------------------------------------ */
-
-.katex {
-  font-size: 1.02em;
-}
+/* -------------------------------------------------------------------- KaTeX */
 
 /*
- * Notation is set by KaTeX, not by the paragraph it sits in.
- *
- * Several of the labels that carry formulas -- the plotter bezel, the HUD, the
- * eyebrow rows on the psychometrics panel -- are styled as instrument type:
- * uppercase, letter-spaced, sometimes italic. Those are typographic decisions
- * about the *label*, and every one of them is wrong for the maths inside it:
- * `text-transform` turns a lowercase theta into a capital one, which is a
- * different symbol, and tracking pushes a subscript off its base. Resetting the
- * three inherited properties at the KaTeX root means a formula can be dropped
- * into any label on the site without the label's styling corrupting it.
+ * KaTeX sets its own size at 1.21em, tuned for a Times-sized body. Beside the
+ * reading face it sits at the text's own size; inside interface text it is
+ * brought down to match the sans' x-height.
  */
 .katex {
+  font-size: 1.04em;
+  /* Notation is not styled by the label it sits in: a capitalised theta is another symbol. */
   text-transform: none;
   letter-spacing: normal;
   font-style: normal;
+  font-stretch: normal;
 }
-
-/*
- * KaTeX inherits its colour, which is what makes it theme-aware for free — but
- * only as long as no ancestor sets an explicit colour on it. Stating it keeps a
- * formula legible when a card's own text colour changes at night.
- */
+.t-reading .katex,
+.t-lede .katex {
+  font-size: 1.02em;
+}
 .katex,
 .katex .mord,
 .katex .mbin,
@@ -294,38 +188,86 @@ h1, h2, h3, h4,
 }
 
 /*
- * Display math on a narrow screen.
- *
- * A long derivation is wider than a phone and KaTeX does not wrap — it simply
- * overflows, and on a page with `overflow-x: hidden` the right-hand side of the
- * equation is silently unreachable. Giving the display block its own scroll
- * container is the only correct fix, and the negative margin lets the scrollable
- * area run to the card's edges so the cut-off is visibly a scroll rather than
- * looking like the formula ends there.
+ * A derivation wider than the phone scrolls inside its own block; KaTeX does
+ * not wrap, and the page itself never scrolls sideways.
  */
 .katex-display {
+  margin-block: var(--s-4);
+  margin-inline: 0;
+  padding-block: var(--s-2);
   overflow-x: auto;
   overflow-y: hidden;
-  padding-block: 0.5rem;
-  margin-inline: -0.25rem;
-  padding-inline: 0.25rem;
   scrollbar-width: thin;
 }
+.katex-display > .katex {
+  font-size: 1.12em;
+}
 
-/*
- * A fading edge that appears only when there is more formula to reach. Pure CSS
- * scroll-driven shadow: the gradient is pinned to the scroll container's right
- * edge and `background-attachment: local` removes it once the content is fully
- * scrolled.
- */
-.katex-display {
-  background-image: linear-gradient(
-    to left,
-    color-mix(in srgb, var(--sf-raised) 92%, transparent),
-    transparent 2.5rem
-  );
-  background-repeat: no-repeat;
-  background-position: right center;
-  background-size: 2.5rem 100%;
-  background-attachment: local;
+/* --------------------------------------------- the older names, same voices */
+
+.type-hero {
+  font-family: var(--font-display);
+  font-stretch: normal;
+  font-weight: 400;
+  line-height: var(--lh-display);
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
+}
+.type-display {
+  font-family: var(--font-display);
+  font-stretch: normal;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
+}
+.type-title {
+  font-family: var(--font-display);
+  font-stretch: normal;
+  font-weight: 400;
+  line-height: var(--lh-heading);
+  letter-spacing: var(--track-heading);
+}
+.type-heading,
+.type-subheading {
+  font-family: var(--font-display);
+  font-stretch: normal;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.type-body {
+  font-family: var(--font-body);
+  font-stretch: var(--wdth-ui);
+  line-height: var(--lh-ui);
+}
+.type-lead {
+  color: var(--ink-2);
+  font-family: var(--font-reading);
+  font-size: var(--fs-lg);
+  font-stretch: normal;
+  line-height: 1.5;
+}
+.type-caption {
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+}
+/* The old kicker. Kept as a plain small label so the words survive; it is no longer a spaced-out tag. */
+.type-eyebrow {
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-stretch: var(--wdth-ui);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.type-data,
+.cx-figure {
+  font-family: var(--font-math);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 400;
+  letter-spacing: 0;
 }

@@ -33,7 +33,6 @@ import { useNotifications } from '../services/data/notifications';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { usePlan } from '../services/data/plan';
 import { PLANS } from '../../shared/plans';
-import '../styles/live-data.css';
 import '../styles/shell.css';
 import '../styles/page.css';
 

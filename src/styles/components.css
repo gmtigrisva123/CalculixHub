@@ -1,0 +1,1209 @@
+/**
+ * What every screen is built from (design.md, "Components").
+ *
+ * The page is one sheet of paper. Things on it are separated by rules,
+ * alignment and space; nothing is boxed for the sake of being boxed, nothing
+ * casts a shadow unless it floats above the page, and nothing is rounded past
+ * a corner that is just broken. Yellow appears where the learner is or what
+ * they chose, and on the one action that matters; everything else is ink.
+ *
+ *    1. Rules and sections        8. Tabs and segments
+ *    2. Buttons and links         9. Tables
+ *    3. Fields                   10. Scales, meters, figures
+ *    4. Choices                  11. Answer bubbles, marks
+ *    5. Topic hue                12. Notices, empty states
+ *    6. Tags, chips, key caps    13. What floats: dialog, menu, toast
+ *    7. Avatars, stats           14. The older `cx-` names
+ *
+ * Every interactive class here carries its states: rest, hover,
+ * focus-visible (the global ring in index.css), active, disabled, and
+ * busy / invalid where the control has them.
+ */
+
+/* --------------------------------------------------------------------------
+ * 1. Rules and sections
+ * ------------------------------------------------------------------------ */
+
+.ui-rule {
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: var(--line-hair) solid var(--rule);
+}
+.ui-rule.is-heavy {
+  border-top: var(--line-heavy) solid var(--ink);
+}
+
+/* A section opens with a heavy rule and its heading directly under it, the way a table opens. */
+.ui-section {
+  padding-top: var(--s-4);
+  border-top: var(--line-heavy) solid var(--ink);
+}
+.ui-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-5);
+}
+.ui-section-head :is(h2, h3) {
+  margin: 0;
+  font-size: clamp(var(--fs-xl), 1.2vw + 1rem, var(--fs-2xl));
+  letter-spacing: var(--track-heading);
+}
+.ui-section-head p {
+  margin: var(--s-1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+}
+
+/* --------------------------------------------------------------------------
+ * 2. Buttons and links
+ * ------------------------------------------------------------------------ */
+
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--control-h);
+  padding: 0 var(--s-5);
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.ui-btn > svg {
+  flex: none;
+}
+.ui-btn:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ui-btn:active:not(:disabled, [aria-disabled='true']) {
+  transform: translateY(1px);
+}
+.ui-btn:disabled,
+.ui-btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ui-btn[aria-busy='true'] {
+  cursor: progress;
+}
+
+/* The one action that matters on a view: the highlighter. */
+.ui-btn.is-primary {
+  border-color: var(--accent-line);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ui-btn.is-primary:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--accent-line);
+  background: var(--accent-deep);
+  color: var(--accent-ink);
+}
+/* Ink, filled: a firm second voice where yellow is already in use. */
+.ui-btn.is-solid {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ui-btn.is-solid:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--ink-2);
+  background: var(--ink-2);
+}
+/* No outline until it is pointed at. */
+.ui-btn.is-quiet {
+  border-color: transparent;
+  padding-inline: var(--s-3);
+}
+.ui-btn.is-quiet:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.ui-btn.is-danger {
+  border-color: var(--critical-ink);
+  color: var(--critical-ink);
+}
+.ui-btn.is-danger:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--critical);
+  background: var(--critical);
+  color: var(--paper);
+}
+.ui-btn.is-sm {
+  min-height: var(--control-h-sm);
+  padding-inline: var(--s-3);
+  font-size: var(--fs-sm);
+}
+.ui-btn.is-lg {
+  min-height: 3.25rem;
+  padding-inline: var(--s-6);
+  font-size: var(--fs-md);
+}
+.ui-btn.is-block {
+  width: 100%;
+}
+
+/* A button that is only an icon. Square, and as tall as its neighbours. */
+.ui-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink-2);
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.ui-icon-btn:hover:not(:disabled) {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.ui-icon-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.ui-icon-btn:disabled {
+  opacity: 0.45;
+}
+
+/* A link in running text or standing alone: ink, underlined; the underline firms up when pointed at. */
+.ui-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--ink-3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.24em;
+  white-space: nowrap;
+  transition: text-decoration-color var(--dur-micro) var(--ease-out);
+}
+.ui-link:hover {
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
+.ui-link:active {
+  color: var(--ink-2);
+}
+
+/* --------------------------------------------------------------------------
+ * 3. Fields
+ * ------------------------------------------------------------------------ */
+
+.ui-label {
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.ui-field {
+  display: block;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--s-3);
+  border: var(--line-hair) solid var(--ink-3);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  line-height: 1.4;
+  /* The ring is reserved at rest, so focusing a field never moves anything. */
+  outline: var(--line-heavy) solid transparent;
+  outline-offset: 1px;
+  transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out);
+}
+.ui-field::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+.ui-field:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+.ui-field:focus,
+.ui-field:focus-visible {
+  border-color: var(--ink);
+  outline-color: var(--focus);
+}
+.ui-field[aria-invalid='true'] {
+  border-color: var(--critical-ink);
+}
+.ui-field:disabled {
+  opacity: 0.55;
+  background: var(--paper-2);
+  cursor: not-allowed;
+}
+textarea.ui-field {
+  min-height: 7rem;
+  padding-block: var(--s-3);
+  line-height: 1.5;
+  resize: vertical;
+}
+select.ui-field {
+  padding-right: var(--s-8);
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position: calc(100% - 1.05rem) 50%, calc(100% - 0.7rem) 50%;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+}
+/* iOS zooms the page into any field set smaller than 16 px. */
+@media (pointer: coarse) {
+  .ui-field {
+    font-size: 1rem;
+  }
+}
+/* The line under a field. Its height is reserved, so an error appearing does not push the form down. */
+.ui-help {
+  min-height: 1lh;
+  margin: var(--s-1) 0 0;
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+}
+.ui-help.is-error {
+  color: var(--critical-ink);
+}
+
+/* --------------------------------------------------------------------------
+ * 4. Choices
+ * ------------------------------------------------------------------------ */
+
+.ui-check,
+.ui-radio {
+  display: inline-grid;
+  place-content: center;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  appearance: none;
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+.ui-radio {
+  border-radius: var(--r-round);
+}
+.ui-check::before {
+  content: '';
+  width: 0.6rem;
+  height: 0.6rem;
+  background: var(--paper);
+  clip-path: polygon(12% 52%, 0 66%, 38% 100%, 100% 22%, 86% 10%, 37% 72%);
+  transform: scale(0);
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+.ui-radio::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: var(--r-round);
+  background: var(--paper);
+  transform: scale(0);
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+.ui-check:checked,
+.ui-radio:checked {
+  background: var(--ink);
+}
+.ui-check:checked::before,
+.ui-radio:checked::before {
+  transform: scale(1);
+}
+.ui-check:disabled,
+.ui-radio:disabled {
+  opacity: 0.45;
+}
+
+/*
+ * On or off. A rectangular track and a square thumb that slides, like the
+ * cursor of a slide rule; on, the track is ink and the thumb is the accent.
+ * Works for `<button role="switch" aria-checked>` and `<input type="checkbox">`.
+ */
+.ui-switch {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 2.75rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-control);
+  background: var(--paper-2);
+  appearance: none;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+.ui-switch::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.5rem - 7px);
+  height: calc(1.5rem - 7px);
+  border-radius: 1px;
+  background: var(--ink);
+  transition: transform var(--dur-short) var(--ease-out), background-color var(--dur-short) var(--ease-out);
+}
+.ui-switch:is([aria-checked='true'], :checked) {
+  background: var(--ink);
+}
+.ui-switch:is([aria-checked='true'], :checked)::before {
+  background: var(--accent);
+  transform: translateX(1.25rem);
+}
+.ui-switch:disabled {
+  opacity: 0.45;
+}
+
+/* --------------------------------------------------------------------------
+ * 5. Topic hue
+ * ------------------------------------------------------------------------ */
+
+/*
+ * The four pigments. Anything inside an element that names its topic can draw
+ * with `--hue` (marks, lines, fills), `--hue-ink` (small text) and `--hue-soft`
+ * (a wash). Colour is never the only signal: a topic is always also named.
+ */
+:is([data-topic='Algebra'], .hue-algebra, .cx-tint-algebra) {
+  --hue: var(--algebra);
+  --hue-ink: var(--algebra-ink);
+  --hue-soft: var(--algebra-soft);
+}
+:is([data-topic='Geometry'], .hue-geometry, .cx-tint-geometry) {
+  --hue: var(--geometry);
+  --hue-ink: var(--geometry-ink);
+  --hue-soft: var(--geometry-soft);
+}
+:is([data-topic='Combinatorics'], .hue-combinatorics, .cx-tint-combinatorics) {
+  --hue: var(--combinatorics);
+  --hue-ink: var(--combinatorics-ink);
+  --hue-soft: var(--combinatorics-soft);
+}
+:is([data-topic='Number Theory'], .hue-number-theory, .cx-tint-number-theory) {
+  --hue: var(--number-theory);
+  --hue-ink: var(--number-theory-ink);
+  --hue-soft: var(--number-theory-soft);
+}
+
+/* The pigment itself: a small flat square, as in a figure's key. */
+.ui-sq {
+  display: inline-block;
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--hue, var(--ink));
+}
+.ui-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+ * 6. Tags, chips, key caps
+ * ------------------------------------------------------------------------ */
+
+/* A fact about the thing beside it: "AMC", "Foundation", "Pro". Not clickable. */
+.ui-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 1.375rem;
+  padding: 0 var(--s-2);
+  border: var(--line-hair) solid var(--rule);
+  border-radius: var(--r-control);
+  color: var(--ink-2);
+  font-size: var(--fs-2xs);
+  font-stretch: var(--wdth-ui);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ui-tag.is-solid {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.ui-tag.is-accent {
+  border-color: var(--accent-line);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ui-tag.is-hue {
+  border-color: transparent;
+  background: var(--hue-soft, var(--paper-2));
+  color: var(--hue-ink, var(--ink));
+}
+.ui-tag.is-positive {
+  border-color: transparent;
+  background: var(--positive-soft);
+  color: var(--positive-ink);
+}
+.ui-tag.is-caution {
+  border-color: transparent;
+  background: var(--caution-soft);
+  color: var(--caution-ink);
+}
+.ui-tag.is-critical {
+  border-color: transparent;
+  background: var(--critical-soft);
+  color: var(--critical-ink);
+}
+
+/* A filter that is on or off (`aria-pressed`). On is ink. */
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--control-h-sm);
+  padding: 0 var(--s-3);
+  border: var(--line-hair) solid var(--ink-3);
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.ui-chip:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--paper-2);
+}
+.ui-chip:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.ui-chip[aria-pressed='true'],
+.ui-chip[aria-checked='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 650;
+}
+.ui-chip:disabled {
+  opacity: 0.45;
+}
+
+kbd,
+.ui-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 var(--s-1);
+  border: var(--line-hair) solid var(--ink-3);
+  border-radius: var(--r-control);
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-2xs);
+  font-stretch: var(--wdth-dense);
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* A count riding on something: unread messages. */
+.ui-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--s-1);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-math);
+  font-size: var(--fs-xs);
+  font-stretch: normal;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+ * 7. Avatars, stats
+ * ------------------------------------------------------------------------ */
+
+.ui-avatar {
+  display: block;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  overflow: hidden;
+  border: var(--line-hair) solid var(--rule);
+  border-radius: var(--r-control);
+  background: var(--paper-2);
+  object-fit: cover;
+}
+
+/* A figure about the learner: the numeral in the mathematics face, what it counts beneath it. */
+.ui-stat {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 0;
+}
+.ui-stat > :is(b, strong, dd) {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-math);
+  font-size: var(--fs-3xl);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.ui-stat > :is(span, small, dt) {
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+}
+
+/* --------------------------------------------------------------------------
+ * 8. Tabs and segments
+ * ------------------------------------------------------------------------ */
+
+/* Views of the same thing. A row of words on a hairline; the current one stands on a heavy rule. */
+.ui-tabs {
+  display: flex;
+  gap: var(--s-6);
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: var(--line-hair) solid var(--rule);
+  scrollbar-width: none;
+}
+.ui-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ui-tabs > :is(button, a) {
+  position: relative;
+  flex: none;
+  min-height: var(--control-h);
+  padding: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  font-weight: 550;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.ui-tabs > :is(button, a)::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px;
+  height: var(--line-heavy);
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-short) var(--ease-out);
+}
+.ui-tabs > :is(button, a):hover {
+  color: var(--ink);
+}
+.ui-tabs > :is([aria-selected='true'], [aria-current='page'], [aria-pressed='true']) {
+  color: var(--ink);
+  font-weight: 700;
+}
+.ui-tabs > :is([aria-selected='true'], [aria-current='page'], [aria-pressed='true'])::after {
+  transform: scaleX(1);
+}
+
+/* One of a few, exactly one chosen: cells that share their edges. The chosen cell is ink. */
+.ui-segment {
+  display: inline-flex;
+  flex: none;
+  border: var(--line-hair) solid var(--ink);
+  border-radius: var(--r-control);
+}
+.ui-segment > button {
+  min-height: calc(var(--control-h-sm) - 2px);
+  padding: 0 var(--s-3);
+  border: 0;
+  border-left: var(--line-hair) solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  white-space: nowrap;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+}
+.ui-segment > button:first-child {
+  border-left: 0;
+}
+.ui-segment > button:hover:not(:disabled) {
+  background: var(--paper-2);
+}
+.ui-segment > button:is([aria-pressed='true'], [aria-checked='true'], [aria-selected='true']) {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 650;
+}
+
+/* --------------------------------------------------------------------------
+ * 9. Tables
+ * ------------------------------------------------------------------------ */
+
+/*
+ * Set the way a typeset paper sets a table: a heavy rule above, a rule under
+ * the head, a heavy rule below, hairlines between rows and no vertical rules.
+ */
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: var(--line-heavy) solid var(--ink);
+  border-bottom: var(--line-heavy) solid var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.ui-table th {
+  padding: var(--s-2) var(--s-4) var(--s-2) 0;
+  border-bottom: var(--line-hair) solid var(--ink);
+  color: var(--ink-2);
+  font-size: var(--fs-2xs);
+  font-stretch: var(--wdth-dense);
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ui-table td {
+  padding: var(--s-3) var(--s-4) var(--s-3) 0;
+  border-bottom: var(--line-hair) solid var(--rule);
+  vertical-align: middle;
+}
+.ui-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ui-table :is(th, td):last-child {
+  padding-right: 0;
+}
+.ui-table :is(th, td).is-num {
+  text-align: right;
+}
+.ui-table td.is-num {
+  font-family: var(--font-math);
+  font-size: var(--fs-md);
+  font-stretch: normal;
+}
+/* The learner's own row: the highlighter. */
+.ui-table tr:is(.is-you, [aria-current='true']) td {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+ * 10. Scales, meters, figures
+ * ------------------------------------------------------------------------ */
+
+/*
+ * The measure. A quantity is a position on a ruled line: ticks every tenth,
+ * taller at the ends and the middle, the reach drawn along it in the topic's
+ * pigment (or ink), and a small yellow flag where the learner stands.
+ *
+ *   <span class="ui-scale" style="--value: 64" role="img" aria-label="64 percent"><i></i></span>
+ *
+ * `--value` runs 0 to 100. Leave the <i> out for a scale with no flag.
+ */
+.ui-scale {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 4rem;
+  height: 1.125rem;
+  container-type: inline-size;
+  border-bottom: var(--line-hair) solid var(--ink-3);
+  background:
+    linear-gradient(var(--ink-3), var(--ink-3)) 0 100% / 1px 0.5rem no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) 50% 100% / 1px 0.5rem no-repeat,
+    linear-gradient(var(--ink-3), var(--ink-3)) 100% 100% / 1px 0.5rem no-repeat,
+    repeating-linear-gradient(90deg, var(--ink-3) 0 1px, transparent 1px 10%) 0 100% / 100% 0.25rem no-repeat;
+}
+.ui-scale::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 -2px;
+  height: 3px;
+  background: var(--hue, var(--ink));
+  transform: scaleX(calc(var(--value, 0) / 100));
+  transform-origin: left;
+  transition: transform var(--dur-long) var(--ease-out);
+}
+.ui-scale > i {
+  position: absolute;
+  bottom: 3px;
+  left: -4px;
+  width: 8px;
+  height: 0.6875rem;
+  border: var(--line-hair) solid var(--accent-ink);
+  background: var(--accent);
+  transform: translateX(calc(var(--value, 0) * 1cqi));
+  transition: transform var(--dur-long) var(--ease-out);
+}
+[data-theme='dark'] .ui-scale > i {
+  border-color: var(--paper);
+}
+
+/* How far along, with no scale to read: one hairline and the reach in ink. */
+.ui-meter {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  background: var(--rule-2);
+}
+.ui-meter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--hue, var(--ink));
+  transform: scaleX(calc(var(--value, 0) / 100));
+  transform-origin: left;
+  transition: transform var(--dur-long) var(--ease-out);
+}
+
+/* A drawing or a chart, with its caption under a hairline, as in a book. */
+.ui-fig {
+  margin: 0;
+}
+.ui-fig > figcaption {
+  margin-top: var(--s-3);
+  padding-top: var(--s-2);
+  border-top: var(--line-hair) solid var(--rule);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
+ * 11. Answer bubbles, marks
+ * ------------------------------------------------------------------------ */
+
+/*
+ * A choice on an answer form: a lettered bubble. Chosen, it is filled in, the
+ * way a pencil fills it on the real sheet.
+ */
+.ui-bubble {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-round);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-stretch: var(--wdth-ui);
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+}
+.ui-bubble.is-on,
+:is([aria-checked='true'], [aria-pressed='true'], [aria-selected='true']) > .ui-bubble {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* The highlighter: a band of the accent behind the words, the height of the letters. */
+mark,
+.ui-mark {
+  padding-inline: 0.2em;
+  margin-inline: -0.2em;
+  background: linear-gradient(transparent 10%, var(--accent) 10%, var(--accent) 90%, transparent 90%);
+  color: var(--accent-ink);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* --------------------------------------------------------------------------
+ * 12. Notices, empty states
+ * ------------------------------------------------------------------------ */
+
+/* Something the learner should know, said once, in a row. */
+.ui-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--control-h);
+  padding: var(--s-2) var(--s-3);
+  border: var(--line-hair) solid var(--rule);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.ui-notice > svg {
+  flex: none;
+  color: var(--ink-2);
+}
+.ui-notice > p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.ui-notice.is-warning {
+  border-color: transparent;
+  background: var(--caution-soft);
+}
+.ui-notice.is-warning > svg {
+  color: var(--caution-ink);
+}
+.ui-notice.is-critical {
+  border-color: transparent;
+  background: var(--critical-soft);
+}
+.ui-notice.is-critical > svg {
+  color: var(--critical-ink);
+}
+.ui-notice.is-positive {
+  border-color: transparent;
+  background: var(--positive-soft);
+}
+.ui-notice.is-positive > svg {
+  color: var(--positive-ink);
+}
+
+/* Nothing here yet. Said plainly, set left like everything else, with the way forward. */
+.ui-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  max-width: 34rem;
+  padding: var(--s-6) 0 var(--s-10);
+  border-top: var(--line-heavy) solid var(--ink);
+}
+.ui-empty :is(h1, h2, h3) {
+  margin: 0;
+  font-size: var(--fs-xl);
+}
+.ui-empty p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.ui-empty .ui-btn {
+  margin-top: var(--s-3);
+}
+
+/* A page or a block on its way. A still tint; nothing shimmers. */
+.ui-skel {
+  display: block;
+  background: var(--paper-2);
+}
+
+/* --------------------------------------------------------------------------
+ * 13. What floats: dialog, menu, toast
+ * ------------------------------------------------------------------------ */
+
+.ui-dialog {
+  width: min(34rem, calc(100vw - var(--s-6)));
+  max-height: calc(100dvh - var(--s-12));
+  padding: 0;
+  overflow: auto;
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--paper-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-float);
+}
+.ui-dialog::backdrop {
+  background: var(--scrim);
+}
+.ui-dialog[open] {
+  animation: ui-rise var(--dur-short) var(--ease-out);
+}
+.ui-dialog[open]::backdrop {
+  animation: ui-fade var(--dur-short) var(--ease-out);
+}
+@keyframes ui-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes ui-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.ui-menu {
+  padding: var(--s-1);
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--paper-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-float);
+}
+.ui-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 2.5rem;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-control);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  text-align: left;
+  text-decoration: none;
+}
+.ui-menu-item:is(:hover, :focus-visible, [data-active='true']) {
+  background: var(--paper-2);
+}
+.ui-menu-item[aria-current='page'] {
+  font-weight: 700;
+}
+
+/* Said from the corner, in ink. For failures and for effects that cannot be seen; never for applause. */
+.ui-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  max-width: min(26rem, calc(100vw - var(--s-8)));
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-control);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  box-shadow: var(--shadow-float);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog[open],
+  .ui-dialog[open]::backdrop {
+    animation-duration: 0.01ms;
+  }
+  .ui-scale::before,
+  .ui-scale > i,
+  .ui-meter::before {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * 14. The older `cx-` names
+ * ------------------------------------------------------------------------ */
+
+/*
+ * A few screens still use the previous system's class names. They resolve to
+ * the components above, so those screens speak the same language until they
+ * are rewritten against the `ui-` names.
+ */
+.cx-ground {
+  background: var(--paper);
+}
+
+.cx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--control-h);
+  padding: 0 var(--s-5);
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.cx-btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+.cx-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.cx-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cx-btn-primary,
+.cx-btn-fill {
+  border-color: var(--accent-line);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+:is(.cx-btn-primary, .cx-btn-fill):hover:not(:disabled) {
+  border-color: var(--accent-line);
+  background: var(--accent-deep);
+  color: var(--accent-ink);
+}
+.cx-btn-ghost {
+  border-color: transparent;
+}
+.cx-btn-ghost:hover:not(:disabled) {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.cx-btn-block {
+  width: 100%;
+}
+.cx-btn-inert {
+  pointer-events: none;
+}
+
+.cx-label {
+  display: block;
+  margin-bottom: var(--s-2);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.cx-input {
+  display: block;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--s-3);
+  border: var(--line-hair) solid var(--ink-3);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.4;
+  outline: var(--line-heavy) solid transparent;
+  outline-offset: 1px;
+  transition: border-color var(--dur-micro) var(--ease-out);
+}
+.cx-input::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+.cx-input:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+.cx-input:focus,
+.cx-input:focus-visible {
+  border-color: var(--ink);
+  outline-color: var(--focus);
+}
+.cx-input:disabled {
+  opacity: 0.55;
+  background: var(--paper-2);
+}
+@media (pointer: coarse) {
+  .cx-input {
+    font-size: 1rem;
+  }
+}
+
+/* The old card: a ruled block on the same paper, not a raised box. */
+.cx-card,
+.cx-card-bezel,
+.cx-card-quantum,
+.cx-glass-panel {
+  border: var(--line-hair) solid var(--rule);
+  border-radius: var(--r-0);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.cx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 1.375rem;
+  padding: 0 var(--s-2);
+  border: var(--line-hair) solid var(--rule);
+  border-radius: var(--r-control);
+  color: var(--cx-hue-text, var(--ink-2));
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+.cx-tag-accent {
+  border-color: var(--accent-line);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.cx-tag-neutral {
+  color: var(--ink-2);
+}
+.cx-hue {
+  color: var(--cx-hue, var(--hue, var(--ink)));
+}
+.cx-hue-text {
+  color: var(--cx-hue-text, var(--hue-ink, var(--ink)));
+}
+
+.cx-option {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--s-2) var(--s-1);
+  border: 0;
+  border-bottom: var(--line-hair) solid var(--rule);
+  border-radius: var(--r-0);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.cx-option:hover:not(:disabled) {
+  background: var(--paper-2);
+}
+.cx-option__letter {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-round);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cx-mark {
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--ink);
+  color: var(--paper);
+}

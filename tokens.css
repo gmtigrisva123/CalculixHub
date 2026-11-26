@@ -1,29 +1,241 @@
-/* CalculixHub custom tokens: quiet study, warm paper, blue ink. */
-.quiet-calculix {
-  --color-paper: oklch(97% .011 84);
-  --color-paper-raised: oklch(98.5% .008 84);
-  --color-paper-shade: oklch(94% .015 84);
-  --color-ink: oklch(27% .023 231);
-  --color-body: oklch(43% .019 231);
-  --color-muted: oklch(51% .018 231);
-  --color-accent: oklch(48% .059 227);
-  --color-accent-soft: oklch(89% .031 227);
-  --color-pencil: oklch(56% .099 35);
-  --color-rule: oklch(83% .019 84);
-  --color-rule-faint: oklch(90% .014 84);
-  --color-grid: oklch(80% .02 84);
-  --color-transparent: transparent;
-  --font-display: 'Manrope', 'Geist', sans-serif;
-  --font-body: 'DM Sans', 'Geist', sans-serif;
-  --font-notation: 'Newsreader', Georgia, serif;
-  --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px;
-  --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px;
-  --text-display: clamp(3.5rem, 7.6vw, 7.25rem);
-  --text-heading: clamp(2.1rem, 4.3vw, 4rem);
-  --text-body: 15px;
-  --ease-out: cubic-bezier(.2,.7,.2,1);
-  --ease-in: cubic-bezier(.5,0,.8,.3);
-  --ease-in-out: cubic-bezier(.65,0,.35,1);
-  --dur-short: 160ms; --dur-reveal: 240ms;
-  --radius-control: 4px; --radius-round: 50%;
+/* Hallmark · route: custom (bespoke) · design-system: design.md · designed-as-app
+ * structure: ruled sheets, no cards · idea: "Ink on paper. Colour belongs to mathematics. Yellow marks where you are."
+ * paper: oklch(96.5% 0.014 96) · accent: oklch(87% 0.176 92) · display: Old Standard TT · body: Archivo · numerals + mathematics: Computer Modern
+ * axes: light / roman-serif (Modern) / chromatic-other (yellow ~92°) · contrast: pass (40-41) · tokens: pass (48) · studied: no
+ */
+
+/*
+ * CalculixHub design tokens: the one source of truth.
+ *
+ * Everything the interface draws with is named here. A stylesheet asks for
+ * `var(--ink)`, never for a hex; a new shade is a `color-mix()` of two
+ * of these, or a new name added to this file. design.md explains the system;
+ * src/styles/tokens.css bridges these names to Tailwind and to the older
+ * semantic names (`--sf`, `--ct`, `--ln`) that some screens still use.
+ *
+ * Three ideas, and the tokens follow from them:
+ *
+ *   Ink on paper.   One paper, one ink, hairlines between them. Structure is
+ *                   drawn with rules and alignment, not with boxes and shadows.
+ *   Colour belongs  Four pigments, one per topic, used for figures and data
+ *   to mathematics. marks only. The interface around them stays ink.
+ *   Yellow marks    A single accent, the yellow of the "yellow books" on every
+ *   where you are.  mathematician's shelf. It is a highlighter: it fills the
+ *                   current page, your row, your answer, the one action that
+ *                   matters. By day it is never a text colour.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ------------------------------------------------------------ paper, ink */
+  --paper: oklch(96.5% 0.014 96);
+  --paper-2: oklch(93.6% 0.018 96);       /* recessed: wells, hovered rows, key caps */
+  --paper-3: oklch(90.4% 0.021 96);       /* pressed, empty tracks */
+  --paper-raised: oklch(98.3% 0.009 96);  /* what floats: menus, dialogs, sheets */
+  --ink: oklch(21% 0.028 165);
+  --ink-2: oklch(38% 0.026 160);          /* secondary text */
+  --ink-3: oklch(50% 0.022 150);          /* tertiary text, control outlines at rest */
+  --rule: oklch(80% 0.02 110);            /* hairline */
+  --rule-2: oklch(87.5% 0.018 104);       /* faint hairline, grid lines */
+  --scrim: oklch(21% 0.028 165 / 0.42);
+
+  /* ---------------------------------------------------------------- accent */
+  --accent: oklch(87% 0.176 92);
+  --accent-ink: oklch(21% 0.028 165);     /* text set on the accent */
+  --accent-soft: oklch(93% 0.085 95);     /* a wash behind a chosen row */
+  --accent-deep: oklch(76% 0.16 86);      /* the accent pressed */
+  --accent-text: var(--ink);        /* "accent" text by day is ink; yellow cannot carry words on paper */
+  --accent-line: var(--ink);        /* lines that turn yellow at night */
+  --focus: var(--ink);
+
+  /* -------------------------------------------- pigments: the four topics */
+  /* `-ink` is the step that carries small text on paper; `-soft` is a wash. */
+  --algebra: oklch(62% 0.2 38);
+  --algebra-ink: oklch(49% 0.175 36);
+  --algebra-soft: oklch(92% 0.045 50);
+  --geometry: oklch(52% 0.11 165);
+  --geometry-ink: oklch(42% 0.095 165);
+  --geometry-soft: oklch(92% 0.035 165);
+  --combinatorics: oklch(50% 0.16 305);
+  --combinatorics-ink: oklch(44% 0.16 305);
+  --combinatorics-soft: oklch(92% 0.035 305);
+  --number-theory: oklch(48% 0.16 258);
+  --number-theory-ink: oklch(43% 0.155 258);
+  --number-theory-soft: oklch(92% 0.035 255);
+
+  /* ---------------------------------------------------------------- status */
+  --positive: oklch(50% 0.12 155);
+  --positive-ink: oklch(40% 0.1 155);
+  --positive-soft: oklch(92.5% 0.045 155);
+  --caution: oklch(72% 0.15 70);
+  --caution-ink: oklch(46% 0.1 70);
+  --caution-soft: oklch(93% 0.06 85);
+  --critical: oklch(52% 0.2 22);
+  --critical-ink: oklch(45% 0.18 22);
+  --critical-soft: oklch(92.5% 0.04 25);
+
+  /* Medals: flat tones for first, second, third. */
+  --gold: oklch(80% 0.14 86);
+  --silver: oklch(80% 0.012 230);
+  --bronze: oklch(64% 0.1 55);
+
+  /* ------------------------------------------------------------------ type */
+  /*
+   * CM Digits is Computer Modern cut down to 0-9 by unicode-range, so it only
+   * ever supplies the numerals; the family after it supplies everything else.
+   */
+  --font-display: 'CM Digits', 'Old Standard TT', 'Times New Roman', serif;
+  --font-reading: 'CM Digits', 'Old Standard TT', 'Times New Roman', serif;
+  --font-body: 'CM Digits', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-math: KaTeX_Main, 'Times New Roman', serif;
+
+  /* Archivo's width axis. Width encodes density: wide to announce, narrow to tabulate. */
+  --wdth-wide: 112%;
+  --wdth-normal: 100%;
+  --wdth-ui: 95%;
+  --wdth-dense: 84%;
+
+  --fs-2xs: 0.75rem;      /* 12  table heads, key caps */
+  --fs-xs: 0.8125rem;     /* 13  captions, meta */
+  --fs-sm: 0.875rem;      /* 14  dense interface */
+  --fs-base: 0.9375rem;   /* 15  interface */
+  --fs-md: 1.0625rem;     /* 17  the smallest the serif is ever set */
+  --fs-lg: 1.1875rem;     /* 19  reading: problem statements, prose */
+  --fs-xl: 1.5rem;        /* 24  sub-heads */
+  --fs-2xl: 1.875rem;     /* 30  section heads */
+  --fs-3xl: 2.5rem;       /* 40  figures (numerals), small page titles */
+  --fs-4xl: 3.5rem;       /* 56  page titles */
+  --fs-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
+  --fs-display-s: clamp(2.25rem, 3.4vw + 1rem, 3.75rem);
+
+  /* Old Standard is fitted loosely, as metal type was. It is drawn in a little, more as it grows. */
+  --track-display: -0.022em;
+  --track-heading: -0.012em;
+  --track-reading: -0.006em;
+
+  --lh-display: 1.02;
+  --lh-heading: 1.15;
+  --lh-ui: 1.45;
+  --lh-reading: 1.6;
+  --measure: 62ch;
+
+  /* ----------------------------------------------------------------- space */
+  /* 4 pt scale; the number is the multiple of 4 px. */
+  --s-0h: 0.125rem;
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.25rem;
+  --s-6: 1.5rem;
+  --s-8: 2rem;
+  --s-10: 2.5rem;
+  --s-12: 3rem;
+  --s-16: 4rem;
+  --s-20: 5rem;
+  --s-24: 6rem;
+  --s-36: 9rem;
+  /* The same scale by role. */
+  --space-3xs: var(--s-0h);
+  --space-2xs: var(--s-1);
+  --space-xs: var(--s-2);
+  --space-sm: var(--s-3);
+  --space-md: var(--s-4);
+  --space-lg: var(--s-6);
+  --space-xl: var(--s-10);
+  --space-2xl: var(--s-16);
+  --space-3xl: var(--s-24);
+  --space-4xl: var(--s-36);
+
+  --page-max: 76rem;
+  --page-gutter: clamp(1rem, 4vw, 3rem);
+
+  /* ----------------------------------------------------------- rule, shape */
+  --line-hair: 1px;
+  --line-medium: 1.5px;
+  --line-heavy: 2px;
+  --r-0: 0;
+  --r-control: 2px;    /* buttons, fields, tags: square, with the corner just broken */
+  --r-round: 50%;      /* answer bubbles, status dots */
+  --control-h: 2.75rem;     /* 44: every button and field on a row shares it */
+  --control-h-sm: 2.25rem;  /* 36: toolbars */
+
+  /* Only what floats above the page casts a shadow. */
+  --shadow-float: 0 18px 44px -18px oklch(21% 0.028 165 / 0.32), 0 2px 6px -2px oklch(21% 0.028 165 / 0.12);
+
+  /* ---------------------------------------------------------------- motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 200ms;
+  --dur-long: 400ms;
+
+  /* ---------------------------------------------------------------- layers */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-sticky-nav: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+}
+
+/*
+ * Night: the same sheet read at the board. The hue never changes, only
+ * lightness and chroma; height is shown by a lighter surface, not a shadow.
+ * Here, and only here, the accent may carry text and lines.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --paper: oklch(17.5% 0.02 165);
+  --paper-2: oklch(21% 0.022 165);
+  --paper-3: oklch(25% 0.024 165);
+  --paper-raised: oklch(22.5% 0.022 165);
+  --ink: oklch(93% 0.02 96);
+  --ink-2: oklch(80% 0.02 100);
+  --ink-3: oklch(66% 0.02 110);
+  --rule: oklch(36% 0.02 160);
+  --rule-2: oklch(28% 0.02 162);
+  --scrim: oklch(8% 0.02 165 / 0.66);
+
+  --accent: oklch(86% 0.16 92);
+  --accent-ink: oklch(19% 0.025 165);
+  --accent-soft: oklch(33% 0.06 95);
+  --accent-deep: oklch(76% 0.15 88);
+  --accent-text: var(--accent);
+  --accent-line: var(--accent);
+  --focus: var(--accent);
+
+  --algebra: oklch(72% 0.17 40);
+  --algebra-ink: oklch(79% 0.14 42);
+  --algebra-soft: oklch(29% 0.06 40);
+  --geometry: oklch(74% 0.11 165);
+  --geometry-ink: oklch(81% 0.1 165);
+  --geometry-soft: oklch(28% 0.045 165);
+  --combinatorics: oklch(76% 0.12 305);
+  --combinatorics-ink: oklch(82% 0.1 305);
+  --combinatorics-soft: oklch(29% 0.06 305);
+  --number-theory: oklch(74% 0.12 255);
+  --number-theory-ink: oklch(81% 0.1 255);
+  --number-theory-soft: oklch(28% 0.055 255);
+
+  --positive: oklch(74% 0.13 155);
+  --positive-ink: oklch(81% 0.12 155);
+  --positive-soft: oklch(28% 0.05 155);
+  --caution: oklch(80% 0.14 75);
+  --caution-ink: oklch(85% 0.12 80);
+  --caution-soft: oklch(30% 0.055 80);
+  --critical: oklch(70% 0.17 25);
+  --critical-ink: oklch(78% 0.14 25);
+  --critical-soft: oklch(29% 0.065 25);
+
+  --gold: oklch(82% 0.14 88);
+  --silver: oklch(78% 0.012 230);
+  --bronze: oklch(66% 0.1 55);
+
+  --shadow-float: 0 24px 60px -20px oklch(5% 0.02 165 / 0.8), 0 0 0 1px oklch(36% 0.02 160);
 }

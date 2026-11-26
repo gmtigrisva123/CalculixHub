@@ -1,272 +1,245 @@
+/* Hallmark · route: custom (bespoke) · design-system: design.md · designed-as-app */
+
 /**
  * CalculixHub stylesheet entry.
  *
  * The layers, in the order they load:
  *
- *   tokens      — semantic colour, elevation and radius; owns the theme flip
- *   materials   — grain, the action face, glass, graph paper, focus
- *   typography  — the type scale and mathematical notation
- *   classical   — the design system's component layer (.cx-*)
+ *   tokens      /tokens.css (the source of truth) bridged to Tailwind and to
+ *               the older semantic names by styles/tokens.css
+ *   typography  the three voices: reading, interface, mathematics
+ *   components  what every screen is built from: buttons, fields, rules,
+ *               tables, scales, bubbles, marks
  *
- * Everything below this block is what belongs to the app shell itself and has no
- * home in a layer: platform quirks, the reduced-motion contract, and the one
- * fixed-position offset that Tailwind's bracket syntax cannot express.
+ * Below the imports is what belongs to the document itself: the element
+ * defaults, the theme change, the reduced-motion contract and the one fixed
+ * offset the tutor button needs. design.md explains the system these express.
  *
- * Webfonts are loaded from index.html rather than with `@import url(...)` here.
- * A remote `@import` inside the app stylesheet serialises the download — the
- * browser must fetch and parse this file before it discovers the font CSS, then
- * fetch that before it discovers the font files — which puts three round trips
- * in front of first paint. The `<link rel="preconnect">` pair in the head opens
- * the connection during HTML parse instead.
+ * Webfonts are declared in styles/fonts.css and preloaded from index.html, so
+ * nothing here waits on a third party.
  */
 
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 @import "./styles/tokens.css";
-@import "./styles/materials.css";
 @import "./styles/typography.css";
-@import "./styles/classical.css";
+@import "./styles/components.css";
 
 @theme {
   /*
-   * Cormorant Garamond for headings over Lora for body text.
-   *
-   * `--font-sans` keeps its name and stops being sans: the app sets body copy
-   * through it at ~450 call sites, and renaming the token would have been a
-   * mechanical diff across every screen for no gain. What it points at is what
-   * matters, and it now points at the Classical system's body face.
-   *
-   * Both faces are loaded with their italic cuts, because this system uses
-   * italics — not bold — for emphasis. Cormorant is requested no heavier than
-   * 600: semibold is the ceiling for interface headings, and display sizes take
-   * the normal cut. See styles/typography.css.
+   * Tailwind's three font utilities point at the system's stacks. There is no
+   * monospace face in this system (design.md, "Typography"): `font-mono` is
+   * the interface face, so an older class name cannot bring a fourth family in.
    */
-  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-serif: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: 'CM Digits', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'CM Digits', 'Old Standard TT', 'Times New Roman', serif;
+  --font-mono: 'CM Digits', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
 
   /*
-   * Brand: ink & brass. A book, not a generic SaaS gradient.
-   *
-   * These are the palette primitives and they are theme-independent — `brass-600`
-   * is #a06f24 in daylight and at midnight. Screens should almost never reach for
-   * them directly; the semantic tokens in styles/tokens.css (`surface`, `content`,
-   * `line`, `accent`) are the ones that know about lighting. Use a primitive only
-   * when a colour is genuinely absolute, such as a brand mark, a permanently dark
-   * surface like the marketing hero bands, or a fixed data-series colour that must
-   * stay identifiable across themes.
-   *
-   * The four families keep the names the codebase already uses (`ink`, `paper`,
-   * `azure`, `proof`) and change what they resolve to, for the same reason the
-   * `stone` ramp in styles/tokens.css is bridged rather than replaced: ~300 call
-   * sites, no diff, no chance of a wrong call in the middle of a mechanical
-   * rename. `azure` is the action colour and is now brass; `proof` is the
-   * verified colour and is now verdigris.
+   * Absolute primitives. A handful of older call sites ask for a colour that
+   * must not follow the theme (`bg-ink-950` under a permanently dark sheet).
+   * They resolve to fixed steps of the same ink and paper as the tokens.
    */
-  --color-ink-50: #f8f4f4;
-  --color-ink-100: #f1eeee;
-  --color-ink-200: #e2dfdf;
-  --color-ink-300: #c9c5c5;
-  --color-ink-400: #9b9797;
-  --color-ink-500: #7d7979;
-  --color-ink-600: #605d5d;
-  --color-ink-700: #444141;
-  --color-ink-750: #3a3736;
-  --color-ink-800: #2d2b2b;
-  --color-ink-850: #232120;
-  --color-ink-900: #1d1912;
-  --color-ink-950: #161310;
+  --color-ink-50: oklch(96.5% 0.014 96);
+  --color-ink-100: oklch(93.6% 0.018 96);
+  --color-ink-200: oklch(87.5% 0.018 104);
+  --color-ink-300: oklch(80% 0.02 110);
+  --color-ink-400: oklch(66% 0.02 110);
+  --color-ink-500: oklch(58% 0.022 140);
+  --color-ink-600: oklch(50% 0.022 150);
+  --color-ink-700: oklch(38% 0.026 160);
+  --color-ink-750: oklch(33% 0.026 162);
+  --color-ink-800: oklch(28% 0.026 164);
+  --color-ink-850: oklch(24% 0.027 165);
+  --color-ink-900: oklch(21% 0.028 165);
+  --color-ink-950: oklch(17.5% 0.02 165);
 
-  --color-paper-50: #f8f4f4;
-  --color-paper-100: #f3f2f2;
-  --color-paper-150: #eeecec;
-  --color-paper-200: #eae9e9;
+  --color-paper-50: oklch(98.3% 0.009 96);
+  --color-paper-100: oklch(96.5% 0.014 96);
+  --color-paper-150: oklch(93.6% 0.018 96);
+  --color-paper-200: oklch(90.4% 0.021 96);
 
-  /* Brass — the accent, applied as stroke rather than fill. */
-  --color-azure-50: #fffaf2;
-  --color-azure-100: #fff3e4;
-  --color-azure-150: #ffebd4;
-  --color-azure-200: #ffe3bf;
-  --color-azure-300: #facb8d;
-  --color-azure-400: #e1ad66;
-  --color-azure-450: #d49f55;
-  --color-azure-500: #c28d41;
-  --color-azure-600: #b68235;
-  --color-azure-700: #a06f24;
-  --color-azure-750: #8e6119;
-  --color-azure-800: #7d5411;
-  --color-azure-850: #6b480e;
-  --color-azure-900: #5a3b0a;
-  --color-azure-950: #3a270d;
+  /* `azure` was the old action colour. Action is ink now. */
+  --color-azure-50: oklch(96.5% 0.014 96);
+  --color-azure-100: oklch(93.6% 0.018 96);
+  --color-azure-150: oklch(93.6% 0.018 96);
+  --color-azure-200: oklch(87.5% 0.018 104);
+  --color-azure-300: oklch(80% 0.02 110);
+  --color-azure-400: oklch(66% 0.02 110);
+  --color-azure-450: oklch(58% 0.022 140);
+  --color-azure-500: oklch(50% 0.022 150);
+  --color-azure-600: oklch(38% 0.026 160);
+  --color-azure-700: oklch(28% 0.026 164);
+  --color-azure-750: oklch(24% 0.027 165);
+  --color-azure-800: oklch(21% 0.028 165);
+  --color-azure-850: oklch(21% 0.028 165);
+  --color-azure-900: oklch(17.5% 0.02 165);
+  --color-azure-950: oklch(17.5% 0.02 165);
 
-  /* Verdigris — verified, correct, complete. */
-  --color-proof-50: #eef7f5;
-  --color-proof-100: #d8ede9;
-  --color-proof-150: #cbe7e2;
-  --color-proof-200: #b4dcd5;
-  --color-proof-300: #86c7bc;
-  --color-proof-400: #56b0a2;
-  --color-proof-405: #4fb8a8;
-  --color-proof-500: #2f9c8c;
-  --color-proof-600: #248375;
-  --color-proof-700: #1e6d61;
-  --color-proof-750: #1c645a;
-  --color-proof-800: #185f56;
-  --color-proof-850: #154f48;
-  --color-proof-900: #12423c;
-  --color-proof-950: #0b2b27;
+  /* `proof` was "verified"; it is the Geometry pigment's family. */
+  --color-proof-50: oklch(92% 0.035 165);
+  --color-proof-100: oklch(92% 0.035 165);
+  --color-proof-150: oklch(88% 0.045 165);
+  --color-proof-200: oklch(84% 0.055 165);
+  --color-proof-300: oklch(74% 0.11 165);
+  --color-proof-400: oklch(64% 0.11 165);
+  --color-proof-405: oklch(64% 0.11 165);
+  --color-proof-500: oklch(52% 0.11 165);
+  --color-proof-600: oklch(46% 0.1 165);
+  --color-proof-700: oklch(42% 0.095 165);
+  --color-proof-750: oklch(40% 0.09 165);
+  --color-proof-800: oklch(36% 0.08 165);
+  --color-proof-850: oklch(32% 0.07 165);
+  --color-proof-900: oklch(28% 0.045 165);
+  --color-proof-950: oklch(22% 0.035 165);
 
   /*
-   * The "half-step" stone shades that used to be declared here now live in
-   * styles/tokens.css alongside the rest of the neutral ramp.
-   *
-   * They had to move: this block is emitted after the imports, so a definition
-   * here would override the themed one and those particular shades — and only
-   * those — would stay locked to their daylight values at night. Keeping the
-   * whole ramp in one file is also the only way the scale stays coherent, since
-   * a half-step is meaningless unless it is defined relative to the steps on
-   * either side of it.
+   * Motion, mirrored for Tailwind. The named easings of /tokens.css are also
+   * `ease-standard` and friends, the names src/lib/motion.ts and the existing
+   * class names use; the durations keep their `--mo-duration-*` names.
    */
-
-  /*
-   * MOTION DESIGN SYSTEM — CSS mirror of src/lib/motion.ts
-   *
-   * Registering these under @theme is what lets Tailwind emit `duration-base`,
-   * `ease-standard` and friends as real utilities, so a CSS transition written
-   * in a className and a spring written in a Motion component are tuned from
-   * the same numbers. Keep the two files in step: motion.ts holds the same
-   * values in seconds, which is Motion's unit.
-   *
-   * Timings are short by design. Apple's own UIKit defaults and the classic
-   * 100ms "instant" threshold both sit well under a third of a second, and past
-   * --duration-slower an interface stops reading as considered and starts
-   * reading as sluggish.
-   */
-  /*
-   * Easings live in Tailwind's `--ease-*` namespace, so `ease-standard` and
-   * `ease-emphasized` are real utilities usable directly in a className.
-   */
-  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-emphasized: cubic-bezier(0.2, 0.9, 0.3, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /*
-   * Durations have no theme namespace in Tailwind v4 — `duration-*` takes bare
-   * millisecond values — so these are emitted as plain custom properties for
-   * the hand-written CSS below. In classNames, use the matching bare number
-   * (duration-160, duration-240, ...) to stay on the same scale.
-   */
   --mo-duration-instant: 100ms;
-  --mo-duration-fast: 160ms;
-  --mo-duration-base: 240ms;
-  --mo-duration-slow: 340ms;
-  --mo-duration-slower: 480ms;
+  --mo-duration-fast: 120ms;
+  --mo-duration-base: 200ms;
+  --mo-duration-slow: 300ms;
+  --mo-duration-slower: 400ms;
 }
 
+/* --------------------------------------------------------------------------
+ * The document
+ * ------------------------------------------------------------------------ */
+
 html {
+  /* `clip`, not `hidden`: it stops sideways scroll without breaking `position: sticky`. */
+  overflow-x: clip;
   scroll-behavior: smooth;
-  /*
-   * Keeps the rubber-band area at the top and bottom of an over-scrolled iOS
-   * page the same colour as the app, instead of the white the WKWebView paints
-   * by default — which at night flashes a bright band above the header.
-   */
-  background-color: var(--sf);
+  scroll-padding-top: var(--s-20);
+  /* The colour iOS shows when a page is pulled past its edge. */
+  background-color: var(--paper);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: clip;
 }
 
 body,
 #root {
-  font-family: var(--font-sans);
-  background-color: var(--sf);
-  color: var(--ct);
-}
-
-/*
- * The page ground is flat.
- *
- * It used to carry the noise texture directly, which put a grain layer behind
- * every character of body copy on every screen. On a warm paper palette that
- * read as tooth; on cool graphite it reads as a dirty screen, and it costs
- * legibility at small sizes for a texture almost nobody consciously sees.
- * `--grain` still exists and is still applied by `.material-card`, at a much
- * lower strength, where it does its job on a bounded surface.
- */
-body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  line-height: var(--lh-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  /* A typeface is never faked: no synthesised bold, italic or small capitals. */
+  font-synthesis: none;
 }
 
 /*
- * Touch feedback.
- *
- * Mobile Safari paints a grey flash over any tapped control by default. Inside
- * the Capacitor WKWebView that flash lands on top of the app's own press
- * animation, so the two fight and the result reads as a double response.
- * Suppressing it leaves `whileTap` as the only feedback, which is the point.
- *
- * Note on `will-change`: it is intentionally absent. Motion applies and removes
- * it around the animations it drives, and a permanent hint costs a retained
- * compositor layer per element whether or not anything is moving.
+ * Headings are the reading face, upright. An emphasised phrase inside one is
+ * carried by weight, never by a slant (design.md, "Headings").
  */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-stretch: normal;
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--lh-heading);
+  letter-spacing: var(--track-heading);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(em, i) {
+  font-style: normal;
+  font-weight: 700;
+}
+
 button,
 a,
+input,
+select,
+textarea,
 [role='button'] {
   -webkit-tap-highlight-color: transparent;
 }
+button:not(:disabled),
+a,
+summary,
+select,
+label[for] {
+  cursor: pointer;
+}
+:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
 
 /*
- * Press feedback deliberately does NOT live here.
- *
- * An early version of this system had a `.mo-press` class alongside Motion's
- * `whileTap`, which meant two independent definitions of how a press feels.
- * Every interactive control now uses `whileTap` with `spring.press`, so the
- * press curve is defined once, in src/lib/motion.ts, and a CSS class cannot
- * drift away from it.
+ * Focus is drawn at once, never faded in: someone moving by keyboard needs to
+ * see where they are on the frame they arrive. Ink by day, the accent at night.
  */
+:focus-visible {
+  outline: var(--line-heavy) solid var(--focus);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* A scrollbar is a hairline of ink, not a platform widget in a different palette. */
+* {
+  scrollbar-color: var(--rule) transparent;
+  scrollbar-width: thin;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* --------------------------------------------------------------------------
  * Theme change
  * ------------------------------------------------------------------------ */
 
 /*
- * The switch between day and night is a wipe from the control that triggered it,
- * driven by the View Transitions API.
- *
- * Cross-fading the whole document is the obvious alternative and it looks wrong:
- * for the length of the fade every surface is a half-mixed colour that exists in
- * neither theme, which reads as a rendering fault. A hard-edged circular reveal
- * never shows an intermediate state — each pixel is fully day or fully night,
- * and the boundary is the only thing that moves.
- *
- * The whole block is progressive enhancement. Browsers without view transitions
- * simply repaint, which is instant and perfectly acceptable; nothing here is
- * required for the theme to work.
+ * Day and night trade places with a hard-edged wipe from the control that asked
+ * for it (View Transitions API). A cross-fade would show, for its whole length,
+ * a half-mixed colour that belongs to neither theme; a wipe never does. Where
+ * the API is missing the page simply repaints.
  */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
-
-/*
- * The outgoing frame stays put and the incoming one is clipped over it, so the
- * old theme is never animated — only revealed away from.
- */
 ::view-transition-old(root) {
   z-index: 1;
 }
-
 ::view-transition-new(root) {
   z-index: 2;
-  animation: theme-wipe 520ms var(--ease-standard);
+  animation: theme-wipe var(--dur-long) var(--ease-out);
 }
-
 @keyframes theme-wipe {
   from {
     clip-path: circle(0% at var(--theme-origin-x, 50%) var(--theme-origin-y, 50%));
@@ -276,32 +249,20 @@ a,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  /*
-   * A 150%-radius wipe is a large moving edge, which is exactly what this
-   * preference is about. Fall back to an instant swap rather than a slow one:
-   * the point is to remove the travel, not to draw it out.
-   */
-  ::view-transition-new(root) {
-    animation: none;
-  }
-}
+/* --------------------------------------------------------------------------
+ * Reduced motion
+ * ------------------------------------------------------------------------ */
 
 /*
- * Reduced motion.
- *
- * Motion-driven animation is handled by `reducedMotion="user"` on MotionConfig,
- * which keeps opacity and drops movement. This block is the equivalent contract
- * for everything CSS owns.
- *
- * It is deliberately not the usual `animation: none !important` sledgehammer.
- * Several loops here are status indicators — the live-feed dots, the offline
- * ping, the grading spinner — and silencing them entirely would remove
- * information, not decoration. Instead transitions collapse to near-instant and
- * looping animations slow to a near-still breath, so state is still legible
- * without anything travelling across the screen.
+ * Movement goes; state stays. Transitions collapse to near-instant, travelling
+ * animations stop, and the few loops that carry information (a spinner, a live
+ * dot) slow down instead of freezing, because a frozen spinner reads as a hang.
+ * Motion's own animations follow `reducedMotion="user"` in MotionProvider.
  */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
@@ -309,16 +270,12 @@ a,
     transition-delay: 0ms !important;
     animation-delay: 0ms !important;
   }
-
-  /* Spinners keep turning — a frozen spinner reads as a hung app. */
+  ::view-transition-new(root) {
+    animation: none;
+  }
   .animate-spin {
     animation-duration: 1.8s !important;
   }
-
-  /*
-   * Scaling loops (ping/pulse/bounce) are the ones that actually cause
-   * discomfort, so they hold still and communicate through opacity alone.
-   */
   .animate-ping,
   .animate-bounce {
     animation: none !important;
@@ -328,15 +285,15 @@ a,
   }
 }
 
+/* --------------------------------------------------------------------------
+ * The tutor button's resting place
+ * ------------------------------------------------------------------------ */
+
 /*
- * AI tutor launcher offset.
- *
- * On mobile the fixed bottom tab rail owns the bottom of the viewport, so the
- * launcher has to sit above it or it buries the last four tabs. The rail is
- * ~46px tall plus 10px of top padding plus its safe-area bottom inset; adding
- * ~16px of breathing room lands the launcher where the source design puts it.
- * Expressed in CSS rather than an arbitrary Tailwind value because the
- * calc(max(...)) nesting does not survive Tailwind's bracket parser cleanly.
+ * On a phone the tab bar owns the foot of the screen, so the button sits above
+ * it, clear of the home indicator. Written here because the nested
+ * calc(max(...)) does not survive a Tailwind bracket value. How the button
+ * looks is in styles/shell.css.
  */
 .tutor-fab {
   bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.75rem);
@@ -344,7 +301,6 @@ a,
   height: auto !important;
   max-height: 3.25rem !important;
 }
-
 @media (max-width: 40rem) {
   .tutor-fab {
     width: 3rem;
@@ -352,11 +308,11 @@ a,
     padding: 0 !important;
     justify-content: center;
   }
-  .tutor-fab-label { display: none; }
+  .tutor-fab-label {
+    display: none;
+  }
 }
-
 @media (min-width: 48rem) {
-  /* Desktop has no rail — restore the original bottom-6 resting position. */
   .tutor-fab {
     bottom: 1.5rem;
     top: auto !important;

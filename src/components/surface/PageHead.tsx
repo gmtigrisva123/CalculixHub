@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 interface PageHeadProps {
-  /** A word or two in small capitals above the title: what kind of page this is. */
+  /** What kind of page this is. Kept for the record; the top bar names the page, so it is not shown. */
   eyebrow?: string;
-  /** The page's one heading. Wrap the phrase that matters in `<em>` to set it in italic serif. */
+  /** The page's one heading. Wrap the phrase that matters in `<em>`: it is set bold and upright. */
   title: ReactNode;
   /** One or two sentences on what the page is for. */
   lede?: ReactNode;
@@ -33,18 +33,13 @@ export default function PageHead({ eyebrow, title, lede, aside }: PageHeadProps)
   );
 }
 
-/** A small ring and a figure: how much of something is done. */
+/** A figure and a line: how much of something is done. */
 export function Tally({ done, total, label }: { done: number; total: number; label: string }) {
   const share = total > 0 ? Math.min(1, done / total) : 0;
-  const circumference = 2 * Math.PI * 13;
   return (
     <div className="pg-tally">
-      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-        <circle className="pg-tally-track" cx="17" cy="17" r="13" strokeWidth="4" />
-        <circle className="pg-tally-fill" cx="17" cy="17" r="13" strokeWidth="4" strokeLinecap="round" transform="rotate(-90 17 17)"
-          strokeDasharray={circumference} strokeDashoffset={circumference * (1 - share)} />
-      </svg>
       <p><strong>{done.toLocaleString()} of {total.toLocaleString()}</strong>{label}</p>
+      <span className="ui-meter" style={{ '--value': Math.round(share * 100) } as CSSProperties} aria-hidden="true" />
     </div>
   );
 }

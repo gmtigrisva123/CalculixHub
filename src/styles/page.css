@@ -1,108 +1,450 @@
+/* Hallmark · route: custom (bespoke) · design-system: design.md · designed-as-app */
+
 /*
- * What every workspace page is built from: a heading, a toolbar, the small
- * controls that sit in one, and the state a page shows when it has nothing yet.
+ * What every workspace page is built from: a heading, sections, a toolbar and
+ * the small controls that sit in one, and the state a page shows when it has
+ * nothing yet. One way to open a page, so that moving between pages reads as
+ * turning to another sheet of the same book (design.md, "A page").
  *
- * Pages used to open in whatever way their author reached for that day: an
- * eyebrow here, an icon beside the title there, a serif on one and a sans on
- * the next. These few classes are the one way a page says what it is, so that
- * moving between pages reads as turning to another sheet of the same book.
+ * A page opens with its title in the reading face, upright, set large and to
+ * the left; the phrase that matters is bold. No label sits above it: the top
+ * bar already says where you are. Sections open with a heavy rule.
  *
- * The heading borrows the landing page's voice on purpose: a tight Geist line
- * with the phrase that matters set in Newsreader's italic.
- *
- * Loaded by the shell, so every page can count on it. Uses the shell's tokens
- * (styles/shell.css) and the app's semantic colours (styles/tokens.css).
+ * Loaded by the shell, so every page can count on it.
  */
 
 /* ---------------------------------------------------------------- heading */
 
-.pg-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 18px 32px; margin-bottom: 26px; }
-.pg-eyebrow { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--ct-subtle); font: 500 11px/1 var(--ws-mono, ui-monospace, monospace); letter-spacing: .11em; text-transform: uppercase; }
-.pg-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #d49f55; box-shadow: 0 0 0 3px color-mix(in srgb, #d49f55 22%, transparent); }
-.pg-title { margin: 12px 0 0; color: var(--ct); font: 560 clamp(30px, 3.3vw, 44px)/1.05 'Geist', system-ui, sans-serif; letter-spacing: -.042em; text-wrap: balance; }
-.pg-title em { color: var(--ac-text); font: italic 400 1.07em/1 'Newsreader', Georgia, serif; letter-spacing: -.022em; }
-.pg-lede { max-width: 64ch; margin: 13px 0 0; color: var(--ct-muted); font-size: 15.5px; line-height: 1.6; text-wrap: pretty; }
-.pg-aside { display: flex; align-items: center; gap: 12px; }
+.pg-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--s-4) var(--s-8);
+  margin-bottom: var(--s-8);
+}
+/* The kicker the pages used to carry. The top bar names the page; a second label above the title is noise. */
+.pg-eyebrow {
+  display: none;
+}
+.pg-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 3vw + 1rem, var(--fs-4xl));
+  font-stretch: normal;
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.pg-title :is(em, i, b, strong) {
+  font-style: normal;
+  font-weight: 700;
+}
+.pg-lede {
+  max-width: 58ch;
+  margin: var(--s-3) 0 0;
+  color: var(--ink-2);
+  font-family: var(--font-reading);
+  font-size: var(--fs-lg);
+  font-stretch: normal;
+  line-height: 1.5;
+  letter-spacing: var(--track-reading);
+  text-wrap: pretty;
+}
+.pg-aside {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
 
-/* A figure that sums the page up, beside the heading: "12 of 124 solved". */
-.pg-tally { display: flex; align-items: center; gap: 12px; padding: 9px 16px 9px 10px; border: 1px solid var(--ln); border-radius: 999px; background: var(--sf-raised); }
-.pg-tally svg { flex: none; }
-.pg-tally-track { stroke: var(--sf-sunken); }
-.pg-tally-fill { stroke: var(--pf, #2d7858); transition: stroke-dashoffset .9s cubic-bezier(.22, 1, .36, 1); }
-.pg-tally p { margin: 0; color: var(--ct-subtle); font-size: 12.5px; line-height: 1.3; }
-.pg-tally strong { display: block; color: var(--ct); font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+/* A figure that sums the page up, beside the heading: "12 of 124", and how far that is. */
+.pg-tally {
+  display: grid;
+  gap: var(--s-2);
+  min-width: 11rem;
+}
+.pg-tally p {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.pg-tally strong {
+  color: var(--ink);
+  font-family: var(--font-math);
+  font-size: var(--fs-xl);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 400;
+  line-height: 1;
+}
 
 /* ---------------------------------------------------------------- section */
 
-.pg-section { margin-top: 44px; }
-.pg-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-.pg-section-head h2 { margin: 0; font: 560 clamp(20px, 2vw, 24px)/1.2 'Geist', system-ui, sans-serif; letter-spacing: -.03em; }
-.pg-section-head p { margin: 4px 0 0; color: var(--ct-muted); font-size: 14px; }
+.pg-section {
+  margin-top: var(--s-12);
+  padding-top: var(--s-4);
+  border-top: var(--line-heavy) solid var(--ink);
+}
+.pg-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-5);
+}
+.pg-section-head h2 {
+  margin: 0;
+  font-size: clamp(var(--fs-xl), 1.2vw + 1rem, var(--fs-2xl));
+  letter-spacing: var(--track-heading);
+}
+.pg-section-head p {
+  margin: var(--s-1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+}
 
 /* ---------------------------------------------------------------- toolbar */
 
-.pg-toolbar { display: grid; gap: 14px; padding: 14px 16px 16px; border: 1px solid var(--ln); border-radius: 18px; background: var(--sf-raised); }
-.pg-toolbar-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; min-width: 0; }
-.pg-toolbar-label { flex: none; width: 58px; color: var(--ct-subtle); font: 500 10.5px/1 var(--ws-mono, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; }
-.pg-toolbar-rule { height: 1px; margin: 0 -16px; border: 0; background: var(--ln-faint); }
+/* The filters above a list: ruled above and below like a table's head, not boxed. */
+.pg-toolbar {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: var(--line-heavy) solid var(--ink);
+  border-bottom: var(--line-hair) solid var(--ink);
+}
+.pg-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.pg-toolbar-label {
+  flex: none;
+  width: 4rem;
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1;
+}
+.pg-toolbar-rule {
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: var(--line-hair) solid var(--rule);
+}
 
-.pg-search { position: relative; display: flex; align-items: center; flex: 1 1 260px; min-width: 0; }
-.pg-search > svg { position: absolute; left: 12px; color: var(--ct-subtle); pointer-events: none; }
-.workspace-content .pg-search input, .pg-search input { width: 100%; height: 40px; padding: 0 36px 0 38px; border: 1px solid var(--ln); border-radius: 11px; background: var(--sf); color: var(--ct); font: 400 14.5px/1 'Geist', system-ui, sans-serif; transition: border-color .16s, box-shadow .16s; }
-.pg-search input::placeholder { color: var(--ct-subtle); }
-.pg-search input:hover { border-color: var(--ln-strong); }
-.pg-search input:focus { border-color: var(--ac); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 18%, transparent); }
-.pg-search button { position: absolute; right: 6px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--ct-subtle); }
-.pg-search button:hover { background: var(--sf-sunken); color: var(--ct); }
+.pg-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.pg-search > svg {
+  position: absolute;
+  left: var(--s-3);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.workspace-content .pg-search input,
+.pg-search input {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--s-10) 0 var(--s-10);
+  border: var(--line-hair) solid var(--ink-3);
+  border-radius: var(--r-control);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-stretch: var(--wdth-ui);
+  line-height: 1;
+  outline: var(--line-heavy) solid transparent;
+  outline-offset: 1px;
+  transition: border-color var(--dur-micro) var(--ease-out);
+}
+.pg-search input::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+.pg-search input:hover {
+  border-color: var(--ink);
+}
+.pg-search input:focus,
+.pg-search input:focus-visible {
+  border-color: var(--ink);
+  outline-color: var(--focus);
+}
+.pg-search button {
+  position: absolute;
+  right: var(--s-1);
+  display: grid;
+  place-items: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  border-radius: var(--r-control);
+  color: var(--ink-2);
+}
+.pg-search button:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+@media (pointer: coarse) {
+  .workspace-content .pg-search input,
+  .pg-search input {
+    font-size: 1rem;
+  }
+}
 
-/* One of several, where exactly one is always chosen. The thumb is carried between them by the component. */
-.pg-segment { display: inline-flex; flex: none; gap: 2px; padding: 3px; border-radius: 11px; background: var(--sf-sunken); box-shadow: inset 0 0 0 1px var(--ln-faint); }
-.pg-segment button { position: relative; isolation: isolate; height: 34px; padding: 0 13px; border-radius: 8px; color: var(--ct-muted); font-size: 13.5px; font-weight: 500; white-space: nowrap; transition: color .16s; }
-.pg-segment button:hover { color: var(--ct); }
-.pg-segment button[aria-pressed='true'], .pg-segment button[aria-checked='true'] { color: var(--ct); font-weight: 580; }
-.pg-segment button > i { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--sf-raised); box-shadow: 0 0 0 1px var(--ln), 0 1px 2px #293d4614; }
+/* One of several, exactly one chosen: cells that share their edges. The chosen cell is ink, carried between them by the component. */
+.pg-segment {
+  display: inline-flex;
+  flex: none;
+  border: var(--line-hair) solid var(--ink);
+  border-radius: var(--r-control);
+}
+.pg-segment button {
+  position: relative;
+  isolation: isolate;
+  height: calc(var(--control-h) - 2px);
+  padding: 0 var(--s-4);
+  border-left: var(--line-hair) solid var(--ink);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  white-space: nowrap;
+  transition: color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out);
+}
+.pg-segment button:first-child {
+  border-left: 0;
+}
+.pg-segment button:hover {
+  background: var(--paper-2);
+}
+.pg-segment button:is([aria-pressed='true'], [aria-checked='true']) {
+  background: none;
+  color: var(--paper);
+  font-weight: 650;
+}
+.pg-segment button > i {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ink);
+}
 
-/* A filter that can be on or off. `--hue` tints it for a topic. */
-.pg-chips { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; min-width: 0; }
-.pg-chip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border: 1px solid var(--ln); border-radius: 999px; background: none; color: var(--ct-muted); font-size: 13.5px; font-weight: 500; white-space: nowrap; transition: border-color .16s, background-color .16s, color .16s, transform .2s cubic-bezier(.22, 1, .36, 1); }
-.pg-chip:hover { border-color: var(--ln-strong); color: var(--ct); }
-.pg-chip:active { transform: scale(.96); }
-.pg-chip > i { width: 7px; height: 7px; border-radius: 50%; background: var(--hue, var(--ac)); }
-.pg-chip > small { color: var(--ct-subtle); font: 500 11px/1 var(--ws-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
-.pg-chip[aria-pressed='true'] { border-color: color-mix(in srgb, var(--hue, var(--ac)) 55%, var(--ln)); background: color-mix(in srgb, var(--hue, var(--ac)) 13%, var(--sf-raised)); color: var(--ct); font-weight: 580; }
-.pg-chip[aria-pressed='true'] > small { color: var(--ct-muted); }
+/* A filter that can be on or off. `--hue` gives it its topic's pigment, shown as a small square. */
+.pg-chips {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  min-width: 0;
+}
+.pg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: var(--control-h-sm);
+  padding: 0 var(--s-3);
+  border: var(--line-hair) solid var(--ink-3);
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  white-space: nowrap;
+  transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.pg-chip:hover {
+  border-color: var(--ink);
+  background: var(--paper-2);
+}
+.pg-chip:active {
+  transform: translateY(1px);
+}
+.pg-chip > i {
+  width: 0.5625rem;
+  height: 0.5625rem;
+  background: var(--hue, var(--ink));
+}
+.pg-chip > small {
+  color: var(--ink-3);
+  font-family: var(--font-math);
+  font-size: var(--fs-xs);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+}
+.pg-chip[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 650;
+}
+.pg-chip[aria-pressed='true'] > small {
+  color: var(--paper);
+}
+/* On ink, a pigment square needs an edge to stay a square. */
+.pg-chip[aria-pressed='true'] > i {
+  box-shadow: 0 0 0 1px var(--paper);
+}
 
-.pg-count { margin: 0; color: var(--ct-muted); font-size: 13.5px; }
-.pg-count strong { color: var(--ct); font-weight: 600; font-variant-numeric: tabular-nums; }
-.pg-link { display: inline-flex; align-items: center; gap: 5px; color: var(--ac-text); font-size: 13.5px; font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 30%, transparent); text-underline-offset: 4px; transition: text-decoration-color .16s; }
-.pg-link:hover { text-decoration-color: currentColor; }
+.pg-count {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.pg-count strong {
+  color: var(--ink);
+  font-family: var(--font-math);
+  font-size: var(--fs-md);
+  font-stretch: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+.pg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--accent-text);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: var(--ink-3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.24em;
+  white-space: nowrap;
+  transition: text-decoration-color var(--dur-micro) var(--ease-out);
+}
+.pg-link:hover {
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
 
 /* ---------------------------------------------------------------- buttons */
 
-.pg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: 1px solid var(--ln-strong); border-radius: 11px; background: var(--sf-raised); color: var(--ct); font-size: 14px; font-weight: 580; letter-spacing: -.01em; text-decoration: none; white-space: nowrap; transition: transform .2s cubic-bezier(.22, 1, .36, 1), border-color .16s, background-color .16s, box-shadow .2s; }
-.pg-btn:hover { border-color: var(--ct-subtle); box-shadow: 0 6px 16px -10px #293d4659; }
-.pg-btn:active { transform: scale(.97); }
-.pg-btn.is-primary { border-color: transparent; background: var(--ct); color: var(--sf); }
-.pg-btn.is-primary:hover { background: color-mix(in srgb, var(--ct) 88%, var(--ac)); }
+.pg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  height: var(--control-h);
+  padding: 0 var(--s-5);
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-base);
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.pg-btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+.pg-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.pg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.pg-btn.is-primary {
+  border-color: var(--accent-line);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.pg-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  background: var(--accent-deep);
+  color: var(--accent-ink);
+}
 
 /* ------------------------------------------------------------------ empty */
 
-.pg-empty { display: grid; justify-items: center; gap: 6px; padding: clamp(36px, 7vw, 72px) 24px; border: 1px dashed var(--ln-strong); border-radius: 22px; background: color-mix(in srgb, var(--sf-raised) 60%, transparent); text-align: center; }
-.pg-empty-mark { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 10px; border: 1px solid var(--ln); border-radius: 16px; background: var(--sf-raised); color: var(--ac-text); box-shadow: 0 8px 20px -14px #293d4666; }
-.pg-empty h1, .pg-empty h2, .pg-empty h3 { margin: 0; font: 560 20px/1.25 'Geist', system-ui, sans-serif; letter-spacing: -.025em; }
-.pg-empty p { max-width: 46ch; margin: 0; color: var(--ct-muted); font-size: 14.5px; line-height: 1.6; text-wrap: pretty; }
-.pg-empty .pg-btn { margin-top: 14px; }
+/* Nothing here yet: said plainly under a heavy rule, set to the left like everything else. */
+.pg-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  max-width: 36rem;
+  padding: var(--s-5) 0 var(--s-10);
+  border-top: var(--line-heavy) solid var(--ink);
+  text-align: left;
+}
+.pg-empty-mark {
+  display: grid;
+  place-items: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  margin-bottom: var(--s-2);
+  border: var(--line-medium) solid var(--ink);
+  border-radius: var(--r-round);
+  color: var(--ink);
+}
+.pg-empty :is(h1, h2, h3) {
+  margin: 0;
+  font-size: var(--fs-xl);
+  letter-spacing: var(--track-heading);
+}
+.pg-empty p {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.pg-empty .pg-btn {
+  margin-top: var(--s-3);
+}
 
 @media (max-width: 767px) {
-  .pg-head { grid-template-columns: minmax(0, 1fr); align-items: start; margin-bottom: 20px; }
-  .pg-aside { justify-self: start; }
-  .pg-toolbar { padding: 12px; border-radius: 16px; }
-  .pg-toolbar-rule { margin: 0 -12px; }
-  .pg-toolbar-label { width: 100%; }
+  .pg-head {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    margin-bottom: var(--s-6);
+  }
+  .pg-aside {
+    justify-self: start;
+  }
+  .pg-toolbar-label {
+    width: 100%;
+  }
   /* A row of chips scrolls sideways on a phone rather than stacking three deep. */
-  .pg-chips { flex-wrap: nowrap; margin: 0 -12px; padding: 0 12px; overflow-x: auto; scrollbar-width: none; }
-  .pg-chips::-webkit-scrollbar { display: none; }
-  .pg-chip { flex: none; height: 36px; }
-  .pg-segment { width: 100%; }
-  .pg-segment button { flex: 1; height: 38px; }
+  .pg-chips {
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * var(--s-4));
+    padding: 0 var(--s-4);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pg-chips::-webkit-scrollbar {
+    display: none;
+  }
+  .pg-chip {
+    flex: none;
+    height: var(--control-h);
+  }
+  .pg-segment {
+    display: flex;
+    width: 100%;
+  }
+  .pg-segment button {
+    flex: 1;
+  }
 }

@@ -32,10 +32,10 @@ export const THEME_STORAGE_KEY = 'calculix_theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
-/** Browser chrome colour per theme, mirroring the workspace desk in styles/shell.css and the boot cover in index.html. */
+/** Browser chrome colour per theme: the paper of /tokens.css (`--paper`) as sRGB, as the boot cover in index.html paints it. */
 const THEME_COLOR: Record<ResolvedTheme, string> = {
-  light: '#efece4',
-  dark: '#141d22',
+  light: '#f6f4e9',
+  dark: '#08130e',
 };
 
 const isPreference = (value: unknown): value is ThemePreference =>
