@@ -71,9 +71,7 @@ export default function ChordPlayground() {
     <section className="lx-play" id="playground" data-tone="paper" aria-labelledby="lx-play-title">
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
-          <div>
-            <SplitText as="h2" id="lx-play-title" className="lx-h2" text={'Two chords.\n*One hidden radius.*'} />
-          </div>
+          <SplitText as="h2" id="lx-play-title" className="lx-h2" text={'Two chords.\nOne *hidden radius.*'} />
           <Rise as="p" className="lx-lead" delay={0.1}>
             Drag the chord wherever you like. One number refuses to move, and that is the way in.
           </Rise>
@@ -85,7 +83,7 @@ export default function ChordPlayground() {
               <span className="lx-play-tag">The problem</span>
               <p className="lx-play-statement">Two chords of a circle meet at a point <i>P</i> inside it.</p>
               <div className="lx-play-givens">
-                <MathText text="$PA=9,\;PB=21,\;PC=7,\;PD=27$" />
+                <MathText text="$PA=9$, $PB=21$, $PC=7$, $PD=27$" />
                 <MathText text="$\cos\angle APC=\tfrac{3}{5}$" />
               </div>
               <p className="lx-play-ask">What is the square of the circle’s radius?</p>

@@ -1,5 +1,5 @@
 /**
- * "Topics": four rooms, one problem in each, and a chalkboard to think on.
+ * "Topics": four topics, one problem in each, and a chalkboard to think on.
  *
  * Instead of describing the four topics, the chapter lets a visitor stand in
  * each. Every room has a chalk drawing of a real contest problem (TopicBoards)
@@ -46,11 +46,11 @@ export default function TopicsChapter({ onRegister }: { onRegister: () => void }
 
         <header className="lx-topics-head lx-wrap">
           <div>
-            <SplitText as="h2" id="lx-topics-title" className="lx-h2" text={'Four kinds of problem.\n*Which one is yours?*'} />
+            <SplitText as="h2" id="lx-topics-title" className="lx-h2" text={'Four kinds of problem.\nWhich one is *yours?*'} />
           </div>
           <div className="lx-topics-intro">
             <Rise as="p" className="lx-lead" delay={0.1}>
-              Every contest problem lives in one of four rooms. Walk into each, have a go at a real one from the archive, and see which feels like home.
+              Contest problems fall into four topics. Try one real problem from the archive in each.
             </Rise>
             <Rise delay={0.2}>
               <p className="lx-topics-aside">
@@ -71,7 +71,7 @@ export default function TopicsChapter({ onRegister }: { onRegister: () => void }
         <div className="lx-wrap lx-topics-foot">
           <Rise>
             <p className="lx-topics-foot-note">Can&rsquo;t pick one?</p>
-            <p className="lx-topics-foot-line">Good. Start with a short placement, and we&rsquo;ll find your level in each room for you.</p>
+            <p className="lx-topics-foot-line">Start with a short placement and we&rsquo;ll find your level.</p>
           </Rise>
           <Rise delay={0.1}>
             <Magnetic>
@@ -126,7 +126,6 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
     <article ref={spot} className="lx-topic" id={id} aria-labelledby={`${id}-title`} data-topic={index + 1} data-solved={solved || undefined}>
       <Rise className="lx-topic-inner" y={44} amount={0.2} panel>
         <header className="lx-topic-head">
-          <span className="lx-topic-number">{String(index + 1).padStart(2, '0')}</span>
           <span className="lx-topic-symbol" aria-hidden="true">{room.symbol}</span>
         </header>
         <h3 id={`${id}-title`} className="lx-topic-title">{room.topic}</h3>

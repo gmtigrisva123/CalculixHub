@@ -114,68 +114,14 @@
 }
 
 .mr-chapter { flex: none; }
-.mr-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--lx-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--mr-ink-soft);
-}
-.mr-pulse {
-  position: relative;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mr-brass);
-}
-.mr-pulse::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 1px solid var(--mr-brass);
-  animation: mr-ping 2.4s var(--lx-glide) infinite;
-}
-@keyframes mr-ping {
-  0% { transform: scale(0.4); opacity: 1; }
-  100% { transform: scale(2.4); opacity: 0; }
-}
 
-.mr-numeral {
-  display: flex;
-  margin: 6px 0 2px -0.04em;
-  font-family: var(--lx-sans);
-  font-weight: 560;
-  font-size: clamp(56px, 38cqw, 168px);
-  line-height: 0.92;
-  letter-spacing: -0.06em;
-  font-variant-numeric: tabular-nums;
-  color: transparent;
-  -webkit-text-stroke: 1.2px var(--mr-ink);
-  /* Still, an outline; moving, it inks in. Switched once when the scroll starts and once when it stops,
-     rather than recomputed from the speed on every frame, so the glow is painted twice, not continuously. */
-  text-shadow: 0 0 14px oklch(38% 0.07 222 / 0);
-  transition: text-shadow 0.5s ease;
-}
-.mr[data-moving] .mr-numeral { text-shadow: 0 0 14px oklch(38% 0.07 222 / 0.42); }
-.mr-digit {
-  position: relative;
-  display: inline-grid;
-  overflow: hidden;
-  padding-bottom: 0.04em;
-}
-.mr-digit > span { grid-area: 1 / 1; display: block; }
-.mr-digit:last-child { -webkit-text-stroke-color: var(--mr-brass); }
 
 .mr-stack { display: grid; }
 .mr-stack > * { grid-area: 1 / 1; }
 .mr-title p {
   margin: 0;
-  font-family: var(--lx-serif);
-  font-style: italic;
+  font-family: var(--lx-sans);
+  font-weight: 540;
   font-size: clamp(16px, 9cqw, 30px);
   line-height: 1.1;
   letter-spacing: -0.015em;
@@ -277,14 +223,6 @@
   transform: scale(0);
   transition: transform 0.6s var(--lx-glide), background-color 0.4s ease;
 }
-.mr-node-num {
-  font-family: var(--lx-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums;
-  color: var(--mr-ink-soft);
-  transition: color 0.4s ease, transform 0.6s var(--lx-glide);
-}
 .mr-node-label {
   font-family: var(--lx-mono);
   font-size: 10.5px;
@@ -302,6 +240,10 @@
   border-color: var(--mr-brass);
 }
 .mr-node[data-state='active'] .mr-dot::after { transform: scale(1); background: var(--mr-brass); }
+@keyframes mr-ping {
+  0% { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
 .mr-node[data-state='active'] .mr-dot::before {
   content: '';
   position: absolute;
@@ -310,7 +252,6 @@
   border: 1px solid var(--mr-brass);
   animation: mr-ping 2s var(--lx-glide) infinite;
 }
-.mr-node[data-state='active'] .mr-node-num { color: var(--mr-brass); transform: translateX(2px); }
 .mr-node[data-state='active'] .mr-node-label {
   opacity: 1;
   color: var(--mr-ink);
@@ -330,23 +271,6 @@
 }
 .mr-read-big { font-size: clamp(22px, 13cqw, 40px); letter-spacing: -0.04em; font-weight: 450; }
 .mr-read-unit { margin-left: 3px; font-size: 12px; color: var(--mr-ink-soft); }
-.mr-read-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  color: var(--mr-ink-soft);
-}
-.mr-read-dim { opacity: 0.6; }
-.mr-arrow {
-  display: inline-block;
-  color: var(--mr-brass);
-  transition: transform 0.5s var(--lx-glide), opacity 0.4s ease;
-}
-.mr-arrow[data-dir='up'] { transform: rotate(180deg); }
-.mr-arrow[data-dir='still'] { opacity: 0.3; transform: rotate(90deg); }
 
 /* ---------------------------------------------------------------------------
  * Right: the figure, its caption, the drifting formulas
@@ -488,7 +412,6 @@
 
 @container (max-width: 210px) {
   .mr-node-label,
-  .mr-read-row,
   .mr-note,
   .mr-stream,
   .mr-orbit-b { display: none; }
@@ -498,12 +421,10 @@
 @container (max-width: 150px) {
   .mr-title,
   .mr-caption,
-  .mr-eyebrow,
   .mr-ruler { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mr-pulse::after,
   .mr-node[data-state='active'] .mr-dot::before,
   .mr-orbit-ring,
   .mr-halo,

@@ -19,8 +19,6 @@
   --lxg-cyan: oklch(84% 0.14 205);
   --lxg-teal: oklch(72% 0.14 190);
   --lxg-gold: oklch(84% 0.15 82);
-  --lxg-coral: oklch(74% 0.16 35);
-  --lxg-violet: oklch(72% 0.13 295);
   /* How much of the strip next to the stage is left uncovered: the tube of light. */
   --lxg-tube: 2px;
   position: absolute;
@@ -48,10 +46,10 @@
     var(--lxg-gold) 124deg,
     oklch(98% 0.03 90) 138deg,
     var(--lxg-gold) 150deg,
-    var(--lxg-coral) 172deg,
-    oklch(74% 0.16 35 / 0.4) 208deg,
-    var(--lxg-violet) 250deg,
-    oklch(72% 0.13 295 / 0.45) 286deg,
+    var(--lxg-gold) 172deg,
+    oklch(84% 0.15 82 / 0.4) 208deg,
+    var(--lxg-teal) 250deg,
+    oklch(72% 0.14 190 / 0.45) 286deg,
     var(--lxg-cyan) 318deg,
     oklch(97% 0.04 205) 330deg,
     var(--lxg-cyan) 344deg,

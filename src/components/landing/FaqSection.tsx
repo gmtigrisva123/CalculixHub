@@ -28,7 +28,7 @@ export default function FaqSection() {
     <section className="lx-faq" id="faq" data-tone="paper" aria-labelledby="lx-faq-title">
       <div className="lx-wrap lx-faq-grid">
         <header className="lx-faq-head">
-          <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={'Questions,\n*answered.*'} />
+          <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={'Questions,\nanswered.'} />
           <Rise delay={0.12}>
             <a className="lx-link" href="/?auth=signup&tab=community">Ask in the community <Arrow size={15} /></a>
           </Rise>
@@ -45,7 +45,6 @@ export default function FaqSection() {
               >
                 <h3>
                   <button type="button" onClick={() => setOpen(expanded ? null : index)} aria-expanded={expanded} aria-controls={`lx-faq-${index}`} id={`lx-faq-q-${index}`}>
-                    <span className="lx-faq-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                     <span className="lx-faq-question">{question}</span>
                     <span className="lx-faq-sign" aria-hidden="true" />
                   </button>

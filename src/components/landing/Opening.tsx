@@ -140,7 +140,7 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
           </m.div>
           <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" play={cued} delay={0.1} stagger={0.07} />
           <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.38, opacity: fade(0.38) }}>
-            Contest problems chosen to fit you, then talked through one step at a time — the way a good tutor would, sitting right beside you.
+            Contest problems chosen to fit your level, each with a hint and a full solution.
           </m.p>
           <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.48, opacity: fade(0.48) }}>
             <Magnetic>

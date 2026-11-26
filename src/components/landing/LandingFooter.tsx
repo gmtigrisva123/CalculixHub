@@ -23,7 +23,7 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
   const reduce = Boolean(useReducedMotion());
   // 0 when the sheet's bottom edge reaches the bottom of the screen, 1 when it has cleared the top.
   const { scrollYProgress: lift } = useScroll({ target: contentRef, offset: ['end end', 'end start'] });
-  const drift = useTransform(lift, [0, 0.8], ['-18%', '0%']);
+  const drift = useTransform(lift, [0, 0.35], ['-18%', '0%']);
 
   return (
     <footer className="lx-footer" data-tone="ink">
@@ -31,7 +31,7 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
         <div className="lx-footer-top lx-wrap">
           <div className="lx-footer-lede">
             <BrandMark />
-            <p>Keep a little room for a good question.</p>
+            <p>Competition mathematics practice, AMC to IMO.</p>
           </div>
         </div>
 
@@ -44,8 +44,8 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
         </p>
 
         <div className="lx-footer-bottom lx-wrap">
-          <a className="lx-top" href="/?preview=ios">The iPhone experience <Arrow size={13} /></a>
-          <a className="lx-top" href="/?preview=mac">The MacBook experience <Arrow size={13} /></a>
+          <a className="lx-top" href="/?preview=ios">iPhone preview <Arrow size={13} /></a>
+          <a className="lx-top" href="/?preview=mac">MacBook preview <Arrow size={13} /></a>
           <button type="button" className="lx-top" onClick={() => scrollToTarget(0)}>
             Back to top <Arrow direction="up" size={13} />
           </button>
@@ -56,8 +56,10 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
 }
 
 function Letter({ letter, index, lift, still, dot = false }: { letter: string; index: number; lift: MotionValue<number>; still: boolean; dot?: boolean }) {
-  const start = 0.18 + index * 0.025;
-  const y = useTransform(lift, [start, start + 0.32], ['105%', '0%']);
+  // Timed to finish well inside the footer's own height: on a phone the footer is shorter than the
+  // screen, so the lift never gets far, and a slower rise left the wordmark stuck half-way up.
+  const start = 0.04 + index * 0.012;
+  const y = useTransform(lift, [start, start + 0.2], ['105%', '0%']);
   return (
     <span className={dot ? 'lx-letter is-dot' : index >= 8 ? 'lx-letter is-light' : 'lx-letter'} aria-hidden="true">
       <m.span style={still ? undefined : { y }}>{letter}</m.span>
