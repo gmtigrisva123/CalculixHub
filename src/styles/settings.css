@@ -1,5 +1,5 @@
 /*
- * Settings — a rhythm that works for you.
+ * Settings — goal, pace and reminders, then the device and the account.
  *
  * The hero shows the plan back as a week: seven beats filled to the daily
  * pace, with the weekly total beside them. Below it, each setting draws what
@@ -84,10 +84,14 @@
   mask-image: radial-gradient(100% 100% at 75% 50%, #000 20%, transparent 80%);
 }
 .se-hero-copy { min-width: 0; animation: se-rise .7s var(--se-ease) both; }
-.se-eyebrow { display: flex; align-items: center; gap: 12px; font: 500 11px/1.3 var(--se-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--se-chalk-muted); }
-.se-eyebrow span { width: 7px; height: 7px; border-radius: 50%; background: var(--se-brass); box-shadow: 0 0 0 4px #e6bd7326; }
-.se-hero h1 { margin: 22px 0 18px; font: 400 clamp(40px, 4.6vw, 66px)/.98 var(--se-serif); letter-spacing: -.04em; text-wrap: balance; font-variant-numeric: normal; }
-.se-hero h1 em { font-style: italic; font-weight: 350; color: var(--se-brass); }
+.se-hero h1 { margin: 0 0 18px; font: 400 clamp(40px, 4.6vw, 66px)/.98 var(--se-serif); letter-spacing: -.04em; text-wrap: balance; font-variant-numeric: normal; }
+/* Emphasis stays roman: a brass pencil stroke under the phrase, redrawn on each line it wraps to. */
+.se-hero h1 em {
+  font: inherit; font-style: normal; letter-spacing: inherit; color: inherit;
+  padding-bottom: .1em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 C 70 2, 170 1, 298 6' fill='none' stroke='%23e6bd73' stroke-width='2.2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") left bottom / 100% .3em no-repeat;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
 .se-summary { max-width: 44ch; font-size: 16px; line-height: 1.6; color: var(--se-chalk-muted); text-wrap: pretty; }
 .se-summary b { font-weight: 600; color: var(--se-chalk); }
 

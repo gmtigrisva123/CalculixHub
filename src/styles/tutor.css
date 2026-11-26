@@ -73,7 +73,13 @@
 /* Nothing asked yet */
 .tu-empty { display: grid; align-content: end; gap: 10px; min-height: 100%; }
 .tu-empty h3 { font: 560 27px/1.1 'Geist', system-ui, sans-serif; letter-spacing: -.04em; }
-.tu-empty h3 em { color: var(--ac-text); font: italic 400 1.07em/1 'Newsreader', Georgia, serif; letter-spacing: -.02em; }
+/* Emphasis stays roman: a pencil stroke under the phrase, as on every page heading (styles/page.css). */
+.tu-empty h3 em {
+  font: inherit; font-style: normal; letter-spacing: inherit; color: inherit;
+  padding-bottom: .1em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 C 70 2, 170 1, 298 6' fill='none' stroke='%23c98a3c' stroke-width='2.2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") left bottom / 100% .3em no-repeat;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
 .tu-empty > p:not(.tu-kicker) { max-width: 40ch; color: var(--ct-muted); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
 .tu-empty .tu-kicker { margin-top: 16px; }
 .tu-starters { display: grid; border-top: 1px solid var(--ln-faint); }
@@ -127,7 +133,7 @@
 .tu-connect { display: grid; align-content: start; gap: 22px; }
 .tu-connect-head { display: grid; gap: 8px; }
 .tu-connect-head h3 { font: 560 22px/1.18 'Geist', system-ui, sans-serif; letter-spacing: -.035em; text-wrap: balance; }
-.tu-connect-head p:not(.tu-kicker) { color: var(--ct-muted); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+.tu-connect-head p { color: var(--ct-muted); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
 .tu-back { justify-self: start; padding: 0; border: 0; background: none; color: var(--ct-muted); font: 500 13.5px/1.4 'Geist', system-ui, sans-serif; text-decoration: underline; text-decoration-color: var(--ln-strong); text-underline-offset: 3px; cursor: pointer; }
 .tu-back:hover { color: var(--ct); }
 

@@ -58,7 +58,6 @@ export default function ProgressView({ userStats, onSeePlans }: ProgressViewProp
   return (
     <div className="pr">
       <PageHead
-        eyebrow="How it’s going"
         title={<>What you know, <em>and what’s next.</em></>}
         lede={hasLearningEvidence
           ? <>Strongest in <strong>{TOPIC_META[sortedSkills[sortedSkills.length - 1][0]].label}</strong>; the most room to grow is in <strong>{weakest}</strong>. Every figure here comes from your own answers.</>

@@ -13,7 +13,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { ArrowUpRight, Check, CreditCard, Sparkles, Users } from 'lucide-react';
+import { ArrowUpRight, Check, CreditCard, Info, Users } from 'lucide-react';
 import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan as PlanData, type PlanId } from '../../shared/plans';
 import { useAuth } from '../context/AuthContext';
 import { openBillingPortal, registerInterest, startCheckout, usePlan } from '../services/data/plan';
@@ -142,8 +142,7 @@ export default function Plan() {
     <div className="plan-page">
       <header className="pl-hero">
         <div className="pl-hero-copy">
-          <p className="pl-eyebrow"><span aria-hidden="true" />Your plan</p>
-          <h1>Practice is free. <em>Pro is for the season.</em></h1>
+          <h1>Practice is free. Pro adds <em>contest prep.</em></h1>
           <p className="pl-status">{status}</p>
         </div>
         {/* Three steps, each a little taller: the plans as a staircase rather than a table. */}
@@ -157,7 +156,7 @@ export default function Plan() {
       </header>
 
       {plan.preview && !plan.loading && (
-        <p className="pl-preview"><Sparkles size={16} aria-hidden="true" /><span><b>Pro is in preview.</b> Checkout isn’t open yet, so everything Pro includes is unlocked for every account in the meantime. The prices below are what it will cost when it opens.</span></p>
+        <p className="pl-preview"><Info size={16} aria-hidden="true" /><span><b>Pro is in preview.</b> Checkout isn’t open yet, so everything Pro includes is unlocked for every account in the meantime. The prices below are what it will cost when it opens.</span></p>
       )}
       {notice && <p className={`pl-notice is-${notice.tone}`} role="status">{notice.text}</p>}
 
@@ -176,7 +175,6 @@ export default function Plan() {
           return (
             <m.section key={id} className={`pl-card is-${id}${id === current ? ' is-current' : ''}`} aria-labelledby={`pl-${id}`}
               initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}>
-              {id === 'pro' && <span className="pl-ribbon">For contest season</span>}
               <h2 id={`pl-${id}`}>{data.name}</h2>
               <p className="pl-audience">{data.audience}</p>
               <Price plan={data} cycle={cycle} />

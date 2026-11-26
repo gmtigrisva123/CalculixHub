@@ -2,11 +2,15 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * Community Solutions: a social feed for problem discussions.
+ * Community: where learners write up solutions, ask for a nudge, and pencil
+ * marks in the margin of each other's work.
  *
- * Posts can be reacted to, commented on (with threaded replies), edited,
- * deleted, saved and shared -- to the feed, by link, or through the system
- * share sheet. A link to a post or comment opens this screen scrolled to it.
+ * The page opens on today's board (one problem, the same for everyone) and
+ * runs into the feed. A post has a kind (solution, stuck, trick, challenge),
+ * may carry technique tags and sealed hints, and can be marked, commented on
+ * (with threaded replies), edited, deleted, saved and shared -- to the feed,
+ * by link, or through the system share sheet. People can be followed, and a
+ * link to a post or comment opens this screen scrolled to it.
  *
  * Authorization lives in the database (see `services/data/feed.ts`); this
  * screen only decides what to offer, and renders the database's answer.
@@ -14,20 +18,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import {
-  ArrowUp,
-  Bookmark,
-  CircleHelp,
-  Hash,
-  Link2,
-  ListFilter,
-  MessageCircle,
-  PenLine,
-  RefreshCw,
-  Sigma,
-  Sparkles,
-  X,
-} from 'lucide-react';
+import { ArrowUp, Bookmark, Link2, ListFilter, MessageCircle, PenLine, RefreshCw, Users, X } from 'lucide-react';
 import { Problem } from '../../shared/types';
 import { useAuth } from '../context/AuthContext';
 import type { AuthorSummary, PostWithAuthor, Reaction, ReactionCounts, SharedPost } from '../services/database.types';
@@ -39,19 +30,45 @@ import {
   toggleSavedPost,
   updatePost,
   usePostFeed,
+  type FeedSort,
   type FeedView,
   type MutationResult,
 } from '../services/data/feed';
+import { useFollowing } from '../services/data/people';
 import { useCommunityPresence, type PresentPerson } from '../services/data/live';
 import { duration, ease, spring, staggerDelay } from '../lib/motion';
 import { Lightbox } from './community/Media';
 import type { MentionPerson } from './community/Mentions';
-import PostCard, { type PostActions } from './community/PostCard';
+import PostCard, { KIND_ICON, type PostActions } from './community/PostCard';
 import PostComposer from './community/PostComposer';
+import ProfilePeek from './community/ProfilePeek';
 import { ReactorsDialog } from './community/Reactions';
+import { TagActionContext } from './community/RichText';
 import SendDialog from './community/SendDialog';
-import { FormattingTips, ProblemFilter, TopContributors } from './community/Sidebar';
-import { authorName, disambiguateTitles, firstName, holdBackFresh, isUuid, newestCreatedAt, shareLink, shiftReaction } from './community/model';
+import { Helpers, MarginKey, ProblemFilter, Techniques } from './community/Sidebar';
+import TodayBoard from './community/TodayBoard';
+import {
+  KIND_META,
+  POST_KINDS,
+  authorName,
+  boardDay,
+  boardProblem,
+  composePost,
+  disambiguateTitles,
+  extractTags,
+  firstName,
+  holdBackFresh,
+  isUuid,
+  kindPattern,
+  newestCreatedAt,
+  parsePost,
+  rankHelpers,
+  shareLink,
+  shiftReaction,
+  tallyTags,
+  type Helper,
+  type PostKind,
+} from './community/model';
 import { Avatar, ConfirmDialog, Dialog, NowContext, ToastProvider, copyText, nativeShare, useTicker, useToast } from './community/ui';
 import '../styles/community.css';
 
@@ -59,13 +76,19 @@ const PAGE = 20;
 const HIGHLIGHT_MS = 2600;
 
 const VIEWS: Record<FeedView, string> = {
-  all: 'All posts',
+  all: 'Everyone',
+  following: 'Following',
   saved: 'Saved',
-  mine: 'Your posts',
+  mine: 'Yours',
+};
+
+const SORTS: Record<FeedSort, string> = {
+  latest: 'Latest',
+  top: 'Top this week',
 };
 
 type ComposerState =
-  | { mode: 'create'; placeholder?: string; preview?: boolean }
+  | { mode: 'create'; kind?: PostKind | null; problemId?: string | null }
   | { mode: 'edit'; post: PostWithAuthor }
   | { mode: 'share'; original: SharedPost };
 
@@ -93,15 +116,23 @@ function excerpt(text: string, length = 160): string {
   return flat.length > length ? `${flat.slice(0, length - 1)}…` : flat;
 }
 
-export default function Community({ problems }: { problems: Problem[] }) {
+interface CommunityProps {
+  problems: Problem[];
+  /** Problems the viewer has solved, so a solution to one they have not is kept under a shield. */
+  solvedIds?: readonly string[];
+  /** Open a problem in Learn. Absent where there is nowhere to send the learner. */
+  onSolveProblem?: (problem: Problem) => void;
+}
+
+export default function Community(props: CommunityProps) {
   return (
     <ToastProvider>
-      <CommunityFeed problems={problems} />
+      <CommunityFeed {...props} />
     </ToastProvider>
   );
 }
 
-function CommunityFeed({ problems }: { problems: Problem[] }) {
+function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) {
   const { user, profile } = useAuth();
   const viewerId = user?.id ?? null;
   const viewer = useMemo<AuthorSummary | null>(() => {
@@ -116,10 +147,25 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
 
   const [problemFilter, setProblemFilter] = useState('All');
   const [view, setView] = useState<FeedView>('all');
+  const [kindFilter, setKindFilter] = useState<PostKind | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [authorFilter, setAuthorFilter] = useState<AuthorSummary | null>(null);
+  const [sort, setSort] = useState<FeedSort>('latest');
   const [limit, setLimit] = useState(PAGE);
   const [loadingMore, setLoadingMore] = useState(false);
-  const feed = usePostFeed({ problemId: problemFilter, viewerId, view, limit });
+  const feed = usePostFeed({
+    problemId: problemFilter,
+    viewerId,
+    view,
+    startsWith: kindFilter ? kindPattern(kindFilter) : null,
+    tag: tagFilter,
+    authorId: authorFilter?.id ?? null,
+    sort,
+    limit,
+  });
   const schema = feed.schema;
+  const following = useFollowing(viewerId);
+  const solved = useMemo(() => new Set(solvedIds ?? []), [solvedIds]);
 
   const [overrides, setOverrides] = useState<Record<string, Reaction | null>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
@@ -128,6 +174,7 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
   const [confirmDelete, setConfirmDelete] = useState<PostWithAuthor | null>(null);
   const [reactors, setReactors] = useState<{ target: 'post' | 'comment'; id: string; counts: ReactionCounts | undefined } | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [peek, setPeek] = useState<AuthorSummary | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [focus, setFocus] = useState<LinkTarget | null>(readLinkTarget);
   const [focusComment, setFocusComment] = useState<LinkTarget | null>(null);
@@ -180,12 +227,16 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
     [overrides],
   );
 
-  const posts = useMemo(() => feed.data.map(withOverride), [feed.data, withOverride]);
+  // The database matches a tag as text, so "#parity" also finds "#parity-check"; the exact tag is kept here.
+  const posts = useMemo(
+    () => feed.data.filter((post) => !tagFilter || extractTags(post.body).includes(tagFilter)).map(withOverride),
+    [feed.data, withOverride, tagFilter],
+  );
 
   // New posts from other people wait behind a "new posts" pill instead of
   // pushing the feed down while it is being read. The baseline is the newest
   // post on screen when this feed (problem, tab, account) first loaded.
-  const feedKey = `${problemFilter}:${view}:${viewerId ?? 'guest'}`;
+  const feedKey = `${problemFilter}:${view}:${kindFilter ?? ''}:${tagFilter ?? ''}:${authorFilter?.id ?? ''}:${sort}:${viewerId ?? 'guest'}`;
   useEffect(() => {
     if (feed.loading || baseline?.key === feedKey) return;
     setBaseline({ key: feedKey, cutoff: newestCreatedAt(feed.data) ?? new Date().toISOString() });
@@ -206,10 +257,10 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
   }, [present, feed.data, viewerId]);
   const linkedPost = linked && !feed.data.some((post) => post.id === linked.id) ? withOverride(linked) : null;
 
-  // Thread counts and contributors come from the unfiltered feed, and are kept
-  // while a filter or tab is applied, so the side column does not lose its
-  // numbers the moment it is used.
-  const unfiltered = problemFilter === 'All' && view === 'all';
+  // Thread counts, techniques and helpers come from the unfiltered feed, and are
+  // kept while a filter or tab is applied, so the side column does not lose
+  // its numbers the moment it is used.
+  const unfiltered = problemFilter === 'All' && view === 'all' && !kindFilter && !tagFilter && !authorFilter && sort === 'latest';
   const countsCache = useRef(new Map<string, number>());
   const problemCounts = useMemo(() => {
     if (!unfiltered) return countsCache.current;
@@ -219,18 +270,33 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
     return counts;
   }, [feed.data, unfiltered]);
 
-  const contributorsCache = useRef<Array<{ id: string; author: AuthorSummary | null; count: number }>>([]);
-  const contributors = useMemo(() => {
-    if (!unfiltered) return contributorsCache.current;
-    const counts = new Map<string, { id: string; author: AuthorSummary | null; count: number }>();
-    for (const post of feed.data) {
-      const entry = counts.get(post.author_id) ?? { id: post.author_id, author: post.author, count: 0 };
-      entry.count += 1;
-      counts.set(post.author_id, entry);
-    }
-    contributorsCache.current = [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 5);
-    return contributorsCache.current;
+  const helpersCache = useRef<Array<Helper<AuthorSummary>>>([]);
+  const helpers = useMemo(() => {
+    if (unfiltered) helpersCache.current = rankHelpers(feed.data);
+    return helpersCache.current;
   }, [feed.data, unfiltered]);
+
+  const tagsCache = useRef<Array<{ tag: string; count: number }>>([]);
+  const tags = useMemo(() => {
+    if (unfiltered) tagsCache.current = tallyTags(feed.data.map((post) => post.body), 12);
+    return tagsCache.current;
+  }, [feed.data, unfiltered]);
+
+  // One problem a day, the same for everyone; recomputed only when the day turns.
+  const today = boardDay(now);
+  const board = useMemo(() => boardProblem(problems, today * 86_400_000), [problems, today]);
+
+  const toTop = () => feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const narrow = (apply: () => void) => {
+    apply();
+    setLimit(PAGE);
+    toTop();
+  };
+  const filterTag = useCallback((tag: string | null) => {
+    setTagFilter(tag);
+    setLimit(PAGE);
+    feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const reveal = useCallback((target: LinkTarget) => {
     if (target.commentId) {
@@ -354,12 +420,11 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
       });
       if (outcome === 'failed') toast('Sharing is not available here. Try “Copy link”.', 'error');
     },
-    filterProblem: (problemId) => {
-      setProblemFilter(problemId);
-      setView('all');
-      setLimit(PAGE);
-      feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    },
+    filterProblem: (problemId) =>
+      narrow(() => {
+        setProblemFilter(problemId);
+        setView('all');
+      }),
     openOriginal: (postId) => {
       if (feed.data.some((post) => post.id === postId)) reveal({ postId, commentId: null });
       else setFocus({ postId, commentId: null });
@@ -385,9 +450,31 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
       if (signedIn('send posts')) setSendTarget(post);
     },
     openMedia: (paths, index) => setLightbox({ paths, index }),
+    openProfile: (author) => setPeek(author),
+    toggleFollow: async (authorId) => {
+      if (!signedIn('follow people')) return;
+      const result = await following.toggle(authorId);
+      if (!result.ok) toast(result.error ?? 'Could not update that follow.', 'error');
+      else toast(result.following ? 'Following. Their posts are under Following.' : 'Unfollowed', 'neutral');
+    },
+    filterAuthor: (author) =>
+      narrow(() => {
+        setAuthorFilter(author);
+        setView('all');
+      }),
+    setResolved: async (post, resolved) => {
+      const { text } = parsePost(post.body);
+      const result = await updatePost({ postId: post.id, body: composePost(text, 'stuck', resolved) });
+      if (!result.ok) {
+        toast(result.error, 'error');
+        return;
+      }
+      toast(resolved ? 'Marked as unstuck. Nice work.' : 'Reopened. It is back in the queue.');
+      await Promise.all([feed.reload(), refreshLinked(post.id)]);
+    },
   };
 
-  const openCreate = (options: { placeholder?: string; preview?: boolean } = {}) => {
+  const openCreate = (options: { kind?: PostKind | null; problemId?: string | null } = {}) => {
     if (!viewer) {
       window.location.assign('/?auth=signup');
       return;
@@ -419,9 +506,14 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
       });
       if (result.ok) {
         toast(composer.mode === 'share' ? 'Shared to the community feed' : 'Your post is live');
+        // Show the new post: drop whatever narrowing would hide it.
         setView('all');
+        setSort('latest');
+        setTagFilter(null);
+        setAuthorFilter(null);
+        if (kindFilter && kindFilter !== parsePost(body).kind) setKindFilter(null);
         if (problemFilter !== 'All' && problemFilter !== problemId) setProblemFilter('All');
-        feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toTop();
       }
     }
     if (result.ok) await feed.reload();
@@ -454,6 +546,9 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
       highlighted={highlight === post.id}
       viewers={viewersByPost.get(post.id) ?? []}
       mentionCandidates={people}
+      following={following.ids}
+      shielded={Boolean(viewerId) && solvedIds !== undefined && Boolean(post.problem_id) && !solved.has(post.problem_id!) && post.author_id !== viewerId}
+      onSolve={onSolveProblem && post.problem_id ? () => { const problem = problems.find((entry) => entry.id === post.problem_id); if (problem) onSolveProblem(problem); } : undefined}
       actions={actions}
     />
   );
@@ -461,318 +556,396 @@ function CommunityFeed({ problems }: { problems: Problem[] }) {
   const hasMore = feed.data.length >= limit;
   const selectedTitle = problemTitle(problemFilter);
   const initialLoading = feed.loading && feed.data.length === 0;
+  const narrowed = [selectedTitle, tagFilter, authorFilter].filter(Boolean).length;
+  const clearNarrowing = () =>
+    narrow(() => {
+      setProblemFilter('All');
+      setTagFilter(null);
+      setAuthorFilter(null);
+    });
+
+  const empty = (() => {
+    if (view === 'saved') return { title: 'Nothing saved yet', text: 'Tap the bookmark on any post to keep it here.' };
+    if (view === 'following') {
+      return following.ids.size === 0
+        ? { title: 'You are not following anyone yet', text: 'Follow someone from their post or from “Helping lately”, and what they write is collected here.' }
+        : { title: 'Nothing new from the people you follow', text: 'Their next post will appear here.' };
+    }
+    if (view === 'mine') return { title: 'You have not posted yet', text: 'Write up a solution, or ask for a nudge on a problem you are stuck on.' };
+    if (kindFilter === 'stuck') return { title: 'Nobody is waiting for a nudge', text: 'Every open question here has been answered. Check back later, or ask one of your own.' };
+    if (kindFilter) return { title: `No ${KIND_META[kindFilter].plural.toLocaleLowerCase()} here yet`, text: 'Be the first to post one.' };
+    if (tagFilter) return { title: `Nothing tagged #${tagFilter} yet`, text: 'Add the tag to a post and it will be found here.' };
+    if (authorFilter) return { title: `${firstName(authorFilter)} has not posted yet`, text: 'Their posts will appear here.' };
+    if (selectedTitle) return { title: 'Nobody has written about this problem yet', text: 'Post your approach, or ask about the step that stops you.' };
+    return { title: 'No posts yet', text: 'Write up a solution, share a trick, or ask for a nudge.' };
+  })();
+
+  const browse = (
+    <>
+      <Techniques tags={tags} selected={tagFilter} onSelect={filterTag} />
+      <section className="cm-side-card" aria-labelledby="cm-threads">
+        <h3 id="cm-threads">Problem threads</h3>
+        <ProblemFilter problems={problems} counts={problemCounts} selected={problemFilter} onSelect={(problemId) => { actions.filterProblem(problemId); setFilterOpen(false); }} />
+      </section>
+    </>
+  );
 
   return (
     <NowContext.Provider value={now}>
-      <div className="cm-root">
-        <header className="cm-hero">
-          <p className="pg-eyebrow">Community Solutions</p>
-          <h1 className="pg-title">Work it out <em>together.</em></h1>
-          <p className="pg-lede">Share an approach, ask for a nudge, and see how other people got there.</p>
-          <AnimatePresence>
-            {present.length > 0 && (
-              <m.p
-                className="cm-online"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0, transition: spring.snappy }}
-                exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
-                title={present.map((person) => person.name).join(', ')}
-              >
-                <span className="cm-live-dot" aria-hidden="true" />
-                <span className="cm-online-faces" aria-hidden="true">
-                  {present.slice(0, 5).map((person) => (
-                    <Avatar key={person.id} author={{ id: person.id, display_name: person.name, username: person.username, avatar_url: person.avatar_url }} size={24} />
-                  ))}
-                </span>
-                {present.length === 1 ? `${present[0]!.name} is here now` : `${present.length} learners are here now`}
-              </m.p>
-            )}
-          </AnimatePresence>
-        </header>
+      <TagActionContext.Provider value={filterTag}>
+        <div className="cm-root">
+          <h1 className="sr-only">Community</h1>
 
-        <div className="cm-layout">
-          <section className="cm-feed" aria-label="Community feed">
-            <div ref={feedTop} className="cm-scroll-anchor" />
+          {board && (
+            <TodayBoard
+              problem={board}
+              solved={solved.has(board.id)}
+              signedIn={Boolean(viewer)}
+              onSolve={onSolveProblem}
+              onOpenThread={actions.filterProblem}
+              onWrite={(problem) => openCreate({ kind: 'solution', problemId: problem.id })}
+              onStuck={(problem) => openCreate({ kind: 'stuck', problemId: problem.id })}
+            />
+          )}
 
-            <section className="cm-card cm-prompt" aria-label="Create a post">
-              <div className="cm-prompt-row">
-                <Avatar author={viewer} size={42} />
-                <button type="button" className="cm-prompt-input" onClick={() => openCreate()}>
-                  {viewer ? `What’s on your mind, ${firstName(viewer)}?` : 'Sign in to start a discussion'}
-                </button>
-              </div>
-              {viewer && (
-                <div className="cm-prompt-actions">
-                  <button type="button" onClick={() => openCreate({ placeholder: 'Walk through your solution, step by step…' })}>
-                    <Sparkles size={20} className="is-solution" aria-hidden="true" /> Solution
-                  </button>
-                  <button type="button" onClick={() => openCreate({ placeholder: 'What are you stuck on? Share what you have tried so far…' })}>
-                    <CircleHelp size={20} className="is-question" aria-hidden="true" /> Ask for help
-                  </button>
-                  <button type="button" onClick={() => openCreate({ placeholder: 'Write it in LaTeX, e.g. $a^2 + b^2 = c^2$', preview: true })}>
-                    <Sigma size={20} className="is-math" aria-hidden="true" /> Math
+          <div className="cm-layout">
+            <section className="cm-feed" aria-label="Community feed">
+              <div ref={feedTop} className="cm-scroll-anchor" />
+
+              <section className="cm-card cm-prompt" aria-label="Write a post">
+                <div className="cm-prompt-row">
+                  <Avatar author={viewer} size={42} />
+                  <button type="button" className="cm-prompt-input" onClick={() => openCreate()}>
+                    {viewer ? 'Share an approach, or ask for a nudge…' : 'Sign in to post'}
                   </button>
                 </div>
-              )}
-            </section>
-
-            <div className="cm-feed-bar">
-              {viewer ? (
-                <div className="cm-segmented" role="group" aria-label="Show">
-                  {(Object.keys(VIEWS) as FeedView[]).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-pressed={view === key}
-                      onClick={() => {
-                        setView(key);
-                        setLimit(PAGE);
-                      }}
-                    >
-                      {view === key && <m.span layoutId="cm-segment" className="cm-segment-pill" transition={spring.snappy} />}
-                      <span>{VIEWS[key]}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <span />
-              )}
-              <button type="button" className="cm-filter-button" onClick={() => setFilterOpen(true)} aria-haspopup="dialog">
-                <ListFilter size={16} aria-hidden="true" />
-                <span>{selectedTitle ?? 'All problems'}</span>
-              </button>
-            </div>
-
-            <AnimatePresence initial={false}>
-              {selectedTitle && (
-                <m.div
-                  className="cm-active-filter"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0, transition: spring.snappy }}
-                  exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
-                >
-                  <Hash size={15} aria-hidden="true" />
-                  <span>
-                    Discussions of <strong>{selectedTitle}</strong>
-                  </span>
-                  <button type="button" className="cm-icon-button" aria-label="Show all problems" onClick={() => actions.filterProblem('All')}>
-                    <X size={16} aria-hidden="true" />
-                  </button>
-                </m.div>
-              )}
-            </AnimatePresence>
-
-            {linkedPost && (
-              <section className="cm-linked" aria-label="Linked post">
-                <div className="cm-linked-bar">
-                  <span>
-                    <Link2 size={15} aria-hidden="true" /> Linked post
-                  </span>
-                  <button type="button" className="cm-link-button" onClick={() => setLinked(null)}>
-                    Close
-                  </button>
-                </div>
-                {card(linkedPost)}
-              </section>
-            )}
-
-            {feed.error && (
-              <div className="cm-card cm-notice" role="alert">
-                <p>{feed.error}</p>
-                <button type="button" className="cm-button is-quiet" onClick={() => void feed.reload()}>
-                  <RefreshCw size={16} aria-hidden="true" /> Try again
-                </button>
-              </div>
-            )}
-
-            {initialLoading && (
-              <div role="status" aria-label="Loading discussions">
-                {[0, 1].map((index) => (
-                  <div key={index} className="cm-card cm-skeleton" aria-hidden="true">
-                    <div className="cm-skeleton-head">
-                      <span className="cm-skeleton-avatar" />
-                      <span className="cm-skeleton-lines">
-                        <i />
-                        <i />
-                      </span>
-                    </div>
-                    <i />
-                    <i />
-                    <i className="is-short" />
+                {viewer && (
+                  <div className="cm-prompt-actions">
+                    {POST_KINDS.map((kind) => {
+                      const Icon = KIND_ICON[kind];
+                      return (
+                        <button key={kind} type="button" className={`is-${kind}`} onClick={() => openCreate({ kind })} title={KIND_META[kind].blurb}>
+                          <Icon size={18} aria-hidden="true" /> {KIND_META[kind].label}
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {!initialLoading && !feed.error && visible.length === 0 && (
-              <div className="cm-card cm-empty">
-                <span className="cm-empty-icon">{view === 'saved' ? <Bookmark size={26} aria-hidden="true" /> : <MessageCircle size={26} aria-hidden="true" />}</span>
-                <h2>{view === 'saved' ? 'Nothing saved yet' : view === 'mine' ? 'You haven’t posted yet' : selectedTitle ? 'No discussions of this problem yet' : 'No discussions yet'}</h2>
-                <p>
-                  {view === 'saved'
-                    ? 'Open the ••• menu on any post and choose “Save post” to keep it here.'
-                    : 'Share an approach, a question or a neat trick — and start the conversation.'}
-                </p>
-                {viewer && view !== 'saved' && (
-                  <button type="button" className="cm-button is-primary" onClick={() => openCreate()}>
-                    <PenLine size={16} aria-hidden="true" /> Create post
-                  </button>
                 )}
-              </div>
-            )}
+              </section>
 
-            <AnimatePresence>
-              {fresh.length > 0 && (
-                <m.div
-                  className="cm-fresh-wrap"
-                  initial={{ opacity: 0, y: -12, scale: 0.94 }}
-                  animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
-                  exit={{ opacity: 0, y: -8, transition: { duration: duration.fast, ease: ease.exit } }}
-                >
-                  <button type="button" className="cm-fresh" onClick={showFresh}>
-                    <ArrowUp size={16} aria-hidden="true" />
-                    <span className="cm-fresh-faces" aria-hidden="true">
-                      {[...new Map(fresh.map((post) => [post.author_id, post.author])).values()].slice(0, 3).map((author, index) => (
-                        <Avatar key={author?.id ?? index} author={author} size={22} />
+              <div className="cm-feed-bar">
+                {viewer ? (
+                  <div className="cm-segmented" role="group" aria-label="Whose posts">
+                    {(Object.keys(VIEWS) as FeedView[]).map((key) => (
+                      <button key={key} type="button" aria-pressed={view === key} onClick={() => narrow(() => setView(key))}>
+                        {view === key && <m.span layoutId="cm-segment" className="cm-segment-pill" transition={spring.snappy} />}
+                        <span>{VIEWS[key]}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span />
+                )}
+                <div className="cm-feed-tools">
+                  <div className="cm-sort" role="group" aria-label="Order">
+                    {(Object.keys(SORTS) as FeedSort[]).map((key) => (
+                      <button key={key} type="button" aria-pressed={sort === key} onClick={() => narrow(() => setSort(key))} title={key === 'top' ? 'The posts that drew the most marks in the last seven days' : 'Newest first'}>
+                        {SORTS[key]}
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="cm-filter-button" onClick={() => setFilterOpen(true)} aria-haspopup="dialog">
+                    <ListFilter size={16} aria-hidden="true" />
+                    <span>Browse</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="cm-kind-bar" role="group" aria-label="Kind of post">
+                <button type="button" className="cm-kind-chip" aria-pressed={!kindFilter} onClick={() => narrow(() => setKindFilter(null))}>
+                  All kinds
+                </button>
+                {POST_KINDS.map((kind) => {
+                  const Icon = KIND_ICON[kind];
+                  return (
+                    <button key={kind} type="button" className={`cm-kind-chip is-${kind}`} aria-pressed={kindFilter === kind} onClick={() => narrow(() => setKindFilter(kindFilter === kind ? null : kind))}>
+                      <Icon size={14} aria-hidden="true" />
+                      {kind === 'stuck' ? 'Needs a nudge' : KIND_META[kind].plural}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <AnimatePresence initial={false}>
+                {present.length > 0 && (
+                  <m.p
+                    className="cm-online"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0, transition: spring.snappy }}
+                    exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
+                    title={present.map((person) => person.name).join(', ')}
+                  >
+                    <span className="cm-live-dot" aria-hidden="true" />
+                    <span className="cm-online-faces" aria-hidden="true">
+                      {present.slice(0, 5).map((person) => (
+                        <Avatar key={person.id} author={{ id: person.id, display_name: person.name, username: person.username, avatar_url: person.avatar_url }} size={22} />
                       ))}
                     </span>
-                    {fresh.length === 1 ? '1 new post' : `${fresh.length} new posts`}
-                  </button>
-                </m.div>
-              )}
-            </AnimatePresence>
-
-            <div className="cm-post-list">
-              <AnimatePresence initial={false} mode="popLayout">
-                {visible.map((post, index) => (
-                  <m.div
-                    key={post.id}
-                    layout="position"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0, transition: { ...spring.smooth, delay: staggerDelay(index) } }}
-                    exit={{ opacity: 0, scale: 0.98, transition: { duration: duration.fast, ease: ease.exit } }}
-                  >
-                    {card(post)}
-                  </m.div>
-                ))}
-              </AnimatePresence>
-            </div>
-
-            {visible.length > 0 && (
-              <div className="cm-feed-end">
-                {hasMore ? (
-                  <button
-                    type="button"
-                    className="cm-button is-quiet"
-                    disabled={loadingMore}
-                    onClick={() => {
-                      setLoadingMore(true);
-                      setLimit((value) => value + PAGE);
-                    }}
-                  >
-                    {loadingMore ? 'Loading…' : 'See more posts'}
-                  </button>
-                ) : (
-                  <p className="cm-muted">You&rsquo;re all caught up.</p>
+                    {present.length === 1 ? `${present[0]!.name} is here now` : `${present.length} learners are here now`}
+                  </m.p>
                 )}
-              </div>
-            )}
-          </section>
+              </AnimatePresence>
 
-          <aside className="cm-side" aria-label="Community overview">
-            <section className="cm-card cm-side-card" aria-labelledby="cm-threads">
-              <h3 id="cm-threads">
-                <Hash size={18} aria-hidden="true" /> Problem threads
-              </h3>
-              <ProblemFilter problems={problems} counts={problemCounts} selected={problemFilter} onSelect={actions.filterProblem} />
+              <AnimatePresence initial={false}>
+                {narrowed > 0 && (
+                  <m.div
+                    className="cm-active-filter"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0, transition: spring.snappy }}
+                    exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
+                  >
+                    <span className="cm-active-list">
+                      {selectedTitle && (
+                        <button type="button" onClick={() => narrow(() => setProblemFilter('All'))} aria-label={`Showing posts about ${selectedTitle}. Clear`}>
+                          {selectedTitle} <X size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                      {tagFilter && (
+                        <button type="button" onClick={() => filterTag(null)} aria-label={`Showing posts tagged ${tagFilter}. Clear`}>
+                          #{tagFilter} <X size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                      {authorFilter && (
+                        <button type="button" onClick={() => narrow(() => setAuthorFilter(null))} aria-label={`Showing posts by ${authorName(authorFilter)}. Clear`}>
+                          By {authorName(authorFilter)} <X size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                    </span>
+                    {narrowed > 1 && (
+                      <button type="button" className="cm-link-button" onClick={clearNarrowing}>
+                        Clear all
+                      </button>
+                    )}
+                  </m.div>
+                )}
+              </AnimatePresence>
+
+              {linkedPost && (
+                <section className="cm-linked" aria-label="Linked post">
+                  <div className="cm-linked-bar">
+                    <span>
+                      <Link2 size={15} aria-hidden="true" /> Linked post
+                    </span>
+                    <button type="button" className="cm-link-button" onClick={() => setLinked(null)}>
+                      Close
+                    </button>
+                  </div>
+                  {card(linkedPost)}
+                </section>
+              )}
+
+              {feed.error && (
+                <div className="cm-card cm-notice" role="alert">
+                  <p>{feed.error}</p>
+                  <button type="button" className="cm-button is-quiet" onClick={() => void feed.reload()}>
+                    <RefreshCw size={16} aria-hidden="true" /> Try again
+                  </button>
+                </div>
+              )}
+
+              {initialLoading && (
+                <div role="status" aria-label="Loading posts">
+                  {[0, 1].map((index) => (
+                    <div key={index} className="cm-card cm-skeleton" aria-hidden="true">
+                      <div className="cm-skeleton-head">
+                        <span className="cm-skeleton-avatar" />
+                        <span className="cm-skeleton-lines">
+                          <i />
+                          <i />
+                        </span>
+                      </div>
+                      <i />
+                      <i />
+                      <i className="is-short" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!initialLoading && !feed.error && visible.length === 0 && (
+                <div className="cm-empty">
+                  <span className="cm-empty-icon">
+                    {view === 'saved' ? <Bookmark size={22} aria-hidden="true" /> : view === 'following' ? <Users size={22} aria-hidden="true" /> : <MessageCircle size={22} aria-hidden="true" />}
+                  </span>
+                  <h2>{empty.title}</h2>
+                  <p>{empty.text}</p>
+                  {viewer && view !== 'saved' && view !== 'following' && !authorFilter && (
+                    <button type="button" className="cm-button is-primary" onClick={() => openCreate({ kind: kindFilter, problemId: problemFilter === 'All' ? null : problemFilter })}>
+                      <PenLine size={16} aria-hidden="true" /> Write a post
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <AnimatePresence>
+                {fresh.length > 0 && (
+                  <m.div
+                    className="cm-fresh-wrap"
+                    initial={{ opacity: 0, y: -12, scale: 0.94 }}
+                    animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+                    exit={{ opacity: 0, y: -8, transition: { duration: duration.fast, ease: ease.exit } }}
+                  >
+                    <button type="button" className="cm-fresh" onClick={showFresh}>
+                      <ArrowUp size={16} aria-hidden="true" />
+                      <span className="cm-fresh-faces" aria-hidden="true">
+                        {[...new Map(fresh.map((post) => [post.author_id, post.author])).values()].slice(0, 3).map((author, index) => (
+                          <Avatar key={author?.id ?? index} author={author} size={22} />
+                        ))}
+                      </span>
+                      {fresh.length === 1 ? '1 new post' : `${fresh.length} new posts`}
+                    </button>
+                  </m.div>
+                )}
+              </AnimatePresence>
+
+              <div className="cm-post-list">
+                <AnimatePresence initial={false} mode="popLayout">
+                  {visible.map((post, index) => (
+                    <m.div
+                      key={post.id}
+                      layout="position"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0, transition: { ...spring.smooth, delay: staggerDelay(index) } }}
+                      exit={{ opacity: 0, scale: 0.98, transition: { duration: duration.fast, ease: ease.exit } }}
+                    >
+                      {card(post)}
+                    </m.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {visible.length > 0 && (
+                <div className="cm-feed-end">
+                  {hasMore ? (
+                    <button
+                      type="button"
+                      className="cm-button is-quiet"
+                      disabled={loadingMore}
+                      onClick={() => {
+                        setLoadingMore(true);
+                        setLimit((value) => value + PAGE);
+                      }}
+                    >
+                      {loadingMore ? 'Loading…' : 'See more posts'}
+                    </button>
+                  ) : (
+                    <p className="cm-muted">That is everything{sort === 'top' ? ' from this week' : ''}.</p>
+                  )}
+                </div>
+              )}
             </section>
-            <TopContributors people={contributors} />
-            <FormattingTips />
-          </aside>
+
+            <aside className="cm-side" aria-label="Browse the community">
+              {browse}
+              <Helpers people={helpers} viewerId={viewerId} following={following.ids} onToggleFollow={actions.toggleFollow} onOpen={actions.openProfile} />
+              <MarginKey />
+            </aside>
+          </div>
+
+          <AnimatePresence>
+            {composer && (
+              <PostComposer
+                key="composer"
+                mode={composer.mode}
+                author={viewer}
+                problems={problems}
+                initialBody={composer.mode === 'edit' ? composer.post.body : ''}
+                initialKind={composer.mode === 'create' ? composer.kind ?? null : null}
+                initialProblemId={
+                  composer.mode === 'edit'
+                    ? composer.post.problem_id
+                    : composer.mode === 'share'
+                      ? composer.original.problem_id
+                      : composer.problemId !== undefined
+                        ? composer.problemId
+                        : problemFilter === 'All'
+                          ? null
+                          : problemFilter
+                }
+                shared={composer.mode === 'share' ? composer.original : composer.mode === 'edit' ? composer.post.shared_post ?? null : null}
+                sharing={composer.mode === 'share' || (composer.mode === 'edit' && Boolean(composer.post.shared_post_id))}
+                initialImages={composer.mode === 'edit' ? composer.post.images ?? [] : []}
+                allowImages={schema === 'social'}
+                mentionCandidates={people}
+                onSubmit={submitComposer}
+                onClose={() => setComposer(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {confirmDelete && (
+              <ConfirmDialog
+                key="confirm-post"
+                title="Delete post?"
+                message="It will be removed from the feed for everyone, along with its comments. This can’t be undone."
+                confirmLabel="Delete"
+                onConfirm={confirmRemove}
+                onClose={() => setConfirmDelete(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {reactors && <ReactorsDialog key="reactors" target={reactors.target} id={reactors.id} counts={reactors.counts} schema={schema} onClose={() => setReactors(null)} />}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {peek && (
+              <ProfilePeek
+                key={`peek-${peek.id}`}
+                person={peek}
+                isSelf={peek.id === viewerId}
+                canFollow={Boolean(viewerId)}
+                following={following.ids.has(peek.id)}
+                onToggleFollow={() => actions.toggleFollow(peek.id)}
+                onSeePosts={() => {
+                  actions.filterAuthor(peek);
+                  setPeek(null);
+                }}
+                onClose={() => setPeek(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {sendTarget && viewer && (
+              <SendDialog
+                key="send"
+                post={sendTarget}
+                original={originalOf(sendTarget)}
+                viewer={viewer}
+                suggestions={people}
+                problemTitle={problemTitle(originalOf(sendTarget).problem_id)}
+                onClose={() => setSendTarget(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>{lightbox && <Lightbox key="lightbox" paths={lightbox.paths} start={lightbox.index} onClose={() => setLightbox(null)} />}</AnimatePresence>
+
+          <AnimatePresence>
+            {filterOpen && (
+              <Dialog key="filter" title="Browse" onClose={() => setFilterOpen(false)} size="sm">
+                <div className="cm-dialog-body cm-browse">
+                  {browse}
+                  <MarginKey compact />
+                </div>
+              </Dialog>
+            )}
+          </AnimatePresence>
         </div>
-
-        <AnimatePresence>
-          {composer && (
-            <PostComposer
-              key="composer"
-              mode={composer.mode}
-              author={viewer}
-              problems={problems}
-              initialBody={composer.mode === 'edit' ? composer.post.body : ''}
-              initialProblemId={
-                composer.mode === 'edit'
-                  ? composer.post.problem_id
-                  : composer.mode === 'share'
-                    ? composer.original.problem_id
-                    : problemFilter === 'All'
-                      ? null
-                      : problemFilter
-              }
-              shared={composer.mode === 'share' ? composer.original : composer.mode === 'edit' ? composer.post.shared_post ?? null : null}
-              sharing={composer.mode === 'share' || (composer.mode === 'edit' && Boolean(composer.post.shared_post_id))}
-              placeholder={composer.mode === 'create' ? composer.placeholder : undefined}
-              initialPreview={composer.mode === 'create' && Boolean(composer.preview)}
-              initialImages={composer.mode === 'edit' ? composer.post.images ?? [] : []}
-              allowImages={schema === 'social'}
-              mentionCandidates={people}
-              onSubmit={submitComposer}
-              onClose={() => setComposer(null)}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {confirmDelete && (
-            <ConfirmDialog
-              key="confirm-post"
-              title="Delete post?"
-              message="It will be removed from the feed for everyone, along with its comments. This can’t be undone."
-              confirmLabel="Delete"
-              onConfirm={confirmRemove}
-              onClose={() => setConfirmDelete(null)}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {reactors && <ReactorsDialog key="reactors" target={reactors.target} id={reactors.id} counts={reactors.counts} schema={schema} onClose={() => setReactors(null)} />}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {sendTarget && viewer && (
-            <SendDialog
-              key="send"
-              post={sendTarget}
-              original={originalOf(sendTarget)}
-              viewer={viewer}
-              suggestions={people}
-              problemTitle={problemTitle(originalOf(sendTarget).problem_id)}
-              onClose={() => setSendTarget(null)}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>{lightbox && <Lightbox key="lightbox" paths={lightbox.paths} start={lightbox.index} onClose={() => setLightbox(null)} />}</AnimatePresence>
-
-        <AnimatePresence>
-          {filterOpen && (
-            <Dialog key="filter" title="Filter by problem" onClose={() => setFilterOpen(false)} size="sm">
-              <div className="cm-dialog-body">
-                <ProblemFilter
-                  problems={problems}
-                  counts={problemCounts}
-                  selected={problemFilter}
-                  autoFocus
-                  onSelect={(problemId) => {
-                    actions.filterProblem(problemId);
-                    setFilterOpen(false);
-                  }}
-                />
-              </div>
-            </Dialog>
-          )}
-        </AnimatePresence>
-      </div>
+      </TagActionContext.Provider>
     </NowContext.Provider>
   );
 }

@@ -228,7 +228,7 @@ async function runBot(person, browser) {
           const options = page.locator('main .space-y-2 > button');
           if (await options.count()) await options.nth(Math.floor(random() * (await options.count()))).click();
         }
-        await page.getByRole('button', { name: /^Submit (Your )?Answer/ }).click();
+        await page.getByRole('button', { name: /^Submit (your )?answer/i }).click();
         await settle(page, 900);
         outcomes.push((await page.locator('[role=status], [role=alert]').allInnerTexts().catch(() => [])).join(' ').slice(0, 120) || 'submitted');
         await navigate(page, 'Learn');
@@ -294,7 +294,7 @@ async function runBot(person, browser) {
       }
       await page.getByRole('button', { name: /Finish my match/ }).click();
       await page.getByRole('button', { name: 'Confirm finish' }).click();
-      await page.getByText('Your match, in perspective.').waitFor({ timeout: 20_000 });
+      await page.getByText('Your match result').waitFor({ timeout: 20_000 });
       return `${submitted} answers in ${rounds} questions`;
     });
 

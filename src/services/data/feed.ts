@@ -263,11 +263,40 @@ export interface PostFeed extends QueryState<PostWithAuthor[]> {
   reload: () => Promise<void>;
 }
 
-/** Which posts a feed shows: everyone's, the viewer's saved posts, or the viewer's own. */
-export type FeedView = 'all' | 'saved' | 'mine';
+/**
+ * Whose posts a feed shows: everyone's, the people the viewer follows, the
+ * viewer's saved posts, or the viewer's own.
+ */
+export type FeedView = 'all' | 'following' | 'saved' | 'mine';
+
+/** Newest first, or the posts that drew the most marks in the last week. */
+export type FeedSort = 'latest' | 'top';
+
+const TOP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+export interface FeedOptions {
+  problemId?: string;
+  viewerId?: string | null;
+  view?: FeedView;
+  /**
+   * Keep posts whose text starts with this, as a `LIKE` pattern ("#stuck%").
+   * A post's kind is the tag it opens with; see `kindPattern` in the model.
+   */
+  startsWith?: string | null;
+  /** Keep posts that carry this technique tag, without the `#`. */
+  tag?: string | null;
+  /** Keep one person's posts. */
+  authorId?: string | null;
+  sort?: FeedSort;
+  limit?: number;
+}
+
+/** Only what a tag can be made of ever reaches a pattern, so none of it is a wildcard. */
+const safeTag = (tag: string): string => tag.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
 /**
- * Live discussion feed, optionally scoped to one problem.
+ * Live discussion feed, optionally narrowed to a problem, a kind of post, a
+ * technique, or a set of people.
  *
  * `limit` is deliberately not part of the live-query key: raising it to load
  * more keeps the posts already on screen until the longer page arrives,
@@ -279,10 +308,9 @@ export type FeedView = 'all' | 'saved' | 'mine';
  * author until the next full load. Refetching costs one indexed query per
  * change and keeps every row complete.
  */
-export function usePostFeed(
-  options: { problemId?: string; viewerId?: string | null; view?: FeedView; limit?: number } = {},
-): PostFeed {
-  const { problemId, viewerId, limit = 30 } = options;
+export function usePostFeed(options: FeedOptions = {}): PostFeed {
+  const { problemId, viewerId, limit = 30, startsWith = null, authorId = null, sort = 'latest' } = options;
+  const tag = options.tag ? safeTag(options.tag) : null;
   const view = viewerId ? options.view ?? 'all' : 'all';
   const load = useCallback(async (): Promise<FeedPage> => {
     const client = supabase;
@@ -293,11 +321,22 @@ export function usePostFeed(
       .from('posts')
       .select(schema === 'social' ? SOCIAL_POST_COLUMNS : POST_COLUMNS)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false })
       .limit(limit);
 
+    // "Top" is this week's posts by the marks they drew; ties fall back to recency.
+    if (sort === 'top') query = query.gte('created_at', new Date(Date.now() - TOP_WINDOW_MS).toISOString()).order('like_count', { ascending: false });
+    query = query.order('created_at', { ascending: false });
+
     if (problemId && problemId !== 'All') query = query.eq('problem_id', problemId);
+    if (startsWith) query = query.ilike('body', startsWith);
+    if (tag) query = query.ilike('body', `%#${tag}%`);
+    if (authorId) query = query.eq('author_id', authorId);
     if (view === 'mine' && viewerId) query = query.eq('author_id', viewerId);
+    if (view === 'following' && viewerId) {
+      const followed = await rowsOf<{ following_id: string }>(client.from('follows').select('following_id').eq('follower_id', viewerId).limit(500));
+      if (followed.length === 0) return { schema, posts: [] };
+      query = query.in('author_id', followed.map((row) => row.following_id));
+    }
     if (view === 'saved' && viewerId) {
       // Saves are private rows, so the set is read first and the posts second.
       const saved = await rowsOf<{ post_id: string }>(
@@ -312,15 +351,17 @@ export function usePostFeed(
 
     const posts = (data ?? []) as unknown as PostWithAuthor[];
     return { schema, posts: await decoratePosts(client, posts, viewerId ?? null, schema) };
-  }, [problemId, viewerId, view, limit]);
+  }, [problemId, viewerId, view, limit, startsWith, tag, authorId, sort]);
 
-  const state = useLiveQuery(`posts:${problemId ?? 'All'}:${view}:${viewerId ?? 'guest'}`, EMPTY_FEED, load);
+  const key = `posts:${problemId ?? 'All'}:${view}:${viewerId ?? 'guest'}:${startsWith ?? ''}:${tag ?? ''}:${authorId ?? ''}:${sort}`;
+  const state = useLiveQuery(key, EMPTY_FEED, load);
   useRealtimeSubscription({ table: 'posts', onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'post_likes' }, () => void state.reload());
   useRealtimeSubscription({ table: 'profiles' }, () => void state.reload());
   useRealtimeSubscription({ table: 'communities', onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'community_members', enabled: Boolean(viewerId), onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'saved_posts', filter: viewerId ? `user_id=eq.${viewerId}` : undefined, enabled: Boolean(viewerId) }, () => void state.reload());
+  useRealtimeSubscription({ table: 'follows', filter: viewerId ? `follower_id=eq.${viewerId}` : undefined, enabled: Boolean(viewerId) && view === 'following' }, () => void state.reload());
 
   return {
     data: state.data.posts,
@@ -352,6 +393,19 @@ export async function fetchPost(postId: string, viewerId: string | null): Promis
 
   const [post] = await decoratePosts(client, [data as unknown as PostWithAuthor], viewerId, schema);
   return post ?? null;
+}
+
+/**
+ * How many posts a problem's thread holds, without reading any of them.
+ * Resolves to null when it cannot be counted, so a caller shows no figure
+ * rather than a wrong zero.
+ */
+export async function countThread(problemId: string): Promise<number | null> {
+  const client = supabase;
+  if (!client) return null;
+
+  const { count, error } = await client.from('posts').select('id', { count: 'exact', head: true }).eq('problem_id', problemId).is('deleted_at', null);
+  return error ? null : count ?? 0;
 }
 
 interface CommentPage {

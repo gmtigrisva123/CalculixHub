@@ -61,8 +61,8 @@ function PodiumArt() {
 
 const RULES = [
   { title: 'Three attempts.', copy: 'A correct answer earns the question’s points. Three misses close it.', Art: AttemptsArt },
-  { title: 'Your pace, measured fairly.', copy: 'The timer is enforced on the server. IRT uses your first response only.', Art: ClockArt },
-  { title: 'Real people. Real results.', copy: 'Rankings contain finished, saved matches.', Art: PodiumArt },
+  { title: 'The server keeps time.', copy: 'The timer is enforced on the server. IRT uses your first response only.', Art: ClockArt },
+  { title: 'Only finished matches rank.', copy: 'Rankings contain finished, saved matches.', Art: PodiumArt },
 ];
 
 /** One strip, three segments: each rule's drawing sits beside its words. */

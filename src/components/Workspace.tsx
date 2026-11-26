@@ -380,7 +380,11 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
           )}
 
           {activeTab === 'community' && (
-            <Community problems={problems} />
+            <Community
+              problems={problems}
+              solvedIds={isLoggedIn && !learner.loading && !learner.error ? completedProblems : undefined}
+              onSolveProblem={(problem) => { setLearnVisit(count => count + 1); navigateWithFilters('learn', { topic: problem.topic, level: problem.level }); }}
+            />
           )}
 
           {activeTab === 'profile' && (

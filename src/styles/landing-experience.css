@@ -9,9 +9,11 @@
  * night-blue, lit from within by the mathematics on it. They are the same
  * stages the dashboard, arena and exam archive open with.
  *
- * Type has three voices. Geist sets everything structural, large and tight.
- * Newsreader's italic marks emphasis — never bold. Geist Mono speaks for
- * numbers and readouts, with tabular figures so a counting value never jitters.
+ * Type has three voices. Geist sets everything structural, large and tight,
+ * and every heading in it is roman: emphasis is a pencil stroke under the
+ * phrase, never a change of face. Newsreader is kept for notation and for the
+ * asides in the margins. Geist Mono speaks for numbers and readouts, with
+ * tabular figures so a counting value never jitters.
  *
  * Motion follows two curves: --lx-glide (fast departure, long settle) for
  * anything arriving, --lx-sweep for anything crossing the screen. Everything
@@ -157,18 +159,6 @@
   color: var(--lx-muted);
 }
 [data-tone='ink'] .lx-eyebrow { color: var(--lx-on-night-muted); }
-.lx-eyebrow-index {
-  display: inline-grid;
-  place-items: center;
-  min-width: 34px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 4px;
-  border: 1px solid currentColor;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  opacity: 0.85;
-}
 .lx-live {
   position: relative;
   width: 8px;
@@ -201,14 +191,21 @@
 }
 .lx-split .lx-wi { display: inline-block; transform-origin: 0% 100%; }
 .lx-split.is-settled .lx-w { overflow: visible; }
-.lx-split em {
-  font-family: var(--lx-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  font-size: 1.06em;
-  line-height: 0;
+/*
+ * Emphasis stays in the heading's own roman. The emphasised words on a line
+ * share one pencil stroke, drawn from the left as they arrive and redrawn on
+ * each line the phrase wraps to (see SplitText in landing/kit.tsx).
+ */
+.lx-split em { font: inherit; font-style: normal; letter-spacing: inherit; }
+.lx-split .lx-em {
+  padding-bottom: 0.1em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 C 70 2, 170 1, 298 6' fill='none' stroke='%23c98a3c' stroke-width='3' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") left bottom / 0 0.3em no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-size 0.9s var(--lx-glide) 0.45s;
 }
+.lx-split.is-shown .lx-em { background-size: 100% 0.3em; }
+[data-tone='ink'] .lx-split .lx-em { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 C 70 2, 170 1, 298 6' fill='none' stroke='%23e6bd73' stroke-width='3' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E"); }
 
 .lx-h2 {
   font-size: clamp(44px, 6.6vw, 108px);
@@ -703,20 +700,18 @@
   letter-spacing: -0.062em;
   color: var(--lx-on-night);
 }
+/* The hero keeps its own, heavier stroke under the one word, drawn a beat after the headline lands. */
+.lx-split.lx-hero-title .lx-em { padding-bottom: 0; background-image: none; }
 .lx-hero-title em {
   position: relative;
   display: inline-block;
-  padding-right: 0.06em;
   color: var(--lx-cyan);
-  letter-spacing: -0.04em;
-  font-size: 1.08em;
-  line-height: 1;
 }
 .lx-hero-title em::after {
   content: '';
   position: absolute;
   left: 0.02em;
-  right: 0.12em;
+  right: 0.02em;
   bottom: -0.05em;
   height: 0.16em;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 20' preserveAspectRatio='none'%3E%3Cpath d='M3 13C60 5 150 3 297 9' fill='none' stroke='%23f2bf68' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
@@ -891,7 +886,6 @@
   box-shadow: 0 -30px 60px -30px oklch(10% 0.03 230 / 0.45);
 }
 .lx-manifesto { padding: var(--lx-section) 0 calc(var(--lx-section) * 1.05); }
-.lx-manifesto-head { margin-bottom: clamp(28px, 5vh, 56px); }
 
 /* The idea: three short lines, set as large as the sheet allows. */
 .lx-idea {
@@ -912,17 +906,12 @@
 .lx-idea-hard { font-weight: 700; transform-origin: 50% 100%; }
 .lx-idea-right {
   position: relative;
-  padding-right: 0.06em;
-  font-family: var(--lx-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.03em;
   color: var(--lx-accent);
 }
 .lx-idea-underline {
   position: absolute;
   left: 0.02em;
-  right: 0.14em;
+  right: 0.04em;
   bottom: 0.02em;
   height: 0.13em;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 20' preserveAspectRatio='none'%3E%3Cpath d='M3 13C60 5 150 3 297 9' fill='none' stroke='%23dc9a34' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
@@ -1012,7 +1001,7 @@
 }
 .lx-engine-head { grid-column: 1; grid-row: 1; }
 .lx-engine-title {
-  margin: 20px 0 16px;
+  margin: 0 0 16px;
   font-size: clamp(40px, 4.6vw, 76px);
   font-weight: 540;
   line-height: 0.95;
@@ -1193,7 +1182,7 @@
     row-gap: 18px;
   }
   .lx-engine-head { grid-row: 1; }
-  .lx-engine-title { font-size: clamp(34px, 9vw, 52px); margin: 12px 0 0; }
+  .lx-engine-title { font-size: clamp(34px, 9vw, 52px); margin: 0; }
   .lx-engine-note { display: none; }
   .lx-instrument { grid-column: 1; grid-row: 2; }
   .lx-readouts { grid-template-columns: auto auto minmax(0, 1fr); gap: 10px 18px; padding-bottom: 14px; }
@@ -1234,7 +1223,6 @@
 .lx-main { display: block; }
 
 .lx-section-head { margin-bottom: clamp(48px, 8vh, 96px); }
-.lx-section-head .lx-h2 { margin-top: 22px; }
 /* The heading takes the full measure; its lead steps in under the right half, editorial-fashion. */
 .lx-section-head-split {
   display: grid;
@@ -1542,7 +1530,7 @@
   align-items: end;
   padding: var(--lx-section) 0 clamp(56px, 7vw, 104px);
 }
-.lx-topics-head .lx-h2 { margin-top: 22px; font-size: clamp(42px, 5.8vw, 96px); }
+.lx-topics-head .lx-h2 { font-size: clamp(42px, 5.8vw, 96px); }
 .lx-topics-aside {
   display: flex;
   align-items: flex-end;
@@ -2258,7 +2246,7 @@
 .lx-faq { padding: calc(var(--lx-section) * 0.6) 0 var(--lx-section); }
 .lx-faq-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(32px, 6vw, 110px); align-items: start; }
 .lx-faq-head { position: sticky; top: 120px; }
-.lx-faq-head .lx-h2 { margin: 22px 0 22px; }
+.lx-faq-head .lx-h2 { margin: 0 0 22px; }
 .lx-faq-head .lx-link { margin-top: 18px; }
 .lx-faq-list { border-top: 1px solid var(--lx-rule); }
 .lx-faq-item { border-bottom: 1px solid var(--lx-rule); }
@@ -2311,7 +2299,7 @@
 .lx-final-halo { fill: oklch(83% 0.12 76 / 0.18); }
 .lx-final-tip { fill: var(--lx-brass); }
 .lx-final-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(32px, 6vw, 110px); align-items: end; }
-.lx-final-letter .lx-h2 { margin: 22px 0 30px; }
+.lx-final-letter .lx-h2 { margin: 0 0 30px; }
 .lx-final-letter .lx-lead + .lx-lead { margin-top: 16px; }
 .lx-final-signoff { margin-top: 26px; font-family: var(--lx-serif); font-style: italic; font-size: clamp(21px, 1.8vw, 26px); color: var(--lx-cyan); }
 .lx-final-paths { display: grid; gap: 14px; }
@@ -2442,6 +2430,7 @@
   .lx-arena-sweep,
   .lx-typing span { animation: none; }
   .lx-hero-title em::after { animation: none; clip-path: none; }
+  .lx-split .lx-em { transition: none; }
   .lx-hero-field { transition: none; }
   .lx-btn,
   .lx-btn-icon,

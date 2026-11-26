@@ -12,7 +12,7 @@ import { AnimatePresence, m, useInView, useReducedMotion, useScroll, useTransfor
 import MathText from '../MathText';
 import { ENGINE_RUN } from './engineRun';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
-import { Arrow, Eyebrow, GLIDE, Rise, SplitText } from './kit';
+import { Arrow, GLIDE, Rise, SplitText } from './kit';
 
 interface JourneyStackProps {
   onRegister: () => void;
@@ -74,7 +74,6 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
           <div>
-            <Eyebrow index="06">What’s inside</Eyebrow>
             <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'Practise, compete,\n*get unstuck.*'} />
           </div>
         </header>

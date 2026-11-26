@@ -88,7 +88,6 @@ export default function LearnCatalog({ problems, completed, attempts, maxAttempt
   return (
     <div className="lr">
       <PageHead
-        eyebrow="Practice bank"
         title={<>Find a question <em>worth your time.</em></>}
         lede="Training questions from short answers to proof techniques, written in the style of each contest. They are not official papers; those are in the Exam Archive."
         aside={problems.length > 0 && <Tally done={completed.length} total={problems.length} label="solved so far" />}

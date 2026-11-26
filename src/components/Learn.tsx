@@ -278,7 +278,7 @@ export default function Learn({
         {
           correct,
           explanation: correct
-            ? 'Correct! Your answer matches the worked solution.'
+            ? 'Correct. Your answer matches the worked solution.'
             : 'Not quite. Check your reasoning and try again while attempts remain.',
           guidance:
             "Answer checked in this browser. Online feedback is currently unavailable.",
@@ -330,7 +330,7 @@ export default function Learn({
             {/* Where this question sits: the way back, and what kind of question it is. */}
             <div className="ls-bar">
               <m.button type="button" onClick={handleCloseWorkspace} whileTap={{ scale: 0.96 }} className="ls-back">
-                <ArrowLeft size={16} aria-hidden="true" /> Back to Problem List
+                <ArrowLeft size={16} aria-hidden="true" /> Back to all questions
               </m.button>
               <p className="ls-facts" style={TOPIC_META[activeProblem.topic].vars}>
                 <span className="ls-topic"><i aria-hidden="true" />{activeProblem.topic}</span>
@@ -353,7 +353,7 @@ export default function Learn({
                   {activeProblem.hint && (
                     <div className="ls-hint">
                       <button type="button" onClick={() => setShowHint(!showHint)} aria-expanded={showHint}>
-                        <HelpCircle size={16} aria-hidden="true" /> {showHint ? 'Hide Hint' : 'Need a Hint?'}
+                        <HelpCircle size={16} aria-hidden="true" /> {showHint ? 'Hide hint' : 'Need a hint?'}
                       </button>
                       <Collapse open={showHint}>
                         <div className="ls-hint-body">
@@ -366,7 +366,7 @@ export default function Learn({
 
                 {showFullSolution && activeProblem.solution && (
                   <article className="ls-sheet ls-solution">
-                    <h3><BookOpenCheck size={16} aria-hidden="true" /> Worked Solution</h3>
+                    <h3><BookOpenCheck size={16} aria-hidden="true" /> Worked solution</h3>
                     <div className="ls-statement">
                       <MathText text={activeProblem.solution} />
                     </div>
@@ -382,7 +382,7 @@ export default function Learn({
                   <button disabled className="ls-submit">Pro coming soon</button>
                 </section> : <form onSubmit={handleSubmitAnswer} className="ls-panel">
                   <div className="ls-panel-head">
-                    <h3>Submit Your Answer</h3>
+                    <h3>Submit your answer</h3>
                     <p className="ls-count">
                       <span className="ls-tries" aria-hidden="true">{[1, 2, 3].map(step => <i key={step} data-used={step <= Math.min(attempt?.count ?? 0, 3)} />)}</span>
                       {Math.min(attempt?.count ?? 0, 3)} of 3 attempts used{attempt?.forfeited ? ' · No points available' : ''}
@@ -414,10 +414,10 @@ export default function Learn({
                   >
                     {evaluating ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Evaluating...
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Checking…
                       </>
                     ) : (
-                      'Submit Answer'
+                      'Submit answer'
                     )}
                   </m.button>
                 </form>}
@@ -434,7 +434,7 @@ export default function Learn({
                   <div className={`ls-verdict ${smartFeedback.correct ? 'is-right' : 'is-wrong'}`}>
                     <strong>
                       {smartFeedback.correct
-                        ? <><CheckCircle size={17} aria-hidden="true" /> Correct!</>
+                        ? <><CheckCircle size={17} aria-hidden="true" /> Correct</>
                         : <><AlertCircle size={17} aria-hidden="true" /> Not quite correct</>}
                     </strong>
                     <MathText as="p" text={smartFeedback.explanation} />
@@ -445,7 +445,7 @@ export default function Learn({
                 <div className="ls-help">
                   <m.button type="button" onClick={() => onOpenTutor()} whileTap={{ scale: 0.97 }} className="ls-help-item">
                     <Sparkles ref={idleSparkleRef} size={17} aria-hidden="true" />
-                    <span>Ask Socratic AI Tutor about this problem<small>It asks you questions; it does not hand over the answer.</small></span>
+                    <span>Ask the tutor about this problem<small>It asks you questions; it does not hand over the answer.</small></span>
                     <ChevronRight size={16} aria-hidden="true" />
                   </m.button>
                   {!showFullSolution && !activeProblem.proOnly && (

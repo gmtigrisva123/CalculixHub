@@ -6,9 +6,7 @@
 import type { ReactNode } from 'react';
 
 interface PageHeadProps {
-  /** A word or two in small capitals above the title: what kind of page this is. */
-  eyebrow?: string;
-  /** The page's one heading. Wrap the phrase that matters in `<em>` to set it in italic serif. */
+  /** The page's one heading. Wrap the phrase that matters in `<em>`: it stays roman and gets a pencil underline. */
   title: ReactNode;
   /** One or two sentences on what the page is for. */
   lede?: ReactNode;
@@ -18,13 +16,13 @@ interface PageHeadProps {
 
 /**
  * How a workspace page opens. One component, so that every page says what it
- * is in the same place, in the same voice (styles/page.css).
+ * is in the same place, in the same voice (styles/page.css). There is no label
+ * above the title: the top bar's breadcrumb already says which page this is.
  */
-export default function PageHead({ eyebrow, title, lede, aside }: PageHeadProps) {
+export default function PageHead({ title, lede, aside }: PageHeadProps) {
   return (
     <header className="pg-head">
       <div>
-        {eyebrow && <p className="pg-eyebrow">{eyebrow}</p>}
         <h1 className="pg-title">{title}</h1>
         {lede && <p className="pg-lede">{lede}</p>}
       </div>

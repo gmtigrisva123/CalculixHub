@@ -132,7 +132,7 @@ export function BoardEmpty({ catalogError }: { catalogError: boolean }) {
         })}
         <path className="al-empty-flag" d="M90 55 V27 M90 28 L105 33 L90 38" />
       </svg>
-      <h3>{catalogError ? 'The board is unavailable.' : 'A quiet arena, for now.'}</h3>
+      <h3>{catalogError ? 'The board is unavailable.' : 'No matches are scheduled.'}</h3>
       <p>{catalogError ? 'Use Refresh to reconnect after setup is complete.' : 'The next match will appear here when an administrator publishes it.'}</p>
     </div>
   );

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * The comment section under a post: comment bubbles, one level of threaded
- * replies, reactions, inline editing and removal, image replies, @mentions,
+ * replies, margin marks, inline editing and removal, image replies, @mentions,
  * a live "is writing a comment" line, and the composer.
  */
 
@@ -61,6 +61,10 @@ export interface CommentsProps {
   /** People worth suggesting for an @mention, beyond those already in the thread. */
   mentionCandidates: MentionPerson[];
   onOpenMedia: (paths: string[], index: number) => void;
+  /** The post is an open request for help: ask for hints rather than answers. */
+  nudge?: boolean;
+  /** Open the small profile of whoever wrote a comment. */
+  onOpenProfile?: (author: AuthorSummary) => void;
 }
 
 /** Enter sends on a keyboard; on a touch screen Enter is a new line and the button sends. */
@@ -76,6 +80,8 @@ export default function Comments({
   onCountChange,
   mentionCandidates,
   onOpenMedia,
+  nudge = false,
+  onOpenProfile,
 }: CommentsProps) {
   const viewerId = viewer?.id ?? null;
   const feed = useComments(post.id, viewerId);
@@ -263,6 +269,7 @@ export default function Comments({
                   onSaved={() => void feed.reload()}
                   onOpenReactors={() => onOpenReactors('comment', comment.id, comment.reactions)}
                   onOpenMedia={onOpenMedia}
+                  onOpenProfile={onOpenProfile}
                 />
 
                 {(replies.length > 0 || replyTo?.threadId === comment.id) && (
@@ -291,6 +298,7 @@ export default function Comments({
                             onSaved={() => void feed.reload()}
                             onOpenReactors={() => onOpenReactors('comment', reply.id, reply.reactions)}
                             onOpenMedia={onOpenMedia}
+                            onOpenProfile={onOpenProfile}
                           />
                         </li>
                       ))}
@@ -348,7 +356,7 @@ export default function Comments({
         <CommentComposer
           ref={composer}
           viewer={viewer}
-          placeholder={threads.length === 0 ? 'Be the first to comment…' : 'Write a comment…'}
+          placeholder={nudge ? 'Give a nudge, not the answer. Seal spoilers with ||double bars||…' : threads.length === 0 ? 'Be the first to comment…' : 'Write a comment…'}
           allowImages={schema === 'social'}
           candidates={candidates}
           onTyping={typing.announce}
@@ -392,6 +400,7 @@ function CommentItem({
   onSaved,
   onOpenReactors,
   onOpenMedia,
+  onOpenProfile,
 }: {
   comment: CommentWithAuthor;
   post: PostWithAuthor;
@@ -406,6 +415,7 @@ function CommentItem({
   onSaved: () => void;
   onOpenReactors: () => void;
   onOpenMedia: (paths: string[], index: number) => void;
+  onOpenProfile?: (author: AuthorSummary) => void;
 }) {
   const now = useNow();
   const toast = useToast();
@@ -476,7 +486,13 @@ function CommentItem({
 
   return (
     <article id={`comment-${comment.id}`} className={`cm-comment ${isReply ? 'is-reply' : ''} ${hasThread ? 'has-thread' : ''} ${highlighted ? 'is-highlighted' : ''}`}>
-      <Avatar author={comment.author} size={isReply ? 28 : 34} />
+      {onOpenProfile && comment.author ? (
+        <button type="button" className="cm-post-face" onClick={() => onOpenProfile(comment.author!)} aria-label={`About ${authorName(comment.author)}`}>
+          <Avatar author={comment.author} size={isReply ? 28 : 34} />
+        </button>
+      ) : (
+        <Avatar author={comment.author} size={isReply ? 28 : 34} />
+      )}
       <div className="cm-comment-main">
         {editing ? (
           <div className="cm-comment-edit">
@@ -529,9 +545,9 @@ function CommentItem({
                 </div>
               )}
               {total > 0 && (
-                <button type="button" className="cm-bubble-reactions" onClick={onOpenReactors} aria-label={`${total} reactions. See who reacted`}>
-                  <ReactionStack counts={comment.reactions} size={16} />
-                  {total > 1 && <span>{compactCount(total)}</span>}
+                <button type="button" className="cm-bubble-reactions" onClick={onOpenReactors} aria-label={`${total} ${total === 1 ? 'mark' : 'marks'}. See who left them`}>
+                  <ReactionStack counts={comment.reactions} size={14} compact />
+                  <span>{compactCount(total)}</span>
                 </button>
               )}
             </div>

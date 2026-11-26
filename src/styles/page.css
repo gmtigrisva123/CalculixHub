@@ -2,13 +2,14 @@
  * What every workspace page is built from: a heading, a toolbar, the small
  * controls that sit in one, and the state a page shows when it has nothing yet.
  *
- * Pages used to open in whatever way their author reached for that day: an
- * eyebrow here, an icon beside the title there, a serif on one and a sans on
- * the next. These few classes are the one way a page says what it is, so that
+ * Pages used to open in whatever way their author reached for that day: a
+ * label over the title here, an icon beside it there, a serif on one and a
+ * sans on the next. These few classes are the one way a page says what it is, so that
  * moving between pages reads as turning to another sheet of the same book.
  *
- * The heading borrows the landing page's voice on purpose: a tight Geist line
- * with the phrase that matters set in Newsreader's italic.
+ * The heading is one voice: a tight Geist line, roman from end to end. The
+ * phrase that matters is marked the way a reader marks a page, with a pencil
+ * stroke drawn under it, never by a change of face.
  *
  * Loaded by the shell, so every page can count on it. Uses the shell's tokens
  * (styles/shell.css) and the app's semantic colours (styles/tokens.css).
@@ -17,10 +18,14 @@
 /* ---------------------------------------------------------------- heading */
 
 .pg-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 18px 32px; margin-bottom: 26px; }
-.pg-eyebrow { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--ct-subtle); font: 500 11px/1 var(--ws-mono, ui-monospace, monospace); letter-spacing: .11em; text-transform: uppercase; }
-.pg-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #d49f55; box-shadow: 0 0 0 3px color-mix(in srgb, #d49f55 22%, transparent); }
-.pg-title { margin: 12px 0 0; color: var(--ct); font: 560 clamp(30px, 3.3vw, 44px)/1.05 'Geist', system-ui, sans-serif; letter-spacing: -.042em; text-wrap: balance; }
-.pg-title em { color: var(--ac-text); font: italic 400 1.07em/1 'Newsreader', Georgia, serif; letter-spacing: -.022em; }
+.pg-title { margin: 0; color: var(--ct); font: 560 clamp(30px, 3.3vw, 44px)/1.05 'Geist', system-ui, sans-serif; letter-spacing: -.042em; text-wrap: balance; }
+/* Emphasis is a pencil stroke under the phrase. The stroke is redrawn on each line the phrase wraps to. */
+.pg-title em {
+  font: inherit; font-style: normal; letter-spacing: inherit; color: inherit;
+  padding-bottom: .1em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 C 70 2, 170 1, 298 6' fill='none' stroke='%23c98a3c' stroke-width='2.2' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") left bottom / 100% .3em no-repeat;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
 .pg-lede { max-width: 64ch; margin: 13px 0 0; color: var(--ct-muted); font-size: 15.5px; line-height: 1.6; text-wrap: pretty; }
 .pg-aside { display: flex; align-items: center; gap: 12px; }
 

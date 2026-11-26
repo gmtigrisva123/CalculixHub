@@ -40,13 +40,13 @@ export function ExpandableBody({
     if (!element || expanded) return;
 
     // Cut at `lines` lines of text, but never through the middle of a display
-    // formula: a clamp there leaves stray fragments of it showing under the
-    // fade. A formula that starts near the top is shown whole instead.
+    // formula or a sealed hint: a clamp there leaves stray fragments of it
+    // showing under the fade. One that starts near the top is shown whole.
     const measure = () => {
       const top = element.getBoundingClientRect().top;
       const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || 22;
       let limit = lines * lineHeight;
-      for (const block of element.querySelectorAll<HTMLElement>('.katex-display, .block')) {
+      for (const block of element.querySelectorAll<HTMLElement>('.katex-display, .block, .cm-hint')) {
         const rect = block.getBoundingClientRect();
         const start = rect.top - top;
         const end = start + rect.height;

@@ -20,7 +20,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { ENGINE_RUN, TIER_BANDS, certainty, type EngineStep } from './engineRun';
-import { Arrow, Eyebrow, GLIDE, Magnetic, SPRING, SplitText } from './kit';
+import { Arrow, GLIDE, Magnetic, SPRING, SplitText } from './kit';
 
 const RUN = ENGINE_RUN;
 const ANSWERS = RUN.steps.length - 1;
@@ -162,7 +162,6 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
         <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale }}>
           <div className="lx-engine-grid" aria-hidden="true" />
           <header className="lx-engine-head">
-            <Eyebrow index="02">How it works</Eyebrow>
             <SplitText as="h2" id="lx-engine-title" className="lx-engine-title" text="Watch it find *your level.*" />
             <p className="lx-engine-note">Scroll to watch one student’s placement, answer by answer.</p>
           </header>

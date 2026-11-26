@@ -534,14 +534,14 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
               {nearest
                 ? <><h3>{nearest.title}</h3><p>{grouped(Math.min(nearest.progress!.now, nearest.progress!.goal))} of {grouped(nearest.progress!.goal)}{nearest.progress!.unit.startsWith('%') ? '' : ' '}{nearest.progress!.unit}</p>
                     <span className="pf-meter" style={{ '--p': nearest.share } as Vars} aria-hidden="true"><span /></span></>
-                : <><h3>{profile ? 'All of them, earned' : 'Badges need an account'}</h3><p>{profile ? 'Nothing left to unlock. For now.' : 'Create one and your first badge is waiting.'}</p></>}
+                : <><h3>{profile ? 'All badges earned' : 'Badges need an account'}</h3><p>{profile ? 'You have every badge there is.' : 'Create one to start earning badges.'}</p></>}
             </div>
           </article>
 
           <button type="button" className="pf-goal is-action" onClick={() => onPractise?.(started ? weakest.topic : undefined)} style={{ '--hue': started ? TOPIC_HUE[weakest.topic] : undefined } as Vars}>
             <span className="pf-goal-icon is-topic" aria-hidden="true"><i /></span>
             <div>
-              <p className="pf-goal-kicker">{started ? 'Where the next points are' : 'A first topic'}</p>
+              <p className="pf-goal-kicker">{started ? 'Most room to grow' : 'A first topic'}</p>
               <h3>{started ? weakest.topic : 'Pick any one to begin'}</h3>
               <p>{started ? weakest.topic === strongest.topic ? `Level at ${weakest.value}% across all four.` : `At ${weakest.value}%, against ${strongest.value}% in ${strongest.topic}.` : 'Your topics fill in as you solve.'}</p>
             </div>

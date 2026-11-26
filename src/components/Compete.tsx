@@ -108,8 +108,7 @@ export default function Compete({
       {/* Header */}
       <div className="border-b border-line pb-4 flex items-center justify-between">
         <div>
-          <p className="type-eyebrow text-amber-500 font-mono text-xs uppercase">Competition Arena</p>
-          <h1 className="type-title text-2xl font-bold text-content mt-1 flex items-center gap-2">
+          <h1 className="type-title text-2xl font-bold text-content flex items-center gap-2">
             <Trophy className="w-6 h-6 text-amber-500" /> Contest &amp; Leaderboard
           </h1>
         </div>

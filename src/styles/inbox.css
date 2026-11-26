@@ -2,8 +2,9 @@
  * Inbox — notifications and direct messages.
  *
  * A working tool rather than a page: one panel, dense rows, monospace
- * metadata, a live indicator that means the websocket is connected, and
- * keyboard affordances (/ to search, Enter to send, Esc to close a thread).
+ * metadata, one status pill in the header that turns to "Degraded" when a
+ * request or the live channel reports an error, and keyboard affordances
+ * (/ to search, Enter to send, Esc to close a thread).
  * Everything resolves through the theme tokens, so dark mode comes for free.
  */
 .ib {
@@ -36,7 +37,6 @@
 .ib-pill.is-warn i { background: var(--st-caution); }
 .ib-pill.is-mail svg { color: var(--ac); }
 .ib-pill code { font: inherit; color: var(--ct); }
-.ib-pill.is-small { height: 24px; padding: 0 9px; font-size: 11px; margin-left: auto; }
 @keyframes ib-ping { 0% { transform: scale(.6); opacity: .5; } 80%, 100% { transform: scale(1.9); opacity: 0; } }
 
 /* Tabs with a sliding indicator */

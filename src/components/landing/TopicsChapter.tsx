@@ -19,7 +19,7 @@ import { AnimatePresence, m, useAnimationControls, useReducedMotion } from 'moti
 import MathText from '../MathText';
 import { TOPIC_ROOMS, type TopicRoom } from './topicRooms';
 import { ChalkFilter, TOPIC_BOARDS } from './TopicBoards';
-import { Arrow, Eyebrow, GLIDE, Magnetic, Rise, SplitText, useSpotlight } from './kit';
+import { Arrow, GLIDE, Magnetic, Rise, SplitText, useSpotlight } from './kit';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
@@ -46,7 +46,6 @@ export default function TopicsChapter({ onRegister }: { onRegister: () => void }
 
         <header className="lx-topics-head lx-wrap">
           <div>
-            <Eyebrow index="04">Topics</Eyebrow>
             <SplitText as="h2" id="lx-topics-title" className="lx-h2" text={'Four kinds of problem.\n*Which one is yours?*'} />
           </div>
           <div className="lx-topics-intro">

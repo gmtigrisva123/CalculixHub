@@ -16,7 +16,7 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, m, useAnimationControls, useReducedMotion } from 'motion/react';
 import MathText from '../MathText';
 import { chordEndpoints, INITIAL_CHORD_ANGLE } from './chords';
-import { Arrow, Eyebrow, GLIDE, Rise, SplitText } from './kit';
+import { Arrow, GLIDE, Rise, SplitText } from './kit';
 
 const draw = {
   hidden: { pathLength: 0, opacity: 0 },
@@ -72,7 +72,6 @@ export default function ChordPlayground() {
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
           <div>
-            <Eyebrow index="03">Try one</Eyebrow>
             <SplitText as="h2" id="lx-play-title" className="lx-h2" text={'Two chords.\n*One hidden radius.*'} />
           </div>
           <Rise as="p" className="lx-lead" delay={0.1}>

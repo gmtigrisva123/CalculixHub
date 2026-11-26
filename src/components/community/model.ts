@@ -11,18 +11,29 @@ import type { AuthorSummary, CommentWithAuthor, Reaction, ReactionCounts } from 
 import { apiUrl, isNativePlatform } from '../../services/apiBase';
 
 export interface ReactionMeta {
+  /** The mark's name, as the picker and the "who marked this" dialog show it. */
   label: string;
-  emoji: string;
+  /** What leaving this mark says, in the reader's own words. */
+  hint: string;
 }
 
+/**
+ * Margin marks.
+ *
+ * What a reader pencils beside a worked solution: a tick where they follow, a
+ * tombstone where the argument is elegant, a question mark where it loses
+ * them. The seven keys are the ones the database has always stored (its check
+ * constraint names them), so every mark left before this wording still counts
+ * and nothing has to migrate; what changed is what each one means here.
+ */
 export const REACTION_META: Record<Reaction, ReactionMeta> = {
-  like: { label: 'Like', emoji: '👍' },
-  love: { label: 'Love', emoji: '❤️' },
-  care: { label: 'Care', emoji: '🥰' },
-  haha: { label: 'Haha', emoji: '😆' },
-  wow: { label: 'Wow', emoji: '😮' },
-  sad: { label: 'Sad', emoji: '😢' },
-  angry: { label: 'Angry', emoji: '😡' },
+  like: { label: 'Follows', hint: 'I follow every step' },
+  love: { label: 'Elegant', hint: 'A beautiful argument' },
+  care: { label: 'Helped', hint: 'This got me unstuck' },
+  haha: { label: 'Sneaky', hint: 'I did not see that trick coming' },
+  wow: { label: 'Aha', hint: 'This made it click' },
+  sad: { label: 'Lost me', hint: 'I cannot follow a step' },
+  angry: { label: 'Check this', hint: 'A step looks wrong to me' },
 };
 
 export function authorName(author: Pick<AuthorSummary, 'display_name' | 'username'> | null | undefined): string {
@@ -308,4 +319,275 @@ export function disambiguateTitles<T extends { id: string; title: string; level:
   const counts = new Map<string, number>();
   for (const problem of problems) counts.set(problem.title, (counts.get(problem.title) ?? 0) + 1);
   return new Map(problems.map((problem) => [problem.id, (counts.get(problem.title) ?? 0) > 1 ? `${problem.title} (${problem.level})` : problem.title]));
+}
+
+/* --------------------------------------------------------------------------
+ * Kinds, tags, sealed hints
+ *
+ * All three live in the text of a post rather than in columns of their own. A
+ * kind is the tag a post opens with ("#stuck"), a technique is a tag anywhere
+ * in it ("#inversion"), and a sealed hint is a fenced block. That keeps them
+ * working against any database the feed already works against, lets a post be
+ * copied, emailed or read by an older client without losing its meaning, and
+ * means filtering by one is an ordinary text match.
+ * ------------------------------------------------------------------------ */
+
+export type PostKind = 'solution' | 'stuck' | 'trick' | 'challenge';
+
+export const POST_KINDS: readonly PostKind[] = ['solution', 'stuck', 'trick', 'challenge'];
+
+export interface KindMeta {
+  /** On the post, and on the filter chip for one. */
+  label: string;
+  /** On the filter chip, where the plural reads better. */
+  plural: string;
+  /** What the composer's button says. */
+  action: string;
+  /** What the composer asks for. */
+  prompt: string;
+  /** One line under the kind in the composer. */
+  blurb: string;
+}
+
+export const KIND_META: Record<PostKind, KindMeta> = {
+  solution: {
+    label: 'Solution',
+    plural: 'Solutions',
+    action: 'Write up a solution',
+    prompt: 'Walk through it step by step. Seal the key idea in a hint so nobody is spoiled.',
+    blurb: 'A full argument for a problem.',
+  },
+  stuck: {
+    label: 'Stuck',
+    plural: 'Stuck',
+    action: 'Ask for a nudge',
+    prompt: 'What have you tried, and where exactly does it stop working?',
+    blurb: 'Show where you are. People reply with hints, not answers.',
+  },
+  trick: {
+    label: 'Trick',
+    plural: 'Tricks',
+    action: 'Share a trick',
+    prompt: 'State the idea in one line, then show it working on a small example.',
+    blurb: 'A lemma, identity or habit worth keeping.',
+  },
+  challenge: {
+    label: 'Challenge',
+    plural: 'Challenges',
+    action: 'Set a challenge',
+    prompt: 'Pose the problem. Seal your own answer in a hint so others can try first.',
+    blurb: 'A problem of your own for others to try.',
+  },
+};
+
+/** The tag a resolved "stuck" post carries instead of `#stuck`. */
+const RESOLVED_TAG = 'unstuck';
+const KIND_TAGS = new Set<string>([...POST_KINDS, RESOLVED_TAG]);
+const LEADING_KIND = /^\s*#(solution|stuck|unstuck|trick|challenge)(?![a-z0-9-])[ \t]*\n?/i;
+
+export interface ParsedPost {
+  kind: PostKind | null;
+  /** Only ever true for a "stuck" post whose author has marked it resolved. */
+  resolved: boolean;
+  /** The body without its kind tag: what is shown, and what the composer edits. */
+  text: string;
+}
+
+/** Read the kind a post opens with, and separate it from what the author wrote. */
+export function parsePost(body: string): ParsedPost {
+  const match = LEADING_KIND.exec(body);
+  if (!match) return { kind: null, resolved: false, text: body };
+  const tag = match[1]!.toLowerCase();
+  const text = body.slice(match[0].length);
+  return tag === RESOLVED_TAG ? { kind: 'stuck', resolved: true, text } : { kind: tag as PostKind, resolved: false, text };
+}
+
+/** The body to store for a post of this kind. A share, or a plain post, has no tag. */
+export function composePost(text: string, kind: PostKind | null, resolved = false): string {
+  const stripped = parsePost(text).text;
+  if (!kind) return stripped;
+  return `#${kind === 'stuck' && resolved ? RESOLVED_TAG : kind}\n${stripped}`;
+}
+
+/** The pattern a feed query uses to keep one kind. Open "stuck" posts only. */
+export const kindPattern = (kind: PostKind): string => `#${kind}%`;
+
+// A tag starts a word, begins with a letter, and is short enough to be a name.
+const TAG_BODY = String.raw`[a-z][a-z0-9]*(?:-[a-z0-9]+)*`;
+const TAG = String.raw`(?<![A-Za-z0-9_&#/])#(${TAG_BODY})(?![A-Za-z0-9_])`;
+const TAG_MAX = 32;
+
+/** Normalise what someone typed into a tag, or null if it cannot be one. */
+export function normaliseTag(raw: string): string | null {
+  const tag = raw.trim().replace(/^#/, '').toLocaleLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-{2,}/g, '-').replace(/^-|-$/g, '');
+  if (!tag || tag.length > TAG_MAX || !/^[a-z]/.test(tag) || KIND_TAGS.has(tag)) return null;
+  return tag;
+}
+
+/** The technique tags in a post, in the order written, without repeats. */
+export function extractTags(body: string): string[] {
+  const pattern = new RegExp(`(${MATH})|${TAG}`, 'gi');
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(body)) !== null) {
+    const tag = match[3]?.toLowerCase();
+    if (!tag || tag.length > TAG_MAX || KIND_TAGS.has(tag)) continue;
+    seen.add(tag);
+  }
+  return [...seen];
+}
+
+/** The most used tags across a page of posts, each counted once per post. */
+export function tallyTags(bodies: string[], limit = 8): Array<{ tag: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const body of bodies) for (const tag of extractTags(body)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  return [...counts]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}
+
+/** Techniques the composer offers, so the same idea ends up under the same tag. */
+export const SUGGESTED_TAGS: readonly string[] = [
+  'vieta', 'am-gm', 'telescoping', 'symmetry', 'substitution', 'induction',
+  'angle-chasing', 'similar-triangles', 'power-of-a-point', 'inversion', 'coordinates',
+  'pigeonhole', 'invariant', 'bijection', 'casework', 'complementary-counting', 'recursion',
+  'mod-arithmetic', 'parity', 'lte', 'extremal', 'generating-functions',
+];
+
+export type BodySegment =
+  | { type: 'text'; value: string }
+  | { type: 'mention'; value: string }
+  | { type: 'tag'; value: string }
+  | { type: 'spoiler'; value: string };
+
+/**
+ * Split running text into plain runs, `@mentions`, `#tags` and `||spoilers||`.
+ * Formulas are matched first and left inside the plain runs, so a norm like
+ * `$||x||$` or a `\#` in LaTeX is never mistaken for markup.
+ */
+export function segmentInline(text: string): BodySegment[] {
+  const pattern = new RegExp(String.raw`(${MATH})|\|\|(?!\s)([^|\n](?:[^|]|\|(?!\|))*?)\|\||${MENTION}|${TAG}`, 'gi');
+  const segments: BodySegment[] = [];
+  let plain = '';
+  let last = 0;
+  const flush = () => {
+    if (plain) segments.push({ type: 'text', value: plain });
+    plain = '';
+  };
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const [, formula, , spoiler, handle, tag] = match;
+    if (formula !== undefined) continue;
+    let segment: BodySegment;
+    if (spoiler !== undefined) segment = { type: 'spoiler', value: spoiler };
+    else if (handle !== undefined) segment = { type: 'mention', value: handle };
+    else if (tag !== undefined && tag.length <= TAG_MAX && !KIND_TAGS.has(tag.toLowerCase())) segment = { type: 'tag', value: tag.toLowerCase() };
+    else continue;
+    plain += text.slice(last, match.index);
+    flush();
+    segments.push(segment);
+    last = match.index + match[0].length;
+  }
+  plain += text.slice(last);
+  flush();
+  return segments;
+}
+
+export type BodyBlock = { type: 'prose'; value: string } | { type: 'hint'; value: string; step: number; of: number };
+
+const HINT = /\[hint\][ \t]*\n?([\s\S]*?)\n?[ \t]*\[\/hint\]/gi;
+
+/**
+ * Split a post into prose and its sealed hints, numbering the hints as rungs
+ * of one ladder: "Hint 2 of 3". An unclosed fence is left as the author typed
+ * it, so a half-written post never swallows the rest of itself.
+ */
+export function segmentBlocks(text: string): BodyBlock[] {
+  const blocks: BodyBlock[] = [];
+  const hints: Array<{ type: 'hint'; value: string; step: number; of: number }> = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  HINT.lastIndex = 0;
+  while ((match = HINT.exec(text)) !== null) {
+    const before = text.slice(last, match.index);
+    if (before.trim()) blocks.push({ type: 'prose', value: before.replace(/^\n+|\n+$/g, '') });
+    const value = match[1]!.trim();
+    if (value) {
+      const hint = { type: 'hint' as const, value, step: hints.length + 1, of: 0 };
+      hints.push(hint);
+      blocks.push(hint);
+    }
+    last = match.index + match[0].length;
+  }
+  const rest = text.slice(last);
+  if (rest.trim() || blocks.length === 0) blocks.push({ type: 'prose', value: blocks.length === 0 ? rest : rest.replace(/^\n+|\n+$/g, '') });
+  for (const hint of hints) hint.of = hints.length;
+  return blocks;
+}
+
+/** How many sealed hints a post carries, for the line under its text. */
+export const countHints = (text: string): number => segmentBlocks(text).filter((block) => block.type === 'hint').length;
+
+/* --------------------------------------------------------------------------
+ * Today's board
+ * ------------------------------------------------------------------------ */
+
+const DAY_MS = 24 * HOUR;
+
+/** The UTC day a moment falls on, as whole days since the epoch. */
+export const boardDay = (now: number): number => Math.floor(now / DAY_MS);
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/**
+ * The one problem everyone is looking at today.
+ *
+ * Chosen from the date alone, so every learner in every timezone's "today"
+ * (UTC) sees the same one without the database having to pick it. The walk
+ * through the bank uses a stride coprime to its size, which visits every
+ * problem once before any repeats.
+ */
+export function boardProblem<T extends { id: string; proOnly?: boolean }>(problems: T[], now: number): T | null {
+  const pool = problems.filter((problem) => !problem.proOnly).sort((a, b) => a.id.localeCompare(b.id));
+  if (pool.length === 0) return null;
+  let stride = Math.min(pool.length - 1, 37) || 1;
+  while (gcd(stride, pool.length) !== 1) stride += 1;
+  return pool[(boardDay(now) * stride + 11) % pool.length] ?? null;
+}
+
+/** "9h 12m" until the board turns over; "under a minute" at the very end. */
+export function boardCountdown(now: number): string {
+  const left = (boardDay(now) + 1) * DAY_MS - now;
+  const hours = Math.floor(left / HOUR);
+  const minutes = Math.floor((left % HOUR) / MINUTE);
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  return minutes > 0 ? `${minutes}m` : 'under a minute';
+}
+
+/* --------------------------------------------------------------------------
+ * Who is helping
+ * ------------------------------------------------------------------------ */
+
+export interface Helper<A> {
+  id: string;
+  author: A | null;
+  posts: number;
+  marks: number;
+}
+
+/**
+ * The people whose posts on this page drew the most marks. Marks first, since
+ * they are what readers gave; posts only break a tie, so writing a lot is not
+ * the way onto the list.
+ */
+export function rankHelpers<A>(posts: Array<{ author_id: string; author: A | null; like_count: number }>, limit = 5): Helper<A>[] {
+  const people = new Map<string, Helper<A>>();
+  for (const post of posts) {
+    const entry = people.get(post.author_id) ?? { id: post.author_id, author: post.author, posts: 0, marks: 0 };
+    entry.posts += 1;
+    entry.marks += post.like_count;
+    people.set(post.author_id, entry);
+  }
+  return [...people.values()].sort((a, b) => b.marks - a.marks || b.posts - a.posts).slice(0, limit);
 }

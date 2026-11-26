@@ -14,7 +14,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { m } from 'motion/react';
 import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
 import { billingConfig } from '../../services/data/plan';
-import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
+import { Arrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
 
 const AUDIENCE: Record<PlanId, string> = { free: 'For every learner', pro: 'For contest season', team: 'For clubs and schools' };
 
@@ -30,7 +30,6 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
       <div className="lx-wrap">
         <header className="lx-section-head lx-plans-head">
           <div>
-            <Eyebrow index="08">Pricing</Eyebrow>
             <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={'Free to practise.\n*Pro for the season.*'} />
           </div>
           <Rise className="lx-cycle-wrap" delay={0.1}>

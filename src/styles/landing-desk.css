@@ -30,7 +30,7 @@
   mask-image: radial-gradient(70% 80% at 72% 50%, #000, transparent);
 }
 .lx-desk-grid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 7fr); gap: clamp(36px, 5vw, 90px); align-items: center; }
-.lx-desk-copy .lx-h2 { margin: 22px 0 26px; font-size: clamp(44px, 5.4vw, 88px); }
+.lx-desk-copy .lx-h2 { margin: 0 0 26px; font-size: clamp(44px, 5.4vw, 88px); }
 .lx-desk-points { display: grid; gap: 14px; margin: clamp(26px, 4vh, 40px) 0 0; padding: 0; list-style: none; max-width: 46ch; }
 .lx-desk-points li { position: relative; padding-left: 26px; font-size: 16px; line-height: 1.55; color: var(--lx-on-night-body); }
 .lx-desk-points li::before { content: ''; position: absolute; left: 2px; top: 0.72em; width: 12px; height: 1.5px; background: var(--lx-brass); }

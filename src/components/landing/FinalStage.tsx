@@ -10,7 +10,7 @@
 
 import { useLayoutEffect, useRef } from 'react';
 import { m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
-import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
+import { Arrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
 
 /*
  * The line keeps to the floor of the stage under the words, then climbs behind
@@ -70,7 +70,6 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
 
         <div className="lx-wrap lx-final-grid">
           <div className="lx-final-letter">
-            <Eyebrow>A note before you begin</Eyebrow>
             <SplitText as="h2" id="lx-final-title" className="lx-h2" text={'You’re allowed\nto *not know yet.*'} />
             <Rise as="p" className="lx-lead">Cross things out. Try a smaller case. Come back tomorrow.</Rise>
             <Rise as="p" className="lx-final-signoff" delay={0.08}>Bring a little patience. We’ll bring the questions.</Rise>

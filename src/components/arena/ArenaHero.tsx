@@ -2,8 +2,8 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * The Arena lobby's opening: the floodlit stage, the line that names the
- * place, and the one thing a visitor most wants to know -- what is on, and
+ * The Arena lobby's opening: the floodlit stage, a line that says what a
+ * match is, and the one thing a visitor most wants to know -- what is on, and
  * how long until it opens or closes.
  *
  * Every number here is read off the match board the server already sent and
@@ -13,7 +13,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { ArrowDown, Brain, DoorOpen, Flag, Sparkles, Swords, Ticket, WifiOff } from 'lucide-react';
+import { ArrowDown, Brain, CalendarClock, DoorOpen, Flag, Ticket, WifiOff } from 'lucide-react';
 import type { Arena } from '../../../shared/arena';
 import { ease, spring } from '../../lib/motion';
 import ArenaStage from './ArenaStage';
@@ -52,11 +52,10 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
     >
       <div className="al-hero-grid">
         <div className="al-hero-copy">
-          <p className="al-brand"><Swords size={15} aria-hidden="true" /> THE MATHEMATICS ARENA</p>
           <h1 className="al-title">
-            <span className="al-title-line"><TitleLine words={['Good', 'minds.']} delay={0.12} still={still} /></span>{' '}
+            <span className="al-title-line"><TitleLine words={['Timed', 'matches,']} delay={0.12} still={still} /></span>{' '}
             <span className="al-title-line al-title-accent">
-              <TitleLine words={['Great', 'matches.']} delay={0.3} still={still} />
+              <TitleLine words={['ranked', 'by', 'points.']} delay={0.3} still={still} />
               <svg className="al-underline" viewBox="0 0 320 20" preserveAspectRatio="none" aria-hidden="true">
                 <m.path
                   d="M4 14 C 70 5, 170 3, 316 10"
@@ -67,7 +66,7 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
               </svg>
             </span>
           </h1>
-          <p className="al-lead">Find your rhythm. Take a seat. Let the ideas do the competing.</p>
+          <p className="al-lead">Register for a scheduled match and enter when it opens. Your clock starts when you enter, and the server keeps the time.</p>
         </div>
         <ArenaStage still={still} paused={paused} onTogglePause={togglePause} />
         <div className="al-hero-foot">
@@ -110,10 +109,10 @@ function NextMatch({ spotlight, clock, loaded, catalogError, still }: { spotligh
   if (catalogError || !spotlight) {
     return (
       <div className="al-next is-quiet">
-        {catalogError ? <WifiOff size={20} aria-hidden="true" /> : <Sparkles size={20} aria-hidden="true" />}
+        {catalogError ? <WifiOff size={20} aria-hidden="true" /> : <CalendarClock size={20} aria-hidden="true" />}
         <div>
-          <strong>{catalogError ? 'The schedule is offline.' : 'No match on the clock.'}</strong>
-          <p>{catalogError ? 'Use Refresh on the board below to reconnect.' : 'New matches appear here the moment they are published.'}</p>
+          <strong>{catalogError ? 'The schedule is offline.' : 'No match is scheduled.'}</strong>
+          <p>{catalogError ? 'Use Refresh on the board below to reconnect.' : 'New matches appear here when they are published.'}</p>
         </div>
       </div>
     );
@@ -123,7 +122,7 @@ function NextMatch({ spotlight, clock, loaded, catalogError, still }: { spotligh
   return (
     <div className={'al-next' + (live ? ' is-live' : '')}>
       <div className="al-next-head">
-        <span className="al-pill"><i className="al-dot" aria-hidden="true" />{live ? 'Live now' : 'Next up'}</span>
+        <span className="al-pill">{live && <i className="al-dot" aria-hidden="true" />}{live ? 'Live now' : 'Next up'}</span>
         <strong>{spotlight.arena.title}</strong>
       </div>
       <div className="al-next-row">
@@ -199,7 +198,7 @@ const JOURNEY = [
 
 function Journey() {
   return (
-    <ol className="al-journey" aria-label="Arena journey">
+    <ol className="al-journey" aria-label="The steps of a match">
       {JOURNEY.map(({ label, icon: Icon }, i) => (
         <li key={label} style={{ '--i': i } as CSSProperties}>
           <span className="al-journey-icon" aria-hidden="true"><Icon size={15} /></span>

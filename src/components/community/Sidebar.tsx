@@ -2,15 +2,17 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * The feed's side column: problem threads, the most active contributors, and
- * a reminder of how to write math.
+ * The feed's side column: problem threads, the techniques in play, the people
+ * whose posts are helping, and a key to how writing here works.
  */
 
 import React, { useMemo, useState } from 'react';
-import { Award, Hash, Layers, Search, Sigma } from 'lucide-react';
+import { Check, Hash, Layers, Search, UserPlus } from 'lucide-react';
 import type { Problem } from '../../../shared/types';
-import type { AuthorSummary } from '../../services/database.types';
-import { authorName, disambiguateTitles, plural } from './model';
+import type { AuthorSummary, Reaction } from '../../services/database.types';
+import { REACTIONS } from '../../services/data/feed';
+import { MarkGlyph } from './Marks';
+import { REACTION_META, authorName, disambiguateTitles, plural, type Helper } from './model';
 import { Avatar } from './ui';
 
 /**
@@ -80,57 +82,132 @@ export function ProblemFilter({
   );
 }
 
-export function TopContributors({ people }: { people: Array<{ author: AuthorSummary | null; id: string; count: number }> }) {
+/** The technique tags on the posts in view, most used first. Choosing one narrows the feed to it. */
+export function Techniques({
+  tags,
+  selected,
+  onSelect,
+}: {
+  tags: Array<{ tag: string; count: number }>;
+  selected: string | null;
+  onSelect: (tag: string | null) => void;
+}) {
+  // A chosen tag stays listed even when the narrowed feed no longer counts the others.
+  const shown = selected && !tags.some((entry) => entry.tag === selected) ? [{ tag: selected, count: 0 }, ...tags] : tags;
   return (
-    <section className="cm-card cm-side-card" aria-labelledby="cm-contributors">
-      <h3 id="cm-contributors">
-        <Award size={18} aria-hidden="true" /> Top contributors
-      </h3>
-      {people.length === 0 ? (
-        <p className="cm-muted">Contributors appear here once people start posting.</p>
+    <section className="cm-side-card" aria-labelledby="cm-techniques">
+      <h3 id="cm-techniques">Techniques in play</h3>
+      {shown.length === 0 ? (
+        <p className="cm-muted">
+          Add a tag such as <code>#invariant</code> to a post and it is collected here.
+        </p>
       ) : (
-        <ol className="cm-contributors">
-          {people.map(({ id, author, count }, index) => (
-            <li key={id}>
-              <span className={`cm-rank is-${index + 1}`}>{index + 1}</span>
-              <Avatar author={author} size={36} />
-              <span className="cm-contributor-name">
-                <strong>{authorName(author)}</strong>
-                <small>{plural(count, 'post')}</small>
-              </span>
+        <ul className="cm-tag-cloud">
+          {shown.map(({ tag, count }) => (
+            <li key={tag}>
+              <button type="button" className="cm-tag is-chip" aria-pressed={selected === tag} onClick={() => onSelect(selected === tag ? null : tag)}>
+                #{tag}
+                {count > 0 && <small>{count}</small>}
+              </button>
             </li>
           ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** The people whose posts in view drew the most marks, each a tap away from being followed. */
+export function Helpers({
+  people,
+  viewerId,
+  following,
+  onToggleFollow,
+  onOpen,
+}: {
+  people: Array<Helper<AuthorSummary>>;
+  viewerId: string | null;
+  following: ReadonlySet<string>;
+  onToggleFollow: (id: string) => void;
+  onOpen: (author: AuthorSummary) => void;
+}) {
+  return (
+    <section className="cm-side-card" aria-labelledby="cm-helpers">
+      <h3 id="cm-helpers">Helping lately</h3>
+      {people.length === 0 ? (
+        <p className="cm-muted">The people whose posts draw the most marks are listed here.</p>
+      ) : (
+        <ol className="cm-helpers">
+          {people.map(({ id, author, posts, marks }) => {
+            const followed = following.has(id);
+            return (
+              <li key={id}>
+                <button type="button" className="cm-helper" onClick={() => author && onOpen(author)} disabled={!author}>
+                  <Avatar author={author} size={36} />
+                  <span className="cm-helper-name">
+                    <strong>{authorName(author)}</strong>
+                    <small>
+                      {plural(marks, 'mark')} on {plural(posts, 'post')}
+                    </small>
+                  </span>
+                </button>
+                {viewerId && viewerId !== id && (
+                  <button
+                    type="button"
+                    className={`cm-follow ${followed ? 'is-on' : ''}`}
+                    aria-pressed={followed}
+                    aria-label={followed ? `Following ${authorName(author)}. Unfollow` : `Follow ${authorName(author)}`}
+                    onClick={() => onToggleFollow(id)}
+                  >
+                    {followed ? <Check size={14} aria-hidden="true" /> : <UserPlus size={14} aria-hidden="true" />}
+                    <span>{followed ? 'Following' : 'Follow'}</span>
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>
   );
 }
 
-export function FormattingTips() {
+const SYNTAX: Array<{ what: string; how: string }> = [
+  { what: 'Inline math', how: '$x^2 + y^2$' },
+  { what: 'Display math', how: '$$\\frac{a}{b}$$' },
+  { what: 'Sealed hint', how: '[hint] … [/hint]' },
+  { what: 'Hidden words', how: '||the answer||' },
+  { what: 'Technique', how: '#pigeonhole' },
+  { what: 'Emphasis', how: '**bold**  *italic*' },
+];
+
+/** What the seven marks mean, and how to write math, hints and tags. */
+export function MarginKey({ compact = false }: { compact?: boolean }) {
   return (
-    <section className="cm-card cm-side-card" aria-labelledby="cm-tips">
-      <h3 id="cm-tips">
-        <Sigma size={18} aria-hidden="true" /> Writing math
-      </h3>
+    <section className={compact ? 'cm-key' : 'cm-side-card cm-key'} aria-labelledby="cm-key-title">
+      <h3 id="cm-key-title">Marks in the margin</h3>
+      <p className="cm-muted cm-key-lede">Readers mark a post the way they would pencil a proof.</p>
+      <ul className="cm-key-marks">
+        {REACTIONS.map((reaction: Reaction) => (
+          <li key={reaction} className={`cm-tone-${reaction}`}>
+            <MarkGlyph reaction={reaction} size={17} />
+            <span>
+              <strong>{REACTION_META[reaction].label}</strong>
+              <small>{REACTION_META[reaction].hint}</small>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <h4>Writing a post</h4>
       <dl className="cm-tips">
-        <div>
-          <dt>Inline</dt>
-          <dd>
-            <code>$x^2 + y^2$</code>
-          </dd>
-        </div>
-        <div>
-          <dt>Display</dt>
-          <dd>
-            <code>{'$$\\frac{a}{b}$$'}</code>
-          </dd>
-        </div>
-        <div>
-          <dt>Emphasis</dt>
-          <dd>
-            <code>**bold**</code> <code>*italic*</code>
-          </dd>
-        </div>
+        {SYNTAX.map(({ what, how }) => (
+          <div key={what}>
+            <dt>{what}</dt>
+            <dd>
+              <code>{how}</code>
+            </dd>
+          </div>
+        ))}
       </dl>
     </section>
   );

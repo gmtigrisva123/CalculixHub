@@ -2,54 +2,46 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * Reactions: the icons, the picker that opens from a Like button, and the
- * dialog that lists who reacted.
+ * Margin marks: the glyphs, the strip that opens from the mark button, and the
+ * dialog that lists who left which mark.
  *
- * The picker opens on hover with a mouse, on a long press with a finger, and
- * with the arrow keys from a focused Like button. A plain click or tap always
- * stays the quick path: like, or take back whatever reaction you left.
+ * The strip opens on hover with a mouse, on a long press with a finger, and
+ * with the arrow keys from a focused button. A plain click or tap always stays
+ * the quick path: a tick ("I follow"), or take back whatever mark you left.
  */
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { Heart, ThumbsUp } from 'lucide-react';
 import type { Reaction, ReactionCounts } from '../../services/database.types';
 import { REACTIONS, fetchReactors, type FeedSchema, type Reactor } from '../../services/data/feed';
 import { duration, ease, spring } from '../../lib/motion';
+import { MarkGlyph } from './Marks';
 import { REACTION_META, authorName, compactCount, topReactions, totalReactions } from './model';
 import { Avatar, Dialog } from './ui';
 
-/** The round badge used in summaries: Like and Love as glyphs, the rest as emoji. */
+/** One mark on its own small disc, for the badge on a reactor's avatar and the dialog's tabs. */
 export function ReactionIcon({ reaction, size = 18 }: { reaction: Reaction; size?: number }) {
-  const style = { width: size, height: size } as React.CSSProperties;
-  if (reaction === 'like') {
-    return (
-      <span className="cm-reaction-icon is-like" style={style} aria-hidden="true">
-        <ThumbsUp size={Math.round(size * 0.56)} fill="currentColor" strokeWidth={1.5} />
-      </span>
-    );
-  }
-  if (reaction === 'love') {
-    return (
-      <span className="cm-reaction-icon is-love" style={style} aria-hidden="true">
-        <Heart size={Math.round(size * 0.56)} fill="currentColor" strokeWidth={1.5} />
-      </span>
-    );
-  }
   return (
-    <span className="cm-reaction-icon is-emoji" style={{ ...style, fontSize: Math.round(size * 0.86) }} aria-hidden="true">
-      {REACTION_META[reaction].emoji}
+    <span className={`cm-reaction-icon cm-tone-${reaction}`} style={{ width: size, height: size }} aria-hidden="true">
+      <MarkGlyph reaction={reaction} size={Math.round(size * 0.72)} />
     </span>
   );
 }
 
-export function ReactionStack({ counts, size = 18 }: { counts: ReactionCounts | undefined; size?: number }) {
-  const top = topReactions(counts);
+/**
+ * The marks a post or comment has drawn, most used first: "✓ 8  ∎ 3  ! 2".
+ * `compact` drops the counts, for the corner of a comment bubble.
+ */
+export function ReactionStack({ counts, size = 16, compact = false, limit = 3 }: { counts: ReactionCounts | undefined; size?: number; compact?: boolean; limit?: number }) {
+  const top = topReactions(counts, limit);
   if (top.length === 0) return null;
   return (
-    <span className="cm-reaction-stack">
+    <span className={`cm-reaction-stack ${compact ? 'is-compact' : ''}`}>
       {top.map((reaction) => (
-        <ReactionIcon key={reaction} reaction={reaction} size={size} />
+        <span key={reaction} className={`cm-tally cm-tone-${reaction}`} title={REACTION_META[reaction].label}>
+          <MarkGlyph reaction={reaction} size={size} />
+          {!compact && <span>{compactCount(counts?.[reaction] ?? 0)}</span>}
+        </span>
       ))}
     </span>
   );
@@ -60,7 +52,7 @@ const CLOSE_DELAY = 300;
 const LONG_PRESS = 420;
 
 /**
- * A Like control with the reaction picker attached.
+ * The mark button, with the strip of all seven attached.
  *
  * `variant="post"` is the full-width action-bar button; `variant="comment"` is
  * the small text link under a comment.
@@ -87,8 +79,8 @@ export function ReactButton({
   const clear = () => window.clearTimeout(timer.current);
   useEffect(() => clear, []);
 
-  // Keep the picker on screen: a Like link deep in a reply thread sits far
-  // enough right that a 300px picker would run off a phone's edge.
+  // Keep the strip on screen: a mark link deep in a reply thread sits far
+  // enough right that the strip would run off a phone's edge.
   useLayoutEffect(() => {
     if (!open || !picker.current) {
       setShift(0);
@@ -119,7 +111,7 @@ export function ReactButton({
     onReact(reaction === current ? null : reaction);
   };
 
-  const label = current ? REACTION_META[current].label : 'Like';
+  const label = current ? REACTION_META[current].label : 'I follow';
 
   return (
     <div
@@ -141,7 +133,7 @@ export function ReactButton({
         disabled={disabled}
         className={variant === 'comment' ? `cm-link-button cm-tone-${current ?? 'none'}` : `cm-action cm-tone-${current ?? 'none'}`}
         aria-pressed={Boolean(current)}
-        aria-label={current ? `${label} — remove reaction` : 'Like'}
+        aria-label={current ? `${label}. Remove your mark` : 'I follow. Hold for more marks'}
         aria-haspopup="true"
         aria-expanded={open}
         onPointerDown={(event) => {
@@ -178,14 +170,7 @@ export function ReactButton({
           onReact(current ? null : 'like');
         }}
       >
-        {variant === 'post' &&
-          (current && current !== 'like' ? (
-            <span className="cm-action-emoji" aria-hidden="true">
-              {REACTION_META[current].emoji}
-            </span>
-          ) : (
-            <ThumbsUp size={19} aria-hidden="true" fill={current === 'like' ? 'currentColor' : 'none'} />
-          ))}
+        {variant === 'post' && <MarkGlyph reaction={current ?? 'like'} size={19} />}
         <span>{label}</span>
       </button>
 
@@ -194,7 +179,7 @@ export function ReactButton({
           <m.div
             ref={picker}
             role="toolbar"
-            aria-label="Reactions"
+            aria-label="Margin marks"
             className="cm-picker"
             style={{ marginLeft: shift }}
             initial={{ opacity: 0, y: 8, scale: 0.9 }}
@@ -218,20 +203,17 @@ export function ReactButton({
               <m.button
                 key={reaction}
                 type="button"
-                className={`cm-picker-option ${reaction === current ? 'is-current' : ''}`}
-                aria-label={REACTION_META[reaction].label}
+                className={`cm-picker-option cm-tone-${reaction} ${reaction === current ? 'is-current' : ''}`}
+                aria-label={`${REACTION_META[reaction].label}: ${REACTION_META[reaction].hint}`}
                 aria-pressed={reaction === current}
+                title={REACTION_META[reaction].hint}
                 onClick={() => pick(reaction)}
-                initial={{ opacity: 0, y: 10, scale: 0.6 }}
-                animate={{ opacity: 1, y: 0, scale: 1, transition: { ...spring.press, delay: index * 0.025 } }}
-                whileHover={{ scale: 1.32, y: -6 }}
-                whileFocus={{ scale: 1.32, y: -6 }}
-                whileTap={{ scale: 1.1 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0, transition: { ...spring.press, delay: index * 0.02 } }}
+                whileTap={{ scale: 0.94 }}
               >
-                <span aria-hidden="true">{REACTION_META[reaction].emoji}</span>
-                <span className="cm-picker-label" aria-hidden="true">
-                  {REACTION_META[reaction].label}
-                </span>
+                <MarkGlyph reaction={reaction} size={22} />
+                <span className="cm-picker-label">{REACTION_META[reaction].label}</span>
               </m.button>
             ))}
           </m.div>
@@ -241,7 +223,7 @@ export function ReactButton({
   );
 }
 
-/** Everyone who reacted, with a tab per reaction. */
+/** Everyone who left a mark, with a tab per mark. */
 export function ReactorsDialog({
   target,
   id,
@@ -262,7 +244,7 @@ export function ReactorsDialog({
     let alive = true;
     fetchReactors({ target, id, schema })
       .then((rows) => alive && setState({ loading: false, error: null, rows }))
-      .catch((error: unknown) => alive && setState({ loading: false, error: error instanceof Error ? error.message : 'Could not load reactions.', rows: [] }));
+      .catch((error: unknown) => alive && setState({ loading: false, error: error instanceof Error ? error.message : 'Could not load the marks.', rows: [] }));
     return () => {
       alive = false;
     };
@@ -272,8 +254,8 @@ export function ReactorsDialog({
   const visible = tab === 'all' ? state.rows : state.rows.filter((row) => row.reaction === tab);
 
   return (
-    <Dialog title="Reactions" onClose={onClose} size="sm">
-      <div className="cm-tabs" role="tablist" aria-label="Filter reactions">
+    <Dialog title="Marks" onClose={onClose} size="sm">
+      <div className="cm-tabs" role="tablist" aria-label="Filter by mark">
         <button type="button" role="tab" aria-selected={tab === 'all'} className="cm-tab" onClick={() => setTab('all')}>
           All {compactCount(totalReactions(counts))}
         </button>
@@ -287,14 +269,18 @@ export function ReactorsDialog({
             className="cm-tab"
             onClick={() => setTab(reaction)}
           >
-            <ReactionIcon reaction={reaction} size={18} /> {compactCount(counts?.[reaction] ?? 0)}
+            <span className={`cm-tally cm-tone-${reaction}`}>
+              <MarkGlyph reaction={reaction} size={16} />
+              <span>{REACTION_META[reaction].label}</span>
+            </span>{' '}
+            {compactCount(counts?.[reaction] ?? 0)}
           </button>
         ))}
       </div>
       <div className="cm-dialog-body cm-reactor-list" role="tabpanel">
-        {state.loading && <p className="cm-muted" role="status">Loading reactions…</p>}
+        {state.loading && <p className="cm-muted" role="status">Loading marks…</p>}
         {state.error && <p role="alert" className="cm-error-text">{state.error}</p>}
-        {!state.loading && !state.error && visible.length === 0 && <p className="cm-muted">No reactions yet.</p>}
+        {!state.loading && !state.error && visible.length === 0 && <p className="cm-muted">No marks yet.</p>}
         <ul>
           {visible.map((row, index) => (
             <li key={`${row.user?.id ?? index}-${row.reaction}`} className="cm-reactor">

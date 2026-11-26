@@ -238,11 +238,10 @@ export default function Inbox() {
             <button className="ib-icon-btn ib-back" onClick={() => setSelected(null)} aria-label="Back to conversations"><ArrowLeft size={17} /></button>
             <span className={`ib-avatar${partner.length > 1 ? ' is-group' : ''}`}>{partner.length > 1 ? <Users size={16} /> : <UserAvatar src={partner[0]?.avatar_url} />}</span>
             <div><strong>{active ? conversationName(active, user.id) : 'Conversation'}</strong><small>{partner.length === 1 ? `@${partner[0].username}` : partner.length ? partner.map(p => `@${p.username}`).join(' · ') : 'Private conversation'}</small></div>
-            <span className="ib-pill is-live is-small"><i aria-hidden="true" />Live</span>
           </header>
           <div className="ib-history" ref={history} aria-live="polite">
             {messages.loading ? <div className="ib-skeleton is-bubbles" role="status" aria-label="Loading messages">{[0, 1, 2].map(i => <span key={i} />)}</div>
-            : messages.data.length === 0 ? <div className="ib-empty is-thread"><p>Say hello — the conversation is yours to begin.</p></div>
+            : messages.data.length === 0 ? <div className="ib-empty is-thread"><p>No messages yet. Write the first one below.</p></div>
             : messages.data.map((m, i) => {
                 const prev = messages.data[i - 1]; const next = messages.data[i + 1];
                 const newDay = !prev || dayKey(prev.created_at) !== dayKey(m.created_at);
