@@ -1484,8 +1484,10 @@ function createEvaluateHandler({ model }) {
       correct,
       pointsAwarded,
       ...progress,
-      explanation: correct ? `Correct! You reasoned through the logical structure of this ${item.topic} problem cleanly.` : `Not quite - that isn't the expected answer. You likely slipped somewhere in the intermediate steps, or the hint's technique hasn't clicked yet.`,
-      guidance: correct ? `Keep pushing: try the next ${item.level === "Foundation" ? "Intermediate" : item.level === "Intermediate" ? "Advanced" : "Olympiad"} tier now!` : `Hint: ${item.hint} Try re-deriving it carefully, step by step.`,
+      // Without the model there is nothing to say about how the learner reasoned,
+      // so this states the verdict and where to look next, and guesses at nothing.
+      explanation: correct ? "Correct. Your answer matches the expected one." : "That is not the expected answer.",
+      guidance: correct ? "The worked solution is open below the question." : item.hint ? `Hint: ${item.hint}` : "",
       isFallback: true
     });
   };
@@ -1835,6 +1837,82 @@ function arenaRoutes() {
 // server/routes/email.ts
 import { createHash, timingSafeEqual as timingSafeEqual2 } from "node:crypto";
 
+// shared/postMarkup.ts
+var POST_KINDS = ["solution", "stuck", "trick", "challenge"];
+var RESOLVED_TAG = "unstuck";
+var KIND_TAGS = /* @__PURE__ */ new Set([...POST_KINDS, RESOLVED_TAG]);
+var LEADING_KIND = /^\s*#(solution|stuck|unstuck|trick|challenge)[ \t]*(?:\r?\n|$)/i;
+function parsePost(body) {
+  const match = LEADING_KIND.exec(body);
+  if (!match) return { kind: null, resolved: false, text: body };
+  const tag = match[1].toLowerCase();
+  const text = body.slice(match[0].length);
+  return tag === RESOLVED_TAG ? { kind: "stuck", resolved: true, text } : { kind: tag, resolved: false, text };
+}
+var MATH_SOURCE = String.raw`\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$|\\begin\{(?<env>[a-z*]+)\}[\s\S]+?\\end\{\k<env>\}`;
+var CODE_SOURCE = String.raw`\x60[^\x60\n]+\x60`;
+var VERBATIM_SOURCE = `${MATH_SOURCE}|${CODE_SOURCE}`;
+var HINT_SOURCE = String.raw`\[hint\]([\s\S]*?)\[\/hint\]`;
+var WORD = /[A-Za-z0-9]/;
+var SEALED_NOTE = "[sealed hint]";
+function hiddenRanges(text, openEnded = false) {
+  const ranges = [];
+  const pattern = new RegExp(`(${VERBATIM_SOURCE})|\\|\\|`, "gi");
+  let open = -1;
+  let scanned = 0;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match[1] !== void 0) continue;
+    const at = match.index;
+    if (open >= 0) {
+      const newline = text.indexOf("\n", scanned);
+      if (newline >= 0 && newline < at) open = -1;
+      scanned = at;
+    }
+    const before = text[at - 1];
+    const after = text[at + 2];
+    if (open < 0) {
+      const startsWord = !(before !== void 0 && WORD.test(before));
+      const holdsSomething = after !== void 0 && !/[\s|]/.test(after);
+      if (startsWord && holdsSomething) {
+        open = at;
+        scanned = at;
+      }
+    } else if (at > open + 2 && before !== void 0 && !/\s/.test(before) && !(after !== void 0 && WORD.test(after))) {
+      ranges.push([open, at + 2]);
+      open = -1;
+    }
+  }
+  if (openEnded && open >= 0 && text.indexOf("\n", open) < 0) ranges.push([open, text.length]);
+  return ranges;
+}
+function redactSealed(text, options = {}) {
+  let open = text.replace(new RegExp(HINT_SOURCE, "gi"), (_fence, inner) => inner.trim() ? `
+${SEALED_NOTE}
+` : "\n");
+  if (options.truncated) {
+    const dangling = open.search(/\[hint\]/i);
+    if (dangling >= 0) open = `${open.slice(0, dangling)}
+${SEALED_NOTE}`;
+  }
+  let quoted = "";
+  let cursor = 0;
+  for (const [start, end] of hiddenRanges(open, options.truncated)) {
+    quoted += `${open.slice(cursor, start)}[hidden]`;
+    cursor = end;
+  }
+  quoted += open.slice(cursor);
+  const parts = quoted.split(SEALED_NOTE);
+  if (parts.length > 1) {
+    const last = parts.length - 1;
+    quoted = parts.map((part, index) => index === 0 ? part.trimEnd() : index === last ? part.trimStart() : part.trim()).join(`
+${SEALED_NOTE}
+`);
+  }
+  return quoted.replace(/\[sealed hint\]\n\n(?=\[sealed hint\])/g, `${SEALED_NOTE}
+`).replace(/\n{3,}/g, "\n\n").trim();
+}
+
 // server/email.ts
 function mailSettings(env = process.env, fallbackOrigin) {
   const provider = env.EMAIL_PROVIDER === "smtp" || env.EMAIL_PROVIDER === "resend" ? env.EMAIL_PROVIDER : null;
@@ -1857,9 +1935,9 @@ function notificationHeadline(payload) {
     case "follow":
       return `${who} started following you`;
     case "post_like":
-      return `${who} reacted to your post`;
+      return `${who} left a mark on your post`;
     case "comment_like":
-      return `${who} reacted to your comment`;
+      return `${who} left a mark on your comment`;
     case "post_comment":
       return `${who} commented on your post`;
     case "comment_reply":
@@ -1885,6 +1963,15 @@ function notificationLink(siteUrl, payload) {
   }
   return `${siteUrl}/?tab=inbox`;
 }
+function quotable(body, max) {
+  return clip(redactSealed(parsePost(body).text), max);
+}
+var POST_HEADLINE = {
+  solution: (author) => `${author} wrote up a solution`,
+  stuck: (author) => `${author} is stuck and asked for a nudge`,
+  trick: (author) => `${author} shared a trick`,
+  challenge: (author) => `${author} set a challenge`
+};
 function layout({ preheader, eyebrow, headline, quote, cta, href, footnote, siteUrl }) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(headline)}</title></head>
 <body style="margin:0;padding:0;background:#f3f1ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#17201f">
@@ -1906,7 +1993,7 @@ function renderEmail(job, siteUrl) {
   const payload = job.payload;
   if (job.kind === "notification") {
     const headline2 = notificationHeadline(payload);
-    const quote = payload.type !== "system" && str(payload.body) ? clip(str(payload.body), 400) : void 0;
+    const quote = payload.type !== "system" && quotable(str(payload.body), 400) || void 0;
     const href2 = notificationLink(siteUrl, payload);
     const cta = payload.type === "message" ? "Open your inbox" : payload.type === "follow" ? "See your notifications" : "View it on CalculixHub";
     return {
@@ -1924,9 +2011,10 @@ Hi ${name}, you are receiving this because it happened on your CalculixHub accou
   }
   if (payload.deleted) return null;
   const author = str(payload.author) || "A learner";
-  const body = clip(str(payload.body).trim(), 600);
+  const { kind } = parsePost(str(payload.body));
+  const body = quotable(str(payload.body), 600);
   const href = `${siteUrl}/?${new URLSearchParams({ tab: "community", post: str(payload.post_id) })}`;
-  const headline = `${author} posted in Community`;
+  const headline = kind ? POST_HEADLINE[kind](author) : `${author} posted in Community`;
   return {
     to: job.recipient_email,
     subject: clip(body ? `${author}: ${body.split("\n")[0]}` : headline, 120),

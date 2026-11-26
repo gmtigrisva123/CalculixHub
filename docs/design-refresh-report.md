@@ -93,6 +93,51 @@ The frame is `WorkspaceShell.tsx` and `styles/shell.css`: a desk, a sheet, a sid
 
 Pages open the same way through `PageHead` and `styles/page.css`, which also holds the toolbar, chips, segmented control and empty state. Anything that sticks below the top bar should use `top: var(--ws-sticky)`.
 
+## The clean-up pass: house rules, and the Community's margin
+
+A second pass went over every screen to take out what read as generated: slogans in place of facts, labels above headings, italic serif accents, icon tiles, side-stripe cards, sparkle icons, glows and marquees. It did not rebuild any screen. The rules it left behind are the ones to keep to.
+
+### House rules
+
+- **Headings are upright Geist.** Emphasis is the pencil stroke under the word that matters (`.pg-title em`, `.lx-em`), never a recoloured or italic run.
+- **Newsreader is for mathematics and problem text only.** Prices, counts, rank names and page titles are in the UI face with tabular figures. Caveat is for the rare pencilled note.
+- **No label above a heading.** A small caps line is allowed only as a field name above a value (POINTS, TOPIC, LEVEL).
+- **Copy states a fact about this learner or this screen.** No mottoes, no encouragement, no exclamation marks. An empty state says what is missing and what fills it.
+- **One accent per surface.** Colour means something: the four topic hues, the seven mark inks, brass for badges and emphasis. No decorative gradients, pulses or side stripes.
+- **Motion happens once.** One entrance per page; nothing fades by scroll position; nothing loops unless it is the drawing the page is about.
+
+### What changed where
+
+- **Home** opens on the learner's own numbers: a greeting by name, a line reporting the streak and the week, and a hero that names the topic practised least with a button straight to it. Sections follow the order a session runs: next action, figures, this week beside what is coming up, the four topics, one proof.
+- **Learn, Progress, Profile**: a solved question says so and opens its solution; the points chart is drawn at its frame's size; Profile's columns end together; decorations that repeated a figure beside them are gone.
+- **Exam Archive** shows two rows per decade with the rest one press away.
+- **Arena, Leaderboard, Inbox, Settings, Plan, sign-in and placement** share the heading voice above, and lost their marquee, kickers, side stripes and repeated meta lines.
+- **Landing**: chapter numbers, italic mottoes and recoloured heading lines are gone; the footer and the countdown card are fixed.
+- **Badges** are named for what was done, and announced by a slip of paper carrying the badge's own coin.
+
+### Community: the margin of the workbook
+
+A post is laid out as a sheet with a margin. Left of the rule stand the author's face and the marks readers pencilled beside the post; right of it, how the post is filed, the words, and one quiet line for comments, sharing and saving. Comments are notes on the same sheet.
+
+Everything below lives in the post or comment text, or in tables that already existed, so **none of it needs SQL**:
+
+| Feature | How it is stored |
+| --- | --- |
+| Seven margin marks (With you, Elegant, Helped, Sneaky, Aha, Lost me, Check this) | the existing reaction keys |
+| Kinds: solution, stuck, trick, challenge; a question marked unstuck | a tag alone on the first line (`#stuck`, `#unstuck`) |
+| Technique tags | `#invariant` in the text |
+| Hidden words, hint ladders | `\|\|words\|\|`, `[hint]…[/hint]` |
+| A note on one line of a post | a comment that opens with `> the line` |
+| The reply that got the asker unstuck | the asker's own Helped mark on that comment |
+| Margin verdicts ("checked by 12 readers") | derived from the mark counts |
+| Today's board, yesterday's board | chosen from the date |
+| Circles | `communities`, `community_members`, `posts.community_id` |
+| Following, the Following tab, profile peek | `follows`, `profiles` |
+
+The syntax is defined once in `shared/postMarkup.ts`, because the server quotes posts in email and must keep a sealed hint sealed. A solution to a problem the reader has not solved stays covered until asked for, and the cover fails closed.
+
+The one database change is `supabase/community-roles-setup.sql` (see `docs/sql-editor-setup.md`): it stops a member appointing themselves owner or moderator of a community. Run it before relying on Circles.
+
 ### Not verified here
 
-This environment has no Supabase project and no GPU. Signed-in states (the live Inbox, the Community feed, the Arena lobby, the leaderboard table) were checked for layout in the new frame but not with real data, and the frame-time figures are from software rendering, which overstates what painting costs on a real GPU.
+This environment has no Supabase project and no GPU. Signed-in states (the Inbox, the Community feed with its marks, circles and threads, the leaderboard table, Progress and Profile) were checked in a browser against a stand-in backend: Playwright routes answering as PostgREST would, seeded from `scripts/community-seed`. That exercises the screens and their requests, not the database's own rules, which are covered by the PGlite tests in `server/__tests__`. The Arena lobby was seen only in its unavailable state. Nothing here was run against the hosted project, and the frame-time figures are from software rendering, which overstates what painting costs on a real GPU.
