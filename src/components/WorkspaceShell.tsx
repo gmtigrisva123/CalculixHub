@@ -331,7 +331,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
 
           {compact ? (
             <div className="ws-drawer-foot">
-              <div className="ws-drawer-who"><span className="ws-avatar"><UserAvatar src={profile?.avatar_url} /></span><span><strong>{name}</strong><small>{signedIn ? `${planName} plan` : 'Not signed in'}</small></span><ThemeSwitch /></div>
+              <div className="ws-drawer-who"><span className="ws-avatar"><UserAvatar src={profile?.avatar_url} seed={profile?.id} /></span><span><strong>{name}</strong><small>{signedIn ? `${planName} plan` : 'Not signed in'}</small></span><ThemeSwitch /></div>
               {signedIn && <button type="button" className="ws-menu-item" onClick={() => { setDrawer(false); onLogout(); }}><LogOut size={17} strokeWidth={1.85} /><span>Sign out</span></button>}
             </div>
           ) : (
@@ -342,7 +342,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
                     initial={{ opacity: 0, y: 8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.98, transition: { duration: 0.12 } }} transition={glide}
                     onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); setAccount(false); accountTrigger.current?.focus(); } }}>
                     <div className="ws-menu-who">
-                      <span className="ws-avatar"><UserAvatar src={profile?.avatar_url} /></span>
+                      <span className="ws-avatar"><UserAvatar src={profile?.avatar_url} seed={profile?.id} /></span>
                       <span><strong>{name}</strong><small>{signedIn ? user?.email ?? `${planName} plan` : 'Exploring as a guest'}</small></span>
                     </div>
                     <div className="ws-menu-list">
@@ -368,7 +368,7 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
               </AnimatePresence>
               <button type="button" ref={accountTrigger} className="ws-account-trigger" aria-expanded={account} aria-controls="ws-account-menu"
                 aria-label={`Account menu: ${name}`} data-tip={folded && !account ? 'Account' : undefined} onClick={() => setAccount(open => !open)}>
-                <span className="ws-avatar"><UserAvatar src={profile?.avatar_url} /></span>
+                <span className="ws-avatar"><UserAvatar src={profile?.avatar_url} seed={profile?.id} /></span>
                 <span className="ws-account-who"><strong>{name}</strong><small>{signedIn ? `${planName} plan` : 'Not signed in'}</small></span>
                 <ChevronsUpDown size={15} aria-hidden="true" />
               </button>

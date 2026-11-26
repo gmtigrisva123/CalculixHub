@@ -133,6 +133,8 @@
 .cm-button.is-danger { background: var(--st-critical); color: #fff; }
 .cm-button.is-danger:hover:not(:disabled) { filter: brightness(1.08); }
 .cm-button.is-wide { width: 100%; }
+.cm-button.is-sent { background: color-mix(in srgb, var(--cm-ink-like) 14%, transparent); color: var(--cm-ink-like); }
+.cm-button.is-sent:disabled { opacity: 1; cursor: default; }
 
 .cm-icon-button {
   display: inline-grid;
@@ -782,9 +784,10 @@ button.cm-note-name:hover { text-decoration: underline; text-underline-offset: 3
 .cm-note-text { margin-top: 1px; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; }
 .cm-mention { margin-right: 3px; color: var(--ac-text); font-weight: 650; }
 .cm-comment-media { margin-top: 6px; }
-.cm-note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin: 3px 0 0 -5px; font-size: 12.5px; color: var(--ct-muted); }
-.cm-note-actions > .cm-link-button { position: relative; margin-left: 5px; font-weight: 700; }
-.cm-note-actions .cm-marks + .cm-link-button { margin-left: 0; }
+.cm-note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin: 3px 0 0; font-size: 12.5px; color: var(--ct-muted); }
+.cm-note-actions > .cm-link-button { position: relative; font-weight: 700; }
+/* The first tally's ink lines up with the text above it, not its padding. */
+.cm-note-actions .cm-tally:first-child { margin-left: -5px; }
 .cm-edited { font-weight: 400; }
 
 /* The reply that got the asker unstuck, in the asker's hand. */
@@ -1712,6 +1715,7 @@ button.cm-tag:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 .cm-spoiler:hover { filter: brightness(.9); }
 .cm-spoiler.is-open { background: color-mix(in srgb, var(--cm-pencil) 16%, transparent); white-space: normal; cursor: text; padding: 0 3px; animation: cm-unveil .28s ease-out; }
+.cm-spoiler.is-open:focus { outline: none; }
 @keyframes cm-unveil { from { opacity: 0; } }
 
 /* A hint ladder: sealed rungs between dashed rules, opened from the top. */

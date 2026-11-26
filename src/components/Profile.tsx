@@ -150,9 +150,9 @@ function PhotoDialog({ open, onClose, userId, current, onSaved }: { open: boolea
     onCancel={event => { event.preventDefault(); dismiss(); }}
     onClick={event => { if (event.target === dialog.current) dismiss(); }}>
     <div className="pf-photo-head">
-      <span className={`pf-photo-preview${busy ? ' is-busy' : ''}`}><UserAvatar src={current} /></span>
+      <span className={`pf-photo-preview${busy ? ' is-busy' : ''}`}><UserAvatar src={current} seed={userId} /></span>
       <h2 id="pf-photo-title">Profile photo</h2>
-      <p>{current ? 'Shown on your profile, the leaderboard and in Community.' : 'Without a photo, everyone sees the default silhouette.'}</p>
+      <p>{current ? 'Shown on your profile, the leaderboard and in Community.' : 'Without a photo, everyone sees the curve drawn from your account. It is yours alone.'}</p>
       {error && <p className="pf-photo-error" role="alert">{error}</p>}
     </div>
     <input ref={picker} type="file" accept={ACCEPTED_IMAGE_TYPES.join(',')} hidden
@@ -210,7 +210,7 @@ function EditDialog({ open, onClose, onChangePhoto, onSaved }: { open: boolean; 
         <p>This is what other learners see on the leaderboard and in Community.</p>
       </header>
       <div className="pf-edit-photo">
-        <span><UserAvatar src={profile.avatar_url} /></span>
+        <span><UserAvatar src={profile.avatar_url} seed={profile.id} /></span>
         <div><b>@{profile.username}</b><button type="button" onClick={onChangePhoto}>{profile.avatar_url ? 'Change photo' : 'Add a photo'}</button></div>
       </div>
       <label className="pf-field"><span>Name</span><input value={edit.displayName} maxLength={60} autoComplete="name" onChange={event => setEdit({ ...edit, displayName: event.target.value })} /></label>
@@ -460,7 +460,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           <div className="pf-face-wrap" style={{ '--p': tierProgress } as Vars}>
             <svg className="pf-face-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="57" /><circle cx="60" cy="60" r="57" pathLength={1} /></svg>
             {profile
-              ? <button type="button" className="pf-face is-editable" onClick={() => setPhotoOpen(true)} aria-label="Change profile photo"><UserAvatar src={profile.avatar_url} /><span className="pf-face-badge" aria-hidden="true"><Camera size={14} strokeWidth={2.2} /></span></button>
+              ? <button type="button" className="pf-face is-editable" onClick={() => setPhotoOpen(true)} aria-label="Change profile photo"><UserAvatar src={profile.avatar_url} seed={profile.id} /><span className="pf-face-badge" aria-hidden="true"><Camera size={14} strokeWidth={2.2} /></span></button>
               : <div className="pf-face"><UserAvatar src={null} /></div>}
           </div>
 

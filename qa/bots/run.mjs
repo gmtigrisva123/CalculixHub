@@ -238,12 +238,15 @@ async function runBot(person, browser) {
 
     await step('community-post', async () => {
       await navigate(page, 'Community');
-      await page.getByRole('region', { name: 'Write a post' }).getByRole('button').first().click();
-      const box = page.getByRole('textbox', { name: 'New post' });
+      // Four ways to write on a wide screen, one button on a phone. Any of them opens the composer.
+      const ways = page.getByRole('region', { name: 'Write a post' }).getByRole('button');
+      await ways.nth(Math.floor(random() * (await ways.count()))).click();
+      const composer = page.getByRole('dialog');
+      const box = composer.getByRole('textbox').first();
       await box.waitFor();
       await box.click();
       await page.keyboard.type(pick(POSTS), { delay: 8 });
-      await page.getByRole('button', { name: 'Post', exact: true }).click();
+      await composer.getByRole('button', { name: 'Post', exact: true }).click();
       await box.waitFor({ state: 'hidden', timeout: 15_000 });
       await settle(page, 800);
       return 'posted';
@@ -251,17 +254,25 @@ async function runBot(person, browser) {
 
     await step('community-comment-react', async () => {
       const feed = page.getByRole('region', { name: 'Community feed' });
-      const posts = feed.locator('article');
+      const posts = feed.locator('article[id^="post-"]');
       const total = await posts.count();
       if (total === 0) return 'feed empty';
       const target = posts.nth(Math.floor(random() * Math.min(total, 6)));
       await target.scrollIntoViewIfNeeded();
-      // The quick mark is a tick ("I follow"); on an open question the comment button asks for a nudge.
-      const mark = target.getByRole('button', { name: /^I follow/ }).first();
-      if (await visible(mark)) await mark.click();
-      const commentButton = target.getByRole('button', { name: /^(Comment|Give a nudge)/ }).first();
+      // A write-up of a problem this learner has not solved is covered until asked for.
+      const cover = target.getByRole('button', { name: 'Show the solution' }).first();
+      if (await visible(cover)) await cover.click();
+      // One of the seven margin marks, from the strip the margin's "Mark" button opens.
+      const opener = target.getByRole('button', { name: /^(Leave a mark|Your mark)/ }).first();
+      if (await visible(opener)) {
+        await opener.click();
+        const marks = page.getByRole('toolbar', { name: 'The seven marks' }).getByRole('button');
+        await marks.nth(Math.floor(random() * (await marks.count()))).click();
+      }
+      // The comment button reads "N comments", "Comment", or "Give a nudge" on an open question.
+      const commentButton = target.getByRole('button', { name: /^(\d+ comments?|Comment|Give a nudge)$/ }).first();
       if (await visible(commentButton)) await commentButton.click();
-      const input = page.getByRole('textbox', { name: /Write a comment|Be the first to comment|Give a nudge/ }).first();
+      const input = page.getByRole('textbox', { name: /Write a comment|Give a nudge/ }).first();
       await input.waitFor({ timeout: 10_000 });
       await input.click();
       await page.keyboard.type(pick(COMMENTS), { delay: 8 });

@@ -7,6 +7,7 @@ import { useConversations, useMessages, type ConversationWithPeople } from '../s
 import { searchProfiles } from '../services/data/people';
 import type { NotificationWithActor, ProfileRow } from '../services/database.types';
 import { Linkified } from '../lib/linkify';
+import { parsePost, redactSealed } from '../../shared/postMarkup';
 import UserAvatar from './UserAvatar';
 import '../styles/inbox.css';
 
@@ -30,6 +31,14 @@ const KIND: Record<string, { icon: typeof Bell; tone: string }> = {
   mention: { icon: AtSign, tone: 'is-amber' }, post_share: { icon: Repeat2, tone: 'is-mint' }, message: { icon: MessageSquare, tone: 'is-violet' },
   system: { icon: Megaphone, tone: 'is-slate' },
 };
+
+/**
+ * The words a notification quotes are the first 140 characters of a post or
+ * comment, cut by the database. The line that files a post is not part of what
+ * was said, and a hint or hidden word the writer sealed stays sealed here,
+ * including one the cut left unclosed.
+ */
+const quoted = (body: string) => redactSealed(parsePost(body).text, { truncated: true });
 
 const rtf = typeof Intl !== 'undefined' ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' }) : null;
 function relative(iso: string, now = Date.now()) {
@@ -194,10 +203,10 @@ export default function Inbox() {
             const kind = KIND[n.type] ?? KIND.system; const Icon = kind.icon;
             const clickable = Boolean(notificationLink(n)) || (n.type === 'message' && n.entity_id);
             return <li key={n.id} className={`ib-note${n.read_at ? '' : ' is-unread'}`}>
-              <span className={`ib-note-icon ${kind.tone}`} aria-hidden="true">{n.actor ? <span className="ib-note-face"><UserAvatar src={n.actor.avatar_url} /></span> : null}<Icon size={14} strokeWidth={2.2} /></span>
+              <span className={`ib-note-icon ${kind.tone}`} aria-hidden="true">{n.actor ? <span className="ib-note-face"><UserAvatar src={n.actor.avatar_url} seed={n.actor.id} /></span> : null}<Icon size={14} strokeWidth={2.2} /></span>
               <div className="ib-note-main">
                 {clickable ? <a href={notificationLink(n) ?? '?tab=inbox&view=messages'} onClick={event => { event.preventDefault(); void openNotification(n); }}><Headline n={n} /></a> : <p><Headline n={n} /></p>}
-                {n.body && n.type !== 'system' && <blockquote>{n.body}</blockquote>}
+                {n.body && n.type !== 'system' && <blockquote>{quoted(n.body)}</blockquote>}
                 <p className="ib-note-meta"><time dateTime={n.created_at} title={new Date(n.created_at).toLocaleString()}>{relative(n.created_at)}</time><span><Mail size={11} aria-hidden="true" />Sent to email</span></p>
               </div>
               {n.read_at ? <span className="ib-note-read" title="Read"><Check size={14} /></span>
@@ -215,7 +224,7 @@ export default function Inbox() {
           {query ? <button type="button" className="ib-icon-btn" aria-label="Clear search" onClick={() => { setQuery(''); setPeople([]); }}><X size={14} /></button> : <kbd>/</kbd>}
         </form>
         {people.length > 0 && <div className="ib-results"><p className="ib-list-label">Start a conversation</p>{people.map(p => <button className="ib-convo" key={p.id} onClick={() => void start(p.id)} disabled={busy}>
-          <span className="ib-avatar"><UserAvatar src={p.avatar_url} /></span><span className="ib-convo-text"><strong>{p.display_name || p.username}</strong><small>@{p.username}</small></span><Send size={14} className="ib-convo-go" />
+          <span className="ib-avatar"><UserAvatar src={p.avatar_url} seed={p.id} /></span><span className="ib-convo-text"><strong>{p.display_name || p.username}</strong><small>@{p.username}</small></span><Send size={14} className="ib-convo-go" />
         </button>)}</div>}
         <p className="ib-list-label">Conversations</p>
         {conversations.loading ? <div className="ib-skeleton is-tight" role="status" aria-label="Loading conversations">{[0, 1, 2].map(i => <span key={i} />)}</div>
@@ -225,7 +234,7 @@ export default function Inbox() {
             const mine = c.participants?.find(p => p.user_id === user.id);
             const unread = Boolean(c.last_message_at && mine && (!mine.last_read_at || Date.parse(mine.last_read_at) < Date.parse(c.last_message_at)));
             return <button className={`ib-convo${unread ? ' is-unread' : ''}`} aria-current={selected === c.id ? 'true' : undefined} key={c.id} data-conversation={c.id} onClick={() => { setSelected(c.id); setBody(''); }}>
-              <span className={`ib-avatar${faces.length > 1 ? ' is-group' : ''}`}>{faces.length > 1 ? <Users size={16} /> : <UserAvatar src={faces[0]?.avatar_url} />}</span>
+              <span className={`ib-avatar${faces.length > 1 ? ' is-group' : ''}`}>{faces.length > 1 ? <Users size={16} /> : <UserAvatar src={faces[0]?.avatar_url} seed={faces[0]?.id} />}</span>
               <span className="ib-convo-text"><strong>{conversationName(c, user.id)}</strong><small>{faces.length > 1 ? `${faces.length + 1} people` : faces[0] ? `@${faces[0].username}` : 'Direct conversation'}</small></span>
               <time dateTime={c.last_message_at ?? c.created_at}>{relative(c.last_message_at ?? c.created_at)}</time>
             </button>;
@@ -236,7 +245,7 @@ export default function Inbox() {
         {!active && !selected ? <div className="ib-empty is-thread"><MessageSquare size={24} /><h2>Pick a conversation</h2><p>Or press <kbd>/</kbd> to find a learner and start one.</p></div> : <>
           <header className="ib-thread-head">
             <button className="ib-icon-btn ib-back" onClick={() => setSelected(null)} aria-label="Back to conversations"><ArrowLeft size={17} /></button>
-            <span className={`ib-avatar${partner.length > 1 ? ' is-group' : ''}`}>{partner.length > 1 ? <Users size={16} /> : <UserAvatar src={partner[0]?.avatar_url} />}</span>
+            <span className={`ib-avatar${partner.length > 1 ? ' is-group' : ''}`}>{partner.length > 1 ? <Users size={16} /> : <UserAvatar src={partner[0]?.avatar_url} seed={partner[0]?.id} />}</span>
             <div><strong>{active ? conversationName(active, user.id) : 'Conversation'}</strong><small>{partner.length === 1 ? `@${partner[0].username}` : partner.length ? partner.map(p => `@${p.username}`).join(' · ') : 'Private conversation'}</small></div>
           </header>
           <div className="ib-history" ref={history} aria-live="polite">
@@ -252,7 +261,7 @@ export default function Inbox() {
                 return <React.Fragment key={m.id}>
                   {newDay && <p className="ib-day"><span>{dayLabel(m.created_at)}</span></p>}
                   <article className={`ib-msg${mine ? ' is-mine' : ''}${joinsPrev ? ' joins-prev' : ''}${joinsNext ? ' joins-next' : ''}`}>
-                    {!mine && <span className="ib-msg-face">{!joinsNext && <UserAvatar src={author?.avatar_url} />}</span>}
+                    {!mine && <span className="ib-msg-face">{!joinsNext && <UserAvatar src={author?.avatar_url} seed={author?.id} />}</span>}
                     <div className="ib-bubble">
                       {!mine && !joinsPrev && partner.length > 1 && <strong>{author?.display_name ?? author?.username ?? 'Learner'}</strong>}
                       <p><Linkified text={m.body} /></p>

@@ -799,7 +799,8 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                 <CircleHeader circle={circle} isMember={inCircle} canJoin={Boolean(viewer)} busy={circleBusy} onToggle={() => void toggleCircle()} onClose={() => openCircle(null)} />
               )}
 
-              {canWrite && (
+              {/* A guest is already offered the way in on the board, when there is one. */}
+              {canWrite && (viewer || !board) && (
                 <section className="cm-write" aria-label="Write a post">
                   {viewer ? (
                     <>
@@ -1157,6 +1158,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                 viewer={viewer}
                 suggestions={people}
                 problemTitle={problemTitle(originalOf(sendTarget).problem_id)}
+                shield={shieldFor(originalOf(sendTarget))}
                 onClose={() => setSendTarget(null)}
               />
             )}

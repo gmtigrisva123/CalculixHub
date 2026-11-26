@@ -31,7 +31,7 @@ const METALS = ['gold', 'silver', 'bronze'] as const;
 const HEADROOM = 0.78;
 
 function Avatar({ row, className }: { row: LeaderboardRow; className: string }) {
-  return <span className={`lb-avatar ${className}`} aria-hidden="true"><UserAvatar src={row.avatar_url} /></span>;
+  return <span className={`lb-avatar ${className}`} aria-hidden="true"><UserAvatar src={row.avatar_url} seed={row.user_id} /></span>;
 }
 
 /*

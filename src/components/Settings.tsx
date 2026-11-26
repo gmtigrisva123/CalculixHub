@@ -532,7 +532,7 @@ export default function Settings({
             {profile && user ? (
               <>
                 <div className="se-identity">
-                  <span className="se-identity-face"><UserAvatar src={profile.avatar_url} /></span>
+                  <span className="se-identity-face"><UserAvatar src={profile.avatar_url} seed={profile.id} /></span>
                   <div><b>{profile.display_name}</b><span>@{profile.username}</span></div>
                   <span className="se-identity-mail"><Mail size={14} aria-hidden="true" />{user.email ?? 'No email on file'}</span>
                 </div>

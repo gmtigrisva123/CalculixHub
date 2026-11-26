@@ -14,7 +14,7 @@ import { sendDirectMessage } from '../../services/data/messaging';
 import { searchProfiles } from '../../services/data/people';
 import type { MentionPerson } from './Mentions';
 import { authorName, shareLink } from './model';
-import { SharedEmbed } from './PostBody';
+import { SharedEmbed, type ShieldReason } from './PostBody';
 import { AutoTextarea, Avatar, Dialog, useToast } from './ui';
 
 type SendState = 'sending' | 'sent' | 'failed';
@@ -25,6 +25,7 @@ export default function SendDialog({
   viewer,
   suggestions,
   problemTitle,
+  shield = null,
   onClose,
 }: {
   post: PostWithAuthor;
@@ -33,6 +34,8 @@ export default function SendDialog({
   viewer: AuthorSummary;
   suggestions: MentionPerson[];
   problemTitle: string | null;
+  /** Set when the post is a solution the sender should not meet uncovered in the preview. */
+  shield?: ShieldReason | null;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -70,22 +73,22 @@ export default function SendDialog({
     const body = `${note.trim() || 'Take a look at this discussion on CalculixHub:'}\n${shareLink(post.id)}`;
     const result = await sendDirectMessage({ targetId: person.id, senderId: viewer.id, body });
     setStates((map) => ({ ...map, [person.id]: result.ok ? 'sent' : 'failed' }));
-    if (result.ok) toast(`Sent to ${authorName(person)}`);
+    if (result.ok) toast(`Sent to ${authorName(person)}.`);
     else toast(result.error, 'error');
   };
 
   const sentCount = Object.values(states).filter((state) => state === 'sent').length;
 
   return (
-    <Dialog title="Send in Messages" onClose={onClose} size="md">
+    <Dialog title="Send in a message" onClose={onClose} size="md">
       <div className="cm-dialog-body cm-send-dialog">
-        <SharedEmbed original={original} problemTitle={problemTitle} />
+        <SharedEmbed original={original} problemTitle={problemTitle} shield={shield} />
         <AutoTextarea
           className="cm-send-note"
           value={note}
           maxLength={500}
           maxHeight={140}
-          placeholder="Add a note (optional)…"
+          placeholder="Add a note, if you like…"
           aria-label="Note to send with the post"
           onChange={(event) => setNote(event.target.value)}
         />
@@ -95,7 +98,7 @@ export default function SendDialog({
           <input data-autofocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search learners by name or @username" />
           {searching && <Loader2 size={16} className="cm-spin" aria-hidden="true" />}
         </label>
-        <p className="cm-send-heading">{query.trim().length >= 2 ? 'Results' : 'Suggested'}</p>
+        <p className="cm-send-heading">{query.trim().length >= 2 ? 'Matching learners' : 'People around the feed'}</p>
         {people.length === 0 ? (
           <p className="cm-muted cm-send-empty">{query.trim().length >= 2 ? (searching ? 'Searching…' : 'Nobody matches that name.') : 'Search for someone to send this to.'}</p>
         ) : (
@@ -111,7 +114,7 @@ export default function SendDialog({
                   </span>
                   <button
                     type="button"
-                    className={`cm-button ${state === 'sent' ? 'is-quiet' : 'is-primary'}`}
+                    className={`cm-button ${state === 'sent' ? 'is-sent' : 'is-quiet'}`}
                     disabled={state === 'sending' || state === 'sent'}
                     onClick={() => void send(person)}
                     aria-label={state === 'sent' ? `Sent to ${authorName(person)}` : `Send to ${authorName(person)}`}

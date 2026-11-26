@@ -383,7 +383,14 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
             <Community
               problems={problems}
               solvedIds={isLoggedIn && !learner.loading && !learner.error ? completedProblems : undefined}
-              onSolveProblem={(problem) => { setLearnVisit(count => count + 1); navigateWithFilters('learn', { topic: problem.topic, level: problem.level }); }}
+              onSolveProblem={(problem) => {
+                // "Try it" means this problem, not the list it is in. Learn opens the
+                // question named in the address when it mounts, so it is named there.
+                navigateWithFilters('learn', { topic: problem.topic, level: problem.level });
+                const url = new URL(window.location.href);
+                url.searchParams.set('problem', problem.id);
+                window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+              }}
             />
           )}
 

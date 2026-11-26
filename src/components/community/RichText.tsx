@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LockKeyhole } from 'lucide-react';
 import MathText from '../MathText';
 import { segmentBlocks, segmentInline } from './model';
@@ -53,7 +53,8 @@ function Spoiler({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   if (open) {
     return (
-      <span className="cm-spoiler is-open">
+      // The button that was pressed is gone; the words it uncovered take the focus it had.
+      <span className="cm-spoiler is-open" tabIndex={-1} ref={(node) => node?.focus({ preventScroll: true })}>
         <MathText text={text} />
       </span>
     );
@@ -78,6 +79,20 @@ function Spoiler({ text }: { text: string }) {
 export default function RichText({ text }: { text: string }) {
   const blocks = useMemo(() => segmentBlocks(text), [text]);
   const [opened, setOpened] = useState(0);
+  const justOpened = useRef<HTMLSpanElement | null>(null);
+
+  // Different words are a different ladder: nothing stays open from the last one.
+  const [seen, setSeen] = useState(text);
+  if (seen !== text) {
+    setSeen(text);
+    setOpened(0);
+  }
+
+  // "Open" disappears when pressed. Focus moves to the hint it opened, so the
+  // next Tab carries on from there instead of from the top of the page.
+  useEffect(() => {
+    if (opened > 0) justOpened.current?.focus({ preventScroll: true });
+  }, [opened]);
 
   if (blocks.length === 1 && blocks[0]!.type === 'prose') return <Inline text={blocks[0]!.value} />;
 
@@ -114,7 +129,7 @@ export default function RichText({ text }: { text: string }) {
                 ))}
             </span>
             {isOpen && (
-              <span className="cm-hint-body">
+              <span className="cm-hint-body" tabIndex={-1} ref={block.step === opened ? justOpened : undefined}>
                 <Inline text={block.value} />
               </span>
             )}
