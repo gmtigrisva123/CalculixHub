@@ -376,7 +376,11 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
           {activeTab === 'admin' && <AdminWorkspace onContentChange={() => void fetchProblems()} />}
 
           {activeTab === 'progress' && (
-            <ProgressView userStats={userStats} onSeePlans={() => selectTab('plan')} />
+            <ProgressView
+              userStats={userStats}
+              onSeePlans={() => selectTab('plan')}
+              onPractise={(topic) => { setLearnVisit(count => count + 1); navigateWithFilters('learn', topic ? { topic } : undefined); }}
+            />
           )}
 
           {activeTab === 'community' && (

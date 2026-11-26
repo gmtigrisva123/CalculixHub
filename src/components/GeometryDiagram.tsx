@@ -2,6 +2,8 @@ import React from 'react';
 import type { GeometryFigure } from '../../shared/types';
 
 type Point = [number, number];
+/** The name of a point (A, B, C), set as mathematics. Lengths and coordinates stay in the interface face. */
+const POINT_NAME = { fontFamily: 'Newsreader, Georgia, serif', fontStyle: 'italic' } as const;
 export default function GeometryDiagram({ figure }: { figure: GeometryFigure }) {
   const values = figure.values ?? [];
   const labels = figure.labels ?? [];
@@ -43,6 +45,12 @@ export default function GeometryDiagram({ figure }: { figure: GeometryFigure }) 
   const height = points.length ? Math.max(...points.map(p => p[1])) - minY : 1;
   const scale = Math.min(270 / (width || 1), 180 / (height || 1));
   const mapped = points.map(([x, y]): Point => [45 + (270 - width * scale) / 2 + (x - minX) * scale, 225 - (180 - height * scale) / 2 - (y - minY) * scale]);
+  // Labels go outside the shape: each is pushed away from its centre, so no letter or length sits on a side.
+  const centre: Point = mapped.length ? [mapped.reduce((sum, p) => sum + p[0], 0) / mapped.length, mapped.reduce((sum, p) => sum + p[1], 0) / mapped.length] : [180, 135];
+  const out = (p: Point, distance: number): Point => {
+    const dx = p[0] - centre[0], dy = p[1] - centre[1], length = Math.hypot(dx, dy) || 1;
+    return [p[0] + dx / length * distance, p[1] + dy / length * distance];
+  };
   const auxiliaries: { label: string; point: Point }[] = [];
   const lines: [Point, Point][] = [];
   const midpoint = (a: Point, b: Point): Point => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
@@ -81,12 +89,15 @@ export default function GeometryDiagram({ figure }: { figure: GeometryFigure }) 
         <circle cx="180" cy="135" r="3" fill="currentColor"/>
         <text x="210" y="125" fill="currentColor">{labels[0] ?? 'r'}</text>
       </> : mapped.length ? <>
-        <polygon points={mapped.map(p => p.join(',')).join(' ')} fill="rgba(99,102,241,0.06)" stroke="currentColor" strokeWidth="2"/>
+        <polygon points={mapped.map(p => p.join(',')).join(' ')} fill="color-mix(in srgb, var(--ac) 7%, transparent)" stroke="currentColor" strokeWidth="2"/>
         {mapped.map((point, i) => {
           const next = mapped[(i + 1) % mapped.length];
+          const vertex = out(point, 15), side = out(midpoint(point, next), 14);
           return <g key={i}><circle cx={point[0]} cy={point[1]} r="3" fill="currentColor"/>
-            <text x={point[0] + 7} y={point[1] - 9} fill="currentColor" fontSize="13">{figure.kind === 'coordinate-grid' ? labels[i] : String.fromCharCode(65 + i)}</text>
-            {figure.kind !== 'coordinate-grid' && <text x={(point[0] + next[0]) / 2} y={(point[1] + next[1]) / 2 + 17} textAnchor="middle" fill="currentColor" fontSize="13">{figure.kind === 'triangle' ? labels[[2, 0, 1][i]] : labels[i]}</text>}
+            {figure.kind === 'coordinate-grid'
+              ? <text x={vertex[0]} y={vertex[1]} textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="13">{labels[i]}</text>
+              : <text x={vertex[0]} y={vertex[1]} textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="13" {...POINT_NAME}>{String.fromCharCode(65 + i)}</text>}
+            {figure.kind !== 'coordinate-grid' && <text x={side[0]} y={side[1]} textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="13">{figure.kind === 'triangle' ? labels[[2, 0, 1][i]] : labels[i]}</text>}
           </g>;
         })}
       </> : <text x="180" y="135" textAnchor="middle" fill="currentColor">See the stated lengths in the problem.</text>}

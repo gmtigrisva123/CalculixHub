@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowRight, ArrowUpRight, CalendarDays, Camera, Check, Flame, Lock, LogOut, MapPin, PencilLine, Share2, Trophy, Users } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarDays, Camera, Check, Lock, LogOut, MapPin, PencilLine, Share2, Users } from 'lucide-react';
 import { UserStats, Problem, Topic } from '../../shared/types';
 import { RANK_TIERS, TOPIC_LIST, formatMinutes, getRankForPoints, nextRankFor } from '../lib/topics';
 import { AnimatedNumber } from './motion';
@@ -37,6 +37,10 @@ const grouped = (value: number) => Math.round(value).toLocaleString();
 const plural = (count: number, word: string) => `${grouped(count)} ${word}${count === 1 ? '' : 's'}`;
 const dayOf = (date: string) => Date.parse(date.length === 10 ? `${date}T00:00:00Z` : date);
 const formatDay = (time: number, withYear = true) => new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined, timeZone: 'UTC' });
+/** How far along a badge is: "412 of 500 points", or for a percentage "At 38% in Combinatorics, needs 60%". */
+const progressLine = ({ now, goal, unit }: { now: number; goal: number; unit: string }) => unit.startsWith('%')
+  ? `At ${grouped(Math.min(now, goal))}%${unit.slice(1)}, needs ${grouped(goal)}%`
+  : `${grouped(Math.min(now, goal))} of ${grouped(goal)} ${unit}`;
 
 /* --------------------------------------------------------------------------
  * Cumulative points over active days
@@ -313,7 +317,7 @@ function ActivityGrid({ gains, streak }: { gains: Map<number, number>; streak: n
         <div className="pf-activity-cells" onPointerOver={point} onPointerLeave={() => setTip(null)}>
           {Array.from({ length: WEEKS * 7 }, (_, index) => {
             const key = first + Math.floor(index / 7) * 7 + (index % 7);
-            return <i key={index} className={key > today ? 'is-future' : key === today ? 'is-today' : undefined} data-level={level(key)} data-key={key > today ? undefined : key} style={{ '--c': Math.floor(index / 7) } as Vars} />;
+            return <i key={index} className={key > today ? 'is-future' : key === today ? 'is-today' : undefined} data-level={level(key)} data-key={key > today ? undefined : key} />;
           })}
         </div>
       </div>
@@ -332,7 +336,8 @@ function ActivityGrid({ gains, streak }: { gains: Map<number, number>; streak: n
  * Topics, as plain bars
  * ------------------------------------------------------------------------ */
 
-const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#209d8c', Combinatorics: '#8b5cf6', 'Number Theory': '#0484c0' };
+/* The four topic hues, as lib/topics.tsx assigns them, so a topic is one colour on Learn, Progress and here. */
+const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#2f9c8c', Combinatorics: '#8b5cf6', 'Number Theory': '#0ea5e9' };
 const standing = (value: number) => value <= 0 ? 'Not started' : value < 35 ? 'Finding your feet' : value < 70 ? 'Getting solid' : 'Strong';
 
 /* Four topics, four corners. The shape is the profile at a glance; the rows below carry the numbers. */
@@ -361,7 +366,8 @@ function TopicShape({ skills, hot, onHot }: { skills: UserStats['skills']; hot: 
 function TopicBars({ skills, solved, onPractise }: { skills: UserStats['skills']; solved: Record<Topic, number>; onPractise?: (topic: Topic) => void }) {
   const [hot, setHot] = useState<Topic | null>(null);
   return <>
-    <TopicShape skills={skills} hot={hot} onHot={setHot} />
+    {/* With every topic at 0 there is no shape to draw, only four dots piled on the centre; the rows below say "Not started". */}
+    {TOPIC_LIST.some(topic => (skills[topic] ?? 0) > 0) && <TopicShape skills={skills} hot={hot} onHot={setHot} />}
     <ul className="pf-topics">{TOPIC_LIST.map(topic => {
       const value = Math.round(skills[topic] ?? 0);
       return <li key={topic} className={hot === topic ? 'is-hot' : undefined} style={{ '--hue': TOPIC_HUE[topic], '--v': `${value}%` } as Vars}>
@@ -378,7 +384,9 @@ function TopicBars({ skills, solved, onPractise }: { skills: UserStats['skills']
 }
 
 /* --------------------------------------------------------------------------
- * A small drawing beside each of the five figures
+ * A small drawing beside a figure, only where it shows what the number does not:
+ * how points have grown, which topics the solved problems came from, and which
+ * of the last seven days were practised.
  * ------------------------------------------------------------------------ */
 
 function Spark({ timeline }: { timeline: UserStats['learningTimeline'] }) {
@@ -387,12 +395,6 @@ function Spark({ timeline }: { timeline: UserStats['learningTimeline'] }) {
   const low = days[0].points, span = Math.max(days[days.length - 1].points - low, 1);
   const path = days.map((day, index) => `${index ? 'L' : 'M'}${(index / (days.length - 1) * 60 + 2).toFixed(1)},${(22 - (day.points - low) / span * 18).toFixed(1)}`).join(' ');
   return <svg className="pf-mini" viewBox="0 0 64 26" aria-hidden="true"><path className="pf-mini-line" d={path} pathLength={1} /></svg>;
-}
-
-function Dial({ share }: { share: number }) {
-  return <svg className="pf-mini is-dial" viewBox="0 0 30 30" aria-hidden="true" style={{ '--p': share } as Vars}>
-    <circle cx="15" cy="15" r="12" /><circle cx="15" cy="15" r="12" pathLength={1} />
-  </svg>;
 }
 
 /* --------------------------------------------------------------------------
@@ -430,7 +432,8 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
     return { ...badge, unlocked, progress, share: unlocked ? 1 : progress ? Math.min(progress.now / progress.goal, .99) : 0 };
   });
   const unlockedCount = badges.filter(badge => badge.unlocked).length;
-  const nearest = badges.filter(badge => !badge.unlocked && badge.progress).sort((a, b) => b.share - a.share)[0] ?? null;
+  // Badges are earned on an account, so a guest has no closest one: the card says to create an account instead.
+  const nearest = profile ? badges.filter(badge => !badge.unlocked && badge.progress).sort((a, b) => b.share - a.share)[0] ?? null : null;
 
   const displayName = profile?.display_name || profile?.username || 'Guest learner';
   const memberSince = profile?.created_at ? new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : null;
@@ -445,20 +448,18 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   // What is still missing from the public profile, in the order worth filling in.
   const missing = profile ? [!profile.avatar_url && 'a photo', !profile.bio && 'a short bio', !profile.country && 'your country'].filter(Boolean) as string[] : [];
 
-  // Monday first, for the two small charts that read as a week.
+  // Monday first, for the weekday chart under Records.
   const byWeekday = [1, 2, 3, 4, 5, 6, 0].map(day => rhythm.weekdays[day]);
   const busiest = Math.max(1, ...byWeekday);
   const todayKey = Math.floor(Date.now() / DAY);
   const lastWeek = Array.from({ length: 7 }, (_, index) => rhythm.gains.has(todayKey - 6 + index));
 
-  const NearestIcon = nearest ? badgeIcon(nearest.id) : Trophy;
-
   return (
     <div className="profile-page">
       <section className="pf-hero" aria-labelledby="pf-name">
         <div className="pf-hero-main">
-          <div className="pf-face-wrap" style={{ '--p': tierProgress } as Vars}>
-            <svg className="pf-face-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="57" /><circle cx="60" cy="60" r="57" pathLength={1} /></svg>
+          <div className="pf-face-wrap">
+            <svg className="pf-face-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="57" /></svg>
             {profile
               ? <button type="button" className="pf-face is-editable" onClick={() => setPhotoOpen(true)} aria-label="Change profile photo"><UserAvatar src={profile.avatar_url} seed={profile.id} /><span className="pf-face-badge" aria-hidden="true"><Camera size={14} strokeWidth={2.2} /></span></button>
               : <div className="pf-face"><UserAvatar src={null} /></div>}
@@ -468,8 +469,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
             <p className="pf-eyebrow">{profile ? <>{profile.username ? `@${profile.username}` : 'No username yet'}</> : 'Guest session'}</p>
             <h1 id="pf-name">{displayName}</h1>
             <p className="pf-chips">
-              <span className="pf-chip is-tier"><Trophy size={12} aria-hidden="true" />{rank.name}</span>
-              <span className="pf-chip">{userStats.level || 'Not placed yet'}</span>
+              <span className="pf-chip">{userStats.level ? `Practising at ${userStats.level}` : 'Not placed yet'}</span>
               {userStats.rank > 0 && <span className="pf-chip">#{grouped(userStats.rank)} worldwide</span>}
             </p>
             {profile?.bio
@@ -508,18 +508,17 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           <div><dt>Points</dt><dd><AnimatedNumber value={userStats.points} format={grouped} /></dd><Spark timeline={userStats.learningTimeline} /></div>
           <div><dt>Solved</dt><dd><AnimatedNumber value={solvedCount} /></dd>
             {solvedCount > 0 && <span className="pf-mini is-split" aria-hidden="true">{TOPIC_LIST.map(topic => solvedByTopic[topic] > 0 && <i key={topic} style={{ flexGrow: solvedByTopic[topic], background: TOPIC_HUE[topic] }} />)}</span>}</div>
-          <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} /><small>%</small></span> : <span className="is-none">—</span>}</dd>{hasAnswers && <Dial share={userStats.accuracy / 100} />}</div>
+          <div><dt>Accuracy</dt><dd>{hasAnswers ? <span><AnimatedNumber value={userStats.accuracy} /><small>%</small></span> : <span className="is-none">—</span>}</dd></div>
           <div><dt>Streak</dt><dd><AnimatedNumber value={userStats.streak} /><small>{userStats.streak === 1 ? 'day' : 'days'}</small></dd>
             <span className="pf-mini is-week" aria-hidden="true">{lastWeek.map((on, index) => <i key={index} className={on ? 'is-on' : undefined} />)}</span></div>
-          <div><dt>Active days</dt><dd><AnimatedNumber value={activeDays} /></dd>
-            {activeDays > 0 && <span className="pf-mini is-bars" aria-hidden="true">{byWeekday.map((count, index) => <i key={index} style={{ height: `${Math.max(count / busiest, .12) * 100}%` }} />)}</span>}</div>
+          <div><dt>Active days</dt><dd><AnimatedNumber value={activeDays} /></dd></div>
         </dl>
       </section>
 
       {missing.length > 0 && (
         <button type="button" className="pf-nudge" onClick={() => setEditOpen(true)}>
           <span className="pf-nudge-meter" aria-hidden="true">{[0, 1, 2].map(n => <i key={n} className={n < 3 - missing.length ? 'is-on' : undefined} />)}</span>
-          <span>Your profile is missing <b>{missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}`}</b>. People follow learners they can recognise.</span>
+          <span>Your profile is missing <b>{missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}`}</b>.</span>
           <span className="pf-nudge-go">Finish it<ArrowRight size={14} aria-hidden="true" /></span>
         </button>
       )}
@@ -528,32 +527,20 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
         <h2 id="pf-next-title" className="pf-section-title">Within reach</h2>
         <div className="pf-next-grid">
           <article className="pf-goal">
-            <span className="pf-goal-icon" aria-hidden="true"><NearestIcon size={18} /></span>
             <div>
               <p className="pf-goal-kicker">Closest badge</p>
               {nearest
-                ? <><h3>{nearest.title}</h3><p>{grouped(Math.min(nearest.progress!.now, nearest.progress!.goal))} of {grouped(nearest.progress!.goal)}{nearest.progress!.unit.startsWith('%') ? '' : ' '}{nearest.progress!.unit}</p>
+                ? <><h3>{nearest.title}</h3><p>{progressLine(nearest.progress!)}</p>
                     <span className="pf-meter" style={{ '--p': nearest.share } as Vars} aria-hidden="true"><span /></span></>
                 : <><h3>{profile ? 'All badges earned' : 'Badges need an account'}</h3><p>{profile ? 'You have every badge there is.' : 'Create one to start earning badges.'}</p></>}
             </div>
           </article>
 
-          <button type="button" className="pf-goal is-action" onClick={() => onPractise?.(started ? weakest.topic : undefined)} style={{ '--hue': started ? TOPIC_HUE[weakest.topic] : undefined } as Vars}>
-            <span className="pf-goal-icon is-topic" aria-hidden="true"><i /></span>
+          <button type="button" className="pf-goal is-action" onClick={() => onPractise?.(started ? weakest.topic : undefined)}>
             <div>
               <p className="pf-goal-kicker">{started ? 'Most room to grow' : 'A first topic'}</p>
               <h3>{started ? weakest.topic : 'Pick any one to begin'}</h3>
               <p>{started ? weakest.topic === strongest.topic ? `Level at ${weakest.value}% across all four.` : `At ${weakest.value}%, against ${strongest.value}% in ${strongest.topic}.` : 'Your topics fill in as you solve.'}</p>
-            </div>
-            <ArrowRight className="pf-goal-arrow" size={17} aria-hidden="true" />
-          </button>
-
-          <button type="button" className="pf-goal is-action" onClick={() => onPractise?.()}>
-            <span className="pf-goal-icon" aria-hidden="true"><Flame size={18} /></span>
-            <div>
-              <p className="pf-goal-kicker">Streak</p>
-              <h3>{userStats.streak > 0 ? `${userStats.streak} ${userStats.streak === 1 ? 'day' : 'days'} and counting` : 'Start one today'}</h3>
-              <p>{userStats.streak > 0 ? 'One solved problem today keeps it going.' : 'One solved problem is all it takes.'}</p>
             </div>
             <ArrowRight className="pf-goal-arrow" size={17} aria-hidden="true" />
           </button>
@@ -570,6 +557,34 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
           <section className="pf-card" aria-labelledby="pf-growth-title">
             <header className="pf-card-head"><h2 id="pf-growth-title">Points over time</h2><span className="pf-muted">{activeDays ? plural(activeDays, 'active day') : 'No answers yet'}</span></header>
             <PointsCurve timeline={userStats.learningTimeline} />
+          </section>
+
+          {/* In the wide column, under the curve: the side column is the taller of the two, and this fills the gap beside it. */}
+          <section className="pf-card pf-medals" aria-labelledby="pf-medals-title">
+            <header className="pf-card-head">
+              <h2 id="pf-medals-title">Badges</h2>
+              <span className="pf-muted"><b>{unlockedCount}</b> of {badges.length} earned</span>
+            </header>
+            <ul className="pf-medal-grid">
+              {badges.map(badge => {
+                const Icon = badgeIcon(badge.id);
+                return (
+                  <li key={badge.id} className={`pf-medal${badge.unlocked ? ' is-unlocked' : ''}`}>
+                    <span className="pf-coin-wrap" aria-hidden="true" style={{ '--p': badge.share } as Vars}>
+                      {!badge.unlocked && badge.progress && <svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="27" /><circle cx="29" cy="29" r="27" pathLength={1} /></svg>}
+                      <span className="pf-coin"><Icon size={20} strokeWidth={1.8} />{!badge.unlocked && <span className="pf-coin-lock"><Lock size={10} strokeWidth={2.4} /></span>}</span>
+                    </span>
+                    <div>
+                      <h3>{badge.title}</h3>
+                      <p>{badge.desc}</p>
+                      {badge.unlocked
+                        ? <span className="pf-medal-state"><Check size={12} strokeWidth={3} aria-hidden="true" />Earned</span>
+                        : badge.progress && <span className="pf-medal-progress">{progressLine(badge.progress)}</span>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         </div>
 
@@ -600,35 +615,9 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
         </aside>
       </div>
 
-      <section className="pf-card pf-medals" aria-labelledby="pf-medals-title">
-        <header className="pf-card-head">
-          <h2 id="pf-medals-title">Badges</h2>
-          <span className="pf-muted"><b>{unlockedCount}</b> of {badges.length} earned</span>
-        </header>
-        <ul className="pf-medal-grid">
-          {badges.map(badge => {
-            const Icon = badgeIcon(badge.id);
-            return (
-              <li key={badge.id} className={`pf-medal${badge.unlocked ? ' is-unlocked' : ''}`}>
-                <span className="pf-coin-wrap" aria-hidden="true" style={{ '--p': badge.share } as Vars}>
-                  {!badge.unlocked && badge.progress && <svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="27" /><circle cx="29" cy="29" r="27" pathLength={1} /></svg>}
-                  <span className="pf-coin"><Icon size={20} strokeWidth={1.8} />{!badge.unlocked && <span className="pf-coin-lock"><Lock size={10} strokeWidth={2.4} /></span>}</span>
-                </span>
-                <div>
-                  <h3>{badge.title}</h3>
-                  <p>{badge.desc}</p>
-                  {badge.unlocked
-                    ? <span className="pf-medal-state"><Check size={12} strokeWidth={3} aria-hidden="true" />Earned</span>
-                    : badge.progress && <span className="pf-medal-progress">{grouped(Math.min(badge.progress.now, badge.progress.goal))} of {grouped(badge.progress.goal)}{badge.progress.unit.startsWith('%') ? '' : ' '}{badge.progress.unit}</span>}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
+      {/* Rank tiers and practice levels share two names (Advanced, Intermediate), so the card says which is which. */}
       {profile && <ShareCard open={shareOpen} onClose={() => setShareOpen(false)} allDesigns={plan.can('share-designs')} onSeePlans={() => { setShareOpen(false); onSeePlans?.(); }}
-        data={{ name: displayName, handle: profile.username, tier: rank.name, level: userStats.level ?? null, points: userStats.points, solved: solvedCount, streak: userStats.streak, accuracy: hasAnswers ? userStats.accuracy : null, skills: userStats.skills }} />}
+        data={{ name: displayName, handle: profile.username, tier: `${rank.name} rank`, level: userStats.level ? `${userStats.level} level` : null, points: userStats.points, solved: solvedCount, streak: userStats.streak, accuracy: hasAnswers ? userStats.accuracy : null, skills: userStats.skills }} />}
       {profile && <EditDialog open={editOpen} onClose={() => setEditOpen(false)} onChangePhoto={() => { setEditOpen(false); setPhotoOpen(true); }} onSaved={refreshProfile} />}
       {profile && <PhotoDialog open={photoOpen} onClose={() => setPhotoOpen(false)} userId={profile.id} current={profile.avatar_url} onSaved={refreshProfile} />}
     </div>

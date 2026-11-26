@@ -239,12 +239,14 @@ export function createEvaluateHandler({ model }: AiRouteDependencies): Handler {
       correct,
       pointsAwarded,
       ...progress,
+      // Without the model there is nothing to say about how the learner reasoned,
+      // so this states the verdict and where to look next, and guesses at nothing.
       explanation: correct
-        ? `Correct! You reasoned through the logical structure of this ${item.topic} problem cleanly.`
-        : `Not quite - that isn't the expected answer. You likely slipped somewhere in the intermediate steps, or the hint's technique hasn't clicked yet.`,
+        ? 'Correct. Your answer matches the expected one.'
+        : 'That is not the expected answer.',
       guidance: correct
-        ? `Keep pushing: try the next ${item.level === 'Foundation' ? 'Intermediate' : item.level === 'Intermediate' ? 'Advanced' : 'Olympiad'} tier now!`
-        : `Hint: ${item.hint} Try re-deriving it carefully, step by step.`,
+        ? 'The worked solution is open below the question.'
+        : item.hint ? `Hint: ${item.hint}` : '',
       isFallback: true,
     });
   };
