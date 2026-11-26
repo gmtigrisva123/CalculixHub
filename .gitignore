@@ -50,3 +50,6 @@ supabase/.temp/
 # Cloudflare Wrangler local state and local-only secrets
 .wrangler/
 .dev.vars*
+
+# graphify local cache
+graphify-out/cache/
