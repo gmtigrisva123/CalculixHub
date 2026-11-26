@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+coverage/
+ios/App/Pods/
+ios/**/build/
+public/
+*.min.js
+package-lock.json
+skills-lock.json
