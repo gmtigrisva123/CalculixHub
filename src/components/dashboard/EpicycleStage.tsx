@@ -492,7 +492,7 @@ function EpicycleStage({ still, paused, onTogglePause }: EpicycleStageProps) {
       />
       {!still && (
         <div className="dh-stage-top">
-          <p className="dh-stage-hint" aria-hidden="true">Hover to slow it down · click for the next figure</p>
+          <p className="dh-stage-hint" aria-hidden="true">Hover to slow it down. Click for the next figure.</p>
           <button
             type="button"
             className="dh-stage-pause"

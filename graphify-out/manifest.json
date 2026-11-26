@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "qa/bots/run.mjs": {
-    "mtime": 1795692482.2859368,
-    "seen": 1795709875.2463393,
-    "ast_hash": "8d9fce58c8043468af44017e23a8b5d7",
+    "mtime": 1795711765.495759,
+    "seen": 1795711844.0466964,
+    "ast_hash": "d12f69f71965282e053c40d104414cf5",
     "semantic_hash": ""
   },
   "qa/confirm.mjs": {
@@ -882,9 +882,9 @@
     "semantic_hash": ""
   },
   "src/components/Community.tsx": {
-    "mtime": 1795711034.2542148,
-    "seen": 1795711477.7466621,
-    "ast_hash": "9069970a6a23bdd74e317d8f15260e7e",
+    "mtime": 1795711817.0365703,
+    "seen": 1795711844.046923,
+    "ast_hash": "532401c10f767f3eaefd03da45e64efb",
     "semantic_hash": ""
   },
   "src/components/Compete.tsx": {
@@ -918,9 +918,9 @@
     "semantic_hash": ""
   },
   "src/components/Inbox.tsx": {
-    "mtime": 1795676788.7749927,
-    "seen": 1795691716.8185422,
-    "ast_hash": "d068ce752377ace4a5c7ac0551c85a8b",
+    "mtime": 1795711694.923675,
+    "seen": 1795711844.046938,
+    "ast_hash": "d9ad4c0161ca232af2b0cc015cd13b1d",
     "semantic_hash": ""
   },
   "src/components/InstallAppButton.tsx": {
@@ -930,9 +930,9 @@
     "semantic_hash": ""
   },
   "src/components/Leaderboard.tsx": {
-    "mtime": 1795676920.6780572,
-    "seen": 1795691716.8185463,
-    "ast_hash": "6a56648b9892dad92979f317c653943e",
+    "mtime": 1795711694.9212978,
+    "seen": 1795711844.0469425,
+    "ast_hash": "0c5d63bebfd670048c86ca355813c308",
     "semantic_hash": ""
   },
   "src/components/Learn.tsx": {
@@ -972,9 +972,9 @@
     "semantic_hash": ""
   },
   "src/components/Profile.tsx": {
-    "mtime": 1795676774.9104366,
-    "seen": 1795691716.8185585,
-    "ast_hash": "f0fe9523b0df57c864c4bb5e6cc99271",
+    "mtime": 1795711714.3986328,
+    "seen": 1795711844.0469587,
+    "ast_hash": "775254f03bc9d72ed765d6ae22d37301",
     "semantic_hash": ""
   },
   "src/components/ProgressReport.tsx": {
@@ -1008,9 +1008,9 @@
     "semantic_hash": ""
   },
   "src/components/Settings.tsx": {
-    "mtime": 1795677017.1232877,
-    "seen": 1795691716.8186095,
-    "ast_hash": "877d2129b983ad02922544c54c0cd5f4",
+    "mtime": 1795711694.9230857,
+    "seen": 1795711844.0469732,
+    "ast_hash": "f6ca4a3390a9b662cf9bf58c31c03292",
     "semantic_hash": ""
   },
   "src/components/ShareCard.tsx": {
@@ -1020,9 +1020,9 @@
     "semantic_hash": ""
   },
   "src/components/UserAvatar.tsx": {
-    "mtime": 1795676624.2956238,
-    "seen": 1795691716.8186145,
-    "ast_hash": "bd95a9594fda89d3a62096ff86f5411b",
+    "mtime": 1795711694.9209127,
+    "seen": 1795711844.0469775,
+    "ast_hash": "7afce67545f33a089a5b01d5700a6047",
     "semantic_hash": ""
   },
   "src/components/Welcome.tsx": {
@@ -1038,15 +1038,15 @@
     "semantic_hash": ""
   },
   "src/components/Workspace.tsx": {
-    "mtime": 1795677240.8381052,
-    "seen": 1795691716.8186216,
-    "ast_hash": "7f9a5878e5a89eac0669d0f10c633b11",
+    "mtime": 1795711662.9152894,
+    "seen": 1795711844.046984,
+    "ast_hash": "97fd7950a42987a3e50c096868aa952b",
     "semantic_hash": ""
   },
   "src/components/WorkspaceShell.tsx": {
-    "mtime": 1795615556.9528046,
-    "seen": 1795670284.4418871,
-    "ast_hash": "ba1ff9ffb0bc92ff1daefbd2d1a46985",
+    "mtime": 1795711694.921902,
+    "seen": 1795711844.046986,
+    "ast_hash": "bcebda1881a81190297fa7308b0f0591",
     "semantic_hash": ""
   },
   "src/components/arena/ArenaHero.tsx": {
@@ -1158,15 +1158,15 @@
     "semantic_hash": ""
   },
   "src/components/community/RichText.tsx": {
-    "mtime": 1795676684.8459349,
-    "seen": 1795691716.8186765,
-    "ast_hash": "806e368a5f3cc50778dd1504f9f80ee0",
+    "mtime": 1795711628.3580642,
+    "seen": 1795711844.0470376,
+    "ast_hash": "f53e533ef6afe3912436f46a05bc515b",
     "semantic_hash": ""
   },
   "src/components/community/SendDialog.tsx": {
-    "mtime": 1795615556.9568079,
-    "seen": 1795670284.4419098,
-    "ast_hash": "0ea96d4b5f65e84b71ef872e7d95f47e",
+    "mtime": 1795711643.5129921,
+    "seen": 1795711844.0470395,
+    "ast_hash": "1f97f8f8c675c9470ca387f7421f04ea",
     "semantic_hash": ""
   },
   "src/components/community/Sidebar.tsx": {

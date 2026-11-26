@@ -4,12 +4,13 @@
  */
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowRight, ArrowUpRight, CalendarDays, Camera, Check, Crown, Dices, Flame, Lock, LogOut, MapPin, PencilLine, Ruler, Share2, Sprout, Trophy, Users, Zap, type LucideIcon } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarDays, Camera, Check, Flame, Lock, LogOut, MapPin, PencilLine, Share2, Trophy, Users } from 'lucide-react';
 import { UserStats, Problem, Topic } from '../../shared/types';
 import { RANK_TIERS, TOPIC_LIST, formatMinutes, getRankForPoints, nextRankFor } from '../lib/topics';
 import { AnimatedNumber } from './motion';
 import { useAuth } from '../context/AuthContext';
 import { ACHIEVEMENTS } from '../domain/achievements';
+import { badgeIcon } from './badgeIcons';
 import { ACCEPTED_IMAGE_TYPES } from '../services/data/media';
 import { clearAvatar, saveAvatar, type AvatarResult } from '../services/data/avatar';
 import { updateProfile } from '../services/data/account';
@@ -398,7 +399,6 @@ function Dial({ share }: { share: number }) {
  * The page
  * ------------------------------------------------------------------------ */
 
-const BADGE_ICON: Record<string, LucideIcon> = { b1: Sprout, b2: Ruler, b3: Dices, b4: Trophy, b5: Flame, b6: Zap, b7: Crown };
 const WEEKDAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
 
 export default function Profile({ userStats, completedProblems, problems, onLogout, onSeePlans, onPractise }: ProfileProps) {
@@ -451,7 +451,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
   const todayKey = Math.floor(Date.now() / DAY);
   const lastWeek = Array.from({ length: 7 }, (_, index) => rhythm.gains.has(todayKey - 6 + index));
 
-  const NearestIcon = nearest ? BADGE_ICON[nearest.id] ?? Trophy : Trophy;
+  const NearestIcon = nearest ? badgeIcon(nearest.id) : Trophy;
 
   return (
     <div className="profile-page">
@@ -607,7 +607,7 @@ export default function Profile({ userStats, completedProblems, problems, onLogo
         </header>
         <ul className="pf-medal-grid">
           {badges.map(badge => {
-            const Icon = BADGE_ICON[badge.id] ?? Trophy;
+            const Icon = badgeIcon(badge.id);
             return (
               <li key={badge.id} className={`pf-medal${badge.unlocked ? ' is-unlocked' : ''}`}>
                 <span className="pf-coin-wrap" aria-hidden="true" style={{ '--p': badge.share } as Vars}>

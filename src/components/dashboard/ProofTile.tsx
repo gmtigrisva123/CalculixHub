@@ -12,7 +12,7 @@
 
 import { useCallback, useRef } from 'react';
 import { m } from 'motion/react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Level, Topic } from '../../../shared/types';
 import { spring } from '../../lib/motion';
 import { clamp01, easeInOut, easeOut, useCanvasScene, withAlpha, type Scene } from './useCanvasScene';
@@ -169,12 +169,6 @@ export default function ProofTile({ still, paused, navigate }: ProofTileProps) {
       viewport={{ once: true, amount: 0.15 }}
       transition={{ ...spring.smooth, delay: 0.08 }}
     >
-      <div className="dh-proof-top">
-        <span className="dh-chip">
-          <Sparkles size={14} aria-hidden="true" /> Something to think about
-        </span>
-        <span className="dh-proof-day">Today</span>
-      </div>
       <div className="dh-proof-body">
         <div className="dh-proof-figure">
           <canvas
@@ -190,10 +184,10 @@ export default function ProofTile({ still, paused, navigate }: ProofTileProps) {
               <span className="dh-term" data-topic="com">y²</span>
             </span>
           </p>
-          <h2 id="dh-proof-title">Look for the simpler step.</h2>
-          <p className="dh-proof-copy">A fresh perspective starts with a little practice. Take a few minutes for your mind.</p>
+          <h2 id="dh-proof-title">The square of a sum, as a picture.</h2>
+          <p className="dh-proof-copy">Cut a square of side x + y along both sides. One x², one y², and two rectangles of xy, with nothing left over.</p>
           <button type="button" className="dh-proof-cta" onClick={() => navigate('learn', { topic: 'Algebra' })}>
-            Explore algebra <ArrowRight size={16} aria-hidden="true" />
+            Practise Algebra <ArrowRight size={16} aria-hidden="true" />
           </button>
         </div>
         {/* The same identity in symbols, one step at a time, beside the picture of it. */}

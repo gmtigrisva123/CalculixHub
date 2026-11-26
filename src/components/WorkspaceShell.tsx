@@ -19,7 +19,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import { AnimatePresence, m } from 'motion/react';
 import {
   ArrowUpRight, Bell, ChevronsUpDown, CornerDownLeft, Flame, Info, Laptop, LogOut, Menu, Monitor, Moon, NotebookPen, PanelLeft,
-  Search, Smartphone, Sparkles, Sun, TriangleAlert, UserPlus, X, type LucideIcon,
+  Search, Smartphone, Sun, TriangleAlert, UserPlus, X, type LucideIcon,
 } from 'lucide-react';
 import { NAV_GROUPS, NAV_ITEMS, RAIL_GROUPS, TAB_BAR_ITEMS, groupOf, itemsIn, pinStaffNav, railCollapsed, rememberRail, staffNavPinned, type NavItem, type TabKey } from '../lib/navigation';
 import { preloadScreen } from '../lib/screens';
@@ -275,10 +275,11 @@ export default function WorkspaceShell({ activeTab, onSelect, name, streak, onli
     );
   };
 
+  // One plain note at the foot of the rail: what an account, or the paid plan, would add.
   const upsell = !signedIn
-    ? <a className="ws-upsell" href="/?auth=signup"><span className="ws-upsell-kicker">Guest session</span><strong>Keep what you solve.</strong><p>A free account saves your progress and finds your level.</p><small>Create a free account <ArrowUpRight size={13} /></small></a>
+    ? <a className="ws-upsell" href="/?auth=signup"><strong>Keep what you solve.</strong><p>A free account saves your progress and finds your level.</p><small>Create a free account <ArrowUpRight size={13} /></small></a>
     : plan.plan === 'free' && !plan.loading && activeTab !== 'plan'
-      ? <button type="button" className="ws-upsell" onClick={() => navigate('plan')}><span className="ws-upsell-kicker"><Sparkles size={12} /> {plan.preview ? 'Pro preview' : 'Pro'}</span><strong>Training for a contest?</strong><p>{plan.preview ? 'Pro is open to everyone while it is being finished.' : 'Get a week-by-week plan up to the day.'}</p><small>See the plans <ArrowUpRight size={13} /></small></button>
+      ? <button type="button" className="ws-upsell" onClick={() => navigate('plan')}><strong>Training for a contest?</strong><p>{plan.preview ? 'Pro is open to everyone while it is being finished.' : 'Pro lays out the weeks up to the day.'}</p><small>See the plans <ArrowUpRight size={13} /></small></button>
       : null;
 
   const visible = useMemo(() => notices.filter(notice => notice.tone === 'warning' || !dismissed.includes(notice.text)), [notices, dismissed]);

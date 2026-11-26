@@ -21,11 +21,12 @@ import { clampPercent, formatLike, TOPIC_KEY } from './dashboardModel';
 import { createGlyph } from './glyphs';
 import { useCanvasScene } from './useCanvasScene';
 
+/* What each topic covers, in the words a contest syllabus uses. */
 const DESCRIPTIONS: Record<Topic, string> = {
-  Algebra: 'Make the patterns click',
-  Geometry: 'See a different angle',
-  Combinatorics: 'Count the possibilities',
-  'Number Theory': 'Discover what adds up',
+  Algebra: 'Equations, inequalities, polynomials, sequences',
+  Geometry: 'Triangles, circles, areas, coordinates',
+  Combinatorics: 'Counting, probability, graphs, games',
+  'Number Theory': 'Divisibility, primes, remainders, digits',
 };
 
 const RING = 46;
@@ -46,11 +47,11 @@ export default function TopicTiles({ skills, still, paused, navigate }: TopicTil
     <section className="dh-topics" aria-labelledby="dh-topics-title">
       <div className="dh-section-head">
         <div>
-          <h2 id="dh-topics-title">Follow your curiosity</h2>
-          <p>Four different ways to see the world.</p>
+          <h2 id="dh-topics-title">The four topics</h2>
+          <p>Open one to practise it. The ring is your mastery so far.</p>
         </div>
         <button type="button" className="dh-link" onClick={() => navigate('learn')}>
-          Explore all <ArrowUpRight size={15} aria-hidden="true" />
+          All problems <ArrowUpRight size={15} aria-hidden="true" />
         </button>
       </div>
       <div className="dh-topic-grid" ref={gridRef}>
@@ -142,7 +143,7 @@ function TopicTile({ topic, index, mastery, shown, still, paused, onOpen }: Topi
       <span className="dh-topic-name">{topic}</span>
       <span className="dh-topic-desc">{DESCRIPTIONS[topic]}</span>
       <span className="dh-topic-foot">
-        <span>{mastery ? 'Your growing confidence' : 'A new world to explore'}</span>
+        <span>{mastery ? 'Mastery' : 'Not started'}</span>
         <strong>
           <span aria-hidden="true">
             <AnimatedNumber value={shown ? mastery : 0} format={(value) => formatLike(value, mastery)} />%

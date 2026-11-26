@@ -9,7 +9,7 @@
 
 import type { CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Check, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, CalendarCheck, Check, Trophy } from 'lucide-react';
 import type { Contest, Level, Topic, WeeklyChallenge } from '../../../shared/types';
 import { spring } from '../../lib/motion';
 
@@ -57,12 +57,9 @@ export default function NextAdventure({ weeklyChallenges, contests, onJoinChalle
     >
       <div className="dh-section-head">
         <div>
-          <h2 id="dh-next-title">Your next adventure</h2>
-          <p>A little friendly challenge.</p>
+          <h2 id="dh-next-title">Coming up</h2>
+          <p>Contests and weekly challenges you can join.</p>
         </div>
-        <span className="dh-next-icon" aria-hidden="true">
-          <Trophy size={18} />
-        </span>
       </div>
 
       {items > 0 && (
@@ -70,7 +67,7 @@ export default function NextAdventure({ weeklyChallenges, contests, onJoinChalle
           {weeklyChallenges.slice(0, 2).map((challenge, index) => (
             <m.li key={challenge.id} className="dh-pass" {...enter(index)}>
               <span className="dh-pass-icon" aria-hidden="true">
-                <Sparkles size={17} />
+                <CalendarCheck size={17} />
               </span>
               <span className="dh-pass-body">
                 {due(challenge.dueDate) && <span className="dh-pass-kind">Due {due(challenge.dueDate)}</span>}
@@ -122,19 +119,15 @@ export default function NextAdventure({ weeklyChallenges, contests, onJoinChalle
         <div className="dh-next-empty">
           <Summit still={still} />
           <div>
-            <h3>Set your own pace.</h3>
-            <p>While the next challenge takes shape, there’s a whole library to explore.</p>
-            <button type="button" className="dh-link" onClick={() => navigate('learn')}>
-              Choose a challenge <ArrowRight size={15} aria-hidden="true" />
+            <h3>Nothing is scheduled.</h3>
+            <p>The next contest is listed here as soon as it has a date. The Arena keeps the past ones to try.</p>
+            <button type="button" className="dh-link" onClick={() => navigate('compete')}>
+              Open the Arena <ArrowRight size={15} aria-hidden="true" />
             </button>
           </div>
         </div>
       )}
 
-      <a className="dh-sprint" href="/?preview=ios">
-        <span>Have a minute? Try a focus sprint.</span>
-        <ArrowUpRight size={16} aria-hidden="true" />
-      </a>
     </m.section>
   );
 }

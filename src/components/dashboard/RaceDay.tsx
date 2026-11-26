@@ -90,7 +90,7 @@ export default function RaceDay({ skills, minutesPerDay, navigate, still }: Race
         <span className="rd-flag" aria-hidden="true"><Flag size={18} /></span>
         <div className="rd-empty-copy">
           <h2 id="rd-title">Training for a date?</h2>
-          <p>Tell us the contest and the day. You’ll get a countdown and a plan that leads up to it.</p>
+          <p>Name the contest and the day. You get a countdown, and a plan for each week up to it.</p>
         </div>
         {editing ? form : <button type="button" className="rd-btn is-solid" onClick={() => setEditing(true)}><CalendarDays size={15} /> Set my contest day</button>}
       </section>
@@ -106,21 +106,18 @@ export default function RaceDay({ skills, minutesPerDay, navigate, still }: Race
         {past
           ? <><strong>—</strong><span>that day has passed</span></>
           : left === 0
-            ? <><strong className="is-word">Today</strong><span>go and enjoy it</span></>
+            ? <><strong className="is-word">Today</strong><span>it is today</span></>
             : <><strong>{left}</strong><span>{left === 1 ? 'day' : 'days'} to go</span></>}
       </div>
 
       <div className="rd-body">
         <header className="rd-head">
-          <div>
-            <p className="rd-kicker"><Flag size={13} aria-hidden="true" /> Race day</p>
-            <h2 id="rd-title">{race.contest}<span> · {longDate(race.date)}</span></h2>
-          </div>
+          <h2 id="rd-title">{race.contest}<span> · {longDate(race.date)}</span></h2>
           <button type="button" className="rd-icon" onClick={() => setEditing(value => !value)} aria-expanded={editing} aria-label="Change your contest day"><Pencil size={15} /></button>
         </header>
 
         {editing ? form : past ? (
-          <p className="rd-note">How did it go? Set your next one whenever you’re ready.</p>
+          <p className="rd-note">That contest is behind you. Set the next one when you know its date.</p>
         ) : thisWeek ? (
           <>
             <ol className="rd-track" aria-label={`${weeks.length} ${weeks.length === 1 ? 'week' : 'weeks'} to the contest`}>
@@ -167,7 +164,7 @@ export default function RaceDay({ skills, minutesPerDay, navigate, still }: Race
             </AnimatePresence>
           </>
         ) : (
-          <p className="rd-note">It’s today. Read every question twice, and trust the work you’ve put in.</p>
+          <p className="rd-note">Read every question twice before you start on it.</p>
         )}
       </div>
     </section>
