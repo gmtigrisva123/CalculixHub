@@ -16,7 +16,7 @@ export default function NumericAnswerGrid({ digits, value, onChange, disabled }:
         <div className="text-center font-mono text-lg">{selected[column] === '_' ? '·' : selected[column]}</div>
         <div role="group" aria-label={'Digit ' + (column + 1)} className="grid grid-cols-5 gap-1">
           {Array.from({ length: 10 }, (_, digit) => <button
-            key={digit} type="button" aria-label={'Column ' + (column + 1) + ', digit ' + digit}
+            key={digit} type="button" aria-label={'Digit ' + (column + 1) + ': ' + digit}
             aria-pressed={selected[column] === String(digit)}
             className={'min-h-11 lg:min-h-9 rounded-[10px] border font-mono text-[15px] transition-colors ' + (selected[column] === String(digit) ? 'border-accent bg-accent-muted text-accent-text font-semibold' : 'border-line text-content hover:bg-surface-sunken')}
             onClick={() => { const next = [...selected]; next[column] = String(digit); onChange(next.join('')); }}

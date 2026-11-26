@@ -221,7 +221,7 @@ async function runBot(person, browser) {
         const grid = page.getByRole('group', { name: /^Digit 1$/ });
         if (await visible(grid)) {
           const columns = await page.getByRole('group', { name: /^Digit \d+$/ }).count();
-          for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Column ${c}, digit ${Math.floor(random() * 10)}` }).click();
+          for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Digit ${c}: ${Math.floor(random() * 10)}`, exact: true }).click();
         } else if (await visible(page.getByPlaceholder(/numerical or algebraic/))) {
           await page.getByPlaceholder(/numerical or algebraic/).fill(String(Math.floor(random() * 200)));
         } else {
@@ -299,7 +299,7 @@ async function runBot(person, browser) {
         await settle(page, 300);
         if (random() < 0.15) { await page.getByRole('button', { name: /Pass this question/ }).click(); await settle(page, 500); continue; }
         const columns = await page.getByRole('group', { name: /^Digit \d+$/ }).count();
-        for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Column ${c}, digit ${Math.floor(random() * 10)}` }).click();
+        for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Digit ${c}: ${Math.floor(random() * 10)}`, exact: true }).click();
         await page.getByRole('button', { name: 'Submit answer' }).click();
         await settle(page, 700);
         submitted += 1;
