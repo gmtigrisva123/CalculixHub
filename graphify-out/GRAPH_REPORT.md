@@ -6,28 +6,28 @@
 - Unclassified: 112 file(s) not represented in the graph (top: .csv 51, .css 43, (none) 8)
 
 ## Summary
-- 7913 nodes · 13480 edges · 459 communities (411 shown, 48 thin omitted)
+- 7942 nodes · 13569 edges · 468 communities (422 shown, 46 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 198 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9adc5c01`
+- Built from commit: `c793d52b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - .agents/skills/hallmark/references/component-cookbook.md
 - .claude/skills/hallmark/references/component-cookbook.md
-- react
+- database.types.ts
 - ShadcnInstaller
 - Comments.tsx
 - kit.tsx
 - react
 - gray
-- PostComposer.tsx
+- Community.tsx
 - EpicycleStage.tsx
 - Opening.tsx
-- Community.tsx
+- feed.ts
 - community-social-setup.sql
 - DeskSection.tsx
 - Assets — sourcing canon for icons, logos, illustrations, photography, video
@@ -50,7 +50,7 @@
 - gemini.ts
 - package.json
 - Brand Guidelines v1.0
-- ai.ts
+- schemas.ts
 - color
 - ArenaStage.tsx
 - Design
@@ -93,7 +93,7 @@
 - compilerOptions
 - Design flow (default)
 - Design flow (default)
-- Arrow
+- plan.ts
 - shareCard.ts
 - lobbyModel.test.ts
 - auth.users
@@ -241,7 +241,7 @@
 - Landing and placement design refresh
 - with
 - admin.ts
-- Leaderboard.tsx
+- LearnCatalog.tsx
 - prototype-data.ts
 - Responsive
 - Primitive Tokens
@@ -255,7 +255,7 @@
 - Genre — modern-minimal
 - Genre — playful
 - Imagery kit — curated abstract assets, hosted, ready
-- Macrostructures
+- Inbox.tsx
 - adminRoutes
 - combinatorics
 - createApp
@@ -342,7 +342,7 @@
 - 20260926000400_realtime.sql
 - Colour
 - 20260801000200_learning.sql
-- Macrostructures
+- ai.ts
 - 33. CATEGORY-SPECIFIC BIAS
 - 13. COLOR & MATERIAL RULES
 - 4. HERO MINIMALISM RULES
@@ -364,7 +364,7 @@
 - Deploying to Cloudflare Workers
 - Learn bank and provisional rewards
 - 20260801000100_identity.sql
-- StageHandle
+- .agents/skills/hallmark/SKILL.md
 - vercel.json
 - The Animation Decision Framework
 - clip-path for Animation
@@ -426,11 +426,13 @@
 - dashboardModel.test.ts
 - 20260801000400_messaging.sql
 - input
+- .claude/skills/hallmark/SKILL.md
+- circles.ts
 - $type
 - radius
 - lg
 - sm
-- EngineStory.tsx
+- InstallAppButton.tsx
 - none
 - community-seed.sql
 - 16
@@ -443,19 +445,26 @@
 - primary-foreground
 - ring
 - secondary-foreground
-- engines
+- admin.ts
+- Eight enrichment archetypes
+- Eight enrichment archetypes
 - archiveSamples.test.ts
 - main.tsx
 - Panel.tsx
+- preflight.mjs
 - ref_path
+- BrandLogo.tsx
+- live.ts
+- clamp
+- Mentions.tsx
 
 ## God Nodes (most connected - your core abstractions)
-1. `react` - 122 edges
+1. `react` - 124 edges
 2. `motion` - 68 edges
-3. `lucide-react` - 59 edges
+3. `lucide-react` - 60 edges
 4. `TailwindConfigGenerator` - 58 edges
-5. `CommunityFeed()` - 49 edges
-6. `vitest` - 45 edges
+5. `CommunityFeed()` - 50 edges
+6. `vitest` - 47 edges
 7. `Topic` - 41 edges
 8. `CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION` - 39 edges
 9. `CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION` - 39 edges
@@ -463,68 +472,68 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `Hero space discipline` --references--> `clamp()`  [INFERRED]
-  .claude/skills/hallmark/references/hero-enrichment.md → src/components/landing/MarginRails.tsx
-- `Hero space discipline` --references--> `clamp()`  [INFERRED]
   .agents/skills/hallmark/references/hero-enrichment.md → src/components/landing/MarginRails.tsx
 - `Fluid scaling` --references--> `clamp()`  [INFERRED]
   .agents/skills/hallmark/references/responsive.md → src/components/landing/MarginRails.tsx
 - `Nav · footer · hero structural slop` --references--> `clamp()`  [INFERRED]
   .agents/skills/hallmark/references/slop-test.md → src/components/landing/MarginRails.tsx
+- `Hero space discipline` --references--> `clamp()`  [INFERRED]
+  .claude/skills/hallmark/references/hero-enrichment.md → src/components/landing/MarginRails.tsx
 - `Fluid scaling` --references--> `clamp()`  [INFERRED]
   .claude/skills/hallmark/references/responsive.md → src/components/landing/MarginRails.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (459 total, 48 thin omitted)
+## Communities (468 total, 46 thin omitted)
 
 ### Community 0 - ".agents/skills/hallmark/references/component-cookbook.md"
 Cohesion: 0.02
-Nodes (50): C1 · Outlined chip, C2 · Inline form-as-CTA, C3 · Typographic link, C4 · Sticky bottom bar, F1 · Bento grid, F2 · Sticky-scroll stack, F3 · Tabular spec sheet, F4 · Step sequence (+42 more)
+Nodes (48): C1 · Outlined chip, C2 · Inline form-as-CTA, C3 · Typographic link, C4 · Sticky bottom bar, F1 · Bento grid, F2 · Sticky-scroll stack, F3 · Tabular spec sheet, F4 · Step sequence (+40 more)
 
 ### Community 1 - ".claude/skills/hallmark/references/component-cookbook.md"
 Cohesion: 0.02
-Nodes (50): C1 · Outlined chip, C2 · Inline form-as-CTA, C3 · Typographic link, C4 · Sticky bottom bar, F1 · Bento grid, F2 · Sticky-scroll stack, F3 · Tabular spec sheet, F4 · Step sequence (+42 more)
+Nodes (48): C1 · Outlined chip, C2 · Inline form-as-CTA, C3 · Typographic link, C4 · Sticky bottom bar, F1 · Bento grid, F2 · Sticky-scroll stack, F3 · Tabular spec sheet, F4 · Step sequence (+40 more)
 
-### Community 2 - "react"
-Cohesion: 0.05
-Nodes (67): react, bucket(), clock(), conversationName(), dayKey(), dayLabel(), Filter, FILTERS (+59 more)
+### Community 2 - "database.types.ts"
+Cohesion: 0.07
+Nodes (40): Avatar(), curveThrough(), GhostPodium(), Leaderboard(), METALS, nameOf(), ordinalOf(), Podium() (+32 more)
 
 ### Community 3 - "ShadcnInstaller"
 Cohesion: 0.05
 Nodes (3): main(), ShadcnInstaller, TestShadcnInstaller
 
 ### Community 4 - "Comments.tsx"
-Cohesion: 0.10
-Nodes (63): react-dom, CommentComposer, CommentItem(), Comments(), CommentsProps, ComposerProps, enterSends(), MarkGlyph() (+55 more)
+Cohesion: 0.14
+Nodes (38): CommentItem(), CommentsProps, ComposerProps, enterSends(), MarkGlyph(), STROKES, MediaGrid(), MentionPerson (+30 more)
 
 ### Community 5 - "kit.tsx"
-Cohesion: 0.10
-Nodes (32): monthlyEquivalent(), FinalStage(), FinalStageProps, PathCard(), PathCardProps, CountUpProps, EyebrowProps, lineContainer (+24 more)
+Cohesion: 0.07
+Nodes (57): ArchiveLadder(), GLYPHS, MarqueeRow(), MarqueeRowProps, STEP, DeskSection(), beatAt(), BEATS (+49 more)
 
 ### Community 6 - "react"
-Cohesion: 0.06
-Nodes (48): lucide-react, motion, RadarChart(), RadarChartProps, RadarDatum, VelocityChartProps, VelocityDatum, LeaderboardAxis (+40 more)
+Cohesion: 0.07
+Nodes (43): lucide-react, motion, react, RadarChart(), RadarChartProps, RadarDatum, VelocityChartProps, VelocityDatum (+35 more)
 
 ### Community 7 - "gray"
 Cohesion: 0.05
 Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
 
-### Community 8 - "PostComposer.tsx"
-Cohesion: 0.11
-Nodes (24): composePost(), countHints(), KIND_META, parsePost(), POST_KINDS, PostKind, segmentBlocks(), segmentInline() (+16 more)
+### Community 8 - "Community.tsx"
+Cohesion: 0.10
+Nodes (41): Comments(), Community(), CommunityFeed(), ComposerState, excerpt(), LinkTarget, authorName(), disambiguateTitles() (+33 more)
 
 ### Community 9 - "EpicycleStage.tsx"
 Cohesion: 0.09
-Nodes (34): createStage(), EpicycleStage(), EpicycleStageProps, FIGURE_KEYS, makeGlow(), Phase, Spark, StageHooks (+26 more)
+Nodes (34): TOPIC_KEY, createStage(), EpicycleStage(), EpicycleStageProps, FIGURE_KEYS, makeGlow(), Phase, Spark (+26 more)
 
 ### Community 10 - "Opening.tsx"
-Cohesion: 0.11
-Nodes (20): afterChapters(), chaptersMounted(), onChapterDemand(), waiting, Band, GroundTones(), at(), band (+12 more)
+Cohesion: 0.10
+Nodes (28): onChapterDemand(), whenChapters(), Band, GroundTones(), at(), band, toneAt(), TONES (+20 more)
 
-### Community 11 - "Community.tsx"
-Cohesion: 0.08
-Nodes (50): Community(), CommunityFeed(), ComposerState, excerpt(), LinkTarget, disambiguateTitles(), extractTags(), Helper (+42 more)
+### Community 11 - "feed.ts"
+Cohesion: 0.13
+Nodes (28): COMMENT_MAX_LENGTH, createComment(), createPost(), decorateComments(), decoratePosts(), deleteComment(), deletePost(), describeError() (+20 more)
 
 ### Community 12 - "community-social-setup.sql"
 Cohesion: 0.05
@@ -532,7 +541,7 @@ Nodes (64): comment_likes_guard_update, comment_likes_notify, comment_likes_user
 
 ### Community 13 - "DeskSection.tsx"
 Cohesion: 0.09
-Nodes (38): A, B, C, DEMO, DEMO_POINTS, demoUpTo(), DeskSection(), FOOT (+30 more)
+Nodes (38): A, addDays(), B, C, CountdownCard(), DEMO, DEMO_POINTS, demoUpTo() (+30 more)
 
 ### Community 14 - "Assets — sourcing canon for icons, logos, illustrations, photography, video"
 Cohesion: 0.05
@@ -548,35 +557,35 @@ Nodes (43): Arbitrary Values, Aspect Ratio, Background Colors, Border Color, Bor
 
 ### Community 17 - "RaceDay.tsx"
 Cohesion: 0.12
-Nodes (30): longDate(), RaceDay(), readStored(), shortDate(), Vars, addDays(), CountdownCard(), day() (+22 more)
+Nodes (28): VelocityChart(), longDate(), RaceDay(), readStored(), shortDate(), Vars, day(), grouped() (+20 more)
 
 ### Community 18 - "MathText"
 Cohesion: 0.11
 Nodes (39): DailyReflexWidget(), StarState, ArchiveProse(), Block, cells(), chunks(), displayMath(), parse() (+31 more)
 
 ### Community 19 - "Dashboard.tsx"
-Cohesion: 0.08
-Nodes (46): Dashboard(), DashboardHero(), Words(), activeDays(), bestDay(), clampPercent(), dailyPoints(), DayPoints (+38 more)
+Cohesion: 0.09
+Nodes (41): Dashboard(), DashboardHero(), Words(), activeDays(), bestDay(), clampPercent(), dailyPoints(), DayPoints (+33 more)
 
 ### Community 20 - "Profile.tsx"
-Cohesion: 0.09
-Nodes (42): VelocityChart(), Compete(), ActivityGrid(), BADGE_ICON, CORNER, dayOf(), Dial(), EditDialog() (+34 more)
+Cohesion: 0.08
+Nodes (44): Compete(), ActivityGrid(), BADGE_ICON, CORNER, dayOf(), Dial(), EditDialog(), formatDay() (+36 more)
 
 ### Community 21 - ".agents/skills/hallmark/references/macrostructures.md"
-Cohesion: 0.05
-Nodes (23): 01 · Bento Grid, 02 · Long Document, 03 · Marquee Hero, 04 · Stat-Led, 05 · Workbench, 06 · Conversational FAQ, 07 · Manifesto, 08 · Photographic (+15 more)
+Cohesion: 0.04
+Nodes (28): 01 · Bento Grid, 02 · Long Document, 03 · Marquee Hero, 04 · Stat-Led, 05 · Workbench, 06 · Conversational FAQ, 07 · Manifesto, 08 · Photographic (+20 more)
 
 ### Community 22 - ".claude/skills/hallmark/references/macrostructures.md"
-Cohesion: 0.05
-Nodes (23): 01 · Bento Grid, 02 · Long Document, 03 · Marquee Hero, 04 · Stat-Led, 05 · Workbench, 06 · Conversational FAQ, 07 · Manifesto, 08 · Photographic (+15 more)
+Cohesion: 0.04
+Nodes (28): 01 · Bento Grid, 02 · Long Document, 03 · Marquee Hero, 04 · Stat-Led, 05 · Workbench, 06 · Conversational FAQ, 07 · Manifesto, 08 · Photographic (+20 more)
 
 ### Community 23 - "pipeline.ts"
 Cohesion: 0.09
-Nodes (30): RFC-9457, zod, BodyResult, clientKey(), problem(), ProblemCode, ProblemDocument, readJsonBody() (+22 more)
+Nodes (27): RFC-9457, DOCUMENT_HEADERS, Env, fetch(), handleApi(), ServerApp, withDocumentHeaders(), BodyResult (+19 more)
 
 ### Community 24 - "Workspace.tsx"
-Cohesion: 0.13
-Nodes (28): AchievementToast(), AchievementToastProps, PullToRefresh(), ScreenSkeleton(), AITutorChat, ScratchPaper, Workspace(), WorkspaceProps (+20 more)
+Cohesion: 0.11
+Nodes (32): AchievementToast(), AchievementToastProps, publicBase(), PullToRefresh(), ScreenSkeleton(), AITutorChat, ScratchPaper, Workspace() (+24 more)
 
 ### Community 25 - "cip/core.py"
 Cohesion: 0.07
@@ -588,43 +597,43 @@ Nodes (67): comment_likes_sync_count, comments_notify, comments_post_idx, commen
 
 ### Community 27 - "Settings.tsx"
 Cohesion: 0.08
-Nodes (36): ConfirmDialog(), ConfirmProps, DAYS, duration(), GOALS, GROUPS, hourLabel(), KEY_ROWS (+28 more)
+Nodes (35): ConfirmDialog(), ConfirmProps, DAYS, duration(), GOALS, GROUPS, hourLabel(), KEY_ROWS (+27 more)
 
 ### Community 28 - "json"
 Cohesion: 0.10
 Nodes (8): test_sync_parses_bundled_starter_template(), format_brief(), format_results(), main(), main(), _run(), test_flags_hardcoded_hex_sharing_line_with_token(), test_token_only_line_reports_no_violation()
 
 ### Community 29 - "irt.ts"
-Cohesion: 0.15
-Nodes (30): ENGINE_RUN, EngineRun, EngineStep, SIMULATED_LEARNER, simulatePlacement(), TIER_BANDS, PlacementExperience(), Props (+22 more)
+Cohesion: 0.13
+Nodes (32): certainty(), ENGINE_RUN, EngineRun, EngineStep, SIMULATED_LEARNER, simulatePlacement(), TIER_BANDS, SURE (+24 more)
 
 ### Community 30 - "generate-icons.py"
 Cohesion: 0.10
 Nodes (19): archive_figures(), bezier(), _blur(), check_sources(), draw_mark(), draw_tracked(), load_font(), main() (+11 more)
 
 ### Community 31 - "gemini.ts"
-Cohesion: 0.09
-Nodes (25): App, BuildAppOptions, BudgetDecision, claimAiCall(), readAiBudget(), AppConfig, loadConfig(), CounterState (+17 more)
+Cohesion: 0.08
+Nodes (27): BuildAppOptions, BudgetDecision, claimAiCall(), readAiBudget(), AppConfig, loadConfig(), CounterState, CounterStore (+19 more)
 
 ### Community 32 - "package.json"
 Cohesion: 0.07
-Nodes (29): config, devDependencies, autoprefixer@^10.4.21, @capacitor/cli@^8.4.2, @electric-sql/pglite@^0.5.4, tailwindcss@^4.1.14, tsx@^4.21.0, @types/express@^4.17.21 (+21 more)
+Nodes (36): config, devDependencies, autoprefixer@^10.4.21, @capacitor/cli@^8.4.2, @electric-sql/pglite@^0.5.4, tailwindcss@^4.1.14, tsx@^4.21.0, @types/express@^4.17.21 (+28 more)
 
 ### Community 33 - "Brand Guidelines v1.0"
 Cohesion: 0.05
 Nodes (37): 1. Color Palette, 2. Typography, 3. Logo Usage, 4. Voice & Tone, 5. Imagery Guidelines, 6. Design Components, Accessibility, AI Image Generation (+29 more)
 
-### Community 34 - "ai.ts"
-Cohesion: 0.09
-Nodes (33): @google/genai@^2.4.0, @google/genai, parseJsonReply(), createChatHandler(), createEvaluateHandler(), createRecommendHandler(), EVALUATOR_SYSTEM_INSTRUCTION, FALLBACK_ANALYSIS (+25 more)
+### Community 34 - "schemas.ts"
+Cohesion: 0.14
+Nodes (16): zod@^4.4.3, zod, ChatRequest, chatRequestSchema(), chatTurn(), EvaluateRequest, evaluateRequestSchema(), LEVELS (+8 more)
 
 ### Community 35 - "color"
 Cohesion: 0.11
 Nodes (19): $type, $value, background, foreground, muted-foreground, primary, primary-hover, secondary (+11 more)
 
 ### Community 36 - "ArenaStage.tsx"
-Cohesion: 0.11
-Nodes (34): ArenaStage(), ArenaStageProps, Cheer, clamp01(), easeInOut(), Glyph, makeSprite(), Palette (+26 more)
+Cohesion: 0.10
+Nodes (36): ArenaStage(), ArenaStageProps, Cheer, clamp01(), easeInOut(), Glyph, makeSprite(), Palette (+28 more)
 
 ### Community 37 - "Design"
 Cohesion: 0.06
@@ -635,12 +644,12 @@ Cohesion: 0.06
 Nodes (35): 1. Visual Communication First, 2. Minimal Text Integration, 3. Expert Craftsmanship, 4. Systematic Patterns, Analog Meditation, Approach, Canvas Boundaries, Canvas Design System (+27 more)
 
 ### Community 39 - "dependencies"
-Cohesion: 0.07
-Nodes (41): dependencies, @capacitor/core@^8.4.2, @capacitor/ios@^8.4.2, @capacitor/local-notifications@^8.2.1, dotenv@^17.2.3, express@^4.21.2, @fontsource-variable/caveat@^5.3.0, @fontsource-variable/geist@^5.3.0 (+33 more)
+Cohesion: 0.06
+Nodes (31): dependencies, @capacitor/core@^8.4.2, @capacitor/ios@^8.4.2, @capacitor/local-notifications@^8.2.1, dotenv@^17.2.3, express@^4.21.2, @fontsource-variable/caveat@^5.3.0, @fontsource-variable/geist@^5.3.0 (+23 more)
 
 ### Community 40 - "plan.ts"
-Cohesion: 0.07
-Nodes (47): AuthenticatedUser, BillingSettings, billingSettings(), chargedAmountMatches(), formEncode(), present(), StripeSubscription, SubscriptionRecord (+39 more)
+Cohesion: 0.15
+Nodes (24): AuthenticatedUser, BillingSettings, billingSettings(), chargedAmountMatches(), formEncode(), present(), StripeSubscription, SubscriptionRecord (+16 more)
 
 ### Community 41 - "CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION"
 Cohesion: 0.06
@@ -656,15 +665,15 @@ Nodes (34): 10. DEVICE MOCKUP FRAME RULE, 11. ONBOARDING FLOW RULE, 12. FIRST SC
 
 ### Community 44 - "vitest"
 Cohesion: 0.09
-Nodes (4): vitest, createTestDatabase(), MIGRATIONS_DIR, TestDatabase
+Nodes (6): vitest, KEEP, SOURCES, createTestDatabase(), MIGRATIONS_DIR, TestDatabase
 
 ### Community 45 - "ParticleField.tsx"
-Cohesion: 0.12
-Nodes (29): cache, Figure, figure(), FIGURE_NAMES, FIGURE_POINTS, fit(), shapes, COUNTS (+21 more)
+Cohesion: 0.09
+Nodes (37): cache, Figure, figure(), FIGURE_NAMES, FIGURE_POINTS, FigureName, fit(), shapes (+29 more)
 
 ### Community 46 - "macbookStage.ts"
-Cohesion: 0.10
-Nodes (30): MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX, root, clock(), GATE, MacBookPrototype() (+22 more)
+Cohesion: 0.09
+Nodes (27): BrandLogo(), clock(), GATE, MacBookPrototype(), Phase, SCENES, SHOTS, SPECS (+19 more)
 
 ### Community 47 - "WorkspaceShell.tsx"
 Cohesion: 0.11
@@ -711,16 +720,16 @@ Cohesion: 0.06
 Nodes (32): 1. Mobile-First Design, 2. Consistent Breakpoint Usage, 3. Test at Breakpoint Boundaries, 4. Use Container for Content Width, 5. Progressive Enhancement, 6. Avoid Too Many Breakpoints, Best Practices, Breakpoint System (+24 more)
 
 ### Community 58 - "generatedProblems.ts"
-Cohesion: 0.12
-Nodes (31): algebra(), area(), buildGeneratedProblems(), catalan(), choices(), choose(), combinatorics(), CONTESTS (+23 more)
+Cohesion: 0.10
+Nodes (34): questions, algebra(), area(), buildGeneratedProblems(), catalan(), choices(), choose(), combinatorics() (+26 more)
 
 ### Community 59 - "AITutorChat.tsx"
-Cohesion: 0.14
-Nodes (26): AITutorChat(), AITutorChatProps, hasMath(), newId(), offlineHint(), Shown, STARTERS, SYMBOLS (+18 more)
+Cohesion: 0.12
+Nodes (31): AITutorChat(), AITutorChatProps, hasMath(), newId(), offlineHint(), Shown, STARTERS, SYMBOLS (+23 more)
 
 ### Community 60 - "useAuth"
-Cohesion: 0.14
-Nodes (22): App(), IPhonePrototype, LearningApp(), MacBookPrototype, Workspace, BootVariant, bootVariant, liftBoot() (+14 more)
+Cohesion: 0.13
+Nodes (24): App(), IPhonePrototype, LearningApp(), MacBookPrototype, Workspace, BootVariant, bootVariant, liftBoot() (+16 more)
 
 ### Community 61 - "ArchiveHero.tsx"
 Cohesion: 0.12
@@ -743,8 +752,8 @@ Cohesion: 0.07
 Nodes (30): A hand-built SVG with declarative animation, A worked example — the bakery loaf as a single div, Animation choices for SVG in 2026, Anti-patterns of CSS art, Anti-patterns of declarative animation, Anti-patterns of generated stills, Anti-patterns of hand-built SVG, Anti-patterns of Three.js / WebGL (+22 more)
 
 ### Community 66 - "JourneyStack.tsx"
-Cohesion: 0.11
-Nodes (25): ArenaVisual(), CHAT, JourneyStack(), JourneyStackProps, LearnVisual(), MINI_LEVEL, MINI_PATHS, miniCurve() (+17 more)
+Cohesion: 0.16
+Nodes (18): ArenaVisual(), CHAT, JourneyStack(), JourneyStackProps, LearnVisual(), MINI_LEVEL, MINI_PATHS, miniCurve() (+10 more)
 
 ### Community 67 - "Custom theme — protocol"
 Cohesion: 0.07
@@ -786,17 +795,17 @@ Nodes (28): 0. Pre-flight scan, 1. Design-context gate, 2.5. Check project memor
 Cohesion: 0.07
 Nodes (28): 0. Pre-flight scan, 1. Design-context gate, 2.5. Check project memory, 2.6. Theme route — studied-DNA, catalog, or custom, 2. Pick a macrostructure FIRST, 3. Load the visual ruleset, 4. Decide on hero enrichment, 5. Preview (+20 more)
 
-### Community 77 - "Arrow"
-Cohesion: 0.22
-Nodes (17): whenChapters(), Arrow(), BrandMark(), LandingFooter(), LandingFooterProps, Letter(), jumpTo(), LandingNav() (+9 more)
+### Community 77 - "plan.ts"
+Cohesion: 0.11
+Nodes (30): dollars(), Entitlement, hasEntitlement(), monthlyEquivalent(), Plan, PLAN_ORDER, PlanFeature, planFromSubscription() (+22 more)
 
 ### Community 78 - "shareCard.ts"
 Cohesion: 0.18
 Nodes (16): ShareCard(), ShareCardProps, toBlob(), CARD_FONTS, CARD_HEIGHT, CARD_WIDTH, CardData, CardDesign (+8 more)
 
 ### Community 79 - "lobbyModel.test.ts"
-Cohesion: 0.15
-Nodes (19): Arena, ArenaAnswer, ArenaView, ArenaHeroProps, Countdown, Crest, CREST_HUES, crestFor() (+11 more)
+Cohesion: 0.18
+Nodes (16): Arena, ArenaHeroProps, Countdown, Crest, CREST_HUES, crestFor(), formatCountdown(), MatchStatus (+8 more)
 
 ### Community 80 - "auth.users"
 Cohesion: 0.10
@@ -831,20 +840,20 @@ Cohesion: 0.13
 Nodes (16): ago(), buildCleanupSql(), buildSeedSql(), catalogIds(), chunked(), engagement(), pickReaction(), quote() (+8 more)
 
 ### Community 88 - "Media.tsx"
-Cohesion: 0.17
-Nodes (18): Attachment, Lightbox(), useAttachments(), ACCEPTED_IMAGE_TYPES, canvasBlob(), EXTENSIONS, fitWithin(), MAX_COMMENT_IMAGES (+10 more)
+Cohesion: 0.12
+Nodes (27): CommentComposer, Attachment, AttachmentTray(), imageFiles(), Lightbox(), useAttachments(), ComposerMode, insideMath() (+19 more)
 
 ### Community 89 - "AuthContext.tsx"
-Cohesion: 0.16
-Nodes (22): AuthContext, AuthProvider(), AuthResult, AuthStatus, friendlyAuthError(), sessionMayExist(), deriveSignupUsername(), clearPendingSignup() (+14 more)
+Cohesion: 0.18
+Nodes (19): AuthContext, AuthProvider(), AuthResult, AuthStatus, friendlyAuthError(), sessionMayExist(), deriveSignupUsername(), clearPendingSignup() (+11 more)
 
 ### Community 90 - "Study — extracting design DNA from a screenshot or URL"
 Cohesion: 0.08
 Nodes (26): After the file is written, Emitting a `design.md` from `study`, Image-mode template, Junk-or-blocked detection, Limits and disclaimers, Refusal — when not to study, Remote URL safety, Source mode — image or URL (+18 more)
 
 ### Community 91 - "app.ts"
-Cohesion: 0.18
-Nodes (20): buildApp(), buildApp(), buildApp(), buildApp(), buildApp(), DOCUMENT_HEADERS, Env, fetch() (+12 more)
+Cohesion: 0.15
+Nodes (27): buildApp(), buildApp(), buildApp(), buildApp(), App, buildApp(), defaultCounterStore, parseJsonReply() (+19 more)
 
 ### Community 92 - "Asset Approval Checklist"
 Cohesion: 0.08
@@ -859,20 +868,20 @@ Cohesion: 0.08
 Nodes (26): After the file is written, Emitting a `design.md` from `study`, Image-mode template, Junk-or-blocked detection, Limits and disclaimers, Refusal — when not to study, Remote URL safety, Source mode — image or URL (+18 more)
 
 ### Community 95 - "model.ts"
-Cohesion: 0.07
-Nodes (38): matches(), Person, useMentions(), activeMention(), boardCountdown(), boardDay(), boardProblem(), BodyBlock (+30 more)
+Cohesion: 0.06
+Nodes (54): CODE_SOURCE, composePost(), HINT_SOURCE, KIND_TAGS, MATH_SOURCE, ParsedPost, parsePost(), POST_KINDS (+46 more)
 
 ### Community 96 - "generate.ts"
-Cohesion: 0.07
-Nodes (31): @supabase/supabase-js, count, dir, end, Entry, file, fresh, id (+23 more)
+Cohesion: 0.09
+Nodes (19): count, dir, end, Entry, file, fresh, id, lastUsed (+11 more)
 
 ### Community 97 - "routes/email.ts"
-Cohesion: 0.17
-Nodes (20): ClaimedEmail, clip(), createMailer(), escape(), failure(), layout(), Mailer, MailSettings (+12 more)
+Cohesion: 0.15
+Nodes (24): adminClient(), ClaimedEmail, clip(), createMailer(), escape(), failure(), layout(), Mailer (+16 more)
 
 ### Community 98 - "Arena.tsx"
-Cohesion: 0.17
-Nodes (7): Arena(), ArenaRules(), RULES, BoardEmpty(), TicketSkeleton(), NumericAnswerGrid(), readArenaResponse()
+Cohesion: 0.19
+Nodes (6): Arena(), ArenaRules(), RULES, BoardEmpty(), TicketSkeleton(), readArenaResponse()
 
 ### Community 99 - "Color Palette Management"
 Cohesion: 0.08
@@ -895,8 +904,8 @@ Cohesion: 0.10
 Nodes (37): email_outbox_kick, email_outbox_notification_key, email_outbox_pending_idx, email_outbox_post_key, notifications_enqueue_email, posts_enqueue_email, public.claim_email_outbox(), public.email_outbox (+29 more)
 
 ### Community 104 - "WelcomeScreen.tsx"
-Cohesion: 0.13
-Nodes (19): Reveal(), SpringBar(), BANK, DOMAINS, GRAPH, GRAPH_NODES, GraphNode, SELF_ORIGIN (+11 more)
+Cohesion: 0.14
+Nodes (20): Reveal(), SpringBar(), BANK, DOMAINS, GRAPH, GRAPH_NODES, GraphNode, SELF_ORIGIN (+12 more)
 
 ### Community 105 - "Animation Audit Playbook"
 Cohesion: 0.09
@@ -939,8 +948,8 @@ Cohesion: 0.09
 Nodes (20): 1. Database, 2. Stripe, 3. Server environment, 4. Check it, Turning checkout on, What happens to everyone when checkout turns on, Before charging anyone, Business model (+12 more)
 
 ### Community 115 - "offline.ts"
-Cohesion: 0.12
-Nodes (20): publicBase(), ConnectivityDeps, ConnectivityMonitor, createConnectivityMonitor(), OFFLINE_GRACE_MS, OFFLINE_RECHECK_MS, PROBE_TIMEOUT_MS, reachNetwork() (+12 more)
+Cohesion: 0.14
+Nodes (17): ConnectivityDeps, ConnectivityMonitor, createConnectivityMonitor(), OFFLINE_GRACE_MS, OFFLINE_RECHECK_MS, PROBE_TIMEOUT_MS, reachNetwork(), setup() (+9 more)
 
 ### Community 116 - "action.mjs"
 Cohesion: 0.12
@@ -987,12 +996,12 @@ Cohesion: 0.11
 Nodes (20): needs, runs-on, steps, jobs, build, setup, name, on (+12 more)
 
 ### Community 127 - "identities.mjs"
-Cohesion: 0.09
-Nodes (28): argv, ADMIN_DUTIES, FOCUS, FOCUS_PLAN, fold(), LEVELS, main(), MIX (+20 more)
+Cohesion: 0.13
+Nodes (19): argv, ADMIN_DUTIES, FOCUS, FOCUS_PLAN, fold(), LEVELS, main(), MIX (+11 more)
 
 ### Community 128 - "TopicBoards.tsx"
-Cohesion: 0.12
-Nodes (27): AlgebraBoard(), Board(), BoardProps, ChalkFilter(), CombinatoricsBoard(), Dot(), GeometryBoard(), LEAVES (+19 more)
+Cohesion: 0.16
+Nodes (21): AlgebraBoard(), Board(), BoardProps, CombinatoricsBoard(), Dot(), GeometryBoard(), LEAVES, letters (+13 more)
 
 ### Community 129 - "Major (looks AI-generated)"
 Cohesion: 0.10
@@ -1155,8 +1164,8 @@ Cohesion: 0.13
 Nodes (16): dependencies, @faker-js/faker@^10.6.0, playwright@^1.56.1, description, engines, node, name, private (+8 more)
 
 ### Community 171 - "geminiClient.ts"
-Cohesion: 0.13
-Nodes (26): looksOdd(), Phase, TutorConnect(), TutorConnectProps, cacheModel(), connectedModel(), describeError(), discoverModels() (+18 more)
+Cohesion: 0.15
+Nodes (22): looksOdd(), Phase, TutorConnect(), TutorConnectProps, cacheModel(), describeError(), discoverModels(), GEMINI_KEY_STORAGE (+14 more)
 
 ### Community 172 - "ExamArchive.tsx"
 Cohesion: 0.26
@@ -1184,15 +1193,15 @@ Nodes (15): 1. Frequency — how often will a user see this?, 2. Purpose — why
 
 ### Community 179 - "daemon.mjs"
 Cohesion: 0.12
-Nodes (10): commands, events, [id, portArg, deviceArg = 'desktop'], lastActivity, log(), port, PROFILES, SIZES (+2 more)
+Nodes (9): commands, events, [id, portArg, deviceArg = 'desktop'], lastActivity, log(), port, PROFILES, SIZES (+1 more)
 
 ### Community 180 - "types.ts"
-Cohesion: 0.04
-Nodes (69): AIRecommendation, AnswerMode, CommunityDiscussion, CompetitionLevel, Contest, LeaderboardEntry, Level, Problem (+61 more)
+Cohesion: 0.07
+Nodes (42): ArenaAnswer, ArenaView, AIRecommendation, AnswerMode, Contest, LeaderboardEntry, Level, Problem (+34 more)
 
 ### Community 181 - "ArenaHero.tsx"
-Cohesion: 0.22
-Nodes (15): ArenaHero(), Countdown(), Digit(), findTicket(), HOUSE_NOTES, JOURNEY, Journey(), MARKS (+7 more)
+Cohesion: 0.23
+Nodes (14): ArenaHero(), Countdown(), Digit(), findTicket(), HOUSE_NOTES, JOURNEY, Journey(), MARKS (+6 more)
 
 ### Community 182 - "buildGeneratedProblems"
 Cohesion: 0.15
@@ -1227,8 +1236,8 @@ Cohesion: 0.16
 Nodes (27): comment_likes_sync_count, comments_post_idx, comments_sync_post_count, comments_touch_updated_at, communities_slug_key, community_members_sync_count, community_members_user_idx, follows_sync_counts (+19 more)
 
 ### Community 190 - "WelcomeScreen"
-Cohesion: 0.20
-Nodes (5): WelcomeScreen(), AuthContextValue, reliability(), thetaToMastery(), Level
+Cohesion: 0.24
+Nodes (4): WelcomeScreen(), AuthContextValue, Level, SocialProvider
 
 ### Community 191 - "Microinteraction tells"
 Cohesion: 0.14
@@ -1315,8 +1324,8 @@ Cohesion: 0.14
 Nodes (14): scripts, build, build:cloudflare, build:vercel, clean, deploy:cloudflare, dev, icons (+6 more)
 
 ### Community 213 - "Hero enrichment — when, what, and how much"
-Cohesion: 0.09
-Nodes (22): Animation discipline (hero specifically), Common mistakes — and the fixes, E1 · Demo Video — Clipped-by-viewport-edge, E2 · Demo Video — Full-bleed muted loop with ghost overlay, E3 · Mock App Screenshot — Browser-framed split, E4 · Mock App Screenshot — Floating no-frame, E5 · Custom Illustration Centerpiece, E6 · Animated Loop — pure CSS / SVG / Motion (+14 more)
+Cohesion: 0.15
+Nodes (13): Animation discipline (hero specifically), Common mistakes — and the fixes, Eyeball or ask — the decision protocol, Hero enrichment — when, what, and how much, Hero shape polish — patterns beyond enrichment, HP1 · Vertical-rail title, HP2 · Marquee-overflow, HP3 · Cursor-spotlight (+5 more)
 
 ### Community 214 - "The six axes"
 Cohesion: 0.15
@@ -1343,8 +1352,8 @@ Cohesion: 0.15
 Nodes (12): Categories, Dark Mode, File Organization, Layer 1: Primitive Tokens, Layer 2: Semantic Tokens, Layer 3: Component Tokens, Layer Overview, Migration from Flat Tokens (+4 more)
 
 ### Community 220 - "Hero enrichment — when, what, and how much"
-Cohesion: 0.09
-Nodes (23): Animation discipline (hero specifically), Common mistakes — and the fixes, E1 · Demo Video — Clipped-by-viewport-edge, E2 · Demo Video — Full-bleed muted loop with ghost overlay, E3 · Mock App Screenshot — Browser-framed split, E4 · Mock App Screenshot — Floating no-frame, E5 · Custom Illustration Centerpiece, E6 · Animated Loop — pure CSS / SVG / Motion (+15 more)
+Cohesion: 0.15
+Nodes (13): Animation discipline (hero specifically), Common mistakes — and the fixes, Eyeball or ask — the decision protocol, Hero enrichment — when, what, and how much, Hero shape polish — patterns beyond enrichment, HP1 · Vertical-rail title, HP2 · Marquee-overflow, HP3 · Cursor-spotlight (+5 more)
 
 ### Community 221 - "The six axes"
 Cohesion: 0.15
@@ -1359,20 +1368,20 @@ Cohesion: 0.15
 Nodes (12): jobs, setup, name, on, workflow_dispatch, runs-on, steps, uses (+4 more)
 
 ### Community 225 - "admin.ts"
-Cohesion: 0.12
-Nodes (19): checkCode(), hashCode(), mintAdminSession(), validAdminSession(), recordAttempt(), RecordAttemptInput, RecordAttemptOutcome, adminClient() (+11 more)
+Cohesion: 0.15
+Nodes (10): recordAttempt(), RecordAttemptInput, RecordAttemptOutcome, identityClient(), verifyAccessToken(), config(), DEV_ORIGINS, envSchema (+2 more)
 
-### Community 226 - "Leaderboard.tsx"
-Cohesion: 0.28
-Nodes (11): Avatar(), curveThrough(), GhostPodium(), Leaderboard(), METALS, nameOf(), ordinalOf(), Podium() (+3 more)
+### Community 226 - "LearnCatalog.tsx"
+Cohesion: 0.08
+Nodes (23): CompetitionLevel, Attempt, CATALOG_PAGE, CatalogStatus, CatalogView, glide, INITIAL_VIEW, LearnCatalog() (+15 more)
 
 ### Community 227 - "prototype-data.ts"
 Cohesion: 0.17
 Nodes (9): activeStreak(), DEFAULT_PROFILE, ids, localDay(), PrototypeProfile, PrototypeQuestion, QUESTIONS, Topic (+1 more)
 
 ### Community 228 - "Responsive"
-Cohesion: 0.11
-Nodes (18): Hero space discipline, Bans, Breakpoints, Clickable text — never wraps, Fluid scaling, Images, Internationalisation, Mobile — non-negotiable (+10 more)
+Cohesion: 0.17
+Nodes (12): Bans, Breakpoints, Clickable text — never wraps, Images, Internationalisation, Mobile — non-negotiable, Pointer and hover queries, Principles (+4 more)
 
 ### Community 229 - "Primitive Tokens"
 Cohesion: 0.17
@@ -1418,9 +1427,9 @@ Nodes (10): Genre — playful, Nav and footer voice, Reference register, Stamp s
 Cohesion: 0.18
 Nodes (11): Anti-patterns, Categories, Decoration, Empty state, Generation pipeline (out-of-band, one-time), Imagery kit — curated abstract assets, hosted, ready, Layered hero composition (the masterclass move), Manifest (placeholder until generation pass ships) (+3 more)
 
-### Community 240 - "Macrostructures"
-Cohesion: 0.29
-Nodes (7): Diversification rule (mandatory), Hero polish patterns, How to pick, Macrostructures, Nav and footer voice, SaaS page sequence, The 21 macrostructures — index
+### Community 240 - "Inbox.tsx"
+Cohesion: 0.12
+Nodes (29): bucket(), clock(), conversationName(), dayKey(), dayLabel(), Filter, FILTERS, Headline() (+21 more)
 
 ### Community 241 - "adminRoutes"
 Cohesion: 0.20
@@ -1688,14 +1697,14 @@ Nodes (8): jobs, test, name, on, workflow_dispatch, run, runs-on, steps
 
 ### Community 312 - "Opening.tsx"
 Cohesion: 0.10
-Nodes (30): ARCHIVE_CONTESTS, ARCHIVE_FIGURES, ArchiveFamilyFigure, ArchiveLadder(), GLYPHS, MarqueeRow(), MarqueeRowProps, STEP (+22 more)
+Nodes (27): ARCHIVE_CONTESTS, ARCHIVE_FIGURES, ArchiveFamilyFigure, afterChapters(), chaptersMounted(), waiting, FaqSection(), HeroGlow() (+19 more)
 
 ### Community 313 - "Component Building Principles"
 Cohesion: 0.25
 Nodes (8): Animate enter states with @starting-style, Buttons must feel responsive, Component Building Principles, Make popovers origin-aware, Never animate from scale(0), Tooltips: skip delay on subsequent hovers, Use blur to mask imperfect transitions, Use CSS transitions over keyframes for interruptible UI
 
 ### Community 314 - "design.md — opt-in portable design system"
-Cohesion: 0.25
+Cohesion: 0.20
 Nodes (8): After the file is written, CTA — surface the offer in the Step 5 preview, design.md — opt-in portable design system, Format (the tight version), Scope, Triggers (phrase-only — no new verb), Two emission paths (default vs study), Why opt-in (not auto-emit)
 
 ### Community 315 - "Export formats"
@@ -1711,7 +1720,7 @@ Cohesion: 0.25
 Nodes (8): Animate enter states with @starting-style, Buttons must feel responsive, Component Building Principles, Make popovers origin-aware, Never animate from scale(0), Tooltips: skip delay on subsequent hovers, Use blur to mask imperfect transitions, Use CSS transitions over keyframes for interruptible UI
 
 ### Community 318 - "design.md — opt-in portable design system"
-Cohesion: 0.25
+Cohesion: 0.20
 Nodes (8): After the file is written, CTA — surface the offer in the Step 5 preview, design.md — opt-in portable design system, Format (the tight version), Scope, Triggers (phrase-only — no new verb), Two emission paths (default vs study), Why opt-in (not auto-emit)
 
 ### Community 319 - "Export formats"
@@ -1746,9 +1755,9 @@ Nodes (7): Bans, Colour, Contrast, Dark mode recipe, Palette construction, Princ
 Cohesion: 0.35
 Nodes (10): problem_attempts_apply_stats, problem_attempts_first_solve_key, problem_attempts_problem_idx, problem_attempts_user_idx, public.apply_attempt_to_stats(), public.leaderboard_view, public.problem_attempts, public.skill_mastery (+2 more)
 
-### Community 331 - "Macrostructures"
-Cohesion: 0.29
-Nodes (7): Diversification rule (mandatory), Hero polish patterns, How to pick, Macrostructures, Nav and footer voice, SaaS page sequence, The 21 macrostructures — index
+### Community 331 - "ai.ts"
+Cohesion: 0.13
+Nodes (22): @supabase/supabase-js, loadProblemBank(), findProblem(), initialContests, initialDiscussions, initialLeaderboard, initialWeeklyChallenges, problems (+14 more)
 
 ### Community 332 - "33. CATEGORY-SPECIFIC BIAS"
 Cohesion: 0.29
@@ -1795,8 +1804,8 @@ Cohesion: 0.29
 Nodes (7): Bans, Colour, Contrast, Dark mode recipe, Palette construction, Principles, Use of the accent
 
 ### Community 344 - "figure.ts"
-Cohesion: 0.13
-Nodes (21): DEFAULT_AVATAR_GREY, DefaultAvatar(), FigureAvatar(), FILL, cache, Figure, figureFor(), gcd() (+13 more)
+Cohesion: 0.16
+Nodes (17): cache, Figure, figureFor(), gcd(), hashSeed(), hypotrochoid(), LISSAJOUS, lissajous() (+9 more)
 
 ### Community 345 - "33. CATEGORY-SPECIFIC BIAS"
 Cohesion: 0.29
@@ -1829,6 +1838,10 @@ Nodes (6): Attempts and storage limits, Calibration work that remains, Current r
 ### Community 353 - "20260801000100_identity.sql"
 Cohesion: 0.38
 Nodes (9): follows_following_idx, on_auth_user_created, profiles_created_at_idx, profiles_touch_updated_at, profiles_username_lower_key, public.follows, public.handle_new_user(), public.profiles (+1 more)
+
+### Community 354 - ".agents/skills/hallmark/SKILL.md"
+Cohesion: 0.20
+Nodes (4): H7 · Demo Video — Clipped-by-viewport-edge, H9 · Custom Illustration Centerpiece, Preview-block worked examples, `hallmark audit`
 
 ### Community 355 - "vercel.json"
 Cohesion: 0.29
@@ -2028,7 +2041,7 @@ Nodes (3): graphify, Instructions for Claude, Weekly Arena routine (standing ins
 
 ### Community 414 - "dashboardModel.test.ts"
 Cohesion: 0.17
-Nodes (12): buildMachine(), dft(), Figure, gcd(), koch(), machineFor(), machines, Point (+4 more)
+Nodes (14): days, timeline, buildMachine(), dft(), FIGURES, gcd(), koch(), machineFor() (+6 more)
 
 ### Community 415 - "20260801000400_messaging.sql"
 Cohesion: 0.44
@@ -2037,6 +2050,14 @@ Nodes (8): conversation_participants_user_idx, messages_conversation_idx, messag
 ### Community 416 - "input"
 Cohesion: 0.29
 Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
+
+### Community 417 - ".claude/skills/hallmark/SKILL.md"
+Cohesion: 0.20
+Nodes (4): H7 · Demo Video — Clipped-by-viewport-edge, H9 · Custom Illustration Centerpiece, Preview-block worked examples, `hallmark audit`
+
+### Community 418 - "circles.ts"
+Cohesion: 0.16
+Nodes (14): CircleHeader(), CircleList(), MemberRing(), StartCircleDialog(), plural(), Circle, CIRCLE_ABOUT_MAX, CIRCLE_NAME_MAX (+6 more)
 
 ### Community 419 - "$type"
 Cohesion: 0.60
@@ -2054,9 +2075,9 @@ Nodes (5): lg, $type, $value, lg, lg
 Cohesion: 0.60
 Nodes (5): sm, sm, sm, $type, $value
 
-### Community 423 - "EngineStory.tsx"
-Cohesion: 0.23
-Nodes (11): certainty(), beatAt(), BEATS, DOMAIN_TONE, EngineStory(), EngineStoryProps, RUG_LEVEL, smooth() (+3 more)
+### Community 423 - "InstallAppButton.tsx"
+Cohesion: 0.18
+Nodes (15): InstallAppButton(), InstallAppButtonProps, InstallPath, InstallSheet(), InstallSheetProps, IosSteps(), ManualSteps(), Step() (+7 more)
 
 ### Community 424 - "none"
 Cohesion: 0.67
@@ -2106,41 +2127,73 @@ Nodes (3): ring, $type, $value
 Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
-### Community 436 - "engines"
-Cohesion: 0.67
-Nodes (3): engines, node, npm
+### Community 436 - "admin.ts"
+Cohesion: 0.35
+Nodes (8): checkCode(), hashCode(), mintAdminSession(), validAdminSession(), adminRoutes(), arenaSchema, attempts, db
+
+### Community 457 - "Eight enrichment archetypes"
+Cohesion: 0.22
+Nodes (9): E1 · Demo Video — Clipped-by-viewport-edge, E2 · Demo Video — Full-bleed muted loop with ghost overlay, E3 · Mock App Screenshot — Browser-framed split, E4 · Mock App Screenshot — Floating no-frame, E5 · Custom Illustration Centerpiece, E6 · Animated Loop — pure CSS / SVG / Motion, E7 · Abstract Background — subtle gradient + grain, E8 · Hero Photography — single tightly-cropped image (+1 more)
+
+### Community 458 - "Eight enrichment archetypes"
+Cohesion: 0.22
+Nodes (9): E1 · Demo Video — Clipped-by-viewport-edge, E2 · Demo Video — Full-bleed muted loop with ghost overlay, E3 · Mock App Screenshot — Browser-framed split, E4 · Mock App Screenshot — Floating no-frame, E5 · Custom Illustration Centerpiece, E6 · Animated Loop — pure CSS / SVG / Motion, E7 · Abstract Background — subtle gradient + grain, E8 · Hero Photography — single tightly-cropped image (+1 more)
 
 ### Community 459 - "archiveSamples.test.ts"
 Cohesion: 0.33
 Nodes (4): katex@^0.18.1, katex, ARCHIVE_SAMPLES, ArchiveSample
 
+### Community 460 - "main.tsx"
+Cohesion: 0.14
+Nodes (7): react-dom@^19.0.1, @vercel/analytics@^2.0.1, @vercel/speed-insights@^2.0.0, react-dom, @vercel/analytics, @vercel/speed-insights, MotionProvider()
+
 ### Community 461 - "Panel.tsx"
-Cohesion: 0.13
-Nodes (10): PageHeadProps, Tally(), Elevation, ELEVATION, PanelProps, RADIUS, Tone, TONE (+2 more)
+Cohesion: 0.15
+Nodes (9): PageHeadProps, Tally(), Elevation, ELEVATION, PanelProps, RADIUS, Tone, TONE (+1 more)
+
+### Community 462 - "preflight.mjs"
+Cohesion: 0.33
+Nodes (8): BASE_URL, OUT, argv, fail(), main(), pass(), rpc(), supabaseFromBundle()
 
 ### Community 463 - "ref_path"
+Cohesion: 0.22
+Nodes (7): @tailwindcss/vite@^4.1.14, vite@^6.2.3, @vitejs/plugin-react@^5.0.4, vite@^6.2.3, @tailwindcss/vite, vite, @vitejs/plugin-react
+
+### Community 464 - "BrandLogo.tsx"
+Cohesion: 0.42
+Nodes (5): MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX, root
+
+### Community 465 - "live.ts"
+Cohesion: 0.32
+Nodes (7): flattenPresence(), presenceRoom(), PresenceState, PresentPerson, Typer, useCommunityPresence(), useTyping()
+
+### Community 466 - "clamp"
 Cohesion: 0.29
-Nodes (5): @tailwindcss/vite@^4.1.14, vite@^6.2.3, vite@^6.2.3, @tailwindcss/vite, vite
+Nodes (7): Hero space discipline, Fluid scaling, Nav · footer · hero structural slop, Hero space discipline, Fluid scaling, Nav · footer · hero structural slop, clamp()
+
+### Community 467 - "Mentions.tsx"
+Cohesion: 0.52
+Nodes (6): matches(), Person, useMentions(), activeMention(), completeMention(), searchProfiles()
 
 ## Knowledge Gaps
 - **4 isolated node(s):** `Capacitor`, `UIKit`, `RFC-9457`, `PackageDescription`
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4169 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4173 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **46 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `clamp()` connect `Responsive` to `JourneyStack.tsx`, `Hero enrichment — when, what, and how much`?**
-  _High betweenness centrality (0.145) - this node is a cross-community bridge._
+- **Why does `clamp()` connect `clamp` to `ParticleField.tsx`?**
+  _High betweenness centrality (0.160) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Capacitor`, `UIKit`, `RFC-9457` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
-  _Cohesion score 0.019801980198019802 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `react` to `TopicBoards.tsx`, `Comments.tsx`, `kit.tsx`, `react`, `PostComposer.tsx`, `EpicycleStage.tsx`, `Opening.tsx`, `Community.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `MathText`, `Dashboard.tsx`, `Profile.tsx`, `Workspace.tsx`, `Settings.tsx`, `irt.ts`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `dependencies`, `EngineStory.tsx`, `plan.ts`, `geminiClient.ts`, `ExamArchive.tsx`, `ParticleField.tsx`, `macbookStage.ts`, `WorkspaceShell.tsx`, `ThemeContext.tsx`, `types.ts`, `ArenaHero.tsx`, `Opening.tsx`, `AITutorChat.tsx`, `useAuth`, `ArchiveHero.tsx`, `archiveModel.ts`, `JourneyStack.tsx`, `main.tsx`, `Arrow`, `shareCard.ts`, `lobbyModel.test.ts`, `Panel.tsx`, `Media.tsx`, `figure.ts`, `AuthContext.tsx`, `model.ts`, `Arena.tsx`, `Leaderboard.tsx`, `WelcomeScreen.tsx`, `ChordPlayground.tsx`, `offline.ts`?**
-  _High betweenness centrality (0.101) - this node is a cross-community bridge._
+  _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `react` to `TopicBoards.tsx`, `database.types.ts`, `Comments.tsx`, `kit.tsx`, `Community.tsx`, `EpicycleStage.tsx`, `Opening.tsx`, `feed.ts`, `DeskSection.tsx`, `RaceDay.tsx`, `MathText`, `Dashboard.tsx`, `Profile.tsx`, `Workspace.tsx`, `Settings.tsx`, `irt.ts`, `package.json`, `circles.ts`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `dependencies`, `InstallAppButton.tsx`, `geminiClient.ts`, `ExamArchive.tsx`, `ParticleField.tsx`, `macbookStage.ts`, `WorkspaceShell.tsx`, `ThemeContext.tsx`, `types.ts`, `ArenaHero.tsx`, `Opening.tsx`, `AITutorChat.tsx`, `useAuth`, `ArchiveHero.tsx`, `archiveModel.ts`, `JourneyStack.tsx`, `main.tsx`, `plan.ts`, `shareCard.ts`, `lobbyModel.test.ts`, `Panel.tsx`, `live.ts`, `Mentions.tsx`, `Media.tsx`, `AuthContext.tsx`, `model.ts`, `Arena.tsx`, `LearnCatalog.tsx`, `WelcomeScreen.tsx`, `ChordPlayground.tsx`, `Inbox.tsx`, `offline.ts`?**
+  _High betweenness centrality (0.113) - this node is a cross-community bridge._
 - **Should `.claude/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
-  _Cohesion score 0.019801980198019802 - nodes in this community are weakly interconnected._
-- **Why does `Hero enrichment — when, what, and how much` connect `Hero enrichment — when, what, and how much` to `.claude/skills/hallmark/references/macrostructures.md`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+  _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
+- **Why does `Slop test — 58 gates + pre-emit self-critique` connect `Slop test — 58 gates + pre-emit self-critique` to `clamp`, `.agents/skills/hallmark/SKILL.md`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._

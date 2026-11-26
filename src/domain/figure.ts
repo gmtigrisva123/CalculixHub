@@ -87,8 +87,12 @@ const ROSES: ReadonlyArray<readonly [n: number, d: number, petals: number | null
 
 function rose(n: number, d: number): Point[] {
   // The curve closes after d turns when n·d is odd, and after 2d otherwise.
-  const turns = (n * d) % 2 === 1 ? d : 2 * d;
-  return sample(turns / 2, 36 * turns, (t) => {
+  const odd = (n * d) % 2 === 1;
+  const turns = odd ? d : 2 * d;
+  // Enough points for every petal to be a curve: a fixed number per turn drew
+  // the seven-petal rose as a heptagon.
+  const petals = odd ? n : 2 * n;
+  return sample(turns / 2, Math.max(48, 26 * petals), (t) => {
     const r = R * Math.cos((n / d) * t);
     return [r * Math.cos(t), r * Math.sin(t)];
   });
@@ -105,11 +109,15 @@ function star(n: number, k: number): Point[] {
   return points;
 }
 
-const LISSAJOUS: ReadonlyArray<readonly [a: number, b: number]> = [[1, 2], [2, 3], [3, 4], [3, 5], [1, 3], [2, 5], [4, 5]];
+// Ratios up to 3:5. Denser ones are a scribble at the size an avatar is drawn.
+const LISSAJOUS: ReadonlyArray<readonly [a: number, b: number]> = [[1, 2], [2, 3], [3, 4], [3, 5], [1, 3], [2, 5]];
 
 function lissajous(a: number, b: number): Point[] {
   const r = R * 0.94;
-  return sample(1, 160, (t) => [r * Math.sin(a * t + Math.PI / 2), r * Math.sin(b * t)]);
+  // A quarter-turn phase retraces the curve when a is even (it is drawn out and
+  // back along one arc); an eighth of a turn opens it into a closed figure.
+  const phase = a % 2 === 0 ? Math.PI / 4 : Math.PI / 2;
+  return sample(1, 36 * (a + b), (t) => [r * Math.sin(a * t + phase), r * Math.sin(b * t)]);
 }
 
 // A point at distance d from the centre of a circle of radius r rolling inside one of radius big.

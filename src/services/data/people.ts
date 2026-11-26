@@ -149,13 +149,15 @@ export function useFollowing(viewerId: string | null): Following {
   const [ids, setIds] = useState<ReadonlySet<string>>(() => new Set());
   const current = useRef(ids);
   current.current = ids;
+  // A read that started before a press must not land after it and undo what the
+  // press showed; a second press on the same person waits for the first.
+  const sequence = useRef(0);
+  const pending = useRef(new Set<string>());
 
   const load = useCallback(async () => {
-    if (!viewerId) {
-      setIds(new Set());
-      return;
-    }
-    setIds(await fetchFollowingIds(viewerId));
+    const mine = ++sequence.current;
+    const next = viewerId ? await fetchFollowingIds(viewerId) : new Set<string>();
+    if (mine === sequence.current) setIds(next);
   }, [viewerId]);
 
   useEffect(() => {
@@ -167,21 +169,29 @@ export function useFollowing(viewerId: string | null): Following {
     async (targetId) => {
       const following = current.current.has(targetId);
       if (!viewerId) return { ok: false, error: 'Sign in to follow people.', following };
+      if (pending.current.has(targetId)) return { ok: true, following };
 
+      pending.current.add(targetId);
+      sequence.current += 1;
       const optimistic = new Set(current.current);
       if (following) optimistic.delete(targetId);
       else optimistic.add(targetId);
       setIds(optimistic);
 
-      const result = await setFollowing({ followerId: viewerId, targetId, following });
-      if (!result.ok) {
-        const reverted = new Set(current.current);
-        if (following) reverted.add(targetId);
-        else reverted.delete(targetId);
-        setIds(reverted);
-        return { ...result, following };
+      try {
+        const result = await setFollowing({ followerId: viewerId, targetId, following });
+        if (!result.ok) {
+          sequence.current += 1;
+          const reverted = new Set(current.current);
+          if (following) reverted.add(targetId);
+          else reverted.delete(targetId);
+          setIds(reverted);
+          return { ...result, following };
+        }
+        return { ok: true, following: !following };
+      } finally {
+        pending.current.delete(targetId);
       }
-      return { ok: true, following: !following };
     },
     [viewerId],
   );

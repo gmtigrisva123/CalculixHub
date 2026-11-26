@@ -15,6 +15,7 @@ import {
   shiftReaction,
   threadComments,
   typingSentence,
+  verdict,
   topReactions,
   totalReactions,
   KIND_META,
@@ -27,6 +28,8 @@ import {
   composePost,
   countHints,
   extractTags,
+  helpfulMarks,
+  insideMath,
   isKind,
   kindPattern,
   normaliseTag,
@@ -250,6 +253,17 @@ describe('the kind of a post', () => {
     }
   });
 
+  it('keeps a tag typed by hand when it is composed with the kind it names', () => {
+    for (const text of ['x', '#stuck\nx', '  lead']) {
+      for (const kind of [...POST_KINDS, null]) {
+        const stored = composePost(text, kind);
+        expect(parsePost(stored).kind).toBe(kind);
+        expect(composePost(stored, parsePost(stored).kind)).toBe(stored);
+      }
+    }
+    expect(composePost('#stuck\nx', parsePost('#stuck\nx').kind)).toBe('#stuck\nx');
+  });
+
   it('narrows a feed to open posts of one kind', () => {
     expect(kindPattern('stuck')).toBe('#stuck%');
     expect(isKind('#stuck\nHelp', 'stuck')).toBe(true);
@@ -275,6 +289,17 @@ describe('technique tags', () => {
   it('ignores what only looks like a tag', () => {
     const body = '#stuck\nSee $\\#S = 3$, https://example.org/page#anchor, C#, issue #12, `#include`, me#you and #unstuck.';
     expect(extractTags(body)).toEqual([]);
+  });
+
+  it('does not read a technique out of what the author sealed', () => {
+    const body = '[hint]use #inversion[/hint] and ||#pigeonhole||, then #vieta';
+    expect(extractTags(body)).toEqual(['vieta']);
+    // The composer still needs to know every tag that has been typed.
+    expect(extractTags(body, true)).toEqual(['inversion', 'pigeonhole', 'vieta']);
+  });
+
+  it('keeps a tag of 32 characters and no longer', () => {
+    expect(extractTags(`#${'a'.repeat(32)} and #${'b'.repeat(33)}, (#parity) #parity,#casework #Invariant #INVARIANT`)).toEqual(['a'.repeat(32), 'parity', 'casework', 'invariant']);
   });
 
   it('normalises what someone types into the form a tag is stored in', () => {
@@ -325,16 +350,57 @@ describe('text with mentions, tags and hidden words', () => {
     ]);
   });
 
-  it('stays fast on hostile input', () => {
-    const hostile = ['|'.repeat(5000), `||${'a|'.repeat(2500)}`, '$'.repeat(5000), '#'.repeat(5000), '[hint]'.repeat(830), '@'.repeat(5000), '#a-'.repeat(1600), '\\begin{a}'.repeat(550)];
-    const started = performance.now();
-    for (const text of hostile) {
-      segmentInline(text);
-      segmentBlocks(text);
-      extractTags(text);
-      parsePost(text);
+  it('pairs the bars by word and by line, so ordinary writing is never hidden', () => {
+    // Parallel lines, a chain of ors, and two stray pairs in different paragraphs.
+    for (const text of ['Since AB||CD we get equal angles, and EF||GH too.', 'x||y||z', '||two\nlines||', 'first || here\n\nand there ||x']) {
+      expect(segmentInline(text)).toEqual([{ type: 'text', value: text }]);
+      expect(redactSealed(text)).toBe(text);
     }
-    expect(performance.now() - started).toBeLessThan(500);
+    expect(segmentInline('(||42||), then ||a|b||.')).toEqual([
+      { type: 'text', value: '(' },
+      { type: 'spoiler', value: '42' },
+      { type: 'text', value: '), then ' },
+      { type: 'spoiler', value: 'a|b' },
+      { type: 'text', value: '.' },
+    ]);
+  });
+
+  it('keeps a formula whole inside hidden words, bars and all', () => {
+    expect(segmentInline('The answer is ||$||v|| = 5$|| done')).toEqual([
+      { type: 'text', value: 'The answer is ' },
+      { type: 'spoiler', value: '$||v|| = 5$' },
+      { type: 'text', value: ' done' },
+    ]);
+    expect(redactSealed('The answer is ||$||v|| = 5$|| done')).toBe('The answer is [hidden] done');
+  });
+
+  it('stays fast on hostile input', () => {
+    const hostile = [
+      '|'.repeat(5000),
+      `||${'a|'.repeat(2500)}`,
+      `||a${'||a'.repeat(1600)}`,
+      `||a ${'|| '.repeat(1600)}`,
+      '$'.repeat(5000),
+      '#'.repeat(5000),
+      '@'.repeat(5000),
+      '`'.repeat(5000),
+      `${' '.repeat(5000)}#`,
+      '#a-'.repeat(1600),
+      '\\begin{a}'.repeat(550),
+      '[hint]'.repeat(830),
+      // An opener, a long run of blanks and no close: the shape that made an
+      // earlier hint pattern backtrack for twenty seconds.
+      `[hint]${' '.repeat(4990)}x`,
+      `[hint]${'\t'.repeat(40)}\n`.repeat(100),
+      `${'[hint] '.repeat(700)}[/hint]`,
+    ];
+    for (const text of hostile) {
+      for (const read of [segmentInline, segmentBlocks, countHints, extractTags, parsePost, redactSealed, (value: string) => redactSealed(value, { truncated: true })]) {
+        const started = performance.now();
+        read(text);
+        expect(performance.now() - started).toBeLessThan(250);
+      }
+    }
   });
 });
 
@@ -393,13 +459,13 @@ describe('today’s board', () => {
 });
 
 describe('who is helping', () => {
-  it('ranks by the marks readers left, and by posts only to break a tie', () => {
+  it('ranks by the marks that say a post helped, and by posts only to break a tie', () => {
     const posts = [
-      { author_id: 'a', author: 'Ada', like_count: 2 },
-      { author_id: 'b', author: 'Bao', like_count: 5 },
-      { author_id: 'a', author: 'Ada', like_count: 4 },
-      { author_id: 'c', author: 'Chloe', like_count: 6 },
-      { author_id: 'd', author: null, like_count: 0 },
+      { author_id: 'a', author: 'Ada', like_count: 2, reactions: { like: 2 } },
+      { author_id: 'b', author: 'Bao', like_count: 5, reactions: { love: 3, wow: 2 } },
+      { author_id: 'a', author: 'Ada', like_count: 4, reactions: { care: 3, haha: 1 } },
+      { author_id: 'c', author: 'Chloe', like_count: 6, reactions: { like: 6 } },
+      { author_id: 'd', author: null, like_count: 0, reactions: {} },
     ];
     expect(rankHelpers(posts, 3)).toEqual([
       { id: 'a', author: 'Ada', posts: 2, marks: 6 },
@@ -407,6 +473,30 @@ describe('who is helping', () => {
       { id: 'b', author: 'Bao', posts: 1, marks: 5 },
     ]);
     expect(rankHelpers([])).toEqual([]);
+  });
+
+  it('does not count objections as help, or list someone who drew only those', () => {
+    const disputed = { author_id: 'e', author: 'Eve', like_count: 9, reactions: { angry: 6, sad: 3 } };
+    const mixed = { author_id: 'f', author: 'Farah', like_count: 5, reactions: { like: 2, sad: 3 } };
+
+    expect(helpfulMarks(disputed)).toBe(0);
+    expect(helpfulMarks(mixed)).toBe(2);
+    expect(rankHelpers([disputed, mixed])).toEqual([{ id: 'f', author: 'Farah', posts: 1, marks: 2 }]);
+    // An older database has no breakdown, and its one kind of mark was a like.
+    expect(helpfulMarks({ like_count: 4 })).toBe(4);
+  });
+});
+
+describe('the composer’s symbol keys', () => {
+  it('know when the caret is inside a formula, whichever way it was opened', () => {
+    expect(insideMath('$x', 2)).toBe(true);
+    expect(insideMath('$$x + ', 6)).toBe(true);
+    expect(insideMath('\\(x + ', 6)).toBe(true);
+    expect(insideMath('\\[ a + ', 7)).toBe(true);
+    expect(insideMath('$x$ and ', 8)).toBe(false);
+    expect(insideMath('$$a$$ b', 7)).toBe(false);
+    expect(insideMath('it cost \\$5 and ', 17)).toBe(false);
+    expect(insideMath('', 0)).toBe(false);
   });
 });
 
@@ -421,9 +511,45 @@ describe('quoting a post outside the feed', () => {
     expect(redactSealed(text)).toBe(text);
   });
 
+  it('seals to the end what a cut left open', () => {
+    // The database keeps the first 140 characters of a body for a notification.
+    expect(redactSealed('Start ||the secret answ', { truncated: true })).toBe('Start [hidden]');
+    expect(redactSealed('Start [hint] the key idea goes', { truncated: true })).toBe('Start\n[sealed hint]');
+    // Without the option an unclosed fence is only what the author typed.
+    expect(redactSealed('Start ||the secret answ')).toBe('Start ||the secret answ');
+    // A line break after the bars means they never were an opener.
+    expect(redactSealed('Start ||a\nb', { truncated: true })).toBe('Start ||a\nb');
+  });
+
   it('keeps a ladder readable as a ladder, without leaving gaps where empty hints were', () => {
     expect(redactSealed('[hint]one[/hint]\n[hint]two[/hint]\n[hint] [/hint]\nDone')).toBe('[sealed hint]\n[sealed hint]\nDone');
     expect(redactSealed('Before [hint]inline[/hint] after')).toBe('Before\n[sealed hint]\nafter');
     expect(redactSealed('')).toBe('');
+  });
+});
+
+describe('what the marks add up to', () => {
+  it('says a write-up was checked once enough readers follow it and nobody objects', () => {
+    expect(verdict({ like: 5 }, false)).toEqual({ tone: 'checked', text: 'checked by 5 readers' });
+    expect(verdict({ like: 4, love: 9 }, false)).toBeNull();
+    // One objection is enough to withhold it.
+    expect(verdict({ like: 12, angry: 1 }, false)).toBeNull();
+  });
+
+  it('warns the next reader when several question a step, whatever else was marked', () => {
+    expect(verdict({ like: 30, angry: 3 }, false)).toEqual({ tone: 'questioned', text: '3 readers question a step' });
+    expect(verdict({ angry: 2 }, false)).toBeNull();
+  });
+
+  it('tells only the author that readers are getting lost', () => {
+    expect(verdict({ sad: 3 }, true)).toEqual({ tone: 'lost', text: '3 readers got lost here. A hint might help.' });
+    expect(verdict({ sad: 3 }, false)).toBeNull();
+    expect(verdict({ sad: 3, like: 6 }, false)).toEqual({ tone: 'checked', text: 'checked by 6 readers' });
+  });
+
+  it('says nothing about a post with few marks or none', () => {
+    expect(verdict(undefined, true)).toBeNull();
+    expect(verdict({}, false)).toBeNull();
+    expect(verdict({ wow: 2, care: 1 }, true)).toBeNull();
   });
 });

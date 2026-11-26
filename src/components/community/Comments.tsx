@@ -2,17 +2,22 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * The comment section under a post: comment bubbles, one level of threaded
- * replies, margin marks, inline editing and removal, image replies, @mentions,
- * a live "is writing a comment" line, and the composer.
+ * The comments under a post, set as notes in its margin rather than as chat
+ * bubbles: a name, a time and the words, with the marks the note has drawn on
+ * the line beneath it. One level of replies hangs from a straight rule.
+ *
+ * Also here: editing and removing a comment, image replies, @mentions, the live
+ * "is writing a comment" line, the composer, and the credit a question's author
+ * gives to the reply that got them unstuck.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { ArrowUpDown, Check, ChevronDown, Copy, ImagePlus, Link2, MoreHorizontal, Pencil, SendHorizontal, Share2, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, CircleCheck, Copy, ImagePlus, Link2, MoreHorizontal, Pencil, SendHorizontal, Share2, Trash2, Undo2, Users } from 'lucide-react';
 import type { AuthorSummary, CommentWithAuthor, PostWithAuthor, Reaction, ReactionCounts } from '../../services/database.types';
 import {
   COMMENT_MAX_LENGTH,
+  CREDIT_MARK,
   createComment,
   deleteComment,
   setCommentReaction,
@@ -27,8 +32,10 @@ import {
   COMMENT_SORTS,
   authorName,
   compactAge,
-  compactCount,
+  firstName,
   fullTimestamp,
+  plural,
+  redactSealed,
   shareLink,
   shiftReaction,
   threadComments,
@@ -38,7 +45,7 @@ import {
 } from './model';
 import { AttachmentTray, MediaGrid, imageFiles, useAttachments } from './Media';
 import { useMentions, type MentionPerson } from './Mentions';
-import { ReactButton, ReactionStack } from './Reactions';
+import { MarkControl } from './Reactions';
 import RichText from './RichText';
 import { AutoTextarea, Avatar, ConfirmDialog, Menu, canNativeShare, copyText, nativeShare, useNow, useToast, type MenuEntry } from './ui';
 
@@ -63,8 +70,19 @@ export interface CommentsProps {
   onOpenMedia: (paths: string[], index: number) => void;
   /** The post is an open request for help: ask for hints rather than answers. */
   nudge?: boolean;
+  /**
+   * The author of a question that has been marked unstuck. The reply that
+   * person marked "Helped" is the one that worked: it is shown first, and says so.
+   */
+  creditFrom?: string | null;
+  /** The reader wrote the question this thread answers, so may say which reply got them there. */
+  canCredit?: boolean;
+  /** The question's author has just credited a reply. */
+  onCredited?: () => void;
   /** Open the small profile of whoever wrote a comment. */
   onOpenProfile?: (author: AuthorSummary) => void;
+  /** A signed-out reader pressed something that needs an account. */
+  onNeedAccount?: (verb: string) => void;
 }
 
 /** Enter sends on a keyboard; on a touch screen Enter is a new line and the button sends. */
@@ -81,10 +99,14 @@ export default function Comments({
   mentionCandidates,
   onOpenMedia,
   nudge = false,
+  creditFrom = null,
+  canCredit = false,
+  onCredited,
   onOpenProfile,
+  onNeedAccount,
 }: CommentsProps) {
   const viewerId = viewer?.id ?? null;
-  const feed = useComments(post.id, viewerId);
+  const feed = useComments(post.id, viewerId, creditFrom);
   const schema = feed.schema ?? feedSchema;
   const toast = useToast();
   const typing = useTyping(post.id, viewer);
@@ -116,7 +138,12 @@ export default function Comments({
     [feed.data, overrides],
   );
 
-  const threads = useMemo(() => threadComments(comments, sort), [comments, sort]);
+  // Whatever the order asked for, the reply that got the asker unstuck leads.
+  const threads = useMemo(() => {
+    const sorted = threadComments(comments, sort);
+    const holdsCredit = (thread: (typeof sorted)[number]) => Boolean(thread.comment.credited) || thread.replies.some((reply) => reply.credited);
+    return [...sorted.filter(holdsCredit), ...sorted.filter((thread) => !holdsCredit(thread))];
+  }, [comments, sort]);
 
   // The people already in this conversation come first in @mention suggestions.
   const candidates = useMemo(() => {
@@ -146,7 +173,11 @@ export default function Comments({
   }, [focusCommentId, feed.loading, comments]);
 
   const react = async (comment: CommentWithAuthor, next: Reaction | null) => {
-    if (!viewerId || inFlight.current.has(comment.id)) return;
+    if (!viewerId) {
+      onNeedAccount?.('leave a mark');
+      return;
+    }
+    if (inFlight.current.has(comment.id)) return;
     inFlight.current.add(comment.id);
     const stored = feed.data.find((row) => row.id === comment.id)?.viewer_reaction ?? null;
     setOverrides((map) => ({ ...map, [comment.id]: next }));
@@ -155,6 +186,12 @@ export default function Comments({
     setOverrides(({ [comment.id]: _settled, ...rest }) => rest);
     inFlight.current.delete(comment.id);
     if (!result.ok) toast(result.error, 'error');
+    return result.ok;
+  };
+
+  // The credit is nothing more than the asker's own "Helped" mark on the reply.
+  const credit = async (comment: CommentWithAuthor) => {
+    if (await react(comment, CREDIT_MARK)) onCredited?.();
   };
 
   const submit = async (body: string, parentId: string | null, images: string[]): Promise<boolean> => {
@@ -206,7 +243,7 @@ export default function Comments({
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.standard } }}
     >
-      {threads.length > 1 && (
+      {threads.length > 2 && (
         <div className="cm-comments-toolbar">
           <Menu
             label="Sort comments"
@@ -220,7 +257,7 @@ export default function Comments({
               onSelect: () => setSort(key),
             }))}
           >
-            {COMMENT_SORTS[sort].label} <ChevronDown size={16} aria-hidden="true" />
+            {COMMENT_SORTS[sort].label} <ChevronDown size={15} aria-hidden="true" />
           </Menu>
         </div>
       )}
@@ -240,13 +277,13 @@ export default function Comments({
           <span />
         </div>
       ) : threads.length === 0 && !feed.error ? (
-        <p className="cm-comments-empty">No comments yet. {viewerId ? 'Start the conversation.' : ''}</p>
+        <p className="cm-comments-empty">No comments yet.</p>
       ) : null}
 
       <ul className="cm-thread-list">
         <AnimatePresence initial={false}>
           {shown.map(({ comment, replies }) => {
-            const open = expanded.has(comment.id);
+            const open = expanded.has(comment.id) || replies.some((reply) => reply.credited);
             return (
               <m.li
                 key={comment.id}
@@ -262,7 +299,8 @@ export default function Comments({
                   viewerId={viewerId}
                   canModerate={canModerate}
                   highlighted={highlight === comment.id}
-                  hasThread={replies.length > 0 || replyTo?.threadId === comment.id}
+                  canCredit={canCredit}
+                  onCredit={() => void credit(comment)}
                   onReact={(next) => void react(comment, next)}
                   onReply={() => startReply(comment, comment)}
                   onDelete={() => setConfirm(comment)}
@@ -276,9 +314,8 @@ export default function Comments({
                   <ul className="cm-replies" aria-label={`Replies to ${authorName(comment.author)}`}>
                     {replies.length > 0 && !open && (
                       <li>
-                        <button type="button" className="cm-view-replies" onClick={() => setExpanded((set) => new Set(set).add(comment.id))}>
-                          <Avatar author={replies[replies.length - 1]!.author} size={22} />
-                          View {replies.length === 1 ? '1 reply' : `all ${replies.length} replies`}
+                        <button type="button" className="cm-view-replies" aria-expanded={false} onClick={() => setExpanded((set) => new Set(set).add(comment.id))}>
+                          {plural(replies.length, 'reply', 'replies')}
                         </button>
                       </li>
                     )}
@@ -292,6 +329,8 @@ export default function Comments({
                             canModerate={canModerate}
                             highlighted={highlight === reply.id}
                             isReply
+                            canCredit={canCredit}
+                            onCredit={() => void credit(reply)}
                             onReact={(next) => void react(reply, next)}
                             onReply={() => startReply(comment, reply)}
                             onDelete={() => setConfirm(reply)}
@@ -329,7 +368,7 @@ export default function Comments({
 
       {hidden > 0 && (
         <button type="button" className="cm-view-more" onClick={() => setVisible((count) => count + NEXT_PAGE)}>
-          View {hidden === 1 ? '1 more comment' : `${Math.min(hidden, NEXT_PAGE)} more comments`}
+          {plural(Math.min(hidden, NEXT_PAGE), 'more comment')}
         </button>
       )}
 
@@ -356,14 +395,14 @@ export default function Comments({
         <CommentComposer
           ref={composer}
           viewer={viewer}
-          placeholder={nudge ? 'Give a nudge, not the answer. Seal spoilers with ||double bars||…' : threads.length === 0 ? 'Be the first to comment…' : 'Write a comment…'}
+          placeholder={nudge ? 'Give a nudge, not the answer. Hide a giveaway between ||double bars||…' : 'Write a comment…'}
           allowImages={schema === 'social'}
           candidates={candidates}
           onTyping={typing.announce}
           onSubmit={(body, images) => submit(body, null, images)}
         />
       ) : (
-        <p className="cm-comments-empty">Sign in to join the conversation.</p>
+        <p className="cm-comments-empty">Sign in to comment.</p>
       )}
 
       <AnimatePresence>
@@ -373,8 +412,8 @@ export default function Comments({
             title="Delete comment?"
             message={
               confirm.author_id === viewerId
-                ? 'Your comment and any replies to it will be removed. This can’t be undone.'
-                : 'This comment and any replies to it will be removed from your post. This can’t be undone.'
+                ? 'Your comment and any replies to it will be removed. This cannot be undone.'
+                : 'This comment and any replies to it will be removed from your post. This cannot be undone.'
             }
             confirmLabel="Delete"
             onConfirm={() => remove(confirm)}
@@ -393,7 +432,8 @@ function CommentItem({
   canModerate,
   highlighted,
   isReply = false,
-  hasThread = false,
+  canCredit = false,
+  onCredit,
   onReact,
   onReply,
   onDelete,
@@ -408,7 +448,9 @@ function CommentItem({
   canModerate: boolean;
   highlighted: boolean;
   isReply?: boolean;
-  hasThread?: boolean;
+  /** The reader asked the question, so may credit a reply for answering it. */
+  canCredit?: boolean;
+  onCredit?: () => void;
   onReact: (next: Reaction | null) => void;
   onReply: () => void;
   onDelete: () => void;
@@ -425,6 +467,8 @@ function CommentItem({
   const own = viewerId === comment.author_id;
   const total = totalReactions(comment.reactions);
   const images = comment.images ?? [];
+  const author = comment.author;
+  const creditedByViewer = canCredit && comment.viewer_reaction === CREDIT_MARK;
 
   const save = async () => {
     if (busy) return;
@@ -445,6 +489,14 @@ function CommentItem({
 
   const link = () => shareLink(post.id, comment.id);
   const items: MenuEntry[] = [
+    ...(canCredit && !own && onCredit
+      ? [
+          creditedByViewer
+            ? { key: 'credit', label: 'Take the credit back', icon: Undo2, onSelect: () => onReact(null) }
+            : { key: 'credit', label: 'This got me unstuck', description: 'It is shown first, with your thanks.', icon: CircleCheck, onSelect: onCredit },
+          { key: 'sep-credit', separator: true as const },
+        ]
+      : []),
     ...(own
       ? [
           { key: 'edit', label: 'Edit', icon: Pencil, onSelect: () => { setDraft(comment.body); setEditing(true); } },
@@ -457,17 +509,18 @@ function CommentItem({
             { key: 'sep', separator: true as const },
           ]
         : []),
+    ...(total > 0 ? [{ key: 'marks', label: 'See who marked this', icon: Users, onSelect: onOpenReactors }] : []),
     {
       key: 'link',
-      label: 'Copy link to comment',
+      label: 'Copy link',
       icon: Link2,
-      onSelect: async () => toast((await copyText(link())) ? 'Link copied to clipboard' : 'Could not copy the link', 'neutral'),
+      onSelect: async () => toast((await copyText(link())) ? 'Link copied.' : 'Could not copy the link.', 'neutral'),
     },
     {
       key: 'text',
       label: 'Copy text',
       icon: Copy,
-      onSelect: async () => toast((await copyText(comment.body)) ? 'Comment text copied' : 'Could not copy the text', 'neutral'),
+      onSelect: async () => toast((await copyText(comment.body)) ? 'Text copied.' : 'Could not copy the text.', 'neutral'),
     },
     ...(canNativeShare()
       ? [
@@ -476,24 +529,60 @@ function CommentItem({
             label: 'Share via…',
             icon: Share2,
             onSelect: async () => {
-              const outcome = await nativeShare({ title: `${authorName(comment.author)} on CalculixHub`, text: comment.body.slice(0, 200), url: link() });
-              if (outcome === 'failed') toast('Sharing is not available here. Try “Copy link”.', 'error');
+              // What the author sealed stays sealed once it leaves the page.
+              const outcome = await nativeShare({ title: `${authorName(author)} on CalculixHub`, text: redactSealed(comment.body).slice(0, 200), url: link() });
+              if (outcome === 'failed') toast('Sharing is not available here. Use “Copy link”.', 'error');
             },
           },
         ]
       : []),
   ];
 
+  const face = <Avatar author={author} size={isReply ? 26 : 32} />;
+
   return (
-    <article id={`comment-${comment.id}`} className={`cm-comment ${isReply ? 'is-reply' : ''} ${hasThread ? 'has-thread' : ''} ${highlighted ? 'is-highlighted' : ''}`}>
-      {onOpenProfile && comment.author ? (
-        <button type="button" className="cm-post-face" onClick={() => onOpenProfile(comment.author!)} aria-label={`About ${authorName(comment.author)}`}>
-          <Avatar author={comment.author} size={isReply ? 28 : 34} />
+    <article
+      id={`comment-${comment.id}`}
+      className={`cm-note ${isReply ? 'is-reply' : ''} ${highlighted ? 'is-highlighted' : ''} ${comment.credited ? 'is-credited' : ''}`}
+    >
+      {onOpenProfile && author ? (
+        <button type="button" className="cm-note-face" onClick={() => onOpenProfile(author)} aria-label={`About ${authorName(author)}`}>
+          {face}
         </button>
       ) : (
-        <Avatar author={comment.author} size={isReply ? 28 : 34} />
+        <span className="cm-note-face">{face}</span>
       )}
-      <div className="cm-comment-main">
+      <div className="cm-note-main">
+        {comment.credited && (
+          <p className="cm-note-credit">
+            <CircleCheck size={14} aria-hidden="true" />
+            This got {firstName(post.author)} unstuck
+          </p>
+        )}
+        <header className="cm-note-head">
+          {onOpenProfile && author ? (
+            <button type="button" className="cm-note-name" onClick={() => onOpenProfile(author)}>
+              {authorName(author)}
+            </button>
+          ) : (
+            <strong className="cm-note-name">{authorName(author)}</strong>
+          )}
+          {comment.author_id === post.author_id && <span className="cm-author-badge">Author</span>}
+          <time dateTime={comment.created_at} title={fullTimestamp(comment.created_at)}>
+            {compactAge(comment.created_at, now)}
+          </time>
+          {comment.edited_at && (
+            <span className="cm-edited" title={`Edited ${fullTimestamp(comment.edited_at)}`}>
+              Edited
+            </span>
+          )}
+          {!editing && (
+            <Menu label="Comment options" items={items} buttonClassName="cm-icon-button cm-note-menu">
+              <MoreHorizontal size={17} aria-hidden="true" />
+            </Menu>
+          )}
+        </header>
+
         {editing ? (
           <div className="cm-comment-edit">
             <AutoTextarea
@@ -516,9 +605,9 @@ function CommentItem({
             <p className="cm-edit-hint">
               {enterSends() ? (
                 <>
-                  Press Enter to save · Esc to{' '}
+                  Enter saves · Esc{' '}
                   <button type="button" className="cm-link-button" onClick={() => setEditing(false)}>
-                    cancel
+                    cancels
                   </button>
                 </>
               ) : (
@@ -535,49 +624,26 @@ function CommentItem({
             </p>
           </div>
         ) : (
-          <div className="cm-comment-row">
-            <div className={`cm-bubble ${total > 0 ? 'has-reactions' : ''}`}>
-              <strong className="cm-bubble-name">{authorName(comment.author)}</strong>
-              {comment.author_id === post.author_id && <span className="cm-author-badge">Author</span>}
-              {comment.body.trim() && (
-                <div className="cm-bubble-text">
-                  <RichText text={comment.body} />
-                </div>
-              )}
-              {total > 0 && (
-                <button type="button" className="cm-bubble-reactions" onClick={onOpenReactors} aria-label={`${total} ${total === 1 ? 'mark' : 'marks'}. See who left them`}>
-                  <ReactionStack counts={comment.reactions} size={14} compact />
-                  <span>{compactCount(total)}</span>
-                </button>
-              )}
+          comment.body.trim() && (
+            <div className="cm-note-text">
+              <RichText text={comment.body} />
             </div>
-            <Menu label="Comment options" items={items} buttonClassName="cm-icon-button cm-comment-menu">
-              <MoreHorizontal size={18} aria-hidden="true" />
-            </Menu>
-          </div>
+          )
         )}
 
         {!editing && images.length > 0 && (
           <div className="cm-comment-media">
-            <MediaGrid paths={images} label={authorName(comment.author)} compact onOpen={(index) => onOpenMedia(images, index)} />
+            <MediaGrid paths={images} label={authorName(author)} compact onOpen={(index) => onOpenMedia(images, index)} />
           </div>
         )}
 
         {!editing && (
-          <div className="cm-comment-actions">
-            <time dateTime={comment.created_at} title={fullTimestamp(comment.created_at)}>
-              {compactAge(comment.created_at, now)}
-            </time>
-            {viewerId && <ReactButton variant="comment" current={comment.viewer_reaction ?? null} onReact={onReact} />}
+          <div className="cm-note-actions">
+            <MarkControl variant="comment" counts={comment.reactions} current={comment.viewer_reaction ?? null} onReact={onReact} />
             {viewerId && (
               <button type="button" className="cm-link-button" onClick={onReply}>
                 Reply
               </button>
-            )}
-            {comment.edited_at && (
-              <span className="cm-edited" title={`Edited ${fullTimestamp(comment.edited_at)}`}>
-                Edited
-              </span>
             )}
           </div>
         )}
@@ -599,7 +665,7 @@ interface ComposerProps {
   onCancel?: () => void;
 }
 
-/** "Write a comment…": a pill that grows with its text, Enter to send, one image allowed. */
+/** "Write a comment…": a field that grows with its text, Enter to send, one image allowed. */
 const CommentComposer = React.forwardRef<HTMLTextAreaElement, ComposerProps>(function CommentComposer(
   { viewer, placeholder, initial = '', compact = false, autoFocus = false, allowImages = false, candidates, onTyping, onSubmit, onCancel },
   forwarded,
@@ -665,7 +731,7 @@ const CommentComposer = React.forwardRef<HTMLTextAreaElement, ComposerProps>(fun
         void send();
       }}
     >
-      <Avatar author={viewer} size={compact ? 28 : 34} />
+      <Avatar author={viewer} size={compact ? 26 : 32} />
       <div className="cm-composer-body">
         <div className="cm-composer-field">
           <AutoTextarea

@@ -67,27 +67,104 @@ export const MATH_SOURCE = String.raw`\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\
 export const CODE_SOURCE = String.raw`\x60[^\x60\n]+\x60`;
 export const VERBATIM_SOURCE = `${MATH_SOURCE}|${CODE_SOURCE}`;
 
-/** `||hidden words||`: at least one character, not starting with a space, single bars allowed inside. */
-export const SPOILER_SOURCE = String.raw`\|\|(?!\s)([^|\n](?:[^|]|\|(?!\|))*?)\|\|`;
+/**
+ * `[hint] … [/hint]`, on its own lines or inline. An unclosed fence is not a
+ * hint. One lazy quantifier and nothing else between the fences: whitespace is
+ * trimmed by whoever reads the capture. An earlier form matched the optional
+ * whitespace itself, on both sides of the capture, and an opener followed by a
+ * long run of spaces made that backtrack for seconds.
+ */
+export const HINT_SOURCE = String.raw`\[hint\]([\s\S]*?)\[\/hint\]`;
 
-/** `[hint] … [/hint]`, on its own lines or inline. An unclosed fence is not a hint. */
-export const HINT_SOURCE = String.raw`\[hint\][ \t]*\n?([\s\S]*?)\n?[ \t]*\[\/hint\]`;
+const WORD = /[A-Za-z0-9]/;
+const SEALED_NOTE = '[sealed hint]';
+
+/**
+ * Where the hidden words of a text are: `[start, end)` for each, bars included.
+ *
+ * Bars are paired by walking the text rather than by one pattern, because what
+ * sits between them may be a formula with bars of its own, and a pattern that
+ * nests formulas backtracks without bound. The rules a pair must meet are the
+ * ones that keep ordinary writing from being hidden by accident:
+ *
+ *   - the opening bars start a word (`AB||CD`, parallel lines, is not markup)
+ *     and are followed by something that is not a space (`a || b` is not);
+ *   - the closing bars end a word and follow something that is not a space;
+ *   - both sit on one line, so two stray pairs in different paragraphs never
+ *     swallow what lies between them.
+ *
+ * `openEnded` is for a text that was cut short, such as the first 140
+ * characters the database keeps for a notification: an opener with no closer
+ * is then taken to run to the end, so what was hidden stays hidden.
+ */
+export function hiddenRanges(text: string, openEnded = false): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const pattern = new RegExp(`(${VERBATIM_SOURCE})|\\|\\|`, 'gi');
+  let open = -1;
+  let scanned = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match[1] !== undefined) continue;
+    const at = match.index;
+
+    if (open >= 0) {
+      const newline = text.indexOf('\n', scanned);
+      if (newline >= 0 && newline < at) open = -1;
+      scanned = at;
+    }
+
+    const before = text[at - 1];
+    const after = text[at + 2];
+    if (open < 0) {
+      const startsWord = !(before !== undefined && WORD.test(before));
+      const holdsSomething = after !== undefined && !/[\s|]/.test(after);
+      if (startsWord && holdsSomething) {
+        open = at;
+        scanned = at;
+      }
+    } else if (at > open + 2 && before !== undefined && !/\s/.test(before) && !(after !== undefined && WORD.test(after))) {
+      ranges.push([open, at + 2]);
+      open = -1;
+    }
+  }
+
+  if (openEnded && open >= 0 && text.indexOf('\n', open) < 0) ranges.push([open, text.length]);
+  return ranges;
+}
 
 /**
  * The text as it may be quoted outside the feed: in an email, a share sheet, a
  * message preview. Sealed hints and hidden words are replaced by a note that
  * they are there, so nothing an author sealed reaches a reader who did not ask
- * for it.
+ * for it. Pass `truncated` for a text that was cut short before it got here:
+ * a fence or a pair of bars left open by the cut is then sealed to the end.
  */
-export function redactSealed(text: string): string {
-  const withoutHints = text.replace(new RegExp(HINT_SOURCE, 'gi'), (_fence, inner: string) => (inner.trim() ? '\n[sealed hint]\n' : '\n'));
-  const withoutSpoilers = withoutHints.replace(new RegExp(`(${VERBATIM_SOURCE})|${SPOILER_SOURCE}`, 'gi'), (match, verbatim: string | undefined) =>
-    verbatim === undefined ? '[hidden]' : match,
-  );
-  // Each note on a line of its own, with no blank lines piling up where a fence used to be.
-  return withoutSpoilers
-    .replace(/[ \t]*\n\s*(?=\[sealed hint\])/g, '\n')
-    .replace(/(\[sealed hint\])\s*\n[ \t]*/g, '$1\n')
+export function redactSealed(text: string, options: { truncated?: boolean } = {}): string {
+  let open = text.replace(new RegExp(HINT_SOURCE, 'gi'), (_fence, inner: string) => (inner.trim() ? `\n${SEALED_NOTE}\n` : '\n'));
+  if (options.truncated) {
+    const dangling = open.search(/\[hint\]/i);
+    if (dangling >= 0) open = `${open.slice(0, dangling)}\n${SEALED_NOTE}`;
+  }
+
+  let quoted = '';
+  let cursor = 0;
+  for (const [start, end] of hiddenRanges(open, options.truncated)) {
+    quoted += `${open.slice(cursor, start)}[hidden]`;
+    cursor = end;
+  }
+  quoted += open.slice(cursor);
+
+  // Each note on a line of its own, with no blank lines piling up where a fence
+  // used to be. Done by splitting rather than by a pattern over the whitespace:
+  // a pattern that starts with "any spaces" is quadratic on a long run of them.
+  const parts = quoted.split(SEALED_NOTE);
+  if (parts.length > 1) {
+    const last = parts.length - 1;
+    quoted = parts.map((part, index) => (index === 0 ? part.trimEnd() : index === last ? part.trimStart() : part.trim())).join(`\n${SEALED_NOTE}\n`);
+  }
+  return quoted
+    .replace(/\[sealed hint\]\n\n(?=\[sealed hint\])/g, `${SEALED_NOTE}\n`)
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

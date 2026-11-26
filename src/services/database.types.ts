@@ -178,6 +178,8 @@ export interface CommentWithAuthor extends CommentRow {
   author: AuthorSummary | null;
   viewer_reaction?: Reaction | null;
   reactions?: ReactionCounts;
+  /** The post's author marked this reply as the one that got them unstuck. */
+  credited?: boolean;
 }
 
 export interface NotificationWithActor extends NotificationRow {

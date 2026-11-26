@@ -48,6 +48,7 @@ export function CircleList({
   canStart,
   onSelect,
   onStart,
+  idPrefix = 'cm-side',
 }: {
   circles: Circle[];
   joined: ReadonlySet<string>;
@@ -58,12 +59,14 @@ export function CircleList({
   canStart: boolean;
   onSelect: (circle: Circle | null) => void;
   onStart: () => void;
+  /** The list is on the page twice (side column and Browse sheet); each needs ids of its own. */
+  idPrefix?: string;
 }) {
   const ordered = [...circles].sort((a, b) => Number(joined.has(b.id)) - Number(joined.has(a.id)));
   return (
-    <section className="cm-side-card" aria-labelledby="cm-circles">
+    <section className="cm-side-card" aria-labelledby={`${idPrefix}-circles`}>
       <div className="cc-head">
-        <h3 id="cm-circles">Circles</h3>
+        <h3 id={`${idPrefix}-circles`}>Circles</h3>
         {canStart && (
           <button type="button" className="cc-start" onClick={onStart}>
             <Plus size={14} aria-hidden="true" /> Start one

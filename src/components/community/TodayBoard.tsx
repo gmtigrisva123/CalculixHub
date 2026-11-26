@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Today's board: one problem from the bank, the same for everyone, pinned at
- * the top of the feed until midnight UTC.
+ * the top of the feed for a day.
  *
  * It gives the room something to talk about on a quiet day, and gives a
  * newcomer an obvious first thing to do: try it, then read how other people
  * got there. The problem is chosen from the date (`boardProblem`), so there is
- * nothing to schedule and nothing to store.
+ * nothing to schedule and nothing to store. Yesterday's problem gets one line
+ * under it: the morning after is when its thread is worth reading.
  */
 
 import { useEffect, useState } from 'react';
@@ -19,42 +20,61 @@ import MathText from '../MathText';
 import { boardCountdown, boardDay, plural } from './model';
 import { useNow } from './ui';
 
+/** How many posts a problem's thread holds, re-read whenever `refreshKey` changes. */
+function useThreadCount(problemId: string | null, refreshKey: string): number | null {
+  const [state, setState] = useState<{ id: string | null; count: number | null }>({ id: problemId, count: null });
+
+  useEffect(() => {
+    if (!problemId) return;
+    let alive = true;
+    countThread(problemId)
+      .then((count) => alive && setState({ id: problemId, count }))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [problemId, refreshKey]);
+
+  // A figure for another problem is never shown; one for this problem stays up while it is re-read.
+  return state.id === problemId ? state.count : null;
+}
+
 export default function TodayBoard({
   problem,
+  yesterday,
   solved,
   signedIn,
+  refreshKey,
   onSolve,
   onOpenThread,
+  onOpenYesterday,
   onWrite,
   onStuck,
 }: {
   problem: Problem;
+  /** The problem the board carried the day before, if it was a different one. */
+  yesterday: Problem | null;
   /** Whether the viewer has already solved it, when that is known. */
   solved: boolean;
   signedIn: boolean;
+  /** Changes whenever the feed does, so the thread counts are read again. */
+  refreshKey: string;
   /** Open the problem in Learn. Absent where there is nowhere to send the learner. */
   onSolve?: (problem: Problem) => void;
   onOpenThread: (problemId: string) => void;
+  /** Open yesterday's thread, most marked first. */
+  onOpenYesterday: (problemId: string) => void;
   onWrite: (problem: Problem) => void;
   onStuck: (problem: Problem) => void;
 }) {
   const now = useNow();
   const day = boardDay(now);
-  const [thread, setThread] = useState<number | null>(null);
+  const thread = useThreadCount(problem.id, `${day}:${refreshKey}`);
+  const before = useThreadCount(yesterday?.id ?? null, `${day}:${refreshKey}`);
 
-  useEffect(() => {
-    let alive = true;
-    setThread(null);
-    countThread(problem.id)
-      .then((count) => alive && setThread(count))
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [problem.id, day]);
-
-  // The board turns over at midnight UTC; the date printed on it is that day.
-  const date = new Date(day * 86_400_000).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  // The board turns over at midnight UTC. Said in the reader's own time, because
+  // "today" printed as a UTC date is the wrong weekday for half the world.
+  const turns = new Date((day + 1) * 86_400_000).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
   return (
     <section className="cm-board" aria-labelledby="cm-board-title">
@@ -62,9 +82,9 @@ export default function TodayBoard({
       <header className="cm-board-head">
         <p className="cm-board-label">
           <strong>Today&rsquo;s board</strong>
-          <span>{date}</span>
+          <span>The same problem for everyone until {turns}</span>
         </p>
-        <p className="cm-board-clock" title="Everyone gets the same problem. It changes at midnight UTC.">
+        <p className="cm-board-clock">
           Next board in <time>{boardCountdown(now)}</time>
         </p>
       </header>
@@ -80,7 +100,7 @@ export default function TodayBoard({
         </div>
 
         <p className="cm-board-note" aria-hidden="true">
-          {solved ? 'you solved this one: show how' : 'same problem for everyone, all day'}
+          {solved ? 'you solved this one: show how' : 'try it before you read the thread'}
         </p>
       </div>
 
@@ -100,11 +120,25 @@ export default function TodayBoard({
             </button>
           )}
         </div>
-        <button type="button" className="cm-board-thread" onClick={() => onOpenThread(problem.id)}>
-          {thread === null ? 'Open the thread' : thread === 0 ? 'No posts yet. Be the first' : `${plural(thread, 'post')} in this thread`}
-          <ArrowRight size={15} aria-hidden="true" />
-        </button>
+        {thread === 0 ? (
+          <p className="cm-board-thread is-static">No posts on this problem yet.</p>
+        ) : (
+          <button type="button" className="cm-board-thread" onClick={() => onOpenThread(problem.id)}>
+            {thread === null ? 'Open the thread' : `${plural(thread, 'post')} in this thread`}
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+        )}
       </footer>
+
+      {yesterday && before !== null && before > 0 && (
+        <p className="cm-board-yesterday">
+          <span>Yesterday</span>
+          <button type="button" onClick={() => onOpenYesterday(yesterday.id)}>
+            {yesterday.title}
+          </button>
+          <span>{before === 1 ? 'One post in its thread.' : `${before} posts, the most marked first.`}</span>
+        </p>
+      )}
     </section>
   );
 }

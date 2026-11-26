@@ -9,7 +9,7 @@
 
 import type { AuthorSummary, CommentWithAuthor, Reaction, ReactionCounts } from '../../services/database.types';
 import { apiUrl, isNativePlatform } from '../../services/apiBase';
-import { HINT_SOURCE, KIND_TAGS, MATH_SOURCE, POST_KINDS, SPOILER_SOURCE, VERBATIM_SOURCE, parsePost, type PostKind } from '../../../shared/postMarkup';
+import { HINT_SOURCE, KIND_TAGS, MATH_SOURCE, POST_KINDS, VERBATIM_SOURCE, hiddenRanges, parsePost, redactSealed, type PostKind } from '../../../shared/postMarkup';
 
 export { POST_KINDS, composePost, parsePost, redactSealed, type ParsedPost, type PostKind } from '../../../shared/postMarkup';
 
@@ -30,7 +30,7 @@ export interface ReactionMeta {
  * and nothing has to migrate; what changed is what each one means here.
  */
 export const REACTION_META: Record<Reaction, ReactionMeta> = {
-  like: { label: 'Follows', hint: 'I follow every step' },
+  like: { label: 'With you', hint: 'I can follow every step' },
   love: { label: 'Elegant', hint: 'A beautiful argument' },
   care: { label: 'Helped', hint: 'This got me unstuck' },
   haha: { label: 'Sneaky', hint: 'I did not see that trick coming' },
@@ -146,9 +146,9 @@ export function shiftReaction(counts: ReactionCounts | undefined, from: Reaction
 export type CommentSort = 'relevant' | 'newest' | 'oldest';
 
 export const COMMENT_SORTS: Record<CommentSort, { label: string; hint: string }> = {
-  relevant: { label: 'Most relevant', hint: 'Most reacted and discussed first.' },
+  relevant: { label: 'Most marked', hint: 'Most marks and replies first.' },
   newest: { label: 'Newest', hint: 'The latest comments first.' },
-  oldest: { label: 'All comments', hint: 'Every comment, oldest first.' },
+  oldest: { label: 'Oldest first', hint: 'Every comment, in the order written.' },
 };
 
 export interface CommentThread {
@@ -373,12 +373,20 @@ export function normaliseTag(raw: string): string | null {
   return tag;
 }
 
-/** The technique tags in a post, in the order written, without repeats. */
-export function extractTags(body: string): string[] {
+/**
+ * The technique tags in a post, in the order written, without repeats.
+ *
+ * Tags are read from the text a reader can see. A technique named only inside
+ * a sealed hint or between hidden-word bars is the idea the author sealed, and
+ * listing it under "Techniques in play" would give it away. `includeSealed` is
+ * for the composer, which must know every tag already typed.
+ */
+export function extractTags(body: string, includeSealed = false): string[] {
   const pattern = new RegExp(`(${VERBATIM})|${TAG}`, 'gi');
+  const text = includeSealed ? body : redactSealed(body);
   const seen = new Set<string>();
   let match: RegExpExecArray | null;
-  while ((match = pattern.exec(body)) !== null) {
+  while ((match = pattern.exec(text)) !== null) {
     const tag = match[3]?.toLowerCase();
     if (!tag || tag.length > TAG_MAX || KIND_TAGS.has(tag)) continue;
     seen.add(tag);
@@ -410,27 +418,25 @@ export type BodySegment =
   | { type: 'tag'; value: string }
   | { type: 'spoiler'; value: string };
 
-/**
- * Split running text into plain runs, `@mentions`, `#tags` and `||spoilers||`.
- * Formulas and inline code are matched first and left inside the plain runs,
- * so a norm like `$||x||$` or a `\#` in LaTeX is never mistaken for markup.
- */
-export function segmentInline(text: string): BodySegment[] {
-  const pattern = new RegExp(`(${VERBATIM})|${SPOILER_SOURCE}|${MENTION}|${TAG}`, 'gi');
-  const segments: BodySegment[] = [];
+/** Plain runs, `@mentions` and `#tags` of a stretch of text that holds no hidden words. */
+function pushRuns(text: string, segments: BodySegment[]): void {
+  if (!text) return;
+  const pattern = new RegExp(`(${VERBATIM})|${MENTION}|${TAG}`, 'gi');
   let plain = '';
   let last = 0;
   const flush = () => {
-    if (plain) segments.push({ type: 'text', value: plain });
+    if (!plain) return;
+    const previous = segments[segments.length - 1];
+    if (previous?.type === 'text') previous.value += plain;
+    else segments.push({ type: 'text', value: plain });
     plain = '';
   };
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text)) !== null) {
-    const [, formula, , spoiler, handle, tag] = match;
-    if (formula !== undefined) continue;
+    const [, verbatim, , handle, tag] = match;
+    if (verbatim !== undefined) continue;
     let segment: BodySegment;
-    if (spoiler !== undefined) segment = { type: 'spoiler', value: spoiler };
-    else if (handle !== undefined) segment = { type: 'mention', value: handle };
+    if (handle !== undefined) segment = { type: 'mention', value: handle };
     else if (tag !== undefined && tag.length <= TAG_MAX && !KIND_TAGS.has(tag.toLowerCase())) segment = { type: 'tag', value: tag.toLowerCase() };
     else continue;
     plain += text.slice(last, match.index);
@@ -440,6 +446,23 @@ export function segmentInline(text: string): BodySegment[] {
   }
   plain += text.slice(last);
   flush();
+}
+
+/**
+ * Split running text into plain runs, `@mentions`, `#tags` and `||hidden words||`.
+ * Formulas and inline code are left whole inside the plain runs, so a norm like
+ * `$||x||$` or a `\#` in LaTeX is never mistaken for markup; hidden words keep
+ * whatever is inside them, a formula included, for the reader who opens them.
+ */
+export function segmentInline(text: string): BodySegment[] {
+  const segments: BodySegment[] = [];
+  let cursor = 0;
+  for (const [start, end] of hiddenRanges(text)) {
+    pushRuns(text.slice(cursor, start), segments);
+    segments.push({ type: 'spoiler', value: text.slice(start + 2, end - 2) });
+    cursor = end;
+  }
+  pushRuns(text.slice(cursor), segments);
   return segments;
 }
 
@@ -515,6 +538,38 @@ export function boardCountdown(now: number): string {
 }
 
 /* --------------------------------------------------------------------------
+ * What the marks add up to
+ * ------------------------------------------------------------------------ */
+
+export interface Verdict {
+  tone: 'checked' | 'questioned' | 'lost';
+  text: string;
+}
+
+const CHECKED_AT = 5;
+const QUESTIONED_AT = 3;
+const LOST_AT = 3;
+
+/**
+ * The one line the marks on a post add up to, if they add up to anything.
+ *
+ * This is what makes a mark more than a reaction: enough readers saying "check
+ * this" is a warning to the next reader, enough saying they follow with nobody
+ * objecting is a reason to trust a write-up, and enough saying they are lost
+ * is something only the author can act on, so only the author is told.
+ */
+export function verdict(counts: ReactionCounts | undefined, isAuthor: boolean): Verdict | null {
+  const questioned = counts?.angry ?? 0;
+  const followed = counts?.like ?? 0;
+  const lost = counts?.sad ?? 0;
+
+  if (questioned >= QUESTIONED_AT) return { tone: 'questioned', text: `${compactCount(questioned)} readers question a step` };
+  if (isAuthor && lost >= LOST_AT) return { tone: 'lost', text: `${compactCount(lost)} readers got lost here. A hint might help.` };
+  if (followed >= CHECKED_AT && questioned === 0) return { tone: 'checked', text: `checked by ${compactCount(followed)} readers` };
+  return null;
+}
+
+/* --------------------------------------------------------------------------
  * Who is helping
  * ------------------------------------------------------------------------ */
 
@@ -522,21 +577,53 @@ export interface Helper<A> {
   id: string;
   author: A | null;
   posts: number;
+  /** Marks that say a post helped. "Lost me" and "Check this" are not among them. */
   marks: number;
 }
 
+/** The marks a reader leaves when a post did them good. */
+const HELPFUL: readonly Reaction[] = ['like', 'love', 'care', 'haha', 'wow'];
+
+/** How many of a post's marks say it helped. Without a breakdown, the total stands in. */
+export function helpfulMarks(post: { like_count: number; reactions?: ReactionCounts }): number {
+  if (!post.reactions) return post.like_count;
+  return HELPFUL.reduce((sum, key) => sum + (post.reactions![key] ?? 0), 0);
+}
+
 /**
- * The people whose posts on this page drew the most marks. Marks first, since
- * they are what readers gave; posts only break a tie, so writing a lot is not
- * the way onto the list.
+ * The people whose posts on this page helped most: counted in the marks that
+ * say so, with posts only breaking a tie, so neither writing a lot nor drawing
+ * objections is a way onto the list. Someone with none is not listed.
  */
-export function rankHelpers<A>(posts: Array<{ author_id: string; author: A | null; like_count: number }>, limit = 5): Helper<A>[] {
+export function rankHelpers<A>(
+  posts: Array<{ author_id: string; author: A | null; like_count: number; reactions?: ReactionCounts }>,
+  limit = 5,
+): Helper<A>[] {
   const people = new Map<string, Helper<A>>();
   for (const post of posts) {
     const entry = people.get(post.author_id) ?? { id: post.author_id, author: post.author, posts: 0, marks: 0 };
     entry.posts += 1;
-    entry.marks += post.like_count;
+    entry.marks += helpfulMarks(post);
     people.set(post.author_id, entry);
   }
-  return [...people.values()].sort((a, b) => b.marks - a.marks || b.posts - a.posts).slice(0, limit);
+  return [...people.values()]
+    .filter((person) => person.marks > 0)
+    .sort((a, b) => b.marks - a.marks || b.posts - a.posts)
+    .slice(0, limit);
+}
+
+/* --------------------------------------------------------------------------
+ * The composer's symbol keys
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Whether the caret sits inside a formula, so a symbol key can insert bare
+ * LaTeX instead of wrapping it in a second pair of dollars. Decided from the
+ * opener still unclosed before the caret, whichever of `$`, `$$`, `\(` or
+ * `\[` it is; counting dollars alone gets `$$x + ` wrong.
+ */
+export function insideMath(value: string, caret: number): boolean {
+  const before = value.slice(0, caret).replace(/\\\$/g, '');
+  const unclosed = before.replace(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^$\n]+\$/g, '');
+  return /\$|\\\(|\\\[/.test(unclosed);
 }

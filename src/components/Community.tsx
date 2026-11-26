@@ -7,10 +7,11 @@
  *
  * The page opens on today's board (one problem, the same for everyone) and
  * runs into the feed. A post has a kind (solution, stuck, trick, challenge),
- * may carry technique tags and sealed hints, and can be marked, commented on
- * (with threaded replies), edited, deleted, saved and shared -- to the feed,
- * by link, or through the system share sheet. People can be followed, and a
- * link to a post or comment opens this screen scrolled to it.
+ * may carry technique tags and sealed hints, may be filed in a circle, and can
+ * be marked, commented on (with threaded replies), edited, deleted, saved and
+ * reposted, or sent on by link or through the system share sheet. People can
+ * be followed, and a link to a post or comment opens this screen scrolled to
+ * it.
  *
  * Authorization lives in the database (see `services/data/feed.ts`); this
  * screen only decides what to offer, and renders the database's answer.
@@ -18,14 +19,16 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { ArrowUp, Bookmark, Link2, ListFilter, MessageCircle, PenLine, RefreshCw, Users, X } from 'lucide-react';
+import { ArrowUp, Link2, ListFilter, PenLine, RefreshCw, X } from 'lucide-react';
 import { Problem } from '../../shared/types';
 import { useAuth } from '../context/AuthContext';
 import type { AuthorSummary, PostWithAuthor, Reaction, ReactionCounts, SharedPost } from '../services/database.types';
 import {
+  CREDIT_MARK,
   createPost,
   deletePost,
   fetchPost,
+  setCommentReaction,
   setPostReaction,
   toggleSavedPost,
   updatePost,
@@ -34,11 +37,14 @@ import {
   type FeedView,
   type MutationResult,
 } from '../services/data/feed';
+import { createCircle, setCircleMembership, useCircles } from '../services/data/circles';
 import { useFollowing } from '../services/data/people';
 import { useCommunityPresence, type PresentPerson } from '../services/data/live';
 import { duration, ease, spring, staggerDelay } from '../lib/motion';
+import { CircleHeader, CircleList, StartCircleDialog } from './community/Circles';
 import { Lightbox } from './community/Media';
 import type { MentionPerson } from './community/Mentions';
+import type { ShieldReason } from './community/PostBody';
 import PostCard, { KIND_ICON, type PostActions } from './community/PostCard';
 import PostComposer from './community/PostComposer';
 import ProfilePeek from './community/ProfilePeek';
@@ -47,6 +53,7 @@ import { TagActionContext } from './community/RichText';
 import SendDialog from './community/SendDialog';
 import { Helpers, MarginKey, ProblemFilter, Techniques } from './community/Sidebar';
 import TodayBoard from './community/TodayBoard';
+import UnstuckDialog from './community/UnstuckDialog';
 import {
   KIND_META,
   POST_KINDS,
@@ -63,7 +70,9 @@ import {
   kindPattern,
   newestCreatedAt,
   parsePost,
+  plural,
   rankHelpers,
+  redactSealed,
   shareLink,
   shiftReaction,
   tallyTags,
@@ -74,7 +83,11 @@ import { Avatar, ConfirmDialog, Dialog, NowContext, ToastProvider, copyText, nat
 import '../styles/community.css';
 
 const PAGE = 20;
+/** How far the feed reads ahead on its own when a filter leaves a whole page empty. */
+const AUTO_PAGE_LIMIT = 200;
 const HIGHLIGHT_MS = 2600;
+const DAY_MS = 86_400_000;
+const GENERIC_ERROR = 'Something went wrong. Please try again.';
 
 const VIEWS: Record<FeedView, string> = {
   all: 'Everyone',
@@ -89,7 +102,7 @@ const SORTS: Record<FeedSort, string> = {
 };
 
 type ComposerState =
-  | { mode: 'create'; kind?: PostKind | null; problemId?: string | null }
+  | { mode: 'create'; kind?: PostKind | null; problemId?: string | null; circleId?: string | null }
   | { mode: 'edit'; post: PostWithAuthor }
   | { mode: 'share'; original: SharedPost };
 
@@ -119,7 +132,11 @@ function excerpt(text: string, length = 160): string {
 
 interface CommunityProps {
   problems: Problem[];
-  /** Problems the viewer has solved, so a solution to one they have not is kept under a shield. */
+  /**
+   * Problems the viewer has solved, so a solution to one they have not is kept
+   * under a shield. Absent while that is not known (the record is loading, could
+   * not be read, or nobody is signed in), and then every solution stays covered.
+   */
   solvedIds?: readonly string[];
   /** Open a problem in Learn. Absent where there is nowhere to send the learner. */
   onSolveProblem?: (problem: Problem) => void;
@@ -151,6 +168,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   const [kindFilter, setKindFilter] = useState<PostKind | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [authorFilter, setAuthorFilter] = useState<AuthorSummary | null>(null);
+  const [circleId, setCircleId] = useState<string | null>(null);
   const [sort, setSort] = useState<FeedSort>('latest');
   const [limit, setLimit] = useState(PAGE);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -161,12 +179,19 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     startsWith: kindFilter ? kindPattern(kindFilter) : null,
     tag: tagFilter,
     authorId: authorFilter?.id ?? null,
+    circleId,
     sort,
     limit,
   });
   const schema = feed.schema;
   const following = useFollowing(viewerId);
+  const circles = useCircles(viewerId);
+  const circle = circleId ? circles.data.find((entry) => entry.id === circleId) ?? null : null;
+  const inCircle = Boolean(circle && circles.joined.has(circle.id));
+  const circleNames = useMemo(() => new Map(circles.data.map((entry) => [entry.id, entry.name])), [circles.data]);
+  const joinedCircles = useMemo(() => circles.data.filter((entry) => circles.joined.has(entry.id)), [circles.data, circles.joined]);
   const solved = useMemo(() => new Set(solvedIds ?? []), [solvedIds]);
+  const solvedKnown = solvedIds !== undefined;
 
   const [overrides, setOverrides] = useState<Record<string, Reaction | null>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
@@ -175,6 +200,9 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   const [confirmDelete, setConfirmDelete] = useState<PostWithAuthor | null>(null);
   const [reactors, setReactors] = useState<{ target: 'post' | 'comment'; id: string; counts: ReactionCounts | undefined } | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [startingCircle, setStartingCircle] = useState(false);
+  const [circleBusy, setCircleBusy] = useState(false);
+  const [unstuck, setUnstuck] = useState<PostWithAuthor | null>(null);
   const [peek, setPeek] = useState<AuthorSummary | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [focus, setFocus] = useState<LinkTarget | null>(readLinkTarget);
@@ -212,6 +240,11 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
 
   useEffect(() => setLoadingMore(false), [feed.data]);
 
+  // A circle that has gone (removed, or no longer visible) is not a place to stay.
+  useEffect(() => {
+    if (circleId && !circles.loading && !circles.error && !circles.data.some((entry) => entry.id === circleId)) setCircleId(null);
+  }, [circleId, circles.loading, circles.error, circles.data]);
+
   const withOverride = useCallback(
     (post: PostWithAuthor): PostWithAuthor => {
       if (!(post.id in overrides)) return post;
@@ -229,11 +262,15 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   );
 
   // The database narrows by text, so "#parity" also finds "#parity-check" and
-  // "#stuck%" also finds a sentence that starts that way; the exact ones are kept here.
+  // "#stuck%" also finds a sentence that starts that way; the exact ones are
+  // kept here. A repost has no kind, whatever its note begins with.
   const posts = useMemo(
     () =>
       feed.data
-        .filter((post) => (!tagFilter || extractTags(post.body).includes(tagFilter)) && (!kindFilter || isKind(post.body, kindFilter)))
+        .filter(
+          (post) =>
+            (!tagFilter || extractTags(post.body).includes(tagFilter)) && (!kindFilter || (!post.shared_post_id && isKind(post.body, kindFilter))),
+        )
         .map(withOverride),
     [feed.data, withOverride, tagFilter, kindFilter],
   );
@@ -241,18 +278,21 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   // New posts from other people wait behind a "new posts" pill instead of
   // pushing the feed down while it is being read. The baseline is the newest
   // post on screen when this feed (problem, tab, account) first loaded.
-  const feedKey = `${problemFilter}:${view}:${kindFilter ?? ''}:${tagFilter ?? ''}:${authorFilter?.id ?? ''}:${sort}:${viewerId ?? 'guest'}`;
+  const feedKey = `${problemFilter}:${view}:${kindFilter ?? ''}:${tagFilter ?? ''}:${authorFilter?.id ?? ''}:${circleId ?? ''}:${sort}:${viewerId ?? 'guest'}`;
   useEffect(() => {
     if (feed.loading || baseline?.key === feedKey) return;
     setBaseline({ key: feedKey, cutoff: newestCreatedAt(feed.data) ?? new Date().toISOString() });
   }, [feed.loading, feed.data, feedKey, baseline?.key]);
-  const { visible, fresh } = holdBackFresh(posts, baseline?.key === feedKey ? baseline.cutoff : null, viewerId);
+  // Only where the newest is on top: a page ordered by marks, or by when
+  // something was saved, has newer posts all through it, and none of them is news.
+  const holdable = sort === 'latest' && view !== 'saved';
+  const { visible, fresh } = holdBackFresh(posts, holdable && baseline?.key === feedKey ? baseline.cutoff : null, viewerId);
   const showFresh = () => {
     setBaseline({ key: feedKey, cutoff: newestCreatedAt(feed.data) });
     feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Everyone around the feed, for @mention suggestions and "Send in Messages".
+  // Everyone around the feed, for @mention suggestions and "Send in a message".
   const people = useMemo(() => {
     const map = new Map<string, MentionPerson>();
     for (const person of present) map.set(person.id, { id: person.id, username: person.username, display_name: person.name, avatar_url: person.avatar_url });
@@ -265,7 +305,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   // Thread counts, techniques and helpers come from the unfiltered feed, and are
   // kept while a filter or tab is applied, so the side column does not lose
   // its numbers the moment it is used.
-  const unfiltered = problemFilter === 'All' && view === 'all' && !kindFilter && !tagFilter && !authorFilter && sort === 'latest';
+  const unfiltered = problemFilter === 'All' && view === 'all' && !kindFilter && !tagFilter && !authorFilter && !circleId && sort === 'latest';
   const countsCache = useRef(new Map<string, number>());
   const problemCounts = useMemo(() => {
     if (!unfiltered) return countsCache.current;
@@ -289,7 +329,11 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
 
   // One problem a day, the same for everyone; recomputed only when the day turns.
   const today = boardDay(now);
-  const board = useMemo(() => boardProblem(problems, today * 86_400_000), [problems, today]);
+  const board = useMemo(() => boardProblem(problems, today * DAY_MS), [problems, today]);
+  const boardBefore = useMemo(() => {
+    const previous = boardProblem(problems, (today - 1) * DAY_MS);
+    return previous && previous.id !== board?.id ? previous : null;
+  }, [problems, today, board]);
 
   const toTop = () => feedTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const narrow = (apply: () => void) => {
@@ -368,9 +412,62 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     return viewer;
   };
 
+  const solveHandler = (problemId: string | null | undefined) => {
+    const problem = onSolveProblem && problemId ? problems.find((entry) => entry.id === problemId) : undefined;
+    return problem ? () => onSolveProblem!(problem) : undefined;
+  };
+
+  // The shield fails closed. A write-up of a problem stays covered unless the
+  // reader wrote it or is known to have solved the problem; "not known" covers
+  // a record still loading, one that could not be read, and a signed-out reader.
+  const shieldFor = (post: { problem_id: string | null; author_id: string } | null | undefined): ShieldReason | null => {
+    if (!post?.problem_id || post.author_id === viewerId) return null;
+    if (!solvedKnown) return 'unknown';
+    return solved.has(post.problem_id) ? null : 'unsolved';
+  };
+
+  const openCircle = (id: string | null) =>
+    narrow(() => {
+      setCircleId(id);
+      setFilterOpen(false);
+      if (id) {
+        setView('all');
+        setProblemFilter('All');
+        setTagFilter(null);
+        setAuthorFilter(null);
+        setKindFilter(null);
+      }
+    });
+
+  const toggleCircle = async () => {
+    const me = signedIn('join a circle');
+    if (!me || !circle || circleBusy) return;
+    const leaving = circles.joined.has(circle.id);
+    setCircleBusy(true);
+    const result = await setCircleMembership({ circleId: circle.id, userId: me.id, joined: leaving });
+    setCircleBusy(false);
+    if (!result.ok) {
+      toast(result.error, 'error');
+      return;
+    }
+    toast(leaving ? `You left ${circle.name}.` : `You joined ${circle.name}. New posts can be filed in it.`, 'neutral');
+    await circles.reload();
+  };
+
+  const resolve = async (post: PostWithAuthor, resolved: boolean) => {
+    const { text } = parsePost(post.body);
+    const result = await updatePost({ postId: post.id, body: composePost(text, 'stuck', resolved) });
+    if (!result.ok) {
+      toast(result.error, 'error');
+      return;
+    }
+    toast(resolved ? 'Marked as unstuck. It has left the queue.' : 'Reopened. It is back in the queue.');
+    await Promise.all([feed.reload(), refreshLinked(post.id)]);
+  };
+
   const actions: PostActions = {
     react: async (post, next) => {
-      if (!viewerId || inFlight.current.has(post.id)) return;
+      if (!signedIn('leave a mark') || !viewerId || inFlight.current.has(post.id)) return;
       inFlight.current.add(post.id);
       const stored =
         (latest.current.posts.find((row) => row.id === post.id) ?? (latest.current.linked?.id === post.id ? latest.current.linked : null))?.viewer_reaction ?? null;
@@ -392,11 +489,11 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
         toast(result.error, 'error');
         return;
       }
-      toast(saved ? 'Removed from your saved posts' : 'Post saved. Find it under Saved.');
+      toast(saved ? 'Removed from Saved.' : 'Saved. It is under Saved.');
       await Promise.all([feed.reload(), refreshLinked(post.id)]);
     },
     shareNow: async (post) => {
-      const me = signedIn('share posts');
+      const me = signedIn('repost');
       if (!me) return;
       const original = originalOf(post);
       const result = await createPost({ authorId: me.id, body: '', problemId: original.problem_id, sharedPostId: original.id });
@@ -404,31 +501,36 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
         toast(result.error, 'error');
         return;
       }
-      toast('Shared to the community feed');
+      toast('Reposted.');
       await feed.reload();
     },
     shareWithThoughts: (post) => {
-      if (!signedIn('share posts')) return;
+      if (!signedIn('repost')) return;
       setComposer({ mode: 'share', original: originalOf(post) });
     },
     copyLink: async (post) => {
-      toast((await copyText(shareLink(post.id))) ? 'Link copied to clipboard' : 'Could not copy the link', 'neutral');
+      toast((await copyText(shareLink(post.id))) ? 'Link copied.' : 'Could not copy the link.', 'neutral');
     },
     copyText: async (post) => {
-      toast((await copyText(post.body)) ? 'Post text copied' : 'Could not copy the text', 'neutral');
+      // The words as written, without the line that files the post.
+      const text = post.shared_post_id ? post.body : parsePost(post.body).text;
+      toast((await copyText(text)) ? 'Text copied.' : 'Could not copy the text.', 'neutral');
     },
     shareVia: async (post) => {
+      // What leaves the page is the open text only: a sealed hint or hidden word stays sealed.
+      const quote = (body: string | null | undefined, isShare = false) => redactSealed(isShare ? body ?? '' : parsePost(body ?? '').text);
       const outcome = await nativeShare({
         title: `${authorName(post.author)} on CalculixHub`,
-        text: excerpt(post.body || post.shared_post?.body || 'A discussion on CalculixHub'),
+        text: excerpt(quote(post.body, Boolean(post.shared_post_id)) || quote(post.shared_post?.body) || 'A discussion on CalculixHub'),
         url: shareLink(post.id),
       });
-      if (outcome === 'failed') toast('Sharing is not available here. Try “Copy link”.', 'error');
+      if (outcome === 'failed') toast('Sharing is not available here. Use “Copy link”.', 'error');
     },
     filterProblem: (problemId) =>
       narrow(() => {
         setProblemFilter(problemId);
         setView('all');
+        setFilterOpen(false);
       }),
     openOriginal: (postId) => {
       if (feed.data.some((post) => post.id === postId)) reveal({ postId, commentId: null });
@@ -459,24 +561,27 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     toggleFollow: async (authorId) => {
       if (!signedIn('follow people')) return;
       const result = await following.toggle(authorId);
-      if (!result.ok) toast(result.error ?? 'Could not update that follow.', 'error');
-      else toast(result.following ? 'Following. Their posts are under Following.' : 'Unfollowed', 'neutral');
+      if (!result.ok) {
+        toast(result.error ?? 'Could not update that follow.', 'error');
+        return;
+      }
+      toast(result.following ? 'Following. Their posts are under Following.' : 'Unfollowed.', 'neutral');
+      // The live channel usually brings this in; when it does not, the list would be stale.
+      if (view === 'following') void feed.reload();
     },
     filterAuthor: (author) =>
       narrow(() => {
         setAuthorFilter(author);
         setView('all');
       }),
-    setResolved: async (post, resolved) => {
-      const { text } = parsePost(post.body);
-      const result = await updatePost({ postId: post.id, body: composePost(text, 'stuck', resolved) });
-      if (!result.ok) {
-        toast(result.error, 'error');
-        return;
-      }
-      toast(resolved ? 'Marked as unstuck. Nice work.' : 'Reopened. It is back in the queue.');
-      await Promise.all([feed.reload(), refreshLinked(post.id)]);
+    setResolved: (post, resolved) => void resolve(post, resolved),
+    askUnstuck: (post) => {
+      // Crediting a reply is the asker's "Helped" mark on it, which only the newer schema stores.
+      if (schema === 'social' && post.comment_count > 0) setUnstuck(post);
+      else void resolve(post, true);
     },
+    openCircle: (id) => openCircle(id),
+    needAccount: (verb) => void signedIn(verb),
   };
 
   const openCreate = (options: { kind?: PostKind | null; problemId?: string | null } = {}) => {
@@ -484,10 +589,10 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
       window.location.assign('/?auth=signup');
       return;
     }
-    setComposer({ mode: 'create', ...options });
+    setComposer({ mode: 'create', ...options, circleId: inCircle ? circleId : null });
   };
 
-  const submitComposer = async (body: string, problemId: string | null, images: string[]): Promise<MutationResult> => {
+  const submitComposer = async (body: string, problemId: string | null, images: string[], postedIn: string | null): Promise<MutationResult> => {
     if (!composer || !viewer) return { ok: false, error: 'Sign in to post.' };
 
     let result: MutationResult;
@@ -499,25 +604,27 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
         isShare: Boolean(composer.post.shared_post_id),
         ...(schema === 'social' ? { images } : {}),
       });
-      if (result.ok) toast('Post updated');
+      if (result.ok) toast('Saved.');
       await refreshLinked(composer.post.id);
     } else {
       result = await createPost({
         authorId: viewer.id,
         body,
         problemId,
+        communityId: composer.mode === 'create' ? postedIn : null,
         sharedPostId: composer.mode === 'share' ? composer.original.id : null,
         images,
       });
       if (result.ok) {
-        toast(composer.mode === 'share' ? 'Shared to the community feed' : 'Your post is live');
+        toast(composer.mode === 'share' ? 'Reposted.' : 'Posted.');
         // Show the new post: drop whatever narrowing would hide it.
         setView('all');
         setSort('latest');
         setTagFilter(null);
         setAuthorFilter(null);
-        if (kindFilter && kindFilter !== parsePost(body).kind) setKindFilter(null);
+        if (kindFilter && (composer.mode === 'share' || kindFilter !== parsePost(body).kind)) setKindFilter(null);
         if (problemFilter !== 'All' && problemFilter !== problemId) setProblemFilter('All');
+        if (circleId && circleId !== postedIn) setCircleId(null);
         toTop();
       }
     }
@@ -535,16 +642,30 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     }
     if (linked?.id === confirmDelete.id) setLinked(null);
     setConfirmDelete(null);
-    toast('Post deleted');
+    toast('Post deleted.');
     await feed.reload();
   };
 
+  const startCircle = async (name: string, about: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+    if (!viewer) return { ok: false, error: 'Sign in to start a circle.' };
+    const result = await createCircle({ ownerId: viewer.id, name, about });
+    if (!result.ok) return result;
+    await circles.reload();
+    openCircle(result.circle.id);
+    toast(`${result.circle.name} is open. Anyone can join it.`);
+    return { ok: true };
+  };
+
+  // Keyed by post, so what one card holds (a lifted cover, opened hints, a
+  // half-written comment) never carries over to another shown in its place.
   const card = (post: PostWithAuthor) => (
     <PostCard
+      key={post.id}
       post={post}
       viewer={viewer}
       schema={schema}
       problemTitle={problemTitle}
+      circleName={post.community_id && post.community_id !== circleId ? circleNames.get(post.community_id) ?? null : null}
       commentsOpen={openComments.has(post.id)}
       composerSignal={composerSignals[post.id] ?? 0}
       focusCommentId={focusComment?.postId === post.id ? focusComment.commentId : null}
@@ -552,8 +673,10 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
       viewers={viewersByPost.get(post.id) ?? []}
       mentionCandidates={people}
       following={following.ids}
-      shielded={Boolean(viewerId) && solvedIds !== undefined && Boolean(post.problem_id) && !solved.has(post.problem_id!) && post.author_id !== viewerId}
-      onSolve={onSolveProblem && post.problem_id ? () => { const problem = problems.find((entry) => entry.id === post.problem_id); if (problem) onSolveProblem(problem); } : undefined}
+      shield={shieldFor(post)}
+      sharedShield={shieldFor(post.shared_post)}
+      onSolve={solveHandler(post.problem_id)}
+      onSolveShared={solveHandler(post.shared_post?.problem_id)}
       actions={actions}
     />
   );
@@ -568,30 +691,75 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
       setTagFilter(null);
       setAuthorFilter(null);
     });
+  const clearEverything = () =>
+    narrow(() => {
+      setProblemFilter('All');
+      setTagFilter(null);
+      setAuthorFilter(null);
+      setKindFilter(null);
+      setView('all');
+    });
 
-  const empty = (() => {
-    if (view === 'saved') return { title: 'Nothing saved yet', text: 'Tap the bookmark on any post to keep it here.' };
+  // The exact filter runs here, on what the database returned for a looser
+  // one, so a full page can come back with nothing in it while later pages do
+  // hold a match. Read on, within reason, before saying there is nothing.
+  useEffect(() => {
+    if (posts.length === 0 && hasMore && !feed.loading && !feed.error && limit < AUTO_PAGE_LIMIT) setLimit((value) => value + PAGE);
+  }, [posts.length, hasMore, feed.loading, feed.error, limit]);
+  const readingOn = posts.length === 0 && hasMore && !feed.error && limit < AUTO_PAGE_LIMIT;
+
+  const filtersOn = [view !== 'all', Boolean(kindFilter), Boolean(tagFilter), Boolean(authorFilter), Boolean(selectedTitle)].filter(Boolean).length;
+  const empty: { title: string; text: string; reset?: boolean; write?: boolean } = (() => {
+    if (filtersOn > 1) return { title: 'Nothing matches all of these', text: 'Remove a filter to see more.', reset: true };
+    if (kindFilter === 'stuck') return { title: 'Nobody is waiting for a nudge', text: 'Every open question here has been answered. Ask one of your own.', write: true };
+    if (kindFilter) return { title: `No ${KIND_META[kindFilter].plural.toLocaleLowerCase()} here yet`, text: 'The first one could be yours.', write: true };
+    if (tagFilter) return { title: `Nothing tagged #${tagFilter} yet`, text: 'Add the tag to a post and it is found here.', write: true };
+    if (selectedTitle) return { title: 'Nobody has written about this problem yet', text: 'Post your approach, or ask about the step that stops you.', write: true };
+    if (authorFilter) return { title: `${firstName(authorFilter)} has not posted yet`, text: 'Their posts will appear here.' };
+    if (view === 'saved') return { title: 'Nothing saved yet', text: 'Use the bookmark on any post to keep it here.' };
     if (view === 'following') {
       return following.ids.size === 0
         ? { title: 'You are not following anyone yet', text: 'Follow someone from their post or from “Helping lately”, and what they write is collected here.' }
         : { title: 'Nothing new from the people you follow', text: 'Their next post will appear here.' };
     }
-    if (view === 'mine') return { title: 'You have not posted yet', text: 'Write up a solution, or ask for a nudge on a problem you are stuck on.' };
-    if (kindFilter === 'stuck') return { title: 'Nobody is waiting for a nudge', text: 'Every open question here has been answered. Check back later, or ask one of your own.' };
-    if (kindFilter) return { title: `No ${KIND_META[kindFilter].plural.toLocaleLowerCase()} here yet`, text: 'Be the first to post one.' };
-    if (tagFilter) return { title: `Nothing tagged #${tagFilter} yet`, text: 'Add the tag to a post and it will be found here.' };
-    if (authorFilter) return { title: `${firstName(authorFilter)} has not posted yet`, text: 'Their posts will appear here.' };
-    if (selectedTitle) return { title: 'Nobody has written about this problem yet', text: 'Post your approach, or ask about the step that stops you.' };
-    return { title: 'No posts yet', text: 'Write up a solution, share a trick, or ask for a nudge.' };
+    if (view === 'mine') return { title: 'You have not posted yet', text: 'Write up a solution, or ask for a nudge on a problem you are stuck on.', write: true };
+    if (circle) {
+      return inCircle
+        ? { title: `Nothing in ${circle.name} yet`, text: 'The first post in a circle sets its tone.', write: true }
+        : { title: `Nothing in ${circle.name} yet`, text: viewer ? 'Join the circle to write its first post.' : 'Sign in and join the circle to write its first post.' };
+    }
+    return { title: 'No posts yet', text: 'Write up a solution, share a trick, or ask for a nudge.', write: true };
   })();
+  const canWrite = !circle || inCircle;
 
-  const browse = (
+  // Shown twice: in the side column, and in the Browse sheet that replaces it on
+  // narrower screens. Each copy gets its own ids.
+  const browse = (prefix: string) => (
     <>
-      <Techniques tags={tags} selected={tagFilter} onSelect={filterTag} />
-      <section className="cm-side-card" aria-labelledby="cm-threads">
-        <h3 id="cm-threads">Problem threads</h3>
-        <ProblemFilter problems={problems} counts={problemCounts} selected={problemFilter} onSelect={(problemId) => { actions.filterProblem(problemId); setFilterOpen(false); }} />
+      <Techniques idPrefix={prefix} tags={tags} selected={tagFilter} onSelect={(tag) => { filterTag(tag); setFilterOpen(false); }} />
+      <section className="cm-side-card" aria-labelledby={`${prefix}-threads`}>
+        <h3 id={`${prefix}-threads`}>Problem threads</h3>
+        <ProblemFilter problems={problems} counts={problemCounts} selected={problemFilter} onSelect={actions.filterProblem} />
       </section>
+      <CircleList
+        idPrefix={prefix}
+        circles={circles.data}
+        joined={circles.joined}
+        selected={circleId}
+        loading={circles.loading}
+        error={circles.error}
+        canStart={Boolean(viewer)}
+        onSelect={(entry) => openCircle(entry?.id ?? null)}
+        onStart={() => { setFilterOpen(false); setStartingCircle(true); }}
+      />
+      <Helpers
+        idPrefix={prefix}
+        people={helpers}
+        viewerId={viewerId}
+        following={following.ids}
+        onToggleFollow={actions.toggleFollow}
+        onOpen={(author) => { setFilterOpen(false); actions.openProfile(author); }}
+      />
     </>
   );
 
@@ -604,10 +772,20 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
           {board && (
             <TodayBoard
               problem={board}
-              solved={solved.has(board.id)}
+              yesterday={boardBefore}
+              solved={solvedKnown && solved.has(board.id)}
               signedIn={Boolean(viewer)}
+              refreshKey={`${feed.data.length}:${newestCreatedAt(feed.data) ?? ''}`}
               onSolve={onSolveProblem}
               onOpenThread={actions.filterProblem}
+              onOpenYesterday={(problemId) =>
+                narrow(() => {
+                  setProblemFilter(problemId);
+                  setView('all');
+                  setKindFilter(null);
+                  setSort('top');
+                })
+              }
               onWrite={(problem) => openCreate({ kind: 'solution', problemId: problem.id })}
               onStuck={(problem) => openCreate({ kind: 'stuck', problemId: problem.id })}
             />
@@ -617,39 +795,60 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
             <section className="cm-feed" aria-label="Community feed">
               <div ref={feedTop} className="cm-scroll-anchor" />
 
-              <section className="cm-card cm-prompt" aria-label="Write a post">
-                <div className="cm-prompt-row">
-                  <Avatar author={viewer} size={42} />
-                  <button type="button" className="cm-prompt-input" onClick={() => openCreate()}>
-                    {viewer ? 'Share an approach, or ask for a nudge…' : 'Sign in to post'}
-                  </button>
-                </div>
-                {viewer && (
-                  <div className="cm-prompt-actions">
-                    {POST_KINDS.map((kind) => {
-                      const Icon = KIND_ICON[kind];
-                      return (
-                        <button key={kind} type="button" className={`is-${kind}`} onClick={() => openCreate({ kind })} title={KIND_META[kind].blurb}>
-                          <Icon size={18} aria-hidden="true" /> {KIND_META[kind].label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
+              {circle && (
+                <CircleHeader circle={circle} isMember={inCircle} canJoin={Boolean(viewer)} busy={circleBusy} onToggle={() => void toggleCircle()} onClose={() => openCircle(null)} />
+              )}
+
+              {canWrite && (
+                <section className="cm-write" aria-label="Write a post">
+                  {viewer ? (
+                    <>
+                      <div className="cm-write-kinds">
+                        {POST_KINDS.map((kind) => {
+                          const Icon = KIND_ICON[kind];
+                          return (
+                            <button key={kind} type="button" className={`cm-write-kind is-${kind}`} onClick={() => openCreate({ kind })} title={KIND_META[kind].blurb}>
+                              <Icon size={17} aria-hidden="true" />
+                              <span>{KIND_META[kind].action}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button type="button" className="cm-write-any" onClick={() => openCreate()}>
+                        <PenLine size={17} aria-hidden="true" />
+                        <span>Write a post</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="cm-write-any is-guest" onClick={() => openCreate()}>
+                      <PenLine size={17} aria-hidden="true" />
+                      <span>Sign in to post</span>
+                    </button>
+                  )}
+                </section>
+              )}
 
               <div className="cm-feed-bar">
-                {viewer ? (
+                {viewer && (
                   <div className="cm-segmented" role="group" aria-label="Whose posts">
                     {(Object.keys(VIEWS) as FeedView[]).map((key) => (
-                      <button key={key} type="button" aria-pressed={view === key} onClick={() => narrow(() => setView(key))}>
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={view === key}
+                        onClick={() =>
+                          narrow(() => {
+                            setView(key);
+                            // "By someone" inside Yours or Following can only be empty.
+                            if (key !== 'all') setAuthorFilter(null);
+                          })
+                        }
+                      >
                         {view === key && <m.span layoutId="cm-segment" className="cm-segment-pill" transition={spring.snappy} />}
                         <span>{VIEWS[key]}</span>
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <span />
                 )}
                 <div className="cm-feed-tools">
                   <div className="cm-sort" role="group" aria-label="Order">
@@ -675,7 +874,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                   return (
                     <button key={kind} type="button" className={`cm-kind-chip is-${kind}`} aria-pressed={kindFilter === kind} onClick={() => narrow(() => setKindFilter(kindFilter === kind ? null : kind))}>
                       <Icon size={14} aria-hidden="true" />
-                      {kind === 'stuck' ? 'Needs a nudge' : KIND_META[kind].plural}
+                      {KIND_META[kind].plural}
                     </button>
                   );
                 })}
@@ -751,14 +950,14 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
 
               {feed.error && (
                 <div className="cm-card cm-notice" role="alert">
-                  <p>{feed.error}</p>
+                  <p>{feed.error === GENERIC_ERROR ? 'The feed could not be loaded. Check your connection and try again.' : feed.error}</p>
                   <button type="button" className="cm-button is-quiet" onClick={() => void feed.reload()}>
                     <RefreshCw size={16} aria-hidden="true" /> Try again
                   </button>
                 </div>
               )}
 
-              {initialLoading && (
+              {(initialLoading || (readingOn && visible.length === 0)) && (
                 <div role="status" aria-label="Loading posts">
                   {[0, 1].map((index) => (
                     <div key={index} className="cm-card cm-skeleton" aria-hidden="true">
@@ -777,17 +976,22 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                 </div>
               )}
 
-              {!initialLoading && !feed.error && visible.length === 0 && (
+              {!initialLoading && !readingOn && !feed.error && visible.length === 0 && fresh.length === 0 && (
                 <div className="cm-empty">
-                  <span className="cm-empty-icon">
-                    {view === 'saved' ? <Bookmark size={22} aria-hidden="true" /> : view === 'following' ? <Users size={22} aria-hidden="true" /> : <MessageCircle size={22} aria-hidden="true" />}
-                  </span>
                   <h2>{empty.title}</h2>
                   <p>{empty.text}</p>
-                  {viewer && view !== 'saved' && view !== 'following' && !authorFilter && (
-                    <button type="button" className="cm-button is-primary" onClick={() => openCreate({ kind: kindFilter, problemId: problemFilter === 'All' ? null : problemFilter })}>
-                      <PenLine size={16} aria-hidden="true" /> Write a post
+                  {empty.reset ? (
+                    <button type="button" className="cm-button is-quiet" onClick={clearEverything}>
+                      Clear filters
                     </button>
+                  ) : (
+                    empty.write &&
+                    viewer &&
+                    canWrite && (
+                      <button type="button" className="cm-button is-primary" onClick={() => openCreate({ kind: kindFilter, problemId: problemFilter === 'All' ? null : problemFilter })}>
+                        <PenLine size={16} aria-hidden="true" /> {kindFilter ? KIND_META[kindFilter].action : 'Write a post'}
+                      </button>
+                    )
                   )}
                 </div>
               )}
@@ -796,8 +1000,8 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                 {fresh.length > 0 && (
                   <m.div
                     className="cm-fresh-wrap"
-                    initial={{ opacity: 0, y: -12, scale: 0.94 }}
-                    animate={{ opacity: 1, y: 0, scale: 1, transition: spring.snappy }}
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.standard } }}
                     exit={{ opacity: 0, y: -8, transition: { duration: duration.fast, ease: ease.exit } }}
                   >
                     <button type="button" className="cm-fresh" onClick={showFresh}>
@@ -807,7 +1011,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                           <Avatar key={author?.id ?? index} author={author} size={22} />
                         ))}
                       </span>
-                      {fresh.length === 1 ? '1 new post' : `${fresh.length} new posts`}
+                      {plural(fresh.length, 'new post')}
                     </button>
                   </m.div>
                 )}
@@ -821,7 +1025,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                       layout="position"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0, transition: { ...spring.smooth, delay: staggerDelay(index) } }}
-                      exit={{ opacity: 0, scale: 0.98, transition: { duration: duration.fast, ease: ease.exit } }}
+                      exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
                     >
                       {card(post)}
                     </m.div>
@@ -841,7 +1045,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                         setLimit((value) => value + PAGE);
                       }}
                     >
-                      {loadingMore ? 'Loading…' : 'See more posts'}
+                      {loadingMore ? 'Loading…' : `Load ${PAGE} more`}
                     </button>
                   ) : (
                     <p className="cm-muted">That is everything{sort === 'top' ? ' from this week' : ''}.</p>
@@ -851,9 +1055,8 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
             </section>
 
             <aside className="cm-side" aria-label="Browse the community">
-              {browse}
-              <Helpers people={helpers} viewerId={viewerId} following={following.ids} onToggleFollow={actions.toggleFollow} onOpen={actions.openProfile} />
-              <MarginKey />
+              {browse('cm-side')}
+              <MarginKey idPrefix="cm-side" />
             </aside>
           </div>
 
@@ -882,6 +1085,8 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
                 initialImages={composer.mode === 'edit' ? composer.post.images ?? [] : []}
                 allowImages={schema === 'social'}
                 mentionCandidates={people}
+                circles={joinedCircles}
+                initialCircleId={composer.mode === 'create' ? composer.circleId ?? null : null}
                 onSubmit={submitComposer}
                 onClose={() => setComposer(null)}
               />
@@ -893,13 +1098,33 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
               <ConfirmDialog
                 key="confirm-post"
                 title="Delete post?"
-                message="It will be removed from the feed for everyone, along with its comments. This can’t be undone."
+                message="It will be removed from the feed for everyone, along with its comments. This cannot be undone."
                 confirmLabel="Delete"
                 onConfirm={confirmRemove}
                 onClose={() => setConfirmDelete(null)}
               />
             )}
           </AnimatePresence>
+
+          <AnimatePresence>
+            {unstuck && viewerId && (
+              <UnstuckDialog
+                key="unstuck"
+                post={unstuck}
+                onClose={() => setUnstuck(null)}
+                onConfirm={async (commentId) => {
+                  if (commentId) {
+                    const credited = await setCommentReaction({ commentId, userId: viewerId, current: null, next: CREDIT_MARK, schema });
+                    if (!credited.ok) toast('The credit could not be saved. The question is still marked unstuck.', 'error');
+                  }
+                  await resolve(unstuck, true);
+                  setUnstuck(null);
+                }}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>{startingCircle && <StartCircleDialog key="start-circle" onSubmit={startCircle} onClose={() => setStartingCircle(false)} />}</AnimatePresence>
 
           <AnimatePresence>
             {reactors && <ReactorsDialog key="reactors" target={reactors.target} id={reactors.id} counts={reactors.counts} schema={schema} onClose={() => setReactors(null)} />}
@@ -943,8 +1168,8 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
             {filterOpen && (
               <Dialog key="filter" title="Browse" onClose={() => setFilterOpen(false)} size="sm">
                 <div className="cm-dialog-body cm-browse">
-                  {browse}
-                  <MarginKey compact />
+                  {browse('cm-sheet')}
+                  <MarginKey compact idPrefix="cm-sheet" />
                 </div>
               </Dialog>
             )}

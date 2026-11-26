@@ -2,8 +2,9 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * The text of a post, clamped with "See more", and the card a share shows for
- * the post it shares.
+ * The text of a post, clamped until the reader asks for the rest; the cover a
+ * solution wears for someone who has not solved the problem; and the card a
+ * repost shows for the post it carries.
  */
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
@@ -11,11 +12,11 @@ import { EyeOff } from 'lucide-react';
 import type { SharedPost } from '../../services/database.types';
 import { MediaGrid } from './Media';
 import RichText from './RichText';
-import { authorName, fullTimestamp, postAge } from './model';
+import { KIND_META, authorName, fullTimestamp, parsePost, postAge } from './model';
 import { Avatar, useNow } from './ui';
 
 /**
- * Long text is clamped to a few lines with a "See more" toggle. The clamp is
+ * Long text is clamped to a few lines until the reader asks for the rest. The clamp is
  * measured after layout rather than guessed from a character count, because a
  * line of KaTeX can be taller than five lines of prose.
  */
@@ -78,7 +79,7 @@ export function ExpandableBody({
       </div>
       {overflowing && !expanded && (
         <button type="button" className="cm-see-more" onClick={() => setExpanded(true)}>
-          See more
+          Read the rest
         </button>
       )}
     </div>
@@ -90,31 +91,74 @@ export function isLargeText(text: string): boolean {
   return text.length > 0 && text.length <= 85 && !/\n|\$|\\\(|\\\[/.test(text);
 }
 
+/**
+ * Why a solution is covered: the reader is known not to have solved the
+ * problem, or it is not known whether they have (their record is still
+ * loading, could not be read, or they are signed out).
+ */
+export type ShieldReason = 'unsolved' | 'unknown';
+
+/**
+ * The cover over a solution. It fails closed: when it is not known whether the
+ * reader has solved the problem, the write-up stays covered and says so in
+ * neutral words, rather than being shown first and hidden a moment later.
+ */
+export function Shield({ reason, onSolve, onReveal }: { reason: ShieldReason; onSolve?: () => void; onReveal: () => void }) {
+  return (
+    <div className="cm-shield">
+      <p>
+        <strong>{reason === 'unsolved' ? 'You have not solved this one yet.' : 'This is a write-up of a problem.'}</strong> It gives the solution away, and so do its comments.
+      </p>
+      <div>
+        {onSolve && (
+          <button type="button" className="cm-button is-primary" onClick={onSolve}>
+            Try the problem first
+          </button>
+        )}
+        <button type="button" className="cm-button is-quiet" onClick={onReveal}>
+          Show the solution
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SharedEmbed({
   original,
   problemTitle,
+  shield = null,
+  onSolve,
   onOpen,
   onOpenMedia,
 }: {
   /** Null when the original is gone or hidden from this viewer. */
   original: SharedPost | null | undefined;
   problemTitle?: string | null;
+  /** Set when the original is a solution this reader should not meet uncovered. */
+  shield?: ShieldReason | null;
+  onSolve?: () => void;
   onOpen?: (id: string) => void;
   onOpenMedia?: (paths: string[], index: number) => void;
 }) {
   const now = useNow();
+  const [revealed, setRevealed] = useState(false);
 
   if (!original) {
     return (
       <div className="cm-shared is-unavailable">
         <EyeOff size={20} aria-hidden="true" />
         <div>
-          <strong>This content isn&rsquo;t available right now</strong>
-          <p>The original post was deleted, or it was shared somewhere you can&rsquo;t see.</p>
+          <strong>This post is no longer available</strong>
+          <p>It was deleted, or you cannot see where it was posted.</p>
         </div>
       </div>
     );
   }
+
+  // A repost carries the original as it was written, kind and all.
+  const { kind, text } = parsePost(original.body);
+  const covered = Boolean(shield) && kind === 'solution' && !revealed;
+  const filed = [kind ? KIND_META[kind].label : null, problemTitle].filter(Boolean).join(kind === 'solution' && problemTitle ? ' to ' : kind === 'stuck' && problemTitle ? ' on ' : ' · ');
 
   const head = (
     <>
@@ -125,14 +169,14 @@ export function SharedEmbed({
           <time dateTime={original.created_at} title={fullTimestamp(original.created_at)}>
             {postAge(original.created_at, now)}
           </time>
-          {problemTitle && <> · {problemTitle}</>}
+          {filed && <> · {filed}</>}
         </span>
       </span>
     </>
   );
 
   // The header is the keyboard path to the original; a click anywhere else on
-  // the card goes there too, except on the card's own "See more".
+  // the card goes there too, except on a button inside it.
   return (
     <div
       className={`cm-shared ${onOpen ? 'is-interactive' : ''}`}
@@ -149,16 +193,22 @@ export function SharedEmbed({
       ) : (
         <div className="cm-shared-head">{head}</div>
       )}
-      <ExpandableBody text={original.body} lines={5} className="cm-shared-body" />
-      {(original.images?.length ?? 0) > 0 && (
-        <div className="cm-shared-media">
-          <MediaGrid
-            paths={original.images!}
-            label={authorName(original.author)}
-            compact
-            onOpen={(index) => (onOpenMedia ? onOpenMedia(original.images!, index) : onOpen?.(original.id))}
-          />
-        </div>
+      {covered ? (
+        <Shield reason={shield!} onSolve={onSolve} onReveal={() => setRevealed(true)} />
+      ) : (
+        <>
+          <ExpandableBody text={text} lines={5} className="cm-shared-body" />
+          {(original.images?.length ?? 0) > 0 && (
+            <div className="cm-shared-media">
+              <MediaGrid
+                paths={original.images!}
+                label={authorName(original.author)}
+                compact
+                onOpen={(index) => (onOpenMedia ? onOpenMedia(original.images!, index) : onOpen?.(original.id))}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

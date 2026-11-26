@@ -2,25 +2,26 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * The post dialog: choose what kind of post it is, write it, and see the math
- * as it will render. Also used to edit a post and to share one with your own
- * words on top.
+ * The post dialog: choose what kind of post it is, where it is filed, write it,
+ * and see the math as it will render. Also used to edit a post and to repost
+ * one with a line of your own above it.
  */
 
 import React, { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { Bold, Eye, EyeOff, EyeClosed, Hash, ImagePlus, ListTree, MessageSquareText, Sigma, SquareSigma } from 'lucide-react';
+import { Bold, BookOpen, EyeClosed, Hash, ImagePlus, ListTree, Sigma, SquareSigma, Users } from 'lucide-react';
 import type { Problem } from '../../../shared/types';
 import type { AuthorSummary, SharedPost } from '../../services/database.types';
+import type { Circle } from '../../services/data/circles';
 import { POST_MAX_LENGTH, type MutationResult } from '../../services/data/feed';
 import { MAX_POST_IMAGES } from '../../services/data/media';
 import { duration, ease } from '../../lib/motion';
 import { AttachmentTray, imageFiles, useAttachments } from './Media';
 import { useMentions, type MentionPerson } from './Mentions';
-import { KIND_META, POST_KINDS, SUGGESTED_TAGS, authorName, composePost, disambiguateTitles, extractTags, parsePost, type PostKind } from './model';
+import { KIND_META, POST_KINDS, SUGGESTED_TAGS, authorName, composePost, disambiguateTitles, extractTags, insideMath, parsePost, type PostKind } from './model';
 import { SharedEmbed } from './PostBody';
 import { KIND_ICON } from './PostCard';
-import RichText from './RichText';
+import RichText, { TagActionContext } from './RichText';
 import { AutoTextarea, Avatar, Dialog, insertAtCaret } from './ui';
 
 /** The keyboard shortcut, named for the keyboard in front of the learner. Nothing on touch. */
@@ -35,8 +36,22 @@ export type ComposerMode = 'create' | 'edit' | 'share';
 const TITLES: Record<ComposerMode, string> = {
   create: 'New post',
   edit: 'Edit post',
-  share: 'Share post',
+  share: 'Repost with a note',
 };
+
+/**
+ * Arrow keys move along a row of keys, so the row is one stop on the way from
+ * the text to the Post button instead of sixteen.
+ */
+function rove(event: React.KeyboardEvent<HTMLElement>) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const keys = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled)')];
+  const index = keys.indexOf(document.activeElement as HTMLElement);
+  if (index < 0) return;
+  event.preventDefault();
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? keys.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + keys.length) % keys.length;
+  keys[next]?.focus();
+}
 
 /**
  * What the palette inserts. Each is LaTeX as a contest write-up uses it, with
@@ -62,16 +77,10 @@ const SYMBOLS: ReadonlyArray<{ face: string; label: string; before: string; afte
   { face: 'π', label: 'Pi', before: '\\pi ' },
 ];
 
-/** Whether the caret sits inside `$…$`, so a symbol can go in bare instead of being wrapped again. */
-function insideMath(value: string, caret: number): boolean {
-  const before = value.slice(0, caret).replace(/\\\$/g, '');
-  return (before.match(/\$/g)?.length ?? 0) % 2 === 1;
-}
-
 const SUBMIT: Record<ComposerMode, [idle: string, busy: string]> = {
   create: ['Post', 'Posting…'],
   edit: ['Save', 'Saving…'],
-  share: ['Share now', 'Sharing…'],
+  share: ['Repost', 'Reposting…'],
 };
 
 export default function PostComposer({
@@ -88,6 +97,8 @@ export default function PostComposer({
   initialImages = [],
   allowImages = false,
   mentionCandidates = [],
+  circles = [],
+  initialCircleId = null,
   onSubmit,
   onClose,
 }: {
@@ -110,16 +121,22 @@ export default function PostComposer({
   /** Whether the database can store images yet. */
   allowImages?: boolean;
   mentionCandidates?: MentionPerson[];
-  onSubmit: (body: string, problemId: string | null, images: string[]) => Promise<MutationResult>;
+  /** The circles the author belongs to, for a new post. A post cannot change circle afterwards. */
+  circles?: Circle[];
+  initialCircleId?: string | null;
+  onSubmit: (body: string, problemId: string | null, images: string[], circleId: string | null) => Promise<MutationResult>;
   onClose: () => void;
 }) {
-  // The kind is stored as the tag the post opens with; here it is a control of its own.
-  const initial = useMemo(() => parsePost(initialBody), [initialBody]);
+  const isShare = mode === 'share' || sharing;
+  // The kind is stored as the tag the post opens with; here it is a control of
+  // its own. A repost has no kind: its words are a note on someone else's post.
+  const initial = useMemo(() => (isShare ? { kind: null, resolved: false, text: initialBody } : parsePost(initialBody)), [initialBody, isShare]);
   const startKind = mode === 'edit' ? initial.kind : initialKind;
   const [body, setBody] = useState(initial.text);
-  const [kind, setKind] = useState<PostKind | null>(startKind);
+  const [chosenKind, setKind] = useState<PostKind | null>(startKind);
   const [problemId, setProblemId] = useState<string>(initialProblemId ?? '');
-  const [moreTags, setMoreTags] = useState(false);
+  const [circleId, setCircleId] = useState<string>(initialCircleId && circles.some((circle) => circle.id === initialCircleId) ? initialCircleId : '');
+  const [tagsOpen, setTagsOpen] = useState(false);
   const [preview, setPreview] = useState(initialPreview);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -136,15 +153,16 @@ export default function PostComposer({
     [problems, problemTitles],
   );
   const imagesChanged = attachments.items.length !== initialImages.length || attachments.paths.some((path, index) => path !== initialImages[index]);
-  const isShare = mode === 'share' || sharing;
+  // A kind tag typed or pasted as the first line counts when nothing is chosen above it.
+  const typed = useMemo(() => (isShare ? { kind: null, resolved: false, text: body } : parsePost(body)), [body, isShare]);
+  const kind = chosenKind ?? typed.kind;
   const dirty = body !== initial.text || kind !== startKind || problemId !== (initialProblemId ?? '') || imagesChanged;
-  const empty = !body.trim() && !isShare && attachments.paths.length === 0;
+  const empty = !typed.text.trim() && !isShare && attachments.paths.length === 0;
   // An unstuck post stays unstuck through an edit, unless it stops being a "stuck" post.
-  const stored = isShare ? body : composePost(body, kind, initial.resolved && kind === 'stuck');
+  const stored = isShare ? body : composePost(body, kind, (initial.resolved || typed.resolved) && kind === 'stuck');
   const remaining = POST_MAX_LENGTH - stored.length;
-  const hasMarkup = /\$|\\\(|\\\[|\*\*|`|\\begin|\[hint\]|\|\|/.test(body);
-  const usedTags = useMemo(() => new Set(extractTags(body)), [body]);
-  const offeredTags = SUGGESTED_TAGS.filter((tag) => !usedTags.has(tag)).slice(0, moreTags ? SUGGESTED_TAGS.length : 7);
+  const usedTags = useMemo(() => new Set(extractTags(body, true)), [body]);
+  const offeredTags = SUGGESTED_TAGS.filter((tag) => !usedTags.has(tag));
 
   const close = () => {
     attachments.discard();
@@ -161,7 +179,7 @@ export default function PostComposer({
     if (busy || empty || remaining < 0 || attachments.uploading) return;
     setBusy(true);
     setError('');
-    const result = await onSubmit(stored, problemId || null, attachments.paths);
+    const result = await onSubmit(stored, problemId || null, attachments.paths, mode === 'create' ? circleId || null : null);
     setBusy(false);
     if (result.ok) {
       attachments.reset();
@@ -223,18 +241,34 @@ export default function PostComposer({
           <Avatar author={author} size={42} />
           <div>
             <strong>{authorName(author)}</strong>
-            <label className="cm-problem-select">
-              <Hash size={14} aria-hidden="true" />
-              <span className="sr-only">Problem this post is about</span>
-              <select value={problemId} onChange={(event) => setProblemId(event.target.value)}>
-                <option value="">Not about one problem</option>
-                {sortedProblems.map((problem) => (
-                  <option key={problem.id} value={problem.id}>
-                    {problemTitles.get(problem.id) ?? problem.title}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="cm-filing-selects">
+              <label className="cm-problem-select">
+                <BookOpen size={14} aria-hidden="true" />
+                <span className="sr-only">Problem this post is about</span>
+                <select value={problemId} onChange={(event) => setProblemId(event.target.value)}>
+                  <option value="">No particular problem</option>
+                  {sortedProblems.map((problem) => (
+                    <option key={problem.id} value={problem.id}>
+                      {problemTitles.get(problem.id) ?? problem.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {mode === 'create' && circles.length > 0 && (
+                <label className="cm-problem-select">
+                  <Users size={14} aria-hidden="true" />
+                  <span className="sr-only">Where this post is filed</span>
+                  <select value={circleId} onChange={(event) => setCircleId(event.target.value)}>
+                    <option value="">Everyone</option>
+                    {circles.map((circle) => (
+                      <option key={circle.id} value={circle.id}>
+                        {circle.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
           </div>
         </div>
 
@@ -244,7 +278,7 @@ export default function PostComposer({
             {POST_KINDS.map((option) => {
               const Icon = KIND_ICON[option];
               return (
-                <button key={option} type="button" className={`cm-kind-option is-${option}`} aria-pressed={kind === option} onClick={() => setKind(kind === option ? null : option)}>
+                <button key={option} type="button" className={`cm-kind-option is-${option}`} aria-pressed={kind === option} onClick={() => setKind(chosenKind === option ? null : option)}>
                   <Icon size={16} aria-hidden="true" />
                   {KIND_META[option].label}
                 </button>
@@ -297,24 +331,35 @@ export default function PostComposer({
               exit={{ opacity: 0, height: 0, transition: { duration: duration.fast, ease: ease.exit } }}
             >
               <span className="cm-preview-label">How it will read</span>
-              <div className="cm-body">
-                <RichText text={body} />
-              </div>
+              {/* Tags are not buttons here: pressing one would filter the feed behind the dialog. */}
+              <TagActionContext.Provider value={null}>
+                <div className="cm-body">
+                  <RichText text={typed.text} />
+                </div>
+              </TagActionContext.Provider>
             </m.div>
           )}
         </AnimatePresence>
 
         {isShare && <SharedEmbed original={shared} problemTitle={problems.find((problem) => problem.id === shared?.problem_id)?.title} />}
 
-        <div className="cm-palette" role="toolbar" aria-label="Insert a symbol">
-          {SYMBOLS.map((entry) => (
-            <button key={entry.label} type="button" className="cm-key-cap" title={entry.label} aria-label={entry.label} onClick={() => symbol(entry.before, entry.after, entry.hole, entry.base)}>
+        <div className="cm-palette" role="toolbar" aria-label="Insert a symbol" onKeyDown={rove}>
+          {SYMBOLS.map((entry, index) => (
+            <button
+              key={entry.label}
+              type="button"
+              className="cm-key-cap"
+              title={entry.label}
+              aria-label={entry.label}
+              tabIndex={index === 0 ? 0 : -1}
+              onClick={() => symbol(entry.before, entry.after, entry.hole, entry.base)}
+            >
               {entry.face}
             </button>
           ))}
         </div>
 
-        <div className="cm-toolbox" role="toolbar" aria-label="Formatting">
+        <div className="cm-toolbox" role="group" aria-label="Formatting">
           <div>
             {allowImages && (
               <>
@@ -355,33 +400,29 @@ export default function PostComposer({
             <button type="button" className="cm-tool" title="Bold  **text**" onClick={() => wrap('**', '**', 'bold')}>
               <Bold size={17} aria-hidden="true" /> Bold
             </button>
-            <button
-              type="button"
-              className={`cm-tool ${preview ? 'is-active' : ''}`}
-              aria-pressed={preview}
-              title={hasMarkup ? 'See how it will read' : 'Preview'}
-              onClick={() => setPreview((value) => !value)}
-            >
-              {preview ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />} Preview
-            </button>
+            {!isShare && (
+              <button
+                type="button"
+                className={`cm-tool ${tagsOpen ? 'is-active' : ''}`}
+                aria-expanded={tagsOpen}
+                aria-controls="cm-tag-offer"
+                title="Name the technique, so the post is found by it"
+                onClick={() => setTagsOpen((value) => !value)}
+              >
+                <Hash size={17} aria-hidden="true" /> Technique
+              </button>
+            )}
           </div>
         </div>
 
-        {!isShare && (
-          <div className="cm-tag-offer">
-            <span className="cm-tag-offer-label">
-              <MessageSquareText size={14} aria-hidden="true" /> Technique
-            </span>
+        {!isShare && tagsOpen && (
+          <div className="cm-tag-offer" id="cm-tag-offer" role="group" aria-label="Technique tags">
             {offeredTags.map((tag) => (
               <button key={tag} type="button" className="cm-tag is-chip" onClick={() => addTag(tag)}>
                 #{tag}
               </button>
             ))}
-            {!moreTags && SUGGESTED_TAGS.length - usedTags.size > offeredTags.length && (
-              <button type="button" className="cm-link-button cm-tag-more" onClick={() => setMoreTags(true)}>
-                More
-              </button>
-            )}
+            {offeredTags.length === 0 && <span className="cm-muted">Every suggested technique is already on this post.</span>}
           </div>
         )}
 
@@ -392,13 +433,16 @@ export default function PostComposer({
         )}
       </div>
 
-      <footer className="cm-dialog-footer is-stacked">
+      <footer className="cm-dialog-footer is-composer">
         <span className={`cm-counter ${remaining < 0 ? 'is-over' : remaining < 300 ? 'is-near' : ''}`} aria-live="polite">
           {remaining < 300 ? `${remaining} characters left` : submitHint(SUBMIT[mode][0])}
         </span>
+        <button type="button" className="cm-button is-quiet" aria-pressed={preview} disabled={!typed.text.trim()} onClick={() => setPreview((value) => !value)}>
+          {preview ? 'Hide preview' : 'Preview'}
+        </button>
         <button
           type="button"
-          className="cm-button is-primary is-wide"
+          className="cm-button is-primary"
           onClick={() => void submit()}
           disabled={busy || empty || remaining < 0 || attachments.uploading || (mode === 'edit' && !dirty)}
         >
@@ -418,7 +462,7 @@ export default function PostComposer({
           >
             <div>
               <strong>{mode === 'edit' ? 'Discard changes?' : 'Discard post?'}</strong>
-              <p>{mode === 'edit' ? 'Your edits won’t be saved.' : 'What you’ve written will be lost.'}</p>
+              <p>{mode === 'edit' ? 'Your edits will not be saved.' : 'What you have written will be lost.'}</p>
               <div className="cm-discard-actions">
                 <button type="button" className="cm-button is-quiet" onClick={() => setDiscarding(false)} autoFocus>
                   Keep editing
