@@ -24,6 +24,16 @@
     ],
     "SessionStart": [
       {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v graphify >/dev/null 2>&1 || pip install --break-system-packages -q 'graphifyy[sql]' >/dev/null 2>&1; command -v graphify >/dev/null 2>&1 && [ -d .git ] && graphify hook install >/dev/null 2>&1; exit 0",
+            "timeout": 180
+          }
+        ]
+      },
+      {
         "matcher": "compact",
         "hooks": [
           {
