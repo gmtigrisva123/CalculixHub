@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "qa/bots/run.mjs": {
-    "mtime": 1795711765.495759,
-    "seen": 1795711844.0466964,
-    "ast_hash": "d12f69f71965282e053c40d104414cf5",
+    "mtime": 1795733695.282242,
+    "seen": 1795733716.9986641,
+    "ast_hash": "9f2d540d7eca8d6664679bcd2ad65e5c",
     "semantic_hash": ""
   },
   "qa/confirm.mjs": {
@@ -948,9 +948,9 @@
     "semantic_hash": ""
   },
   "src/components/NumericAnswerGrid.tsx": {
-    "mtime": 1795712687.1750946,
-    "seen": 1795712883.679152,
-    "ast_hash": "5358a091fdd5463097a70d2ba3777172",
+    "mtime": 1795733695.2815049,
+    "seen": 1795733716.9987926,
+    "ast_hash": "a6e75ff51ef479969182598e8970324c",
     "semantic_hash": ""
   },
   "src/components/PlacementExperience.tsx": {
