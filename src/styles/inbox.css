@@ -33,7 +33,6 @@
 .ib-status { display: flex; flex-wrap: wrap; gap: 8px; }
 .ib-pill { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 1px solid var(--ln); border-radius: 999px; background: var(--ib-panel); font: 500 12px/1 var(--ib-mono); color: var(--ct-muted); white-space: nowrap; }
 .ib-pill i { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--ib-live); }
-.ib-pill.is-live i::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: var(--ib-live); opacity: .35; animation: ib-ping 2s var(--ib-ease) infinite; }
 .ib-pill.is-warn i { background: var(--st-caution); }
 .ib-pill.is-mail svg { color: var(--ac); }
 .ib-pill code { font: inherit; color: var(--ct); }
@@ -75,12 +74,14 @@
 .ib-note:hover { background: var(--ib-hover); }
 .ib-note.is-unread { background: color-mix(in srgb, var(--ac) 4.5%, transparent); }
 .ib-note.is-unread:hover { background: color-mix(in srgb, var(--ac) 8%, transparent); }
-.ib-note.is-unread::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: var(--ac); }
 .ib-note-icon { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--ib-tone); background: color-mix(in srgb, var(--ib-tone) 13%, var(--ib-panel)); }
 .ib-note-face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
 .ib-note-face + svg { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; padding: 4px; border-radius: 50%; color: #fff; background: var(--ib-tone); box-shadow: 0 0 0 2px var(--ib-panel); }
-.is-sky { --ib-tone: #0284c7; } .is-rose { --ib-tone: #e11d48; } .is-indigo { --ib-tone: #4f46e5; } .is-amber { --ib-tone: #d97706; }
-.is-mint { --ib-tone: #059669; } .is-violet { --ib-tone: #7c3aed; } .is-slate { --ib-tone: #475569; }
+/* What kind of notice it is, in the house inks: the same green, plum and brass the margin marks use. */
+.ib .is-sky { --ib-tone: var(--ac); } .ib .is-rose { --ib-tone: #c2591b; } .ib .is-indigo { --ib-tone: #7b5596; } .ib .is-amber { --ib-tone: #a8742a; }
+.ib .is-mint { --ib-tone: #2d7858; } .ib .is-violet { --ib-tone: #7b5596; } .ib .is-slate { --ib-tone: #66727a; }
+:root[data-theme='dark'] .ib .is-rose { --ib-tone: #f0a36a; } :root[data-theme='dark'] .ib .is-indigo, :root[data-theme='dark'] .ib .is-violet { --ib-tone: #c7a6e0; }
+:root[data-theme='dark'] .ib .is-amber { --ib-tone: #e6bd73; } :root[data-theme='dark'] .ib .is-mint { --ib-tone: #6cc79f; } :root[data-theme='dark'] .ib .is-slate { --ib-tone: #a9b6bf; }
 :root[data-theme='dark'] .is-slate { --ib-tone: #94a3b8; }
 .ib-note-main { min-width: 0; padding-top: 2px; }
 .ib-note-main > a, .ib-note-main > p:first-child { display: block; margin: 0; font-size: 14.5px; line-height: 1.45; color: var(--ct); text-decoration: none; overflow-wrap: anywhere; }

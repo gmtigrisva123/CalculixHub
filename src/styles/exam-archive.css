@@ -1,6 +1,6 @@
 /* Hallmark · genre: atmospheric sky over the workspace paper · macrostructure: Map / Diagram (an orrery of the whole catalog) → shelves by decade → exam desk
  * theme: custom "Observatory" · tone: nocturnal, precise, unhurried · anchor hue: starlight gold on night blue
- * display: Newsreader (roman) · body: Geist · math: KaTeX via MathText · nav/footer: the workspace shell's own
+ * headings and body: Geist · problem text: Newsreader (roman) · math: KaTeX via MathText · nav/footer: the workspace shell's own
  * enrichment: WebGL star map drawn from the catalog (each star is a problem; data, not decoration)
  * motion: sky drift + twinkle (pausable, still under reduced motion) · rail glide · a result's constellation drawn in
  * Previous: eight paper cards in a flat grid. Current: the archive as one sky, shelves where each paper is its own
@@ -15,7 +15,9 @@
  * ------------------------------------------------------------------------ */
 
 .xa {
+  /* Newsreader sets problem text and mathematics; headings and figures are in the UI face, like every other page. */
   --xa-display: 'Newsreader', Georgia, serif;
+  --xa-head: 'Geist', system-ui, sans-serif;
   --xa-body: 'Geist', sans-serif;
   --xa-ease: cubic-bezier(.32, .72, 0, 1);
   --xa-ease-in-out: cubic-bezier(.65, 0, .35, 1);
@@ -268,8 +270,8 @@
 .xa-sky-copy > * { pointer-events: auto; }
 .xa-sky-copy h1 {
   margin: 0 0 20px;
-  font: 400 clamp(2.6rem, 1.7rem + 2.9vw, 4.4rem)/1.02 var(--xa-display);
-  letter-spacing: -.028em;
+  font: 560 clamp(2.3rem, 1.5rem + 2.6vw, 3.9rem)/1.02 var(--xa-head);
+  letter-spacing: -.05em;
   text-wrap: balance;
   overflow-wrap: anywhere;
   min-width: 0;
@@ -375,7 +377,7 @@
   box-shadow: var(--xa-sky-card-drop);
   animation: xa-rise .28s var(--xa-ease) both;
 }
-.xa-focus-title { display: flex; align-items: center; gap: 8px; margin: 0; font: 400 22px/1.15 var(--xa-display); letter-spacing: -.01em; }
+.xa-focus-title { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 19px/1.2 var(--xa-head); letter-spacing: -.028em; }
 .xa-focus-title::before { content: ''; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--fam-star); box-shadow: 0 0 12px var(--fam-star); }
 .xa-focus-meta { margin: 8px 0 16px; font-size: 13px; color: var(--xa-sky-muted); }
 .xa-focus-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -390,14 +392,14 @@
   min-width: 0;
   overflow-wrap: anywhere;
   margin: 0 0 8px;
-  font: 400 clamp(2.1rem, 1.6rem + 1.8vw, 3.2rem)/1.04 var(--xa-display);
-  letter-spacing: -.022em;
+  font: 560 clamp(1.9rem, 1.45rem + 1.5vw, 2.75rem)/1.05 var(--xa-head);
+  letter-spacing: -.045em;
   color: var(--xa-ink);
 }
 .xa-library-count { margin: 0; color: var(--xa-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 
 .xa-resume { margin-top: 28px; }
-.xa-resume h3, .xa-sources h3 { margin: 0 0 16px; font: 400 22px/1.2 var(--xa-display); letter-spacing: -.01em; color: var(--xa-ink); }
+.xa-resume h3, .xa-sources h3 { margin: 0 0 16px; font: 600 19px/1.25 var(--xa-head); letter-spacing: -.028em; color: var(--xa-ink); }
 
 .xa-toolbar {
   display: flex;
@@ -526,7 +528,11 @@
   padding-bottom: 12px;
   border-bottom: 1px solid var(--xa-line);
 }
-.xa-decade-head h3 { min-width: 0; overflow-wrap: anywhere; margin: 0; font: 400 clamp(1.7rem, 1.4rem + 1vw, 2.3rem)/1 var(--xa-display); letter-spacing: -.016em; }
+.xa-decade-head h3 { min-width: 0; overflow-wrap: anywhere; margin: 0; font: 600 clamp(1.5rem, 1.25rem + .8vw, 1.95rem)/1 var(--xa-head); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.xa-more { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; margin-top: 14px; padding: 0 14px 0 11px; border: 1px solid var(--xa-line-strong); border-radius: 10px; background: none; color: var(--xa-ink); font: 600 13.5px/1 var(--xa-body); cursor: pointer; transition: background-color .16s, border-color .16s; }
+.xa-more:hover { background: color-mix(in srgb, var(--xa-ink) 5%, transparent); }
+.xa-more svg { transition: rotate .2s; }
+.xa-more[aria-expanded='true'] svg { rotate: 180deg; }
 .xa-decade-head p { margin: 0; color: var(--xa-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
 .xa-plates {
@@ -568,8 +574,9 @@
   position: absolute;
   left: 16px;
   bottom: 8px;
-  font: 400 30px/1 var(--xa-display);
-  letter-spacing: -.01em;
+  font: 560 27px/1 var(--xa-head);
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
   color: var(--xa-sky-ink);
   font-variant-numeric: lining-nums tabular-nums;
   text-shadow: 0 1px 12px var(--xa-sky-scrim);
@@ -677,8 +684,8 @@
   flex: 1 1 260px;
   min-width: 0;
   margin: 0;
-  font: 400 clamp(1.35rem, 1.1rem + .7vw, 1.75rem)/1.1 var(--xa-display);
-  letter-spacing: -.012em;
+  font: 600 clamp(1.2rem, 1rem + .6vw, 1.5rem)/1.15 var(--xa-head);
+  letter-spacing: -.03em;
   overflow-wrap: anywhere;
 }
 
@@ -735,7 +742,7 @@
 }
 .xa-sheet-head { margin-bottom: 24px; }
 .xa-sheet-kicker { margin: 0 0 8px; color: var(--fam-ink); font: 650 12.5px/1.2 var(--xa-body); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-.xa-sheet-head h1 { min-width: 0; margin: 0; font: 400 clamp(2.1rem, 1.6rem + 1.8vw, 3.1rem)/1.04 var(--xa-display); letter-spacing: -.022em; color: var(--xa-ink); overflow-wrap: anywhere; }
+.xa-sheet-head h1 { min-width: 0; margin: 0; font: 560 clamp(1.9rem, 1.45rem + 1.5vw, 2.7rem)/1.05 var(--xa-head); letter-spacing: -.045em; color: var(--xa-ink); overflow-wrap: anywhere; }
 .xa-sheet-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
 .xa-statement { font: 400 clamp(1.1rem, 1rem + .4vw, 1.3rem)/1.72 var(--xa-display); color: var(--xa-ink); }
 .xa-statement.is-small { font-size: 1.04rem; }
@@ -808,7 +815,8 @@
   border-radius: 16px;
   background: var(--xa-page);
   color: var(--xa-ink);
-  font: 400 2.7rem/1 var(--xa-display);
+  font: 560 2.4rem/1 var(--xa-head);
+  letter-spacing: -.04em;
   font-variant-numeric: lining-nums tabular-nums;
 }
 .xa-digits-cells > .is-filled { border-color: transparent; background: var(--fam-wash); color: var(--fam-ink); }
@@ -939,7 +947,7 @@
 .xa-cover.is-result .xa-cover-line { stroke-opacity: .4; stroke-dasharray: 1; stroke-dashoffset: 1; animation: xa-draw 1.6s .2s var(--xa-ease-in-out) forwards; }
 .xa-cover.is-result circle { transform-box: fill-box; transform-origin: center; animation: xa-star-in .7s var(--xa-ease) backwards; animation-delay: calc(var(--xa-i) * 50ms + 150ms); }
 .xa-result-kicker { margin: 0 0 8px; color: var(--fam-ink); font: 650 12.5px/1.2 var(--xa-body); letter-spacing: .01em; }
-.xa-result-copy h1 { min-width: 0; margin: 0 0 16px; font: 400 clamp(2.4rem, 1.7rem + 2.6vw, 3.9rem)/1.02 var(--xa-display); letter-spacing: -.024em; font-variant-numeric: lining-nums; overflow-wrap: anywhere; }
+.xa-result-copy h1 { min-width: 0; margin: 0 0 16px; font: 560 clamp(2.1rem, 1.5rem + 2.2vw, 3.4rem)/1.03 var(--xa-head); letter-spacing: -.05em; font-variant-numeric: lining-nums; overflow-wrap: anywhere; }
 .xa-result-copy > p:not(.xa-result-kicker) { max-width: 46ch; margin: 0 0 24px; color: var(--xa-muted); font-size: 15.5px; line-height: 1.6; }
 .xa-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 

@@ -33,8 +33,8 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((value) => !value), []);
 
-  // The pause covers every loop in the lobby, not only the canvas: the ticker,
-  // the journey and the rule drawings all stop with it.
+  // The pause covers every loop in the lobby, not only the canvas: the journey
+  // and the rule drawings stop with it.
   useEffect(() => {
     const space = heroRef.current?.closest('.arena-space');
     if (!space) return;
@@ -74,7 +74,6 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
           <Journey />
         </div>
       </div>
-      <Ticker arenas={arenas} clock={clock} />
     </m.header>
   );
 }
@@ -206,46 +205,5 @@ function Journey() {
         </li>
       ))}
     </ol>
-  );
-}
-
-const HOUSE_NOTES = ['Three attempts per question', 'Timer kept by the server', 'Worked solutions open when you finish', 'Register · Enter · Think · Finish'];
-const MARKS = ['∑', 'π', '∞', '√', '∫', '△'];
-const STATUS_CLASS = { 'Live now': 'is-live', Upcoming: 'is-upcoming', Finished: 'is-finished' } as const;
-
-/**
- * The stadium's LED band: every match on the board, then the house rules,
- * scrolling past. Decorative -- the board below carries the same facts for
- * assistive technology -- so it is hidden from it.
- */
-function Ticker({ arenas, clock }: { arenas: Arena[]; clock: number }) {
-  const notes = [
-    ...arenas.map((arena) => ({
-      key: arena.id,
-      status: matchStatus(arena, clock),
-      text: [arena.title, `${arena.duration_minutes} min`, arena.question_count != null ? `${arena.question_count} questions` : ''].filter(Boolean).join(' · '),
-    })),
-    ...HOUSE_NOTES.map((text) => ({ key: text, status: null, text })),
-  ];
-  // One run must outlast the widest stage, or the loop shows its seam.
-  const runWidth = notes.reduce((total, note) => total + note.text.length * 7.4 + (note.status ? 90 : 0) + 64, 0);
-  const repeats = Math.max(1, Math.ceil(1700 / runWidth));
-  const run = (copy: number) =>
-    Array.from({ length: repeats }, (_, r) =>
-      notes.map((note, i) => (
-        <span className="al-ticker-item" key={`${copy}-${r}-${note.key}`}>
-          {note.status && <b className={'al-ticker-status ' + STATUS_CLASS[note.status]}>{note.status}</b>}
-          {note.text}
-          <span className="al-ticker-mark">{MARKS[(i + r) % MARKS.length]}</span>
-        </span>
-      )),
-    );
-  return (
-    <div className="al-ticker" aria-hidden="true">
-      <div className="al-ticker-track" style={{ '--al-ticker-time': `${Math.round((runWidth * repeats) / 42)}s` } as CSSProperties}>
-        {run(0)}
-        {run(1)}
-      </div>
-    </div>
   );
 }

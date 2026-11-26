@@ -201,7 +201,7 @@ export default function Leaderboard({ rows, loading, error, onRefresh, currentUs
             <span className="lb-row-measure" aria-hidden="true" />
           </m.li>;
         })}</ol> : <p className="lb-no-results">No learner matches that search in the selected range.</p>}
-        <p className="lb-method">Global rank is based on saved learning points, then problems solved. Accuracy and streak are shown as context, not as extra points. The line under each learner is drawn to scale against the leader.</p>
+        <p className="lb-method">Rank is by points, then by problems solved. Accuracy and streak are shown for context and add nothing. The line under each learner is drawn to scale against the leader.</p>
       </section>
 
       <aside className="lb-aside">
@@ -225,7 +225,7 @@ export default function Leaderboard({ rows, loading, error, onRefresh, currentUs
           <button className="lb-you-cta" onClick={onPractice}><span>{currentUserId ? 'Back to practice' : 'Sign in or create account'}</span><ArrowRight size={17} /></button>
           {currentUserId && <button className="lb-you-find" onClick={findMe} disabled={!me}><LocateFixed size={15} aria-hidden="true" /> Find my place</button>}
         </section>
-        <div className="lb-rule"><p className="lb-kicker">How the order works</p><p>Only saved practice contributes. The board starts empty, updates from real submissions, and never counts a placement test as points.</p></div>
+        <div className="lb-rule"><h3>How the order works</h3><p>Points come from practice answers saved to your account. A placement test adds none. Ties go to whoever has solved more problems.</p></div>
       </aside>
     </div>}
   </div>;

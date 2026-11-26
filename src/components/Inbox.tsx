@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, AtSign, Bell, Check, CheckCheck, CornerDownLeft, Heart, Mail, Megaphone, MessageCircle, MessageSquare, Repeat2, Search, Send, UserPlus, Users, X } from 'lucide-react';
+import { ArrowLeft, AtSign, Bell, Check, CheckCheck, CornerDownLeft, Mail, Megaphone, MessageCircle, MessageSquare, Repeat2, Search, Send, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { useNotifications, describeNotification, notificationLink } from '../services/data/notifications';
@@ -16,7 +16,7 @@ type Filter = 'all' | 'unread' | 'replies' | 'messages' | 'social';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' }, { key: 'unread', label: 'Unread' }, { key: 'replies', label: 'Replies & mentions' },
-  { key: 'messages', label: 'Messages' }, { key: 'social', label: 'Reactions & follows' },
+  { key: 'messages', label: 'Messages' }, { key: 'social', label: 'Marks & follows' },
 ];
 const matches = (n: NotificationWithActor, filter: Filter) =>
   filter === 'all' ? true
@@ -26,7 +26,7 @@ const matches = (n: NotificationWithActor, filter: Filter) =>
   : ['follow', 'post_like', 'comment_like', 'post_share'].includes(n.type);
 
 const KIND: Record<string, { icon: typeof Bell; tone: string }> = {
-  follow: { icon: UserPlus, tone: 'is-sky' }, post_like: { icon: Heart, tone: 'is-rose' }, comment_like: { icon: Heart, tone: 'is-rose' },
+  follow: { icon: UserPlus, tone: 'is-sky' }, post_like: { icon: Check, tone: 'is-mint' }, comment_like: { icon: Check, tone: 'is-mint' },
   post_comment: { icon: MessageCircle, tone: 'is-indigo' }, comment_reply: { icon: MessageCircle, tone: 'is-indigo' },
   mention: { icon: AtSign, tone: 'is-amber' }, post_share: { icon: Repeat2, tone: 'is-mint' }, message: { icon: MessageSquare, tone: 'is-violet' },
   system: { icon: Megaphone, tone: 'is-slate' },
@@ -175,8 +175,8 @@ export default function Inbox() {
         <p>{notifications.unreadCount ? `${notifications.unreadCount} unread · ` : 'All caught up · '}{conversations.data.length} {conversations.data.length === 1 ? 'conversation' : 'conversations'}</p>
       </div>
       <div className="ib-status">
-        <span className={`ib-pill ${errors.length ? 'is-warn' : 'is-live'}`}><i aria-hidden="true" />{errors.length ? 'Degraded' : 'Realtime'}</span>
-        {mailbox && <span className="ib-pill is-mail" title="Every notification is also delivered to your email address"><Mail size={13} aria-hidden="true" />Email copies → <code>{mailbox}</code></span>}
+        {errors.length > 0 && <span className="ib-pill is-warn"><i aria-hidden="true" />Not everything loaded</span>}
+        {mailbox && <span className="ib-pill is-mail"><Mail size={13} aria-hidden="true" />Copies go to <code>{mailbox}</code></span>}
       </div>
     </header>
 
@@ -196,7 +196,7 @@ export default function Inbox() {
         <button className="ib-btn" onClick={() => void notifications.markAllRead()} disabled={!notifications.unreadCount}><CheckCheck size={15} />Mark all read</button>
       </div>
       {notifications.loading ? <div className="ib-skeleton" role="status" aria-label="Loading notifications">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>
-      : !shown.length ? <div className="ib-empty"><Bell size={22} /><h2>{filter === 'all' ? 'No notifications yet' : 'Nothing here'}</h2><p>{filter === 'all' ? 'Replies, reactions, follows and messages will show up here — and in your email.' : 'Try another filter.'}</p></div>
+      : !shown.length ? <div className="ib-empty"><Bell size={22} /><h2>{filter === 'all' ? 'No notifications yet' : 'Nothing here'}</h2><p>{filter === 'all' ? 'Replies, marks, follows and messages are listed here, and copied to your email.' : 'Try another filter.'}</p></div>
       : groups.map(group => <section key={group.label} className="ib-group" aria-label={group.label}>
           <h2 className="ib-group-label">{group.label}</h2>
           <ul>{group.items.map(n => {
@@ -207,7 +207,7 @@ export default function Inbox() {
               <div className="ib-note-main">
                 {clickable ? <a href={notificationLink(n) ?? '?tab=inbox&view=messages'} onClick={event => { event.preventDefault(); void openNotification(n); }}><Headline n={n} /></a> : <p><Headline n={n} /></p>}
                 {n.body && n.type !== 'system' && <blockquote>{quoted(n.body)}</blockquote>}
-                <p className="ib-note-meta"><time dateTime={n.created_at} title={new Date(n.created_at).toLocaleString()}>{relative(n.created_at)}</time><span><Mail size={11} aria-hidden="true" />Sent to email</span></p>
+                <p className="ib-note-meta"><time dateTime={n.created_at} title={new Date(n.created_at).toLocaleString()}>{relative(n.created_at)}</time></p>
               </div>
               {n.read_at ? <span className="ib-note-read" title="Read"><Check size={14} /></span>
                 : <button className="ib-icon-btn" onClick={() => void notifications.markRead(n.id)} aria-label="Mark as read" title="Mark as read"><span className="ib-dot" /></button>}

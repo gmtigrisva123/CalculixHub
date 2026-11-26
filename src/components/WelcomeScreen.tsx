@@ -780,16 +780,14 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
           <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
         </div>
         <div className="cq-auth-story-copy relative max-w-[40ch]">
-          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">One quick check, then you're in.</h2>
+          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Confirm your email first.</h2>
           <p className="type-lead mt-4.5 text-stone-400">Confirm that this email belongs to you before your first sign in.</p>
         </div>
-        <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">Your next question is waiting.</p>
       </div>
       <div className="cq-auth-form-wrap">
         <div className="cq-auth-form w-full" aria-live="polite">
           <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-accent-text"><Mail size={27} aria-hidden="true" /></div>
-          <p className="type-eyebrow text-accent-text">Verify your email</p>
-          <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
+          <h1 className="type-title text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
           <p className="type-body mt-3 text-content-subtle">If this address needs confirmation, look for a link at <strong className="text-content break-all">{confirmationEmail}</strong>. You can open it on any device, including your phone. This page continues by itself once you've confirmed.</p>
           <div className="mt-7 border-y border-line py-5 text-[13.5px] leading-[1.7] text-content-subtle">
             <p>It may take a minute to arrive. Check your spam folder. If you've used this address before, your account may already be verified. Sign in instead, or use “Forgot?” on the sign-in screen to reset your password.</p>
@@ -821,16 +819,14 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
           <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
         </div>
         <div className="cq-auth-story-copy relative max-w-[40ch]">
-          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Verified. Your next step is on the other screen.</h2>
+          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Confirmed. Carry on where you signed up.</h2>
           <p className="type-lead mt-4.5 text-stone-400">Your account is ready wherever you sign in.</p>
         </div>
-        <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">Your next question is waiting.</p>
       </div>
       <div className="cq-auth-form-wrap">
         <div className="cq-auth-form w-full" aria-live="polite">
           <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-proof"><CheckCircle2 size={27} aria-hidden="true" /></div>
-          <p className="type-eyebrow text-proof">Email verified</p>
-          <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">You're all set</h1>
+          <h1 className="type-title text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Email confirmed</h1>
           <p className="type-body mt-3 text-content-subtle">
             {verifiedEmail ? <><strong className="text-content break-all">{verifiedEmail}</strong> is confirmed.</> : 'Your email is confirmed.'} Go back to the device where you created your account to continue.
           </p>
@@ -890,24 +886,18 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
 
           <div className="cq-auth-brand relative flex items-center gap-3">
             <span className="cq-symbol" aria-hidden="true"><BrandLogo /></span>
-            <span className="flex flex-col leading-[1.15]">
-              <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
-              <span className="type-eyebrow text-stone-500">A place to think</span>
-            </span>
+            <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
           </div>
 
           <div className="cq-auth-story-copy relative max-w-[40ch]">
             <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">
-              Pick up where the estimate left off.
+              {isReset ? 'A new password, then back to work.' : isLogin ? 'Pick up where you left off.' : 'Keep what you solve.'}
             </h2>
             <p className="type-lead mt-4.5 text-stone-400">
               Your skill map, streak and every graded answer are tied to the account, not the browser.
             </p>
           </div>
 
-          <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">
-            A little room for your next good question.
-          </p>
         </div>
 
         {/* The form. */}
@@ -922,14 +912,13 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
               transition={spring.smooth}
               className="cq-auth-form w-full"
             >
-              <p className="type-eyebrow text-accent-text">{isReset ? 'Password recovery' : isLogin ? 'Sign in' : 'Create account'}</p>
-              <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
-                {isReset ? 'Choose a new password' : isLogin ? 'Welcome back' : 'Start measuring'}
+              <h1 className="type-title text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
+                {isReset ? 'Choose a new password' : isLogin ? 'Sign in' : 'Create your account'}
               </h1>
               <p className="type-body mt-2.5 text-content-subtle">
-                {isReset ? 'Enter a new password to secure your account.' : isLogin
-                  ? 'Sign in to keep your streak, skill map and contest history.'
-                  : 'One account, and the placement test result stays with you.'}
+                {isReset ? 'At least 8 characters. It replaces the old one straight away.' : isLogin
+                  ? 'Your streak, skill map and contest history are where you left them.'
+                  : 'It is free. Practice, past papers and the Arena stay free.'}
               </p>
 
               {!isReset && <>
@@ -942,7 +931,6 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
                   <Facebook size={20} aria-hidden="true" className="text-[#1877F2]" />
                   {socialProvider === 'facebook' ? 'Opening Facebook…' : 'Continue with Facebook'}
                 </button>
-                <p className="text-xs text-content-subtle text-center">One secure sign-in for new and returning learners.</p>
               </div>
               <div className="my-5 flex items-center gap-3 text-xs text-content-subtle"><span className="h-px flex-1 bg-line"/>or use your email<span className="h-px flex-1 bg-line"/></div>
               </>}

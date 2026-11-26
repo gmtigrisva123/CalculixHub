@@ -84,7 +84,7 @@
   mask-image: radial-gradient(100% 100% at 75% 50%, #000 20%, transparent 80%);
 }
 .se-hero-copy { min-width: 0; animation: se-rise .7s var(--se-ease) both; }
-.se-hero h1 { margin: 0 0 18px; font: 400 clamp(40px, 4.6vw, 66px)/.98 var(--se-serif); letter-spacing: -.04em; text-wrap: balance; font-variant-numeric: normal; }
+.se-hero h1 { margin: 0 0 18px; font: 560 clamp(36px, 4.1vw, 58px)/1 var(--se-sans); letter-spacing: -.05em; text-wrap: balance; font-variant-numeric: normal; }
 /* Emphasis stays roman: a brass pencil stroke under the phrase, redrawn on each line it wraps to. */
 .se-hero h1 em {
   font: inherit; font-style: normal; letter-spacing: inherit; color: inherit;
@@ -103,7 +103,7 @@
 .se-beat-bell { position: absolute; left: 50%; bottom: calc(var(--fill) * 100% + 8px); width: 7px; height: 7px; translate: -50% 0; border-radius: 50%; background: var(--se-mint); box-shadow: 0 0 0 3px #5fd0bd33, 0 0 10px var(--se-mint); transition: bottom .6s var(--se-ease); }
 .se-beat small { font: 600 10px/1 var(--se-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--se-chalk-faint); }
 .se-rhythm figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f2ece11a; }
-.se-rhythm figcaption strong { font: 400 30px/1 var(--se-serif); letter-spacing: -.02em; }
+.se-rhythm figcaption strong { font: 600 26px/1 var(--se-sans); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 .se-rhythm figcaption span { font-size: 13px; color: var(--se-chalk-muted); }
 
 /* --------------------------------------------------------------------------
@@ -170,7 +170,7 @@
 .se-pace.is-chosen .se-dial-slice { fill: var(--se-tone); }
 .se-dial-pin { fill: var(--se-ink); }
 .se-pace-text { display: grid; gap: 4px; min-width: 0; }
-.se-pace-text b { font: 400 24px/1 var(--se-serif); letter-spacing: -.02em; }
+.se-pace-text b { font: 600 21px/1 var(--se-sans); letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
 .se-pace-text b small { font: 500 12px var(--se-sans); letter-spacing: 0; color: var(--se-subtle); }
 .se-pace-text > small { font-size: 12px; color: var(--se-subtle); }
 .se-pace-tag { justify-self: start; padding: 2px 8px; border-radius: 999px; background: var(--se-sunken); font: 600 9.5px/1.5 var(--se-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--se-muted); }
@@ -263,12 +263,6 @@
 .se-export-file { display: inline-flex; align-items: center; gap: 8px; flex: none; max-width: 46%; height: 34px; padding: 0 12px; overflow: hidden; border-radius: 10px; background: var(--se-night); color: var(--se-chalk); font: 500 11.5px/1 var(--se-mono); white-space: nowrap; text-overflow: ellipsis; box-shadow: inset 0 0 0 1px #e6bd7333; }
 .se-export-file svg { flex: none; color: var(--se-brass); }
 
-/* Cards settle in as they are scrolled to, where the browser can do that without script. */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .se-sections > .se-card { animation: se-settle linear both; animation-timeline: view(); animation-range: entry 0% entry 38%; }
-  }
-}
 .se-card { transition: border-color .3s, box-shadow .3s; }
 .se-card:hover { border-color: var(--se-line-strong, var(--ln-strong)); }
 .se-card:hover .se-card-icon { background: color-mix(in srgb, var(--se-tone) 20%, var(--se-surface)); }
