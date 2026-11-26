@@ -39,6 +39,10 @@ import {
   segmentBlocks,
   segmentInline,
   tallyTags,
+  QUOTE_MAX,
+  clipQuote,
+  quoteLine,
+  splitQuote,
 } from './model';
 
 const NOW = new Date('2026-10-04T12:00:00Z').getTime();
@@ -551,5 +555,53 @@ describe('what the marks add up to', () => {
     expect(verdict(undefined, true)).toBeNull();
     expect(verdict({}, false)).toBeNull();
     expect(verdict({ wow: 2, care: 1 }, true)).toBeNull();
+  });
+});
+
+describe('notes on a line', () => {
+  it('separates the quoted line from what was said about it', () => {
+    expect(splitQuote('> so $x = 5$\nWhy is the negative root dropped?')).toEqual({ quote: 'so $x = 5$', text: 'Why is the negative root dropped?' });
+    expect(splitQuote('>no space\n\ntext')).toEqual({ quote: 'no space', text: 'text' });
+  });
+
+  it('joins a quote that runs over several lines', () => {
+    expect(splitQuote('> first half\n> second half\nmy note')).toEqual({ quote: 'first half second half', text: 'my note' });
+  });
+
+  it('leaves an ordinary comment alone', () => {
+    for (const body of ['plain words', 'a > b always', 'line one\n> not at the top', '', '>', '>   \nonly a mark']) {
+      expect(splitQuote(body)).toEqual({ quote: null, text: body });
+    }
+  });
+
+  it('keeps a quote with nothing written under it', () => {
+    expect(splitQuote('> the whole comment')).toEqual({ quote: 'the whole comment', text: '' });
+  });
+
+  it('writes the line a note opens with', () => {
+    expect(quoteLine('  the  radius\n is 5 ')).toBe('> the radius is 5\n');
+    expect(quoteLine('   ')).toBe('');
+    expect(splitQuote(`${quoteLine('so $x = 5$')}why?`)).toEqual({ quote: 'so $x = 5$', text: 'why?' });
+  });
+
+  it('quotes sealed words still sealed', () => {
+    const line = quoteLine('the answer is 682', true);
+    expect(line).toBe('> ||the answer is 682||\n');
+    expect(redactSealed(splitQuote(line).quote!)).toBe('[hidden]');
+    // Bars inside the selection cannot close the seal early.
+    expect(quoteLine('a || b', true)).toBe('> ||a b||\n');
+  });
+
+  it('cuts a long quote at a word and never inside a formula', () => {
+    const long = `${'word '.repeat(60)}`;
+    const clipped = clipQuote(long);
+    expect(clipped.length).toBeLessThanOrEqual(QUOTE_MAX + 1);
+    expect(clipped.endsWith('word…')).toBe(true);
+
+    const formula = `${'a '.repeat(104)}$\\frac{1}{2} + \\frac{1}{3} + \\frac{1}{6} = 1$ and more`;
+    const cut = clipQuote(formula);
+    expect((cut.match(/\$/g) ?? []).length % 2).toBe(0);
+    expect(cut.endsWith('…')).toBe(true);
+    expect(clipQuote('short')).toBe('short');
   });
 });

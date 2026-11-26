@@ -5,16 +5,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
-import {
-  Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
-  ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
-  Globe, Shield, TrendingUp, Users, Check, X, Download,
-  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare, Monitor
-} from 'lucide-react';
+import { Key, Mail, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, Check, Facebook, Monitor } from 'lucide-react';
 import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
 import BrandLogo from './BrandLogo';
-import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from './brand';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';
@@ -633,121 +627,6 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
     onLoginSuccess(fullName || 'Calculix Student', calculatedLevel);
   };
 
-  // --- PDF IMPACT REPORT EXPORT ---
-  const handleExportImpactReport = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>CalculixHub - Impact & Research Report</title>
-          <style>
-            body { font-family: 'Georgia', serif; color: #0d1117; padding: 45px; line-height: 1.6; background: #ffffff; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1d4ed8; padding-bottom: 25px; margin-bottom: 35px; }
-            .logo { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 900; color: #161b22; text-transform: uppercase; letter-spacing: 1.5px; }
-            .logo svg { width: 34px; height: 34px; color: #366478; }
-            .subtitle { font-size: 11px; color: #4a5567; text-transform: uppercase; font-weight: 700; margin-top: 5px; }
-            .date { font-size: 13px; color: #4a5567; font-family: monospace; background: #eef1f5; padding: 5px 10px; border-radius: 6px; }
-            .section { margin-bottom: 40px; page-break-inside: avoid; }
-            h2 { font-size: 18px; color: #1d4ed8; border-left: 5px solid #3b82f6; padding-left: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
-            p { font-size: 14px; color: #334155; text-align: justify; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
-            th { background-color: #f8fafc; font-weight: bold; color: #0f172a; }
-            .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 25px; }
-            .metric-card { border: 1px solid #e2e8f0; background: #f6f8fa; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-            .metric-val { font-size: 26px; font-weight: 800; color: #1d4ed8; font-family: monospace; margin: 8px 0; }
-            .metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
-            .footer { margin-top: 60px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 25px; font-size: 11px; color: #64748b; }
-            @media print { body { padding: 25px; } .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <div class="logo"><svg viewBox="${MARK_VIEWBOX}" fill="none"><path d="${MARK_PATH}" stroke="currentColor" stroke-width="${MARK_STROKE}" stroke-linecap="round"/><circle cx="${MARK_DOT.cx}" cy="${MARK_DOT.cy}" r="${MARK_DOT.r}" fill="currentColor"/></svg>CalculixHub</div>
-              <div class="subtitle">A place to think</div>
-            </div>
-            <div class="date">Generated: ${new Date().toLocaleString('en-US')}</div>
-          </div>
-
-          <div class="section">
-            <h2>1. Strategic Overview</h2>
-            <p>CalculixHub is an integrated mathematics education ecosystem combining deep AI personalization (EduReach Core) with an adaptive testing model based on Item Response Theory (IRT). The platform replaces static, linear question delivery with a flexible knowledge graph tracking each student's zone of proximal development (ZPD).</p>
-          </div>
-
-          <div class="section">
-            <h2>2. Live Operating Metrics</h2>
-            <div class="metric-grid">
-              <div class="metric-card">
-                <div class="metric-label">Learners active</div>
-                <div class="metric-val">${statsAvailable ? liveStats.registeredUsers : 'Unavailable'}</div>
-                <div class="metric-label">Arrivals in the last 15 minutes</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">IRT assessments completed</div>
-                <div class="metric-val">${statsAvailable ? liveStats.testsCompleted : 'Unavailable'}</div>
-                <div class="metric-label">Since this instance started</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Problems graded</div>
-                <div class="metric-val">${statsAvailable ? liveStats.problemsSolved : 'Unavailable'}</div>
-                <div class="metric-label">Since this instance started</div>
-              </div>
-            </div>
-            <p style="font-size:12px;color:#64748b;margin-top:18px;">These counters are held in the serving instance's memory and reset when it restarts; on a multi-instance deployment each instance counts only its own traffic. They are reported as operational signal, not as audited telemetry. A report with figures suitable for citation requires the database-backed aggregation that is not yet in place.</p>
-          </div>
-
-          <div class="section">
-            <h2>3. Assessment Bank</h2>
-            <p>The adaptive placement test administers provisional items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
-            <table>
-              <thead>
-                <tr><th>Domain</th><th>Items</th><th>Concepts</th><th>Difficulty range (b)</th><th>Mean discrimination (a)</th></tr>
-              </thead>
-              <tbody>
-                ${bankProfiles
-                  .map(
-                    (profile) => `<tr>
-                  <td><strong>${profile.domain}</strong></td>
-                  <td>${profile.itemCount}</td>
-                  <td>${profile.conceptCount}</td>
-                  <td>${formatDifficulty(profile.easiestB)} to ${formatDifficulty(profile.hardestB)}</td>
-                  <td>${profile.meanDiscrimination.toFixed(2)}</td>
-                </tr>`,
-                  )
-                  .join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="section" style="page-break-before: always;">
-            <h2>4. Four Core Layers &amp; Methodology</h2>
-            <p>The system rests on four architectural pillars:</p>
-            <ul>
-              <li><strong>Learning Engine:</strong> Clear tiers (Foundation, Intermediate, Advanced, Olympiad) that adapt to each student.</li>
-              <li><strong>AI Personalization Layer:</strong> EduReach automatically isolates weak points (e.g. combinatorics) and restructures the learning path.</li>
-              <li><strong>Competition System:</strong> Live, ranked arenas organized weekly by age group and skill tier.</li>
-              <li><strong>Analytics Radar:</strong> Visualizes common misconceptions to support curriculum research.</li>
-            </ul>
-          </div>
-
-          <div class="footer">
-            <p>Compiled in the browser from the shipped item bank and the counters returned by /api/live-stats at the time shown above.</p>
-            <p>CalculixHub Science &amp; Technology Board - Tech for Social Impact (c) 2026</p>
-          </div>
-
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const IRT_FORMULA = '\\[P_i(\\theta) = \\frac{e^{\\theta - b_i}}{1 + e^{\\theta - b_i}}\\]';
 
   // --- LANDING PAGE RENDERING FUNCTION ---
   /*

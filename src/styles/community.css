@@ -554,6 +554,28 @@
 .cm-shared.is-unavailable strong { display: block; color: var(--ct); font-size: 14.5px; }
 .cm-shared.is-unavailable p { margin: 2px 0 0; font-size: 13px; line-height: 1.45; }
 
+/* Offered where the reader has selected part of the text. */
+.cm-quote-pick {
+  position: absolute;
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
+  background: var(--sf-inverse);
+  color: var(--ct-inverse);
+  box-shadow: var(--ev-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 8px));
+  animation: cm-unveil .16s ease-out;
+}
+/* A finger's own selection handles sit above the text, so the offer goes below it. */
+@media (pointer: coarse) { .cm-quote-pick { transform: translate(-50%, 2.4em); min-height: 38px; } }
+
 /* One quiet line under the text: comments on the left, sending and keeping on the right. */
 .cm-post-foot { grid-area: foot; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-width: 0; padding: 6px 8px 8px calc(var(--cm-gutter) - 8px); color: var(--ct-muted); font-size: 13.5px; }
 .cm-foot-button {
@@ -783,6 +805,8 @@ button.cm-note-name:hover { text-decoration: underline; text-underline-offset: 3
 @media (hover: none) { .cm-note-menu { opacity: 1; } }
 .cm-note-text { margin-top: 1px; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; }
 .cm-mention { margin-right: 3px; color: var(--ac-text); font-weight: 650; }
+/* The line of the post a note is about, set off the way a quotation is. */
+.cm-note-quote { margin: 3px 0 4px; padding: 1px 0 1px 10px; border-left: 2px solid var(--cm-pencil); color: var(--ct-muted); font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
 .cm-comment-media { margin-top: 6px; }
 .cm-note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; margin: 3px 0 0; font-size: 12.5px; color: var(--ct-muted); }
 .cm-note-actions > .cm-link-button { position: relative; font-weight: 700; }

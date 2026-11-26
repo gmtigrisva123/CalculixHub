@@ -186,6 +186,7 @@ const SYNTAX: Array<{ what: string; how: string }> = [
   { what: 'Sealed hint', how: '[hint] … [/hint]' },
   { what: 'Hidden words', how: '||the answer||' },
   { what: 'Technique', how: '#pigeonhole' },
+  { what: 'Note on a line', how: '> the line' },
   { what: 'Emphasis', how: '**bold**  *italic*' },
 ];
 
@@ -194,7 +195,7 @@ export function MarginKey({ compact = false, idPrefix = 'cm-side' }: { compact?:
   return (
     <section className={compact ? 'cm-key' : 'cm-side-card cm-key'} aria-labelledby={`${idPrefix}-key`}>
       <h3 id={`${idPrefix}-key`}>Marks in the margin</h3>
-      <p className="cm-muted cm-key-lede">Readers mark a post the way they would pencil a proof.</p>
+      <p className="cm-muted cm-key-lede">Readers mark a post the way they would pencil a proof. Select any line of a post to leave a note on it.</p>
       <ul className="cm-key-marks">
         {REACTIONS.map((reaction: Reaction) => (
           <li key={reaction} className={`cm-tone-${reaction}`}>

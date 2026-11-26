@@ -8,8 +8,9 @@
  * The page opens on today's board (one problem, the same for everyone) and
  * runs into the feed. A post has a kind (solution, stuck, trick, challenge),
  * may carry technique tags and sealed hints, may be filed in a circle, and can
- * be marked, commented on (with threaded replies), edited, deleted, saved and
- * reposted, or sent on by link or through the system share sheet. People can
+ * be marked, commented on (with threaded replies, or as a note on one selected
+ * line), edited, deleted, saved and reposted, or sent on by link or through
+ * the system share sheet. People can
  * be followed, and a link to a post or comment opens this screen scrolled to
  * it.
  *
@@ -196,6 +197,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   const [overrides, setOverrides] = useState<Record<string, Reaction | null>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const [composerSignals, setComposerSignals] = useState<Record<string, number>>({});
+  const [quoteSignals, setQuoteSignals] = useState<Record<string, { text: string; key: number }>>({});
   const [composer, setComposer] = useState<ComposerState | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PostWithAuthor | null>(null);
   const [reactors, setReactors] = useState<{ target: 'post' | 'comment'; id: string; counts: ReactionCounts | undefined } | null>(null);
@@ -582,6 +584,11 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     },
     openCircle: (id) => openCircle(id),
     needAccount: (verb) => void signedIn(verb),
+    quote: (post, line) => {
+      setOpenComments((set) => new Set(set).add(post.id));
+      setWatching(post.id);
+      setQuoteSignals((signals) => ({ ...signals, [post.id]: { text: line, key: (signals[post.id]?.key ?? 0) + 1 } }));
+    },
   };
 
   const openCreate = (options: { kind?: PostKind | null; problemId?: string | null } = {}) => {
@@ -668,6 +675,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
       circleName={post.community_id && post.community_id !== circleId ? circleNames.get(post.community_id) ?? null : null}
       commentsOpen={openComments.has(post.id)}
       composerSignal={composerSignals[post.id] ?? 0}
+      quoteSignal={quoteSignals[post.id] ?? null}
       focusCommentId={focusComment?.postId === post.id ? focusComment.commentId : null}
       highlighted={highlight === post.id}
       viewers={viewersByPost.get(post.id) ?? []}

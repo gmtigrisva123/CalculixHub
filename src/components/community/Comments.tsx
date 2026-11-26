@@ -38,6 +38,7 @@ import {
   redactSealed,
   shareLink,
   shiftReaction,
+  splitQuote,
   threadComments,
   totalReactions,
   typingSentence,
@@ -60,6 +61,8 @@ export interface CommentsProps {
   schema: FeedSchema | null;
   /** Increments each time the post's Comment button is pressed. */
   focusSignal: number;
+  /** A line of the post to open the next comment with, each time its key changes. */
+  quoteSignal?: { text: string; key: number } | null;
   /** A comment to scroll to and highlight, from a shared link. */
   focusCommentId: string | null;
   onOpenReactors: (target: 'comment', id: string, counts: ReactionCounts | undefined) => void;
@@ -93,6 +96,7 @@ export default function Comments({
   viewer,
   schema: feedSchema,
   focusSignal,
+  quoteSignal = null,
   focusCommentId,
   onOpenReactors,
   onCountChange,
@@ -159,6 +163,21 @@ export default function Comments({
     if (focusSignal > 0) requestAnimationFrame(() => composer.current?.focus({ preventScroll: false }));
   }, [focusSignal]);
 
+  // "Note on this line": the quoted line goes in first, and the caret after it.
+  const quoteKey = quoteSignal?.key ?? 0;
+  useEffect(() => {
+    if (!quoteSignal) return;
+    const frame = requestAnimationFrame(() => {
+      const field = composer.current;
+      if (!field) return;
+      field.dispatchEvent(new CustomEvent('cm-prefill', { detail: quoteSignal.text }));
+      field.focus({ preventScroll: false });
+    });
+    return () => cancelAnimationFrame(frame);
+    // Keyed on the signal's key alone: the same line may be quoted twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteKey]);
+
   // A shared link to a comment: reveal its thread, scroll to it, flash it once.
   useEffect(() => {
     if (!focusCommentId || feed.loading || focusedOnce.current === focusCommentId) return;
@@ -203,6 +222,9 @@ export default function Comments({
     }
     typing.stop();
     if (parentId) setExpanded((set) => new Set(set).add(parentId));
+    // A new comment has no marks, so under "Most marked" it would land below the
+    // fold of a long thread, out of its writer's sight. Show the newest first.
+    else setSort('newest');
     await feed.reload();
     onCountChange();
     return true;
@@ -469,6 +491,8 @@ function CommentItem({
   const images = comment.images ?? [];
   const author = comment.author;
   const creditedByViewer = canCredit && comment.viewer_reaction === CREDIT_MARK;
+  // A note on one line of the post opens with that line, quoted.
+  const { quote, text } = splitQuote(comment.body);
 
   const save = async () => {
     if (busy) return;
@@ -624,11 +648,18 @@ function CommentItem({
             </p>
           </div>
         ) : (
-          comment.body.trim() && (
-            <div className="cm-note-text">
-              <RichText text={comment.body} />
-            </div>
-          )
+          <>
+            {quote && (
+              <blockquote className="cm-note-quote">
+                <RichText text={quote} />
+              </blockquote>
+            )}
+            {text.trim() && (
+              <div className="cm-note-text">
+                <RichText text={text} />
+              </div>
+            )}
+          </>
         )}
 
         {!editing && images.length > 0 && (
@@ -696,9 +727,11 @@ const CommentComposer = React.forwardRef<HTMLTextAreaElement, ComposerProps>(fun
     const element = field.current;
     if (!element) return;
     const onPrefill = (event: Event) => {
-      const mention = (event as CustomEvent<string>).detail;
-      if (!mention) return;
-      setBody((value) => (value.startsWith(mention) ? value : mention + value));
+      const lead = (event as CustomEvent<string>).detail;
+      if (!lead) return;
+      // A quoted line replaces whichever line was quoted before; a mention is only ever added once.
+      setBody((value) => (lead.startsWith('>') ? lead + splitQuote(value).text : value.startsWith(lead) ? value : lead + value));
+      requestAnimationFrame(() => element.setSelectionRange(element.value.length, element.value.length));
     };
     element.addEventListener('cm-prefill', onPrefill);
     return () => element.removeEventListener('cm-prefill', onPrefill);

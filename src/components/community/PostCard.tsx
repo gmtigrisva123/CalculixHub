@@ -11,7 +11,7 @@
  * saving. On a phone the margin folds into a row under the text.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Bookmark,
   BookmarkCheck,
@@ -22,6 +22,7 @@ import {
   Lightbulb,
   Link2,
   MessageCircle,
+  MessageSquareQuote,
   MoreHorizontal,
   Pencil,
   PenLine,
@@ -45,7 +46,8 @@ import { MediaGrid } from './Media';
 import type { MentionPerson } from './Mentions';
 import { ExpandableBody, SharedEmbed, Shield, isLargeText, type ShieldReason } from './PostBody';
 import { MarkControl } from './Reactions';
-import { KIND_META, authorName, firstName, fullTimestamp, parsePost, plural, postAge, totalReactions, verdict, type PostKind } from './model';
+import { KIND_META, authorName, firstName, fullTimestamp, parsePost, plural, postAge, quoteLine, totalReactions, verdict, type PostKind } from './model';
+import { quoteFromRange } from './selectionQuote';
 import { Avatar, Menu, canNativeShare, useNow, type MenuEntry } from './ui';
 
 export interface PostActions {
@@ -80,6 +82,8 @@ export interface PostActions {
   openCircle: (circleId: string) => void;
   /** A signed-out reader pressed something that needs an account. */
   needAccount: (verb: string) => void;
+  /** Start a comment about one line of the post: `line` is the quoted line, ready to type after. */
+  quote: (post: PostWithAuthor, line: string) => void;
 }
 
 export const KIND_ICON: Record<PostKind, LucideIcon> = {
@@ -97,6 +101,7 @@ export default function PostCard({
   circleName,
   commentsOpen,
   composerSignal,
+  quoteSignal = null,
   focusCommentId,
   highlighted,
   viewers,
@@ -116,6 +121,8 @@ export default function PostCard({
   circleName: string | null;
   commentsOpen: boolean;
   composerSignal: number;
+  /** A line of this post the reader has just asked to leave a note on. */
+  quoteSignal?: { text: string; key: number } | null;
   focusCommentId: string | null;
   highlighted: boolean;
   /** Other people with this post's comments open right now. */
@@ -153,6 +160,35 @@ export default function PostCard({
   const covered = Boolean(shield) && kind === 'solution' && !revealed;
   const summed = covered ? null : verdict(post.reactions, own);
   const nudge = kind === 'stuck' && !resolved;
+
+  // Selecting part of the text offers a note on that line. The offer stands
+  // where the selection is, and leaves when the selection does.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [pick, setPick] = useState<{ x: number; y: number; line: string } | null>(null);
+  const readSelection = () => {
+    const selection = window.getSelection();
+    const host = bodyRef.current;
+    const card = host?.closest('article');
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0 || !host || !card) return setPick(null);
+    const range = selection.getRangeAt(0);
+    if (!host.contains(range.commonAncestorContainer)) return setPick(null);
+    const found = quoteFromRange(range);
+    const line = found.text.length >= 3 ? quoteLine(found.text, found.sealed) : '';
+    if (!line) return setPick(null);
+    const at = range.getBoundingClientRect();
+    const frame = card.getBoundingClientRect();
+    const x = Math.max(74, Math.min(frame.width - 74, at.left + at.width / 2 - frame.left));
+    setPick({ x, y: at.top - frame.top, line });
+  };
+  const picking = pick !== null;
+  useEffect(() => {
+    if (!picking) return;
+    const onChange = () => {
+      if (window.getSelection()?.isCollapsed ?? true) setPick(null);
+    };
+    document.addEventListener('selectionchange', onChange);
+    return () => document.removeEventListener('selectionchange', onChange);
+  }, [picking]);
 
   const reveal = () => {
     setRevealed(true);
@@ -299,7 +335,9 @@ export default function PostCard({
           <Shield reason={shield!} onSolve={onSolve} onReveal={reveal} />
         ) : (
           <>
-            <ExpandableBody text={text} large={!isShare && !kind && images.length === 0 && isLargeText(text)} className="cm-post-body" />
+            <div ref={bodyRef} onMouseUp={() => requestAnimationFrame(readSelection)} onKeyUp={readSelection} onTouchEnd={() => window.setTimeout(readSelection, 60)}>
+              <ExpandableBody text={text} large={!isShare && !kind && images.length === 0 && isLargeText(text)} className="cm-post-body" />
+            </div>
 
             {images.length > 0 && (
               <div className="cm-post-media">
@@ -322,6 +360,25 @@ export default function PostCard({
           </>
         )}
       </div>
+
+      {pick && (
+        <button
+          type="button"
+          className="cm-quote-pick"
+          style={{ left: pick.x, top: pick.y }}
+          // Pressing it must not clear the selection it is about.
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            const line = pick.line;
+            setPick(null);
+            window.getSelection()?.removeAllRanges();
+            if (viewerId) actions.quote(post, line);
+            else actions.needAccount('comment');
+          }}
+        >
+          <MessageSquareQuote size={14} aria-hidden="true" /> Note on this line
+        </button>
+      )}
 
       <footer className="cm-post-foot">
         {covered ? (
@@ -375,6 +432,7 @@ export default function PostCard({
           viewer={viewer}
           schema={schema}
           focusSignal={composerSignal}
+          quoteSignal={quoteSignal}
           focusCommentId={focusCommentId}
           nudge={nudge}
           creditFrom={kind === 'stuck' && resolved ? post.author_id : null}

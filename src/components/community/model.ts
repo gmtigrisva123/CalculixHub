@@ -538,6 +538,56 @@ export function boardCountdown(now: number): string {
 }
 
 /* --------------------------------------------------------------------------
+ * Notes on a line
+ *
+ * A comment may be about one line of a post rather than the whole of it. It
+ * says so the way plain-text mail does: it opens with the line, quoted behind
+ * a ">". Nothing new is stored, an older client shows the quote as text, and
+ * the thread can set the quoted line apart from what was said about it.
+ * ------------------------------------------------------------------------ */
+
+/** The most of a line a note quotes. Longer selections are cut at a word, never inside a formula. */
+export const QUOTE_MAX = 220;
+
+const QUOTED_LINE = /^[ \t]*>[ \t]?/;
+
+/** Separate the line a comment quotes, if it opens with one, from what was written about it. */
+export function splitQuote(body: string): { quote: string | null; text: string } {
+  const lines = body.split('\n');
+  let count = 0;
+  while (count < lines.length && QUOTED_LINE.test(lines[count]!)) count += 1;
+  const quote = lines
+    .slice(0, count)
+    .map((line) => line.replace(QUOTED_LINE, '').trim())
+    .filter(Boolean)
+    .join(' ');
+  if (!quote) return { quote: null, text: body };
+  return { quote, text: lines.slice(count).join('\n').replace(/^\n+/, '') };
+}
+
+/** One line, at most QUOTE_MAX long. A cut never lands inside `$…$`, and is marked with an ellipsis. */
+export function clipQuote(raw: string): string {
+  const flat = raw.replace(/\s+/g, ' ').trim();
+  if (flat.length <= QUOTE_MAX) return flat;
+  let cut = flat.slice(0, QUOTE_MAX);
+  // An odd number of dollars is an open formula: go back to before it began.
+  if ((cut.match(/\$/g) ?? []).length % 2 === 1) cut = cut.slice(0, cut.lastIndexOf('$'));
+  else cut = cut.replace(/\s+\S*$/, '');
+  return `${cut.trim()}…`;
+}
+
+/**
+ * The first line of a comment that quotes these words, ready to be typed
+ * after. `sealed` is for words taken from an opened hint or from hidden text:
+ * they are quoted hidden, so the note does not undo what the author sealed.
+ */
+export function quoteLine(raw: string, sealed = false): string {
+  const flat = clipQuote(raw.replace(/\|\|/g, ' '));
+  if (!flat) return '';
+  return `> ${sealed ? `||${flat}||` : flat}\n`;
+}
+
+/* --------------------------------------------------------------------------
  * What the marks add up to
  * ------------------------------------------------------------------------ */
 
