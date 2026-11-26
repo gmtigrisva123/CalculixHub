@@ -9,6 +9,9 @@
 
 import type { AuthorSummary, CommentWithAuthor, Reaction, ReactionCounts } from '../../services/database.types';
 import { apiUrl, isNativePlatform } from '../../services/apiBase';
+import { HINT_SOURCE, KIND_TAGS, MATH_SOURCE, POST_KINDS, SPOILER_SOURCE, VERBATIM_SOURCE, parsePost, type PostKind } from '../../../shared/postMarkup';
+
+export { POST_KINDS, composePost, parsePost, redactSealed, type ParsedPost, type PostKind } from '../../../shared/postMarkup';
 
 export interface ReactionMeta {
   /** The mark's name, as the picker and the "who marked this" dialog show it. */
@@ -140,13 +143,6 @@ export function shiftReaction(counts: ReactionCounts | undefined, from: Reaction
   return next;
 }
 
-/** "You and 3 others", "You", or the bare total. */
-export function reactionSentence(total: number, viewerReacted: boolean): string {
-  if (!viewerReacted) return compactCount(total);
-  if (total <= 1) return 'You';
-  return `You and ${plural(total - 1, 'other')}`;
-}
-
 export type CommentSort = 'relevant' | 'newest' | 'oldest';
 
 export const COMMENT_SORTS: Record<CommentSort, { label: string; hint: string }> = {
@@ -225,35 +221,8 @@ export function shareLink(postId: string, commentId?: string | null, base: strin
 }
 
 // Math is matched first, so an `@` inside a formula is never read as a mention.
-const MATH = String.raw`\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$|\\begin\{(?<env>[a-z*]+)\}[\s\S]+?\\end\{\k<env>\}`;
+const MATH = MATH_SOURCE;
 const MENTION = String.raw`(?<![A-Za-z0-9_@.])@([A-Za-z0-9](?:[A-Za-z0-9_]{0,22}[A-Za-z0-9])?)(?![A-Za-z0-9_])`;
-
-export type RichSegment = { type: 'text'; value: string } | { type: 'mention'; value: string };
-
-/**
- * Split text into plain runs and `@username` mentions. Formulas stay inside
- * the plain runs whole, for MathText to render; an email address is not a
- * mention.
- */
-export function segmentMentions(text: string): RichSegment[] {
-  const pattern = new RegExp(`(${MATH})|${MENTION}`, 'g');
-  const segments: RichSegment[] = [];
-  let plain = '';
-  let last = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) {
-    const handle = match[3];
-    if (handle === undefined) continue; // a formula: leave it in the plain run
-    plain += text.slice(last, match.index);
-    if (plain) segments.push({ type: 'text', value: plain });
-    plain = '';
-    segments.push({ type: 'mention', value: handle });
-    last = match.index + match[0].length;
-  }
-  plain += text.slice(last);
-  if (plain) segments.push({ type: 'text', value: plain });
-  return segments;
-}
 
 /**
  * The `@query` being typed at the caret, if any: where it starts and what has
@@ -332,10 +301,6 @@ export function disambiguateTitles<T extends { id: string; title: string; level:
  * means filtering by one is an ordinary text match.
  * ------------------------------------------------------------------------ */
 
-export type PostKind = 'solution' | 'stuck' | 'trick' | 'challenge';
-
-export const POST_KINDS: readonly PostKind[] = ['solution', 'stuck', 'trick', 'challenge'];
-
 export interface KindMeta {
   /** On the post, and on the filter chip for one. */
   label: string;
@@ -380,37 +345,21 @@ export const KIND_META: Record<PostKind, KindMeta> = {
   },
 };
 
-/** The tag a resolved "stuck" post carries instead of `#stuck`. */
-const RESOLVED_TAG = 'unstuck';
-const KIND_TAGS = new Set<string>([...POST_KINDS, RESOLVED_TAG]);
-const LEADING_KIND = /^\s*#(solution|stuck|unstuck|trick|challenge)(?![a-z0-9-])[ \t]*\n?/i;
-
-export interface ParsedPost {
-  kind: PostKind | null;
-  /** Only ever true for a "stuck" post whose author has marked it resolved. */
-  resolved: boolean;
-  /** The body without its kind tag: what is shown, and what the composer edits. */
-  text: string;
-}
-
-/** Read the kind a post opens with, and separate it from what the author wrote. */
-export function parsePost(body: string): ParsedPost {
-  const match = LEADING_KIND.exec(body);
-  if (!match) return { kind: null, resolved: false, text: body };
-  const tag = match[1]!.toLowerCase();
-  const text = body.slice(match[0].length);
-  return tag === RESOLVED_TAG ? { kind: 'stuck', resolved: true, text } : { kind: tag as PostKind, resolved: false, text };
-}
-
-/** The body to store for a post of this kind. A share, or a plain post, has no tag. */
-export function composePost(text: string, kind: PostKind | null, resolved = false): string {
-  const stripped = parsePost(text).text;
-  if (!kind) return stripped;
-  return `#${kind === 'stuck' && resolved ? RESOLVED_TAG : kind}\n${stripped}`;
-}
-
-/** The pattern a feed query uses to keep one kind. Open "stuck" posts only. */
+/**
+ * The pattern a feed query uses to narrow to one kind. It is deliberately a
+ * plain prefix: the database keeps every post that could be one, and
+ * `isKind` then keeps exactly the ones that are.
+ */
 export const kindPattern = (kind: PostKind): string => `#${kind}%`;
+
+/** Whether a stored body is a post of this kind. For "stuck", only the ones still open. */
+export function isKind(body: string, kind: PostKind): boolean {
+  const parsed = parsePost(body);
+  return parsed.kind === kind && !parsed.resolved;
+}
+
+// Formulas and inline code are verbatim: `#include` is not a technique (see shared/postMarkup.ts).
+const VERBATIM = VERBATIM_SOURCE;
 
 // A tag starts a word, begins with a letter, and is short enough to be a name.
 const TAG_BODY = String.raw`[a-z][a-z0-9]*(?:-[a-z0-9]+)*`;
@@ -426,7 +375,7 @@ export function normaliseTag(raw: string): string | null {
 
 /** The technique tags in a post, in the order written, without repeats. */
 export function extractTags(body: string): string[] {
-  const pattern = new RegExp(`(${MATH})|${TAG}`, 'gi');
+  const pattern = new RegExp(`(${VERBATIM})|${TAG}`, 'gi');
   const seen = new Set<string>();
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(body)) !== null) {
@@ -463,11 +412,11 @@ export type BodySegment =
 
 /**
  * Split running text into plain runs, `@mentions`, `#tags` and `||spoilers||`.
- * Formulas are matched first and left inside the plain runs, so a norm like
- * `$||x||$` or a `\#` in LaTeX is never mistaken for markup.
+ * Formulas and inline code are matched first and left inside the plain runs,
+ * so a norm like `$||x||$` or a `\#` in LaTeX is never mistaken for markup.
  */
 export function segmentInline(text: string): BodySegment[] {
-  const pattern = new RegExp(String.raw`(${MATH})|\|\|(?!\s)([^|\n](?:[^|]|\|(?!\|))*?)\|\||${MENTION}|${TAG}`, 'gi');
+  const pattern = new RegExp(`(${VERBATIM})|${SPOILER_SOURCE}|${MENTION}|${TAG}`, 'gi');
   const segments: BodySegment[] = [];
   let plain = '';
   let last = 0;
@@ -496,7 +445,7 @@ export function segmentInline(text: string): BodySegment[] {
 
 export type BodyBlock = { type: 'prose'; value: string } | { type: 'hint'; value: string; step: number; of: number };
 
-const HINT = /\[hint\][ \t]*\n?([\s\S]*?)\n?[ \t]*\[\/hint\]/gi;
+const HINT = new RegExp(HINT_SOURCE, 'gi');
 
 /**
  * Split a post into prose and its sealed hints, numbering the hints as rungs

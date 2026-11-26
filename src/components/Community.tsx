@@ -58,6 +58,7 @@ import {
   extractTags,
   firstName,
   holdBackFresh,
+  isKind,
   isUuid,
   kindPattern,
   newestCreatedAt,
@@ -227,10 +228,14 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     [overrides],
   );
 
-  // The database matches a tag as text, so "#parity" also finds "#parity-check"; the exact tag is kept here.
+  // The database narrows by text, so "#parity" also finds "#parity-check" and
+  // "#stuck%" also finds a sentence that starts that way; the exact ones are kept here.
   const posts = useMemo(
-    () => feed.data.filter((post) => !tagFilter || extractTags(post.body).includes(tagFilter)).map(withOverride),
-    [feed.data, withOverride, tagFilter],
+    () =>
+      feed.data
+        .filter((post) => (!tagFilter || extractTags(post.body).includes(tagFilter)) && (!kindFilter || isKind(post.body, kindFilter)))
+        .map(withOverride),
+    [feed.data, withOverride, tagFilter, kindFilter],
   );
 
   // New posts from other people wait behind a "new posts" pill instead of

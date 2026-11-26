@@ -44,13 +44,25 @@ type Point = readonly [number, number];
 const TAU = Math.PI * 2;
 const R = 38;
 
-/** FNV-1a, 32 bit: small, fast, and spreads similar ids well apart. */
+/**
+ * FNV-1a, 32 bit, with a murmur3 finalizer.
+ *
+ * FNV alone is not enough here. Its low bits depend only on the low bits of
+ * what came before, so two draws from related seeds (an id, and the same id
+ * with a suffix) come out correlated: every rose would sit on one of two
+ * grounds. The finalizer makes every output bit depend on every input bit.
+ */
 export function hashSeed(seed: string): number {
   let hash = 0x811c9dc5;
   for (let index = 0; index < seed.length; index++) {
     hash ^= seed.charCodeAt(index);
     hash = Math.imul(hash, 0x01000193);
   }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
   return hash >>> 0;
 }
 
@@ -76,7 +88,7 @@ const ROSES: ReadonlyArray<readonly [n: number, d: number, petals: number | null
 function rose(n: number, d: number): Point[] {
   // The curve closes after d turns when n·d is odd, and after 2d otherwise.
   const turns = (n * d) % 2 === 1 ? d : 2 * d;
-  return sample(turns / 2, 90 * turns, (t) => {
+  return sample(turns / 2, 36 * turns, (t) => {
     const r = R * Math.cos((n / d) * t);
     return [r * Math.cos(t), r * Math.sin(t)];
   });
@@ -97,7 +109,7 @@ const LISSAJOUS: ReadonlyArray<readonly [a: number, b: number]> = [[1, 2], [2, 3
 
 function lissajous(a: number, b: number): Point[] {
   const r = R * 0.94;
-  return sample(1, 220, (t) => [r * Math.sin(a * t + Math.PI / 2), r * Math.sin(b * t)]);
+  return sample(1, 160, (t) => [r * Math.sin(a * t + Math.PI / 2), r * Math.sin(b * t)]);
 }
 
 // A point at distance d from the centre of a circle of radius r rolling inside one of radius big.
@@ -106,7 +118,7 @@ const TROCHOIDS: ReadonlyArray<readonly [big: number, small: number, arm: number
 function hypotrochoid(big: number, small: number, arm: number): Point[] {
   const turns = small / gcd(big, small);
   const scale = R / (big - small + arm);
-  return sample(turns, 110 * turns, (t) => [
+  return sample(turns, 64 * turns, (t) => [
     scale * ((big - small) * Math.cos(t) + arm * Math.cos(((big - small) / small) * t)),
     scale * ((big - small) * Math.sin(t) - arm * Math.sin(((big - small) / small) * t)),
   ]);

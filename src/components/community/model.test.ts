@@ -7,18 +7,35 @@ import {
   initials,
   isUuid,
   postAge,
-  reactionSentence,
   shareLink,
   activeMention,
   completeMention,
   holdBackFresh,
   newestCreatedAt,
-  segmentMentions,
   shiftReaction,
   threadComments,
   typingSentence,
   topReactions,
   totalReactions,
+  KIND_META,
+  POST_KINDS,
+  REACTION_META,
+  SUGGESTED_TAGS,
+  boardCountdown,
+  boardDay,
+  boardProblem,
+  composePost,
+  countHints,
+  extractTags,
+  isKind,
+  kindPattern,
+  normaliseTag,
+  parsePost,
+  rankHelpers,
+  redactSealed,
+  segmentBlocks,
+  segmentInline,
+  tallyTags,
 } from './model';
 
 const NOW = new Date('2026-10-04T12:00:00Z').getTime();
@@ -87,11 +104,15 @@ describe('reactions', () => {
     expect(shiftReaction(undefined, null, null)).toEqual({});
   });
 
-  it('phrases the summary from the viewer’s point of view', () => {
-    expect(reactionSentence(1, true)).toBe('You');
-    expect(reactionSentence(2, true)).toBe('You and 1 other');
-    expect(reactionSentence(4, true)).toBe('You and 3 others');
-    expect(reactionSentence(4, false)).toBe('4');
+  it('names all seven marks, each with what leaving it says', () => {
+    const marks = Object.entries(REACTION_META);
+    // The keys are the database's; only what they are called here is ours to change.
+    expect(marks.map(([key]) => key)).toEqual(['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry']);
+    expect(new Set(marks.map(([, meta]) => meta.label)).size).toBe(7);
+    for (const [, meta] of marks) {
+      expect(meta.label.length).toBeGreaterThan(0);
+      expect(meta.hint.length).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -129,16 +150,16 @@ describe('share links and mentions', () => {
   });
 
   it('finds mentions anywhere, but not in formulas or email addresses', () => {
-    expect(segmentMentions('@ada_l nice proof')).toEqual([{ type: 'mention', value: 'ada_l' }, { type: 'text', value: ' nice proof' }]);
-    expect(segmentMentions('Thanks @bob and @Eve_N!')).toEqual([
+    expect(segmentInline('@ada_l nice proof')).toEqual([{ type: 'mention', value: 'ada_l' }, { type: 'text', value: ' nice proof' }]);
+    expect(segmentInline('Thanks @bob and @Eve_N!')).toEqual([
       { type: 'text', value: 'Thanks ' },
       { type: 'mention', value: 'bob' },
       { type: 'text', value: ' and ' },
       { type: 'mention', value: 'Eve_N' },
       { type: 'text', value: '!' },
     ]);
-    expect(segmentMentions('mail me@x.com, $a@b$ and $$x @y$$')).toEqual([{ type: 'text', value: 'mail me@x.com, $a@b$ and $$x @y$$' }]);
-    expect(segmentMentions('\\begin{align}@z\\end{align} @ok')).toEqual([
+    expect(segmentInline('mail me@x.com, $a@b$ and $$x @y$$')).toEqual([{ type: 'text', value: 'mail me@x.com, $a@b$ and $$x @y$$' }]);
+    expect(segmentInline('\\begin{align}@z\\end{align} @ok')).toEqual([
       { type: 'text', value: '\\begin{align}@z\\end{align} ' },
       { type: 'mention', value: 'ok' },
     ]);
@@ -194,5 +215,215 @@ describe('disambiguating problem titles', () => {
     expect(titles.get('1')).toBe('A circle in disguise (Foundation)');
     expect(titles.get('2')).toBe('A circle in disguise (Advanced)');
     expect(titles.get('3')).toBe('The lonely triangle');
+  });
+});
+
+describe('the kind of a post', () => {
+  it('is the tag the post opens with, read apart from what the author wrote', () => {
+    expect(parsePost('#stuck\nWhere do I start?')).toEqual({ kind: 'stuck', resolved: false, text: 'Where do I start?' });
+    expect(parsePost('#Solution  \nSquare both sides.')).toEqual({ kind: 'solution', resolved: false, text: 'Square both sides.' });
+    expect(parsePost('#trick\r\nSubtract the 2.')).toEqual({ kind: 'trick', resolved: false, text: 'Subtract the 2.' });
+    // A post that is only its kind (the rest was images) still has one.
+    expect(parsePost('#challenge')).toEqual({ kind: 'challenge', resolved: false, text: '' });
+  });
+
+  it('reads a resolved question as a stuck post that is no longer open', () => {
+    expect(parsePost('#unstuck\nGot it, thanks.')).toEqual({ kind: 'stuck', resolved: true, text: 'Got it, thanks.' });
+  });
+
+  it('leaves a sentence that merely starts with the word alone', () => {
+    for (const body of ['#stuck on problem 4, any ideas?', '#solutions are overrated', 'Hello #stuck', '# stuck\nspaced', 'stuck\nno hash']) {
+      expect(parsePost(body)).toEqual({ kind: null, resolved: false, text: body });
+    }
+  });
+
+  it('stores the kind once, however many times a post is edited', () => {
+    expect(composePost('Body', 'trick')).toBe('#trick\nBody');
+    expect(composePost('#stuck\nBody', 'solution')).toBe('#solution\nBody');
+    expect(composePost('#stuck\nBody', null)).toBe('Body');
+    expect(composePost('Body', 'stuck', true)).toBe('#unstuck\nBody');
+    // Only a question can be resolved.
+    expect(composePost('Body', 'solution', true)).toBe('#solution\nBody');
+    for (const kind of POST_KINDS) {
+      const stored = composePost(composePost('Two\nlines', kind), kind);
+      expect(parsePost(stored)).toEqual({ kind, resolved: false, text: 'Two\nlines' });
+    }
+  });
+
+  it('narrows a feed to open posts of one kind', () => {
+    expect(kindPattern('stuck')).toBe('#stuck%');
+    expect(isKind('#stuck\nHelp', 'stuck')).toBe(true);
+    // The database pattern is a prefix, so these reach the client and are dropped here.
+    expect(isKind('#unstuck\nSolved', 'stuck')).toBe(false);
+    expect(isKind('#stuckness is a state of mind', 'stuck')).toBe(false);
+    expect(isKind('#solution\nQED', 'stuck')).toBe(false);
+  });
+
+  it('describes every kind', () => {
+    for (const kind of POST_KINDS) {
+      const meta = KIND_META[kind];
+      for (const text of [meta.label, meta.plural, meta.action, meta.prompt, meta.blurb]) expect(text.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('technique tags', () => {
+  it('finds tags in prose, once each, lower-cased, in the order written', () => {
+    expect(extractTags('Tried #AM-GM, then #vieta and #am-gm again.')).toEqual(['am-gm', 'vieta']);
+  });
+
+  it('ignores what only looks like a tag', () => {
+    const body = '#stuck\nSee $\\#S = 3$, https://example.org/page#anchor, C#, issue #12, `#include`, me#you and #unstuck.';
+    expect(extractTags(body)).toEqual([]);
+  });
+
+  it('normalises what someone types into the form a tag is stored in', () => {
+    expect(normaliseTag(' #Angle Chasing ')).toBe('angle-chasing');
+    expect(normaliseTag('power_of_a_point')).toBe('power-of-a-point');
+    expect(normaliseTag('a--b')).toBe('a-b');
+    expect(normaliseTag('#stuck')).toBeNull();
+    expect(normaliseTag('2024')).toBeNull();
+    expect(normaliseTag('')).toBeNull();
+    expect(normaliseTag('x'.repeat(40))).toBeNull();
+  });
+
+  it('counts a tag once per post and lists the most used first', () => {
+    const tally = tallyTags(['#vieta and #vieta', 'again #vieta #parity', 'no tags here', '#parity', '#lte'], 2);
+    expect(tally).toEqual([{ tag: 'parity', count: 2 }, { tag: 'vieta', count: 2 }]);
+  });
+
+  it('suggests only tags that are valid as written', () => {
+    for (const tag of SUGGESTED_TAGS) expect(normaliseTag(tag)).toBe(tag);
+    expect(new Set(SUGGESTED_TAGS).size).toBe(SUGGESTED_TAGS.length);
+  });
+});
+
+describe('text with mentions, tags and hidden words', () => {
+  it('picks each out and leaves formulas whole', () => {
+    expect(segmentInline('Thanks @ada: use #vieta, the answer is ||682||, since $||x|| \\le 1$.')).toEqual([
+      { type: 'text', value: 'Thanks ' },
+      { type: 'mention', value: 'ada' },
+      { type: 'text', value: ': use ' },
+      { type: 'tag', value: 'vieta' },
+      { type: 'text', value: ', the answer is ' },
+      { type: 'spoiler', value: '682' },
+      { type: 'text', value: ', since $||x|| \\le 1$.' },
+    ]);
+  });
+
+  it('does not hide a logical or, or an empty pair of bars', () => {
+    for (const text of ['a || b || c', '||||', '|| spaced out ||', 'one | two | three']) {
+      expect(segmentInline(text)).toEqual([{ type: 'text', value: text }]);
+    }
+  });
+
+  it('keeps a single bar inside hidden words', () => {
+    expect(segmentInline('so ||a|b|| holds')).toEqual([
+      { type: 'text', value: 'so ' },
+      { type: 'spoiler', value: 'a|b' },
+      { type: 'text', value: ' holds' },
+    ]);
+  });
+
+  it('stays fast on hostile input', () => {
+    const hostile = ['|'.repeat(5000), `||${'a|'.repeat(2500)}`, '$'.repeat(5000), '#'.repeat(5000), '[hint]'.repeat(830), '@'.repeat(5000), '#a-'.repeat(1600), '\\begin{a}'.repeat(550)];
+    const started = performance.now();
+    for (const text of hostile) {
+      segmentInline(text);
+      segmentBlocks(text);
+      extractTags(text);
+      parsePost(text);
+    }
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+});
+
+describe('sealed hints', () => {
+  it('numbers the hints of a post as the rungs of one ladder', () => {
+    expect(segmentBlocks('Intro\n[hint]\nFirst\n[/hint]\n[HINT]Second[/hint]\nOutro')).toEqual([
+      { type: 'prose', value: 'Intro' },
+      { type: 'hint', value: 'First', step: 1, of: 2 },
+      { type: 'hint', value: 'Second', step: 2, of: 2 },
+      { type: 'prose', value: 'Outro' },
+    ]);
+    expect(countHints('a[hint]x[/hint]b[hint]y[/hint]')).toBe(2);
+  });
+
+  it('leaves an unclosed or empty fence as the author typed it', () => {
+    expect(segmentBlocks('Text [hint] with no close')).toEqual([{ type: 'prose', value: 'Text [hint] with no close' }]);
+    expect(segmentBlocks('[hint]  [/hint]Only this')).toEqual([{ type: 'prose', value: 'Only this' }]);
+    expect(segmentBlocks('')).toEqual([{ type: 'prose', value: '' }]);
+    expect(countHints('no hints')).toBe(0);
+  });
+});
+
+describe('today’s board', () => {
+  const problems = Array.from({ length: 10 }, (_, index) => ({ id: `p${String(index).padStart(2, '0')}`, proOnly: index === 3 }));
+  const midnight = Date.UTC(2026, 10, 26);
+  const HOUR = 3_600_000;
+
+  it('shows everyone the same problem for the whole UTC day', () => {
+    const first = boardProblem(problems, midnight);
+    expect(first).not.toBeNull();
+    expect(boardProblem(problems, midnight + 23 * HOUR + 59 * 60_000)).toBe(first);
+    expect(boardProblem([...problems].reverse(), midnight + 5 * HOUR)).toBe(first);
+    expect(boardProblem(problems, midnight + 24 * HOUR)).not.toBe(first);
+    expect(boardDay(midnight + 24 * HOUR)).toBe(boardDay(midnight) + 1);
+  });
+
+  it('goes through every free problem before repeating one', () => {
+    const seen = new Set<string>();
+    for (let day = 0; day < 9; day++) seen.add(boardProblem(problems, midnight + day * 24 * HOUR)!.id);
+    expect(seen.size).toBe(9);
+    expect(seen.has('p03')).toBe(false);
+  });
+
+  it('has nothing to pin when the bank is empty or all of it is paid', () => {
+    expect(boardProblem([], midnight)).toBeNull();
+    expect(boardProblem([{ id: 'only', proOnly: true }], midnight)).toBeNull();
+    expect(boardProblem([{ id: 'only' }], midnight + 400 * 24 * HOUR)).toEqual({ id: 'only' });
+  });
+
+  it('counts down to midnight UTC', () => {
+    expect(boardCountdown(midnight + HOUR)).toBe('23h 00m');
+    expect(boardCountdown(midnight + 14 * HOUR + 48 * 60_000)).toBe('9h 12m');
+    expect(boardCountdown(midnight + 24 * HOUR - 5 * 60_000)).toBe('5m');
+    expect(boardCountdown(midnight + 24 * HOUR - 30_000)).toBe('under a minute');
+  });
+});
+
+describe('who is helping', () => {
+  it('ranks by the marks readers left, and by posts only to break a tie', () => {
+    const posts = [
+      { author_id: 'a', author: 'Ada', like_count: 2 },
+      { author_id: 'b', author: 'Bao', like_count: 5 },
+      { author_id: 'a', author: 'Ada', like_count: 4 },
+      { author_id: 'c', author: 'Chloe', like_count: 6 },
+      { author_id: 'd', author: null, like_count: 0 },
+    ];
+    expect(rankHelpers(posts, 3)).toEqual([
+      { id: 'a', author: 'Ada', posts: 2, marks: 6 },
+      { id: 'c', author: 'Chloe', posts: 1, marks: 6 },
+      { id: 'b', author: 'Bao', posts: 1, marks: 5 },
+    ]);
+    expect(rankHelpers([])).toEqual([]);
+  });
+});
+
+describe('quoting a post outside the feed', () => {
+  it('replaces what the author sealed with a note that it is there', () => {
+    const text = 'Drop the altitude.\n[hint]\nThe height is 12.\n[/hint]\nSo the answer is ||100||.';
+    expect(redactSealed(text)).toBe('Drop the altitude.\n[sealed hint]\nSo the answer is [hidden].');
+  });
+
+  it('leaves formulas, inline code and anything unsealed exactly as written', () => {
+    const text = 'A norm $||x|| \\le 1$, code `a||b||c`, a || b, and [hint] with no close.';
+    expect(redactSealed(text)).toBe(text);
+  });
+
+  it('keeps a ladder readable as a ladder, without leaving gaps where empty hints were', () => {
+    expect(redactSealed('[hint]one[/hint]\n[hint]two[/hint]\n[hint] [/hint]\nDone')).toBe('[sealed hint]\n[sealed hint]\nDone');
+    expect(redactSealed('Before [hint]inline[/hint] after')).toBe('Before\n[sealed hint]\nafter');
+    expect(redactSealed('')).toBe('');
   });
 });

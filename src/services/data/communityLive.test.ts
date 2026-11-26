@@ -25,7 +25,7 @@ describe('notifications', () => {
     expect(describeNotification(note({ type: 'mention', entity_type: 'comment' }))).toBe('Ada mentioned you in a comment');
     expect(describeNotification(note({ type: 'mention', entity_type: 'post' }))).toBe('Ada mentioned you in a post');
     expect(describeNotification(note({ type: 'post_share' }))).toBe('Ada shared your post');
-    expect(describeNotification(note({ type: 'comment_like' }))).toBe('Ada reacted to your comment');
+    expect(describeNotification(note({ type: 'comment_like' }))).toBe('Ada left a mark on your comment');
   });
 
   it('links to the post, and to the comment inside it when there is one', () => {

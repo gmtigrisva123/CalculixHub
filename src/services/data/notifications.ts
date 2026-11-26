@@ -59,9 +59,9 @@ export function describeNotification(notification: NotificationWithActor): strin
     case 'follow':
       return `${who} started following you`;
     case 'post_like':
-      return `${who} reacted to your post`;
+      return `${who} left a mark on your post`;
     case 'comment_like':
-      return `${who} reacted to your comment`;
+      return `${who} left a mark on your comment`;
     case 'post_comment':
       return `${who} commented on your post`;
     case 'comment_reply':

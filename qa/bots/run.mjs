@@ -238,8 +238,8 @@ async function runBot(person, browser) {
 
     await step('community-post', async () => {
       await navigate(page, 'Community');
-      await page.getByRole('region', { name: 'Create a post' }).getByRole('button').first().click();
-      const box = page.getByRole('textbox', { name: 'Create post' });
+      await page.getByRole('region', { name: 'Write a post' }).getByRole('button').first().click();
+      const box = page.getByRole('textbox', { name: 'New post' });
       await box.waitFor();
       await box.click();
       await page.keyboard.type(pick(POSTS), { delay: 8 });
@@ -256,11 +256,12 @@ async function runBot(person, browser) {
       if (total === 0) return 'feed empty';
       const target = posts.nth(Math.floor(random() * Math.min(total, 6)));
       await target.scrollIntoViewIfNeeded();
-      const like = target.getByRole('button', { name: 'Like' }).first();
-      if (await visible(like)) await like.click();
-      const commentButton = target.getByRole('button', { name: /^Comment/ }).first();
+      // The quick mark is a tick ("I follow"); on an open question the comment button asks for a nudge.
+      const mark = target.getByRole('button', { name: /^I follow/ }).first();
+      if (await visible(mark)) await mark.click();
+      const commentButton = target.getByRole('button', { name: /^(Comment|Give a nudge)/ }).first();
       if (await visible(commentButton)) await commentButton.click();
-      const input = page.getByRole('textbox', { name: /Write a comment|Be the first to comment/ }).first();
+      const input = page.getByRole('textbox', { name: /Write a comment|Be the first to comment|Give a nudge/ }).first();
       await input.waitFor({ timeout: 10_000 });
       await input.click();
       await page.keyboard.type(pick(COMMENTS), { delay: 8 });
