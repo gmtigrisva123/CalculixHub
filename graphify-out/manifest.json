@@ -5328,8 +5328,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1795670295.3595977,
-    "seen": 1795670300.8852715,
+    "mtime": 1795670536.6436687,
+    "seen": 1795670545.6820319,
     "ast_hash": "484d95f73903272bc0daba08ef2514dd",
     "semantic_hash": ""
   },
@@ -5475,12 +5475,6 @@
     "mtime": 1795615556.9473705,
     "seen": 1795670284.4426553,
     "ast_hash": "85f2f508de6dac7eba1610991476b288",
-    "semantic_hash": ""
-  },
-  ".claude/settings.json": {
-    "mtime": 1795670295.3600237,
-    "seen": 1795670300.883024,
-    "ast_hash": "acd227e338c191e7f4de125904d4db81",
     "semantic_hash": ""
   },
   "qa/cleanup.sql": {
@@ -5727,6 +5721,12 @@
     "mtime": 1795615556.9947133,
     "seen": 1795670300.8845181,
     "ast_hash": "9237a64c6187f3ed440b77f4795c30f1",
+    "semantic_hash": ""
+  },
+  ".claude/settings.json": {
+    "mtime": 1795670542.402559,
+    "seen": 1795670555.6189885,
+    "ast_hash": "37b658fd1bef0de6ed19ca69ae0efc2e",
     "semantic_hash": ""
   },
   "package-lock.json": {

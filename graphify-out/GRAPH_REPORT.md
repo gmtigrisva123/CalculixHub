@@ -1,7 +1,7 @@
 # Graph Report - CalculixHub  (2026-11-26)
 
 ## Corpus Check
-- 944 files · ~1,284,913 words
+- 944 files · ~1,284,958 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 111 file(s) not represented in the graph (top: .csv 51, .css 42, (none) 8)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a9a5c161`
+- Built from commit: `90398053`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -95,7 +95,7 @@
 - Design flow (default)
 - routes/billing.ts
 - shareCard.ts
-- geminiClient.ts
+- lobbyModel.test.ts
 - auth.users
 - Recipes
 - Animation Standards Reference
@@ -187,7 +187,7 @@
 - Critical (ships as slop)
 - Typography
 - qa/package.json
-- lobbyModel.test.ts
+- geminiClient.ts
 - ExamArchive.tsx
 - ThemeContext.tsx
 - Finding Animation Opportunities
@@ -255,7 +255,7 @@
 - Genre — modern-minimal
 - Genre — playful
 - Imagery kit — curated abstract assets, hosted, ready
-- render-html.py
+- kit.tsx
 - adminRoutes
 - combinatorics
 - createApp
@@ -307,8 +307,8 @@
 - createApp
 - createApp
 - BM25
-- BM25
-- BM25
+- TutorConnect.tsx
+- render-html.py
 - Design Engineering
 - 20260801000500_notifications.sql
 - Layout and space
@@ -325,7 +325,7 @@
 - rollback.yml
 - sync.yml
 - test.yml
-- kit.tsx
+- BM25
 - Opening.tsx
 - Component Building Principles
 - design.md — opt-in portable design system
@@ -338,7 +338,7 @@
 - UI/UX Pro Max - Design Intelligence
 - build-cloudflare.mjs
 - {{id}}: {{displayName}}, live-site QA on {{baseUrl}}
-- TutorConnect.tsx
+- BM25
 - 20260926000400_realtime.sql
 - Colour
 - 20260801000200_learning.sql
@@ -792,9 +792,9 @@ Nodes (23): AuthenticatedUser, BillingSettings, billingSettings(), chargedAmount
 Cohesion: 0.18
 Nodes (16): ShareCard(), ShareCardProps, toBlob(), CARD_FONTS, CARD_HEIGHT, CARD_WIDTH, CardData, CardDesign (+8 more)
 
-### Community 79 - "geminiClient.ts"
-Cohesion: 0.20
-Nodes (16): cacheModel(), connectedModel(), describeError(), discoverModels(), GEMINI_KEY_STORAGE, GeminiKeyError, GeminiTurn, GenerateOptions (+8 more)
+### Community 79 - "lobbyModel.test.ts"
+Cohesion: 0.15
+Nodes (17): Arena, ArenaHeroProps, Countdown, Crest, CREST_HUES, crestFor(), formatCountdown(), MatchStatus (+9 more)
 
 ### Community 80 - "auth.users"
 Cohesion: 0.10
@@ -1152,9 +1152,9 @@ Nodes (17): Banned defaults, Bans, Body text rules, Free body faces, Free displa
 Cohesion: 0.13
 Nodes (16): dependencies, @faker-js/faker@^10.6.0, playwright@^1.56.1, description, engines, node, name, private (+8 more)
 
-### Community 171 - "lobbyModel.test.ts"
-Cohesion: 0.15
-Nodes (17): Arena, ArenaHeroProps, Countdown, Crest, CREST_HUES, crestFor(), formatCountdown(), MatchStatus (+9 more)
+### Community 171 - "geminiClient.ts"
+Cohesion: 0.20
+Nodes (16): cacheModel(), connectedModel(), describeError(), discoverModels(), GEMINI_KEY_STORAGE, GeminiKeyError, GeminiTurn, GenerateOptions (+8 more)
 
 ### Community 172 - "ExamArchive.tsx"
 Cohesion: 0.16
@@ -1416,9 +1416,9 @@ Nodes (10): Genre — playful, Nav and footer voice, Reference register, Stamp s
 Cohesion: 0.18
 Nodes (11): Anti-patterns, Categories, Decoration, Empty state, Generation pipeline (out-of-band, one-time), Imagery kit — curated abstract assets, hosted, ready, Layered hero composition (the masterclass move), Manifest (placeholder until generation pass ships) (+3 more)
 
-### Community 240 - "render-html.py"
-Cohesion: 0.25
-Nodes (4): generate_html(), get_deliverable_info(), get_image_base64(), main()
+### Community 240 - "kit.tsx"
+Cohesion: 0.14
+Nodes (14): CountUp(), CountUpProps, EyebrowProps, grouped(), lineContainer, RiseProps, Segment, splitEmphasis() (+6 more)
 
 ### Community 241 - "adminRoutes"
 Cohesion: 0.20
@@ -1616,6 +1616,14 @@ Nodes (9): checkRateLimit(), clientKey(), corsHeaders(), createApp(), evaluateOr
 Cohesion: 0.22
 Nodes (11): checkRateLimit(), clientKey(), corsHeaders(), createApp(), evaluateOrigin(), isSameOrigin(), notFound(), originDeniedResponse() (+3 more)
 
+### Community 293 - "TutorConnect.tsx"
+Cohesion: 0.25
+Nodes (10): looksOdd(), Phase, TutorConnect(), TutorConnectProps, maskKey(), modelLabel(), normalizeGeminiKey(), storeGeminiKey() (+2 more)
+
+### Community 294 - "render-html.py"
+Cohesion: 0.25
+Nodes (4): generate_html(), get_deliverable_info(), get_image_base64(), main()
+
 ### Community 295 - "Design Engineering"
 Cohesion: 0.22
 Nodes (8): Accessibility, Design Engineering, Initial Response, prefers-reduced-motion, Review Checklist, Review Format (Required), Stagger Animations, Touch device hover states
@@ -1676,10 +1684,6 @@ Nodes (8): jobs, sync, name, on, workflow_dispatch, run, runs-on, steps
 Cohesion: 0.22
 Nodes (8): jobs, test, name, on, workflow_dispatch, run, runs-on, steps
 
-### Community 311 - "kit.tsx"
-Cohesion: 0.14
-Nodes (14): CountUp(), CountUpProps, EyebrowProps, grouped(), lineContainer, RiseProps, Segment, splitEmphasis() (+6 more)
-
 ### Community 312 - "Opening.tsx"
 Cohesion: 0.15
 Nodes (19): ARCHIVE_CONTESTS, ARCHIVE_FIGURES, ArchiveFamilyFigure, afterChapters(), HeroGlow(), fade(), Hero(), HeroStat() (+11 more)
@@ -1727,10 +1731,6 @@ Nodes (6): esbuild@^0.25.0, esbuild, file, rules, source, entries
 ### Community 326 - "{{id}}: {{displayName}}, live-site QA on {{baseUrl}}"
 Cohesion: 0.25
 Nodes (7): How to behave, How to drive the browser, {{id}}: {{displayName}}, live-site QA on {{baseUrl}}, What to hand in, Who you are, Your account, Your assignment: {{focusTitle}}
-
-### Community 327 - "TutorConnect.tsx"
-Cohesion: 0.25
-Nodes (10): looksOdd(), Phase, TutorConnect(), TutorConnectProps, maskKey(), modelLabel(), normalizeGeminiKey(), storeGeminiKey() (+2 more)
 
 ### Community 328 - "20260926000400_realtime.sql"
 Cohesion: 0.21
@@ -2121,7 +2121,7 @@ Cohesion: 0.67
 Nodes (3): engines, node, npm
 
 ## Knowledge Gaps
-- **4 isolated node(s):** `Capacitor`, `UIKit`, `RFC-9457`, `PackageDescription`
+- **4 isolated node(s):** `UIKit`, `Capacitor`, `PackageDescription`, `RFC-9457`
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4136 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **46 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -2129,16 +2129,16 @@ Nodes (3): engines, node, npm
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `clamp()` connect `Responsive` to `JourneyStack.tsx`, `Hero enrichment — when, what, and how much`?**
-  _High betweenness centrality (0.127) - this node is a cross-community bridge._
+  _High betweenness centrality (0.135) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Capacitor`, `UIKit`, `RFC-9457` to the rest of the system?**
+- **What connects `UIKit`, `Capacitor`, `PackageDescription` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.019801980198019802 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `react` to `TopicBoards.tsx`, `react`, `Community.tsx`, `Arrow`, `LearnCatalog.tsx`, `EpicycleStage.tsx`, `Opening.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `MathText`, `Dashboard.tsx`, `Profile.tsx`, `Workspace.tsx`, `Settings.tsx`, `PlacementExperience.tsx`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `dependencies`, `plan.ts`, `linkify.tsx`, `ExamArchive.tsx`, `ParticleField.tsx`, `macbookStage.ts`, `WorkspaceShell.tsx`, `ThemeContext.tsx`, `ArenaHero.tsx`, `kit.tsx`, `Opening.tsx`, `AITutorChat.tsx`, `useAuth`, `ArchiveHero.tsx`, `archiveModel.ts`, `JourneyStack.tsx`, `TutorConnect.tsx`, `shareCard.ts`, `Media.tsx`, `AuthContext.tsx`, `InstallAppButton.tsx`, `Arena.tsx`, `Leaderboard.tsx`, `WelcomeScreen.tsx`, `ChordPlayground.tsx`, `offline.ts`?**
-  _High betweenness centrality (0.099) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `TopicBoards.tsx`, `react`, `Community.tsx`, `Arrow`, `LearnCatalog.tsx`, `EpicycleStage.tsx`, `Opening.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `MathText`, `Dashboard.tsx`, `Profile.tsx`, `Workspace.tsx`, `Settings.tsx`, `PlacementExperience.tsx`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `TutorConnect.tsx`, `dependencies`, `plan.ts`, `linkify.tsx`, `ExamArchive.tsx`, `ParticleField.tsx`, `macbookStage.ts`, `WorkspaceShell.tsx`, `ThemeContext.tsx`, `ArenaHero.tsx`, `Opening.tsx`, `AITutorChat.tsx`, `useAuth`, `ArchiveHero.tsx`, `archiveModel.ts`, `JourneyStack.tsx`, `shareCard.ts`, `Media.tsx`, `AuthContext.tsx`, `InstallAppButton.tsx`, `Arena.tsx`, `Leaderboard.tsx`, `WelcomeScreen.tsx`, `ChordPlayground.tsx`, `kit.tsx`, `offline.ts`?**
+  _High betweenness centrality (0.097) - this node is a cross-community bridge._
 - **Should `.claude/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
 - **Why does `Hero enrichment — when, what, and how much` connect `Hero enrichment — when, what, and how much` to `Responsive`, `.agents/skills/hallmark/references/macrostructures.md`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
