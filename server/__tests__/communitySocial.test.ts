@@ -361,7 +361,8 @@ describe('community notifications', () => {
     const secret = await post(ada, 'Members only, @feed_eve', { community: community!.id });
     expect((await inbox(eve, 'mention')).filter((row) => row.post_id === secret)).toHaveLength(0);
 
-    await db.asUser(eve, 'insert into public.community_members (community_id, user_id) values ($1, $2)', [community!.id, eve]);
+    // A private community is not joined by asking: the service role adds its members.
+    await db.query('insert into public.community_members (community_id, user_id) values ($1, $2)', [community!.id, eve]);
     const shared = await post(ada, 'Now you are in, @feed_eve', { community: community!.id });
     expect((await inbox(eve, 'mention')).filter((row) => row.post_id === shared)).toHaveLength(1);
   });

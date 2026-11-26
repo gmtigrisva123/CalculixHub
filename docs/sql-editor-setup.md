@@ -23,6 +23,27 @@ It also closes a hole in the core notifications setup: `emit_notification` was c
 
 The file is transactional, safe to rerun and preserves existing posts, comments and likes (existing likes become "like" reactions). It adds columns, triggers, two views, a few functions, the bucket and its policies, without redefining anything from the core files, so rerunning `core-setup.sql` afterwards does not undo it. Until it is applied, the Community screen keeps working with likes, flat comments, saving, editing and deleting, and simply does not offer the features that need the new columns. Live presence ("here now", "viewing") and "is writing a comment" use Realtime Presence and Broadcast, which need no SQL.
 
+Then run `supabase/community-roles-setup.sql`. It makes the database, not the browser, decide who holds which role in a community (the `communities` and `community_members` tables that Circles in the Community screen are built on):
+
+- whoever created a community becomes its owner when they join it; everybody else joins as a member, whatever role the request asks for. Before this file any signed-in learner could add themselves to any community as its owner, and an owner could then rename it, make it private and write themselves in as its creator;
+- a private community can no longer be joined by someone who merely knows its id. Only its creator may add themselves. There is no invitation flow yet, so add other members with the service role (the SQL Editor);
+- no client can change a membership's role, community, person or date; a new community starts with no members and the current time whatever the request says; and its creator, member count and creation time survive every update.
+
+The first time it runs it resets the roles it cannot vouch for, because either could have been self-assigned: every moderator, and every owner who is not the community's creator. It reports how many in a notice. Reruns skip that step, so a moderator you appoint afterwards in the SQL Editor is kept. To hand a community to someone else, change `communities.created_by` as well as the member's role: owning a community now rests on having created it.
+
+The file is transactional, safe to rerun, and adds only triggers and functions of its own, so rerunning `core-setup.sql` afterwards does not undo it. Two things it cannot do:
+
+- It cannot repair a community that was already taken over. If `created_by` was rewritten before this file ran, there is no other record of who made the community, and the reset will trust what it finds. If you had communities before running it, read the list once and correct any that look wrong:
+
+  ```sql
+  select c.slug, c.name, c.is_private, p.username as created_by, c.member_count, c.created_at
+    from public.communities c
+    left join public.profiles p on p.id = c.created_by
+   order by c.created_at;
+  ```
+
+- It does not make a community editable where `qa-cohort-setup.sql` is also applied. There, any update of a community by a learner currently fails with "infinite recursion detected in policy for relation communities": the cohort policy on `communities` contains a sub-select, and with it PostgreSQL treats communities, community_members and communities again as a loop. Nothing in the app updates a community, so nothing is broken by it, but an owner cannot yet rename one there. The guards in this file do not rely on that failure; they hold on a database without the cohort file, where the update works.
+
 Last, run `supabase/qa-cohort-setup.sql`. It creates the QA cohort: accounts that sign up with a `+cxqa-` plus-address (the live-site QA bots and agents in `qa/`) see only each other, and learners never see them. That covers the feed, rankings, arenas, notifications, messages, presence and platform totals. The file adds restrictive policies and triggers of its own, so rerunning earlier files leaves them in place. The exception is four SECURITY DEFINER readers it redefines with the cohort filter: `arena_catalog`, `arena_action`, `platform_stats` and `learning_snapshot`. Rerun this file after `admin-arena-setup.sql` or `realtime-setup.sql`. `qa/cleanup.sql` removes the cohort and everything it created. See `qa/README.md`.
 
 Optionally, run `supabase/community-seed.sql` to open Community Solutions with 50 discussion threads (each with at least ten people replying, plus reactions and follows) written by 36 learner accounts. Run it after `community-social-setup.sql`. It is transactional and safe to rerun, and it stops without writing anything if a learner already holds one of its usernames. Times are relative to the moment it runs, so the threads read as recent. The accounts cannot sign in, and their addresses use the reserved `community-seed.calculixhub.invalid` domain, so no mail is sent. They count as learners everywhere else too, for example in platform totals. `supabase/community-seed-cleanup.sql` removes all of it, including any comments learners left on those threads. Both files are generated: edit the threads in `scripts/community-seed/` and rebuild with `node scripts/community-seed/build.mjs`.
