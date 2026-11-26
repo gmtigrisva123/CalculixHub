@@ -126,6 +126,14 @@ function originalOf(post: PostWithAuthor): SharedPost {
   return post.shared_post_id && post.shared_post ? post.shared_post : post;
 }
 
+/**
+ * Where a repost of this has to be posted: the closed community the original
+ * sits in, or null for the open feed. The database refuses anything else.
+ */
+function insideOf(original: SharedPost): string | null {
+  return original.community_id && original.walled !== false ? original.community_id : null;
+}
+
 function excerpt(text: string, length = 160): string {
   const flat = text.replace(/\s+/g, ' ').trim();
   return flat.length > length ? `${flat.slice(0, length - 1)}…` : flat;
@@ -215,7 +223,10 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
   const [lightbox, setLightbox] = useState<{ paths: string[]; index: number } | null>(null);
   const [baseline, setBaseline] = useState<{ key: string; cutoff: string | null } | null>(null);
 
-  const present = useCommunityPresence(viewer, watching);
+  // Which post someone is reading is announced to everyone with the feed open,
+  // so a post inside a closed community is never named there.
+  const watched = watching ? feed.data.find((post) => post.id === watching) ?? (linked?.id === watching ? linked : null) : null;
+  const present = useCommunityPresence(viewer, watched?.walled === false ? watching : null);
   const viewersByPost = useMemo(() => {
     const map = new Map<string, PresentPerson[]>();
     for (const person of present) if (person.post) map.set(person.post, [...(map.get(person.post) ?? []), person]);
@@ -498,12 +509,13 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
       const me = signedIn('repost');
       if (!me) return;
       const original = originalOf(post);
-      const result = await createPost({ authorId: me.id, body: '', problemId: original.problem_id, sharedPostId: original.id });
+      const inside = insideOf(original);
+      const result = await createPost({ authorId: me.id, body: '', problemId: original.problem_id, sharedPostId: original.id, communityId: inside });
       if (!result.ok) {
         toast(result.error, 'error');
         return;
       }
-      toast('Reposted.');
+      toast(inside ? 'Reposted inside its circle.' : 'Reposted.');
       await feed.reload();
     },
     shareWithThoughts: (post) => {
@@ -521,9 +533,11 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
     shareVia: async (post) => {
       // What leaves the page is the open text only: a sealed hint or hidden word stays sealed.
       const quote = (body: string | null | undefined, isShare = false) => redactSealed(isShare ? body ?? '' : parsePost(body ?? '').text);
+      // From inside a closed circle only the link leaves: it opens for members and for nobody else.
+      const closed = post.walled !== false || (post.shared_post ? post.shared_post.walled !== false : false);
       const outcome = await nativeShare({
-        title: `${authorName(post.author)} on CalculixHub`,
-        text: excerpt(quote(post.body, Boolean(post.shared_post_id)) || quote(post.shared_post?.body) || 'A discussion on CalculixHub'),
+        title: closed ? 'CalculixHub' : `${authorName(post.author)} on CalculixHub`,
+        text: closed ? 'A discussion in a private circle on CalculixHub' : excerpt(quote(post.body, Boolean(post.shared_post_id)) || quote(post.shared_post?.body) || 'A discussion on CalculixHub'),
         url: shareLink(post.id),
       });
       if (outcome === 'failed') toast('Sharing is not available here. Use “Copy link”.', 'error');
@@ -618,12 +632,12 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
         authorId: viewer.id,
         body,
         problemId,
-        communityId: composer.mode === 'create' ? postedIn : null,
+        communityId: composer.mode === 'create' ? postedIn : insideOf(composer.original),
         sharedPostId: composer.mode === 'share' ? composer.original.id : null,
         images,
       });
       if (result.ok) {
-        toast(composer.mode === 'share' ? 'Reposted.' : 'Posted.');
+        toast(composer.mode !== 'share' ? 'Posted.' : insideOf(composer.original) ? 'Reposted inside its circle.' : 'Reposted.');
         // Show the new post: drop whatever narrowing would hide it.
         setView('all');
         setSort('latest');

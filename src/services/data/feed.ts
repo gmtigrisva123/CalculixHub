@@ -64,7 +64,7 @@ const POST_AUTHOR = `author:profiles!posts_author_id_fkey (${AUTHOR_COLUMNS})`;
 const POST_BASE = 'id, author_id, problem_id, community_id, body, like_count, comment_count, deleted_at, created_at, updated_at';
 const POST_COLUMNS = `${POST_BASE}, ${POST_AUTHOR}`;
 const SOCIAL_POST_COLUMNS = `${POST_BASE}, edited_at, shared_post_id, share_count, images, ${POST_AUTHOR}`;
-const SHARED_POST_COLUMNS = `id, author_id, problem_id, body, deleted_at, created_at, images, ${POST_AUTHOR}`;
+const SHARED_POST_COLUMNS = `id, author_id, problem_id, community_id, body, deleted_at, created_at, images, ${POST_AUTHOR}`;
 const COMMENT_AUTHOR = `author:profiles!comments_author_id_fkey (${AUTHOR_COLUMNS})`;
 const COMMENT_BASE = 'id, post_id, author_id, body, like_count, deleted_at, created_at';
 const COMMENT_COLUMNS = `${COMMENT_BASE}, ${COMMENT_AUTHOR}`;
@@ -91,6 +91,7 @@ function describeError(error: { message: string; code?: string }): string {
   }
   if (error.code === '23505') return 'That has already been done.';
   if (error.code === '23514') {
+    if (/private community/i.test(error.message)) return 'A post from a private circle can only be reposted inside it.';
     if (/no longer available/i.test(error.message)) return 'That post is no longer available to share.';
     if (/same post/i.test(error.message)) return 'That comment is no longer available to reply to.';
     return 'That content is not valid.';
@@ -144,6 +145,43 @@ function tally<K extends string>(rows: Array<Record<K, string> & { reaction: Rea
 }
 
 /**
+ * Which of these communities are closed, given the rows that could be read.
+ *
+ * It fails closed. A community is open only when its row came back and says
+ * so: one that could not be read (it is private and the viewer has left, or
+ * the lookup failed and `rows` is null) counts as closed.
+ */
+export function closedAmong(ids: readonly string[], rows: ReadonlyArray<{ id: string; is_private: boolean }> | null): Set<string> {
+  const open = new Set((rows ?? []).filter((row) => row.is_private === false).map((row) => row.id));
+  return new Set(ids.filter((id) => !open.has(id)));
+}
+
+/**
+ * Mark each post, and each original it shares, that sits inside a closed
+ * community.
+ *
+ * Who is reading or typing travels over channels anyone can join, and a share
+ * carries the id of what it shares. The feed needs to know which posts must
+ * stay out of both. One query for the page, and none when no post is in a
+ * community at all.
+ */
+async function markWalled(client: NonNullable<typeof supabase>, posts: PostWithAuthor[]): Promise<void> {
+  const subjects: Array<{ community_id?: string | null; walled?: boolean }> = [];
+  for (const post of posts) {
+    subjects.push(post);
+    if (post.shared_post) subjects.push(post.shared_post);
+  }
+
+  const ids = [...new Set(subjects.map((subject) => subject.community_id).filter((id): id is string => Boolean(id)))];
+  let closed = new Set<string>();
+  if (ids.length > 0) {
+    const { data, error } = await client.from('communities').select('id, is_private').in('id', ids);
+    closed = closedAmong(ids, error ? null : ((data ?? []) as Array<{ id: string; is_private: boolean }>));
+  }
+  for (const subject of subjects) subject.walled = Boolean(subject.community_id && closed.has(subject.community_id));
+}
+
+/**
  * Attach reactions, saves and share originals to a page of posts.
  *
  * Each is one set-membership query over the page rather than a correlated
@@ -180,6 +218,7 @@ async function decoratePosts(
         post.viewer_has_saved = savedIds.has(post.id);
       }
     }
+    await markWalled(client, posts);
     return posts;
   }
 
@@ -215,6 +254,7 @@ async function decoratePosts(
       post.viewer_has_saved = savedIds.has(post.id);
     }
   }
+  await markWalled(client, posts);
   return posts;
 }
 

@@ -264,6 +264,16 @@ create trigger community_members_sync_count
 -- policy. Reading through a definer function steps outside that evaluation. It
 -- is safe to do so because the function answers exactly one closed question
 -- about the caller and returns no row data.
+--
+-- "About the caller" is enforced, not assumed. In the public schema a function
+-- is also an RPC, and `who` is an argument: without the second half of the
+-- body anyone could ask whether anyone else was in a community. It answers
+-- about somebody else only inside a trigger, where the answer feeds a decision
+-- and does not travel back to a client, and for a request that is not a
+-- learner's at all (the service role, the SQL Editor, a scheduled job): both
+-- the role the request runs as and the role in its token have to say so.
+-- Everywhere else the answer is a plain "no", never null, which would be an
+-- answer of its own. community-privacy-setup.sql carries the same body.
 create or replace function public.is_community_member(target uuid, who uuid)
 returns boolean
 language sql
@@ -274,6 +284,19 @@ as $$
   select exists (
     select 1 from public.community_members m
     where m.community_id = target and m.user_id = who
+  )
+  and coalesce(
+    who = auth.uid()
+    or pg_trigger_depth() > 0
+    or (
+      coalesce(current_setting('role', true), '') not in ('anon', 'authenticated')
+      and coalesce(
+        nullif(current_setting('request.jwt.claim.role', true), ''),
+        nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+        'service_role'
+      ) = 'service_role'
+    ),
+    false
   );
 $$;
 
@@ -315,7 +338,7 @@ create policy communities_update_owner
   on public.communities for update
   using (exists (
     select 1 from public.community_members m
-    where m.community_id = id and m.user_id = auth.uid() and m.role in ('owner', 'moderator')
+    where m.community_id = communities.id and m.user_id = auth.uid() and m.role in ('owner', 'moderator')
   ));
 
 drop policy if exists community_members_select_visible on public.community_members;

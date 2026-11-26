@@ -156,6 +156,9 @@ export type ReactionCounts = Partial<Record<Reaction, number>>;
 /** The original a share points at, as the share renders it. */
 export type SharedPost = Pick<PostRow, 'id' | 'author_id' | 'problem_id' | 'body' | 'deleted_at' | 'created_at' | 'images'> & {
   author: AuthorSummary | null;
+  community_id?: string | null;
+  /** See `PostWithAuthor.walled`. */
+  walled?: boolean;
 };
 
 /** A post joined with its author, which is how every feed renders one. */
@@ -172,6 +175,14 @@ export interface PostWithAuthor extends PostRow {
    * hidden from this viewer -- the feed renders that as unavailable.
    */
   shared_post?: SharedPost | null;
+  /**
+   * True when the post sits inside a community that is not open to everyone,
+   * or whose openness could not be confirmed. Nothing about such a post goes
+   * out on a channel anyone can join, and a repost of it stays in its
+   * community. Set on every post the feed returns; absent means "not known",
+   * which callers treat as walled.
+   */
+  walled?: boolean;
 }
 
 export interface CommentWithAuthor extends CommentRow {

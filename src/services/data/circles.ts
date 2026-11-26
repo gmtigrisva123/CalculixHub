@@ -10,9 +10,10 @@
  * Nothing here needs new SQL.
  *
  * Only open circles are created and listed. The schema also has private ones,
- * but joining is a self-insert that the database does not gate on an
- * invitation, so "private" would promise more than it keeps. Until it does,
- * this file does not offer it.
+ * and the database keeps what that word promises (community-roles-setup.sql,
+ * community-privacy-setup.sql). What is missing is a way in: nobody can be
+ * invited, so members are added with the service role. Until there is an
+ * invitation flow, this file does not offer them.
  *
  * As everywhere in this folder there is no permission logic: who may create,
  * join or post is decided by the policies in `20260801000300_social.sql`, and

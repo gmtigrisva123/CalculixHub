@@ -229,10 +229,13 @@ export default function PostCard({
     ...(text.trim() ? [{ key: 'text', label: 'Copy text', icon: Copy, onSelect: () => actions.copyText(post) }] : []),
   ];
 
+  // A repost of something inside a closed circle is posted inside it too.
+  const reposted = post.shared_post_id && post.shared_post ? post.shared_post : post;
+  const staysInside = Boolean(reposted.community_id) && reposted.walled !== false;
   const shareMenu: MenuEntry[] = [
     ...(viewerId && social
       ? [
-          { key: 'now', label: 'Repost', description: 'It appears in the feed under your name.', icon: Repeat2, onSelect: () => actions.shareNow(post) },
+          { key: 'now', label: 'Repost', description: staysInside ? 'It stays inside this circle, under your name.' : 'It appears in the feed under your name.', icon: Repeat2, onSelect: () => actions.shareNow(post) },
           { key: 'thoughts', label: 'Repost with a note', description: 'Write a line above it first.', icon: SquarePen, onSelect: () => actions.shareWithThoughts(post) },
           { key: 'sep', separator: true as const },
         ]

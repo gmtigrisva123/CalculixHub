@@ -113,7 +113,9 @@ export default function Comments({
   const feed = useComments(post.id, viewerId, creditFrom);
   const schema = feed.schema ?? feedSchema;
   const toast = useToast();
-  const typing = useTyping(post.id, viewer);
+  // The typing channel is open to anyone who knows a post's id, so a post inside
+  // a closed community does not use it.
+  const typing = useTyping(post.walled === false ? post.id : null, viewer);
 
   const [sort, setSort] = useState<CommentSort>('relevant');
   const [visible, setVisible] = useState(FIRST_PAGE);

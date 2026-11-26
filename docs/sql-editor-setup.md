@@ -44,16 +44,44 @@ The file is transactional, safe to rerun, and adds only triggers and functions o
 
 - It does not make a community editable where `qa-cohort-setup.sql` is also applied. There, any update of a community by a learner currently fails with "infinite recursion detected in policy for relation communities": the cohort policy on `communities` contains a sub-select, and with it PostgreSQL treats communities, community_members and communities again as a loop. Nothing in the app updates a community, so nothing is broken by it, but an owner cannot yet rename one there. The guards in this file do not rely on that failure; they hold on a database without the cohort file, where the update works.
 
+Then run `supabase/community-privacy-setup.sql`. A private community already hid its posts and comments from everyone outside it. Everything attached to them was still open, and this file closes it:
+
+- marks: who marked a private post or comment, and how many did, could be read by anyone, signed in or not. Marks are now readable exactly where the post is;
+- marking and saving: someone outside could mark or save a private post by its id, which moved its counter and notified its author. Both are refused now, with the same answer a post that does not exist gets;
+- notifications: a reply, a comment or a mark was sent, quoted, to the author it concerned even after that author had left the community, and a repost written inside one was quoted to the outside author of what it reposted. Notifications about a private post now reach its members only, and ones delivered earlier disappear from the inbox of anyone who has left (nothing is deleted: they return if the person does);
+- email: every new post was mailed to every learner on the server, private ones included. A private post is now mailed to its members, and mail still in the queue is set aside when its recipient leaves or an open community closes;
+- membership: `is_community_member(community, anyone)` and `is_conversation_participant(conversation, anyone)` could be called by anybody about anybody. They now answer about the caller (a conversation also answers to its own participants), and say no to everything else;
+- reposts: a post from a private community can be reposted inside it and nowhere else;
+- a post's author who has left can no longer remove other people's comments on it, though they can still withdraw their own;
+- Realtime: a deleted row is announced to every subscriber with its primary key, and for memberships, marks and saves that key was the pair of ids itself, so leaving a private community told everyone listening who had been in it. `community_members`, `post_likes`, `comment_likes` and `saved_posts` get a `row_id` key that says nothing; the pair stays unique.
+
+Run it after `community-roles-setup.sql`; it refuses to apply before that file or before `community-social-setup.sql`, and says which is missing. It is transactional and safe to rerun. It adds restrictive policies, triggers and a `privacy` schema of its own, so rerunning an earlier file does not undo it. The two membership functions belong to `core-setup.sql` and are corrected in both files, so a rerun of either leaves the corrected version in place. If `email-delivery-setup.sql` is applied later, that file attaches the queue guard itself.
+
+Three things it does not change:
+
+- Images. `community-media` is a public bucket: an image is reached by an address nobody can guess but anybody can use, and leaving a community does not take back an address already seen.
+- A row deleted outright (when an account is deleted, for example) is still announced to Realtime subscribers by its id. The id names nothing that can be read any more.
+- Presence and typing indicators are relayed by Realtime between browsers and never pass through a policy. The app does not send them for a post inside a private community. That is a rule of the app, not of the database.
+
+There is still no invitation flow, so members of a private community are added in the SQL Editor:
+
+```sql
+insert into public.community_members (community_id, user_id)
+select c.id, p.id
+  from public.communities c, public.profiles p
+ where c.slug = '<community-slug>' and p.username = '<username>';
+```
+
 Last, run `supabase/qa-cohort-setup.sql`. It creates the QA cohort: accounts that sign up with a `+cxqa-` plus-address (the live-site QA bots and agents in `qa/`) see only each other, and learners never see them. That covers the feed, rankings, arenas, notifications, messages, presence and platform totals. The file adds restrictive policies and triggers of its own, so rerunning earlier files leaves them in place. The exception is four SECURITY DEFINER readers it redefines with the cohort filter: `arena_catalog`, `arena_action`, `platform_stats` and `learning_snapshot`. Rerun this file after `admin-arena-setup.sql` or `realtime-setup.sql`. `qa/cleanup.sql` removes the cohort and everything it created. See `qa/README.md`.
 
 Optionally, run `supabase/community-seed.sql` to open Community Solutions with 50 discussion threads (each with at least ten people replying, plus reactions and follows) written by 36 learner accounts. Run it after `community-social-setup.sql`. It is transactional and safe to rerun, and it stops without writing anything if a learner already holds one of its usernames. Times are relative to the moment it runs, so the threads read as recent. The accounts cannot sign in, and their addresses use the reserved `community-seed.calculixhub.invalid` domain, so no mail is sent. They count as learners everywhere else too, for example in platform totals. `supabase/community-seed-cleanup.sql` removes all of it, including any comments learners left on those threads. Both files are generated: edit the threads in `scripts/community-seed/` and rebuild with `node scripts/community-seed/build.mjs`.
 
 ## Email for notifications and new posts
 
-Run `supabase/email-delivery-setup.sql` after `qa-cohort-setup.sql`. From then on:
+Run `supabase/email-delivery-setup.sql` after `qa-cohort-setup.sql`. If you applied it before the private-community fix, run the current file again: the earlier one mailed private posts to everyone. From then on:
 
 - every notification (follow, reaction, comment, reply, mention, share, message) is also emailed to the learner who received it;
-- every new post is emailed to every other member, except suspended accounts, the seed accounts on the reserved `.invalid` domain, and accounts in the other cohort (QA and learners never mail each other).
+- every new post is emailed to every other member who can read it, except suspended accounts, the seed accounts on the reserved `.invalid` domain, and accounts in the other cohort (QA and learners never mail each other). A post in a private community goes to its members only.
 
 The triggers only write rows into `public.email_outbox`, in the same transaction as the notification or post. The server route `POST /api/email/dispatch` sends them and retries failures up to five times. Set the server environment (see `.env.example`): `EMAIL_PROVIDER` (`smtp` for Gmail with an App Password, or `resend`), its credentials, `APP_URL` and `EMAIL_DISPATCH_SECRET`. Then tell the database where the dispatcher is:
 
