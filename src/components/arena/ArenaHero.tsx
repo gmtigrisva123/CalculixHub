@@ -2,8 +2,8 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * The Arena lobby's opening: the floodlit stage, the line that names the
- * place, and the one thing a visitor most wants to know -- what is on, and
+ * The Arena lobby's opening: the floodlit stage, a line that says what a
+ * match is, and the one thing a visitor most wants to know -- what is on, and
  * how long until it opens or closes.
  *
  * Every number here is read off the match board the server already sent and
@@ -13,7 +13,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { ArrowDown, Brain, DoorOpen, Flag, Sparkles, Swords, Ticket, WifiOff } from 'lucide-react';
+import { ArrowDown, Brain, CalendarClock, DoorOpen, Flag, Ticket, WifiOff } from 'lucide-react';
 import type { Arena } from '../../../shared/arena';
 import { ease, spring } from '../../lib/motion';
 import ArenaStage from './ArenaStage';
@@ -33,8 +33,8 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((value) => !value), []);
 
-  // The pause covers every loop in the lobby, not only the canvas: the ticker,
-  // the journey and the rule drawings all stop with it.
+  // The pause covers every loop in the lobby, not only the canvas: the journey
+  // and the rule drawings stop with it.
   useEffect(() => {
     const space = heroRef.current?.closest('.arena-space');
     if (!space) return;
@@ -52,11 +52,10 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
     >
       <div className="al-hero-grid">
         <div className="al-hero-copy">
-          <p className="al-brand"><Swords size={15} aria-hidden="true" /> THE MATHEMATICS ARENA</p>
           <h1 className="al-title">
-            <span className="al-title-line"><TitleLine words={['Good', 'minds.']} delay={0.12} still={still} /></span>{' '}
+            <span className="al-title-line"><TitleLine words={['Timed', 'matches,']} delay={0.12} still={still} /></span>{' '}
             <span className="al-title-line al-title-accent">
-              <TitleLine words={['Great', 'matches.']} delay={0.3} still={still} />
+              <TitleLine words={['ranked', 'by', 'points.']} delay={0.3} still={still} />
               <svg className="al-underline" viewBox="0 0 320 20" preserveAspectRatio="none" aria-hidden="true">
                 <m.path
                   d="M4 14 C 70 5, 170 3, 316 10"
@@ -67,7 +66,7 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
               </svg>
             </span>
           </h1>
-          <p className="al-lead">Find your rhythm. Take a seat. Let the ideas do the competing.</p>
+          <p className="al-lead">Register for a scheduled match and enter when it opens. Your clock starts when you enter, and the server keeps the time.</p>
         </div>
         <ArenaStage still={still} paused={paused} onTogglePause={togglePause} />
         <div className="al-hero-foot">
@@ -75,7 +74,6 @@ export default function ArenaHero({ arenas, clock, loaded, catalogError, still }
           <Journey />
         </div>
       </div>
-      <Ticker arenas={arenas} clock={clock} />
     </m.header>
   );
 }
@@ -110,10 +108,10 @@ function NextMatch({ spotlight, clock, loaded, catalogError, still }: { spotligh
   if (catalogError || !spotlight) {
     return (
       <div className="al-next is-quiet">
-        {catalogError ? <WifiOff size={20} aria-hidden="true" /> : <Sparkles size={20} aria-hidden="true" />}
+        {catalogError ? <WifiOff size={20} aria-hidden="true" /> : <CalendarClock size={20} aria-hidden="true" />}
         <div>
-          <strong>{catalogError ? 'The schedule is offline.' : 'No match on the clock.'}</strong>
-          <p>{catalogError ? 'Use Refresh on the board below to reconnect.' : 'New matches appear here the moment they are published.'}</p>
+          <strong>{catalogError ? 'The schedule is offline.' : 'No match is scheduled.'}</strong>
+          <p>{catalogError ? 'Use Refresh on the board below to reconnect.' : 'New matches appear here when they are published.'}</p>
         </div>
       </div>
     );
@@ -123,7 +121,7 @@ function NextMatch({ spotlight, clock, loaded, catalogError, still }: { spotligh
   return (
     <div className={'al-next' + (live ? ' is-live' : '')}>
       <div className="al-next-head">
-        <span className="al-pill"><i className="al-dot" aria-hidden="true" />{live ? 'Live now' : 'Next up'}</span>
+        <span className="al-pill">{live && <i className="al-dot" aria-hidden="true" />}{live ? 'Live now' : 'Next up'}</span>
         <strong>{spotlight.arena.title}</strong>
       </div>
       <div className="al-next-row">
@@ -199,7 +197,7 @@ const JOURNEY = [
 
 function Journey() {
   return (
-    <ol className="al-journey" aria-label="Arena journey">
+    <ol className="al-journey" aria-label="The steps of a match">
       {JOURNEY.map(({ label, icon: Icon }, i) => (
         <li key={label} style={{ '--i': i } as CSSProperties}>
           <span className="al-journey-icon" aria-hidden="true"><Icon size={15} /></span>
@@ -207,46 +205,5 @@ function Journey() {
         </li>
       ))}
     </ol>
-  );
-}
-
-const HOUSE_NOTES = ['Three attempts per question', 'Timer kept by the server', 'Worked solutions open when you finish', 'Register · Enter · Think · Finish'];
-const MARKS = ['∑', 'π', '∞', '√', '∫', '△'];
-const STATUS_CLASS = { 'Live now': 'is-live', Upcoming: 'is-upcoming', Finished: 'is-finished' } as const;
-
-/**
- * The stadium's LED band: every match on the board, then the house rules,
- * scrolling past. Decorative -- the board below carries the same facts for
- * assistive technology -- so it is hidden from it.
- */
-function Ticker({ arenas, clock }: { arenas: Arena[]; clock: number }) {
-  const notes = [
-    ...arenas.map((arena) => ({
-      key: arena.id,
-      status: matchStatus(arena, clock),
-      text: [arena.title, `${arena.duration_minutes} min`, arena.question_count != null ? `${arena.question_count} questions` : ''].filter(Boolean).join(' · '),
-    })),
-    ...HOUSE_NOTES.map((text) => ({ key: text, status: null, text })),
-  ];
-  // One run must outlast the widest stage, or the loop shows its seam.
-  const runWidth = notes.reduce((total, note) => total + note.text.length * 7.4 + (note.status ? 90 : 0) + 64, 0);
-  const repeats = Math.max(1, Math.ceil(1700 / runWidth));
-  const run = (copy: number) =>
-    Array.from({ length: repeats }, (_, r) =>
-      notes.map((note, i) => (
-        <span className="al-ticker-item" key={`${copy}-${r}-${note.key}`}>
-          {note.status && <b className={'al-ticker-status ' + STATUS_CLASS[note.status]}>{note.status}</b>}
-          {note.text}
-          <span className="al-ticker-mark">{MARKS[(i + r) % MARKS.length]}</span>
-        </span>
-      )),
-    );
-  return (
-    <div className="al-ticker" aria-hidden="true">
-      <div className="al-ticker-track" style={{ '--al-ticker-time': `${Math.round((runWidth * repeats) / 42)}s` } as CSSProperties}>
-        {run(0)}
-        {run(1)}
-      </div>
-    </div>
   );
 }

@@ -135,20 +135,16 @@
   font-weight: 550;
 }
 .dh-greeting svg { color: var(--dh-accent); flex-shrink: 0; }
-.dh-greeting-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .6; }
 .dh-title {
   margin: 12px 0 10px;
   min-width: 0;
-  /* The same heading voice as every other page (styles/page.css): Geist, with the phrase that matters in italic serif. */
+  /* The same heading voice as every other page (styles/page.css): Geist, upright. */
   font: 560 clamp(30px, 3.3vw, 44px)/1.05 var(--dh-display);
   letter-spacing: -.042em;
   color: var(--dh-ink);
   text-wrap: balance;
 }
-.dh-title-accent { position: relative; display: inline-block; color: var(--dh-accent-text); font: italic 400 1.07em/1 var(--dh-math); letter-spacing: -.022em; }
-.dh-title-underline { position: absolute; left: 0; bottom: -.1em; width: 100%; height: .28em; overflow: visible; }
-.dh-title-underline path { fill: none; stroke: var(--dh-underline); stroke-width: 2.4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.dh-sub { margin: 0; max-width: 46ch; color: var(--dh-ink-2); font-size: 15.5px; line-height: 1.6; }
+.dh-sub { margin: 0; max-width: 52ch; color: var(--dh-ink-2); font-size: 15.5px; line-height: 1.6; }
 
 /* --------------------------------------------------------------------------
  * Cards and the light that follows the pointer
@@ -234,18 +230,6 @@
 .dh-link:hover svg { transform: translate(2px, -2px); }
 .dh-link:active { transform: scale(.97); }
 
-.dh-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 11px;
-  border: 1px solid var(--dh-rule);
-  border-radius: 999px;
-  color: var(--dh-ink-2);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
 
 /* --------------------------------------------------------------------------
  * The night stage
@@ -279,24 +263,6 @@
 }
 
 .dh-hero-copy { position: relative; z-index: 1; min-width: 0; padding: 30px 22px 26px; }
-.dh-hero-chip {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 9px;
-  max-width: 100%;
-  margin: 0;
-  padding: 8px 14px 8px 12px;
-  border: 1px solid var(--dh-stage-rule);
-  border-radius: 999px;
-  background: var(--dh-stage-veil);
-  color: var(--dh-stage-glow);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: .15em;
-  text-transform: uppercase;
-}
 .dh-live-dot { position: relative; flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--dh-alg-glow); }
 .dh-live-dot::after {
   content: '';
@@ -375,7 +341,7 @@
   pointer-events: none;
 }
 .dh-stage-caption { display: grid; gap: 3px; margin: 0; min-width: 0; }
-.dh-stage-kicker { color: var(--dh-stage-muted); font-size: 10.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.dh-stage-kicker { color: var(--dh-stage-muted); font-size: 12px; font-weight: 550; }
 .dh-stage-name { display: grid; gap: 2px; min-width: 0; }
 .dh-stage-name strong { color: var(--dh-stage-ink); font-family: var(--dh-display); font-size: 16px; font-weight: 650; letter-spacing: -.02em; }
 .dh-stage-formula { color: var(--dh-stage-glow); font-family: var(--dh-math); font-size: 16px; line-height: 1.3; }
@@ -616,7 +582,7 @@
 .dh-topic-foot strong { color: var(--dh-ink); font-family: var(--dh-display); font-size: 18px; font-weight: 700; letter-spacing: -.03em; }
 
 /* --------------------------------------------------------------------------
- * Bento: momentum, the proof, the next adventure
+ * This week beside what is coming up; then, lower down, one proof
  * ------------------------------------------------------------------------ */
 
 .dh-bento { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 40px; }
@@ -703,23 +669,8 @@
   text-align: center;
   pointer-events: none;
 }
-.dh-chart-empty svg { flex-shrink: 0; color: var(--dh-accent); }
-.dh-chart-caption { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; color: var(--dh-ink-2); font-size: 12.5px; }
-.dh-chart-caption > span { width: 6px; height: 6px; border-radius: 50%; background: var(--dh-accent); }
 
-.dh-proof { display: flex; flex-direction: column; padding: 20px; }
-.dh-proof-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dh-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--dh-accent-text);
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-.dh-proof-day { color: var(--dh-ink-2); font-size: 12px; font-weight: 600; }
+.dh-proof { display: flex; flex-direction: column; margin-top: 40px; padding: 20px; }
 .dh-proof-body { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .dh-proof-text { display: flex; flex-direction: column; min-width: 0; }
 .dh-proof-figure { position: relative; width: 100%; max-width: 340px; aspect-ratio: 1; margin: 6px auto 0; }
@@ -763,7 +714,6 @@
 .dh-proof-cta:active { transform: scale(.98); }
 
 .dh-next { display: flex; flex-direction: column; padding: 20px 18px 18px; }
-.dh-next-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--dh-accent-wash); color: var(--dh-accent); }
 .dh-passes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 18px 0 0; padding: 0; list-style: none; }
 .dh-pass {
   display: grid;
@@ -813,45 +763,9 @@
 .dh-summit-flag line { stroke: var(--dh-ink); stroke-width: 1.6; stroke-linecap: round; }
 .dh-summit-pennant { fill: var(--dh-flame); transform-box: fill-box; transform-origin: left center; animation: dh-wave 2.4s ease-in-out infinite; }
 
-.dh-sprint {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 46px;
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid var(--dh-rule);
-  color: var(--dh-accent-text);
-  font-size: 13.5px;
-  font-weight: 650;
-  text-decoration: none;
-}
 .dh-passes,
-.dh-next-empty { margin-bottom: 18px; }
-.dh-sprint svg { flex-shrink: 0; transition: transform .3s var(--dh-ease-out); }
-.dh-sprint:hover svg { transform: translate(2px, -2px); }
+.dh-next-empty { margin-bottom: 4px; }
 
-/* --------------------------------------------------------------------------
- * Closing line
- * ------------------------------------------------------------------------ */
-
-.dh-quote { display: grid; gap: 14px; margin: 46px 0 8px; padding: 30px 0 0; border-top: 1px solid var(--dh-rule); }
-.dh-quote blockquote { margin: 0; }
-.dh-quote p {
-  margin: 0;
-  max-width: 30ch;
-  color: var(--dh-ink);
-  font-family: var(--dh-math);
-  font-size: clamp(1.55rem, 1.05rem + 2.2cqi, 2.5rem);
-  font-weight: 400;
-  line-height: 1.18;
-  letter-spacing: -.02em;
-  text-wrap: balance;
-}
-.dh-quote-word { display: inline-block; }
-.dh-quote figcaption { display: flex; align-items: center; gap: 12px; color: var(--dh-ink-2); font-size: 11.5px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
-.dh-quote figcaption::before { content: ''; width: 28px; height: 1px; background: var(--dh-underline); }
 
 /* --------------------------------------------------------------------------
  * Wider containers
@@ -898,12 +812,12 @@
 }
 
 @container dh (min-width: 62rem) {
-  .dh-bento { grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr); grid-template-areas: 'chart next' 'proof proof'; gap: 16px; }
+  .dh-bento { grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr); grid-template-areas: 'chart next'; gap: 16px; }
   .dh-momentum { grid-area: chart; }
   /* Beside a taller neighbour, the chart takes the height rather than leaving it empty. */
   .dh-chart { flex: 1 1 auto; height: auto; min-height: 214px; }
   .dh-next { grid-area: next; }
-  .dh-proof { grid-area: proof; padding: 24px 28px 26px; }
+  .dh-proof { padding: 24px 28px 26px; }
   /* A full-width band: the picture, the words, then the same identity in symbols. */
   .dh-proof-body {
     display: grid;
@@ -921,17 +835,13 @@
 @container dh (max-width: 30rem) {
   .dh-pass { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
   .dh-join { grid-column: 2; justify-self: start; }
-  .dh-hero-chip { letter-spacing: .1em; }
 }
 
 @container dh (max-width: 24rem) {
-  .dh-hero-chip { font-size: 12px; letter-spacing: 0; text-transform: none; }
   .dh-dots-grid { grid-template-columns: repeat(9, minmax(0, 1fr)); }
   .dh-chain-mark { width: 12px; height: 12px; }
   .dh-chain-link { top: 5px; }
   .dh-next { padding-inline: 16px; }
-  .dh-sprint { font-size: 12.5px; }
-  .dh-sprint svg { display: none; }
 }
 
 @container dh (max-width: 21rem) {

@@ -4,12 +4,15 @@
  *
  * The four headline figures, each as a small instrument.
  *
- *   Learning points   the figure, this week's gain, and the running total
+ *   Points            the figure, this week's gain, and the running total
  *                     across every active day as a sparkline;
  *   Problems solved   one dot per solved problem;
  *   Answer accuracy   a gauge, or an honest dash before the first answer;
- *   Learning streak   the last seven days as a chain: a filled link for each
+ *   Streak            the last seven days as a chain: a filled link for each
  *                     day with practice, joined where the days run on.
+ *
+ * The line under each figure says what the figure is, or what the drawing
+ * beside it shows. None of them is encouragement.
  *
  * Every mark is drawn from the same props the figures are, and each figure
  * stays readable as text: the drawings add nothing a screen reader would miss.
@@ -39,16 +42,14 @@ const GAUGE = 'M 12 62 A 50 50 0 0 1 112 62';
 
 export default function Instruments({ points, weekPoints, curve, solved, accuracy, streak, week, still }: InstrumentsProps) {
   const answered = solved > 0;
+  const activeCount = week.filter((day) => day.active).length;
   return (
-    <section className="dh-instruments" aria-label="Your learning statistics">
-      <Instrument index={0} kind="points" label="Learning points" icon={Trophy} still={still}>
+    <section className="dh-instruments" aria-label="Where you stand">
+      <Instrument index={0} kind="points" label="Points" icon={Trophy} still={still}>
         <p className="dh-figure">
           <AnimatedNumber value={points} format={(value) => Math.round(value).toLocaleString()} />
         </p>
-        <p className="dh-note">
-          {weekPoints > 0 && <span className="dh-delta">+{weekPoints.toLocaleString()} this week</span>}
-          One discovery at a time
-        </p>
+        <p className="dh-note">{weekPoints > 0 ? <span className="dh-delta">+{weekPoints.toLocaleString()} this week</span> : 'None yet this week'}</p>
         <Sparkline values={curve} still={still} />
       </Instrument>
 
@@ -56,11 +57,11 @@ export default function Instruments({ points, weekPoints, curve, solved, accurac
         <p className="dh-figure">
           <AnimatedNumber value={solved} />
         </p>
-        <p className="dh-note">Ideas made your own</p>
+        <p className="dh-note">{solved > 0 ? 'One dot for each' : 'A dot for each one you solve'}</p>
         <DotMatrix count={solved} />
       </Instrument>
 
-      <Instrument index={2} kind="accuracy" label="Answer accuracy" icon={Target} still={still}>
+      <Instrument index={2} kind="accuracy" label="Accuracy" icon={Target} still={still}>
         <p className="dh-figure">
           {answered ? (
             <>
@@ -70,16 +71,16 @@ export default function Instruments({ points, weekPoints, curve, solved, accurac
             '—'
           )}
         </p>
-        <p className="dh-note">{answered ? 'Keep refining your thinking' : 'Solve a problem to get started'}</p>
+        <p className="dh-note">{answered ? 'Of every answer you have submitted' : 'No answers yet'}</p>
         <Gauge value={answered ? accuracy : 0} still={still} />
       </Instrument>
 
-      <Instrument index={3} kind="streak" label="Learning streak" icon={Flame} still={still} lit={streak > 0}>
+      <Instrument index={3} kind="streak" label="Streak" icon={Flame} still={still} lit={streak > 0}>
         <p className="dh-figure">
           <AnimatedNumber value={streak} />
           <span className="dh-figure-unit"> {streak === 1 ? 'day' : 'days'}</span>
         </p>
-        <p className="dh-note">Little habits. Lasting growth.</p>
+        <p className="dh-note">Practised on {activeCount} of the last 7 days</p>
         <StreakChain week={week} />
       </Instrument>
     </section>
@@ -134,7 +135,7 @@ function Sparkline({ values: days, still }: { values: DayPoints[]; still: boolea
     return (
       <div className="dh-spark is-empty" aria-hidden="true">
         <span className="dh-spark-rest" />
-        <span className="dh-spark-hint">Your curve starts with your first point</span>
+        <span className="dh-spark-hint">No points yet</span>
       </div>
     );
   }

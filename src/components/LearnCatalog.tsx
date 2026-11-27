@@ -88,7 +88,6 @@ export default function LearnCatalog({ problems, completed, attempts, maxAttempt
   return (
     <div className="lr">
       <PageHead
-        eyebrow="Practice bank"
         title={<>Find a question <em>worth your time.</em></>}
         lede="Training questions from short answers to proof techniques, written in the style of each contest. They are not official papers; those are in the Exam Archive."
         aside={problems.length > 0 && <Tally done={completed.length} total={problems.length} label="solved so far" />}
@@ -99,7 +98,7 @@ export default function LearnCatalog({ problems, completed, attempts, maxAttempt
           <label className="pg-search">
             <span className="sr-only">Search questions</span>
             <Search size={16} aria-hidden="true" />
-            <input type="search" value={view.query} onChange={event => set({ query: event.target.value })} placeholder="Search by title or by what the question says" autoComplete="off" spellCheck={false} />
+            <input type="search" value={view.query} onChange={event => set({ query: event.target.value })} placeholder="Search titles and question text" autoComplete="off" spellCheck={false} />
             {view.query && <button type="button" aria-label="Clear the search" onClick={() => set({ query: '' })}><X size={15} /></button>}
           </label>
           <div className="pg-segment" role="group" aria-label="Show">
@@ -158,8 +157,8 @@ export default function LearnCatalog({ problems, completed, attempts, maxAttempt
       {problems.length > 0 && matches.length === 0 && (
         <div className="pg-empty">
           <span className="pg-empty-mark"><SearchX size={22} strokeWidth={1.8} aria-hidden="true" /></span>
-          <h2>Nothing matches that yet.</h2>
-          <p>Loosen a filter or two. The bank is still growing, and some combinations of level and contest have no questions so far.</p>
+          <h2>No questions match.</h2>
+          <p>Clear the search or remove a filter. Some combinations of level and contest have no questions.</p>
           <button type="button" className="pg-btn" onClick={reset}>Show every question</button>
         </div>
       )}
@@ -183,7 +182,7 @@ export default function LearnCatalog({ problems, completed, attempts, maxAttempt
                 <span className="lr-meta">{problem.competition ?? problem.level}</span>
                 {state === 'solved' && <span className="lr-state is-solved"><Check size={13} strokeWidth={2.6} aria-hidden="true" />Solved</span>}
                 {state === 'seen' && <span className="lr-state"><Eye size={13} aria-hidden="true" />Solution seen</span>}
-                {state === 'trying' && <span className="lr-state is-trying">{attempt!.count} of {problem.maxAttempts ?? maxAttempts} tries used</span>}
+                {state === 'trying' && <span className="lr-state is-trying">{attempt!.count} of {problem.maxAttempts ?? maxAttempts} attempts used</span>}
                 {state === 'locked' && <span className="lr-state"><Lock size={12} aria-hidden="true" />Opens with Pro</span>}
               </span>
               <span className="lr-title">{problem.title}</span>

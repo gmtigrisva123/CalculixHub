@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Leaf } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import MathText from './MathText';
 import BrandLogo from './BrandLogo';
 import { evaluatePlacement, tierForTheta, recommendedSource, type IRTItem, type ResponseRecord } from '../domain/irt';
@@ -42,19 +42,18 @@ export default function PlacementExperience(props: Props) {
     <main className="placement-layout">
       <aside className="placement-intro">
         <div className="placement-intro-copy">
-        <span className="placement-eyebrow">A beginning, made for you</span>
-        <h1>Find your <br /><em>own rhythm.</em></h1>
-        <p>A little mathematics. A clearer place to start. Take your time — there’s no clock to race.</p>
+        <h1>Find your level.</h1>
+        <p>A short adaptive test. Each answer picks the next question, and it stops once it has a level for you. There is no clock.</p>
         <svg className="placement-drawing" viewBox="0 0 260 120" fill="none" aria-hidden="true">
           <path d="M8 99H250M28 110V10" stroke="currentColor" opacity=".2" />
           <path d="M30 93C65 93 70 80 97 77S130 82 153 56 188 24 235 22" stroke="currentColor" strokeWidth="2" />
           <circle cx="153" cy="56" r="5" fill="currentColor" /><path d="M153 63V98" stroke="currentColor" strokeDasharray="3 5" opacity=".3" />
         </svg>
-        <div className="placement-note"><Leaf size={19} /><p>Your answers shape what comes next. We’ll stop when we have a useful starting point.</p></div>
+        <div className="placement-note"><p>If you do not know, say so. A guess makes the level less accurate.</p></div>
         </div>
         <section className="placement-irt" aria-label="Live IRT analysis">
           <div className="placement-irt-title"><span className="placement-live-dot" /><h2>Live IRT analysis</h2><span>3PL · EAP</span></div>
-          <p className="placement-irt-description">A changing estimate, shaped by your answers.</p>
+          <p className="placement-irt-description">The estimate after each answer.</p>
           <div className="placement-ability-label"><span>Ability estimate <span aria-hidden="true">θ</span></span><strong>{props.theta.toFixed(2)}</strong></div>
           <div className="placement-ability-scale" role="img" aria-label={`Ability estimate ${props.theta.toFixed(2)}, posterior standard deviation ${props.sem.toFixed(2)}`}>
             <span className="placement-ability-interval" style={{ left: `${position(props.theta - props.sem)}%`, width: `${position(props.theta + props.sem) - position(props.theta - props.sem)}%` }} />
@@ -75,11 +74,8 @@ export default function PlacementExperience(props: Props) {
       </aside>
       <section className="placement-work" aria-label="Adaptive placement">
         {props.completed ? <div className="placement-result">
-          <span className="placement-eyebrow">Ready when you are</span>
-          <h2 ref={heading} tabIndex={-1}>A place to begin.</h2>
-          <p className="placement-result-copy">Your starting path is <strong>{props.level}</strong>.</p>
-          <p>{props.provisional ? 'This is a tentative starting point: the available questions can only tell us so much.' : 'Your answers give us enough evidence to choose a starting path.'} Your practice will help you grow from here.</p>
-          <div className="placement-result-note">A starting point, never a ceiling.</div>
+          <h2 ref={heading} tabIndex={-1}>You start at {props.level}.</h2>
+          <p>{props.provisional ? 'This is a first estimate: there were not enough questions to be sure.' : 'Your answers were enough to place you.'} The level moves as you practise.</p>
           <button className="placement-primary" disabled={busy} onClick={finish}>{busy ? 'Opening your workspace…' : 'Begin learning'}<ArrowRight size={19} /></button>
         </div> : <div key={props.item.id} className="placement-question">
           <div className="placement-question-meta"><span>{props.item.domain}</span><span>{props.item.source} level</span></div>
@@ -92,11 +88,11 @@ export default function PlacementExperience(props: Props) {
           </fieldset>
           {props.error && <p role="alert" className="placement-error">{props.error}</p>}
           <div className="placement-actions"><button className="placement-primary" onClick={props.onNext} disabled={props.selected === null}>Continue <ArrowRight size={19} /></button><button className="placement-unsure" onClick={props.onUnsure}>I’m not sure yet</button></div>
-          <p className="placement-reassurance">It’s okay not to know. An honest answer helps us find the right path.</p>
+          <p className="placement-reassurance">Not knowing is an answer too: it helps place you.</p>
         </div>}
       </section>
     </main>
-    <footer className="placement-footer"><span>Space to think. Room to grow.</span><span>Adaptive placement · CalculixHub</span></footer>
+    <footer className="placement-footer"><span>Adaptive placement · CalculixHub</span></footer>
     </div>
   </div>;
 }

@@ -12,6 +12,11 @@
  *
  * Both degrade to nothing: without a backend, or when a project restricts
  * Realtime to private channels, the hooks simply report nobody.
+ *
+ * Anyone can join these channels by name, and no policy stands in front of
+ * them. So nothing about a post inside a closed community is ever sent here:
+ * the callers pass no post id for one (see `walled` on a post), and the people
+ * reading or writing in it are simply not announced.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

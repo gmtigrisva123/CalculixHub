@@ -186,12 +186,11 @@ body:has(.ws) { background: var(--ws-desk); }
 
 .ws-rail-foot { display: grid; gap: 10px; padding-top: 10px; }
 
-.ws-upsell { display: block; width: 100%; padding: 14px 14px 13px; border: 1px solid color-mix(in srgb, #c8973a 30%, var(--ln)); border-radius: 16px; background: radial-gradient(120% 90% at 100% 0%, var(--ws-brass-soft), transparent 62%), var(--sf-raised); color: var(--ct); text-align: left; text-decoration: none; transition: transform .35s var(--ws-ease), box-shadow .3s, border-color .2s; }
-.ws-upsell:hover { transform: translateY(-2px); border-color: color-mix(in srgb, #c8973a 55%, var(--ln)); box-shadow: 0 14px 28px -20px #6b4a1066; }
+.ws-upsell { display: block; width: 100%; padding: 13px 14px 12px; border: 1px solid var(--ln); border-radius: 12px; background: var(--sf-raised); color: var(--ct); text-align: left; text-decoration: none; transition: border-color .2s, background-color .2s; }
+.ws-upsell:hover { border-color: var(--ln-strong); background: color-mix(in srgb, var(--ct) 2.5%, var(--sf-raised)); }
 .ws-upsell:active { transform: scale(.985); }
-.ws-upsell-kicker { display: inline-flex; align-items: center; gap: 5px; color: var(--ws-brass); font: 600 10px/1 var(--ws-mono); letter-spacing: .1em; text-transform: uppercase; }
-.ws-upsell strong { display: block; margin-top: 9px; font: 500 17px/1.2 'Newsreader', Georgia, serif; letter-spacing: -.01em; }
-.ws-upsell p { margin: 5px 0 10px; color: var(--ct-muted); font-size: 12.5px; line-height: 1.5; }
+.ws-upsell strong { display: block; font-size: 14px; font-weight: 650; line-height: 1.25; letter-spacing: -.01em; }
+.ws-upsell p { margin: 4px 0 9px; color: var(--ct-muted); font-size: 12.5px; line-height: 1.45; }
 .ws-upsell small { display: flex; align-items: center; gap: 3px; color: var(--ac-text); font-size: 12.5px; font-weight: 600; }
 /* A short window keeps the list and loses the invitation. */
 @media (max-height: 760px) { .ws-upsell { display: none; } }
@@ -439,4 +438,64 @@ body:has(.ws) { background: var(--ws-desk); }
 
 @media (prefers-reduced-motion: reduce) {
   .ws-nav-live i, .ws-live i { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+ * A badge was earned: a slip of paper at the edge of the screen.
+ *
+ * No glow, no pulse, no countdown bar. The coin is the one the badge is kept
+ * with on the profile, and it is the only colour on the note.
+ * ------------------------------------------------------------------------ */
+
+.badge-note {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 1250;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  width: min(340px, calc(100vw - 28px));
+  padding: 14px 10px 14px 14px;
+  border: 1px solid var(--ln-strong);
+  border-radius: 12px;
+  background: var(--sf-overlay);
+  color: var(--ct);
+  box-shadow: var(--ev-4);
+}
+.badge-note-coin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  /* The same struck brass as an earned coin on the profile. */
+  background: linear-gradient(150deg, #f4dca8, #d9a850 55%, #b98432);
+  box-shadow: inset 0 1px 0 #fff6dc99, inset 0 -2px 0 #8a5f1f40;
+  color: #4a3210;
+}
+.badge-note-coin::before { content: ''; position: absolute; inset: 4px; border: 1px dashed currentColor; border-radius: 50%; opacity: .45; }
+.badge-note-text { min-width: 0; }
+.badge-note-label { margin: 1px 0 0; color: var(--ct-muted); font-size: 12px; font-weight: 550; line-height: 1.3; }
+.badge-note-title { margin: 1px 0 0; font-size: 15.5px; font-weight: 650; line-height: 1.25; letter-spacing: -.012em; overflow-wrap: anywhere; }
+.badge-note-desc { margin: 3px 0 0; color: var(--ct-muted); font-size: 13px; line-height: 1.4; text-wrap: pretty; }
+.badge-note-link {
+  margin-top: 8px;
+  padding: 0;
+  color: var(--ac-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 32%, transparent);
+  text-underline-offset: 3px;
+}
+.badge-note-link:hover { text-decoration-color: currentColor; }
+.badge-note-close { display: grid; place-items: center; width: 30px; height: 30px; margin: -4px 0 0; border-radius: 8px; color: var(--ct-subtle); transition: background-color .16s, color .16s; }
+.badge-note-close:hover { background: color-mix(in srgb, var(--ct) 7%, transparent); color: var(--ct); }
+.badge-note :focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+/* Above the bottom rail on a phone or tablet, and centred there. */
+@media (max-width: 1023px) {
+  .badge-note { left: 0; right: 0; bottom: calc(84px + env(safe-area-inset-bottom)); margin-inline: auto; }
 }

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { m, useInView, useReducedMotion } from 'motion/react';
 import { drawPage, extendStroke, type ScratchInk, type ScratchStroke, type ScratchTool } from '../../domain/scratch';
 import { PHASE_LABEL, dateKey, daysUntil, trainingPlan } from '../../domain/raceDay';
-import { Arrow, Eyebrow, Magnetic, Rise, SplitText, Stagger, StaggerItem, useStageArrival } from './kit';
+import { Arrow, Magnetic, Rise, SplitText, Stagger, StaggerItem, useStageArrival } from './kit';
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
@@ -235,8 +235,7 @@ export default function DeskSection({ onRegister }: { onRegister: () => void }) 
       <m.div className="lx-desk-stage" data-tone="ink" style={arrival}>
         <div className="lx-wrap lx-desk-grid">
           <header className="lx-desk-copy">
-            <Eyebrow index="07">Your desk</Eyebrow>
-            <SplitText as="h2" id="lx-desk-title" className="lx-h2" text={'Pen, paper,\n*and a date.*'} />
+            <SplitText as="h2" id="lx-desk-title" className="lx-h2" text={'Pen, paper,\nand *a date.*'} />
             <Rise as="p" className="lx-lead">Contest maths is done by hand, toward a day on the calendar. So every page has scratch paper under it, and your practice counts down to the day that matters.</Rise>
             <Stagger as="ul" className="lx-desk-points" delay={0.1} gap={0.09}>
               <StaggerItem as="li"><b>Scratch paper</b> on every screen. Press S and it slides in beside the problem.</StaggerItem>

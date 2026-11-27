@@ -13,7 +13,7 @@
 
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, m, useInView } from 'motion/react';
-import { ArrowUpRight, Sparkles } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { ease, spring } from '../../lib/motion';
 import { AnimatedNumber } from '../motion';
 import { bestDay, niceCeiling, type DayPoints } from './dashboardModel';
@@ -65,10 +65,9 @@ export default function MomentumChart({ daily, weekPoints, still, onProgress }: 
     >
       <div className="dh-section-head">
         <div>
-          <h2 id="dh-momentum-title">A little better, every day</h2>
-          <p>Your learning momentum this week.</p>
+          <h2 id="dh-momentum-title">This week</h2>
+          <p>Points earned on each of the last seven days.</p>
         </div>
-        <span className="dh-pill">Last 7 days</span>
       </div>
 
       <div className="dh-momentum-total">
@@ -76,10 +75,10 @@ export default function MomentumChart({ daily, weekPoints, still, onProgress }: 
           <strong>
             <AnimatedNumber value={shown ? weekPoints : 0} />
           </strong>
-          <span>points this week</span>
+          <span>{weekPoints === 1 ? 'point' : 'points'} in seven days</span>
         </p>
         <button type="button" className="dh-link" onClick={onProgress}>
-          See my progress <ArrowUpRight size={15} aria-hidden="true" />
+          Full progress report <ArrowUpRight size={15} aria-hidden="true" />
         </button>
       </div>
 
@@ -165,17 +164,10 @@ export default function MomentumChart({ daily, weekPoints, still, onProgress }: 
 
         {weekPoints === 0 && (
           <div className="dh-chart-empty">
-            <Sparkles size={16} aria-hidden="true" />
-            <span>Your first solved problem will bring this chart to life.</span>
+            <span>No points yet this week. Each problem you solve adds a bar.</span>
           </div>
         )}
       </div>
-
-      {weekPoints > 0 && (
-        <p className="dh-chart-caption">
-          <span aria-hidden="true" /> Every point is a little more understanding.
-        </p>
-      )}
 
       <table className="sr-only">
         <caption>Points earned each day this week</caption>

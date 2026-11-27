@@ -35,9 +35,9 @@ const ParticleField = lazy(() => import('./ParticleField'));
  *
  * So the entrance waits for two things. First, for the browser to have drawn a
  * frame of the finished layout (two animation frames after mount: one for the
- * layout, one to prove the next frame came). Second, for the two display faces,
- * so the words rise in their real type rather than swapping part-way up; they
- * are preloaded and normally already in hand, and the wait is capped so a slow
+ * layout, one to prove the next frame came). Second, for the display face, so
+ * the words rise in their real type rather than swapping part-way up; it is
+ * preloaded and normally already in hand, and the wait is capped so a slow
  * font can only delay the entrance by a moment, never hold it.
  */
 function useHeroCue(): boolean {
@@ -45,7 +45,7 @@ function useHeroCue(): boolean {
   useEffect(() => {
     let live = true;
     const fonts = typeof document.fonts?.load === 'function'
-      ? Promise.all([document.fonts.load("560 1em 'Geist'"), document.fonts.load("italic 400 1em 'Newsreader'")]).catch(() => undefined)
+      ? document.fonts.load("560 1em 'Geist'").catch(() => undefined)
       : Promise.resolve();
     const painted = new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     const cap = new Promise<void>(resolve => window.setTimeout(resolve, 900));
@@ -136,11 +136,11 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
             and can be clicked from the first frame; nothing waits on a flourish.
           */}
           <m.div initial={{ opacity: 0, y: 14 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.02, opacity: fade(0.02) }}>
-            <Eyebrow live>Competition mathematics · AMC to IMO</Eyebrow>
+            <Eyebrow>Competition mathematics · AMC to IMO</Eyebrow>
           </m.div>
           <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" play={cued} delay={0.1} stagger={0.07} />
           <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.38, opacity: fade(0.38) }}>
-            Contest problems chosen to fit you, then talked through one step at a time — the way a good tutor would, sitting right beside you.
+            Contest problems chosen to fit your level, each with a hint and a full solution.
           </m.p>
           <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.48, opacity: fade(0.48) }}>
             <Magnetic>
@@ -228,9 +228,6 @@ const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
   return (
     <section ref={ref} className="lx-sheet lx-manifesto" id="idea" data-tone="paper" aria-labelledby="lx-idea-title">
       <div className="lx-wrap">
-        <div className="lx-manifesto-head">
-          <Eyebrow index="01">The idea</Eyebrow>
-        </div>
         <h2 ref={textRef} id="lx-idea-title" className="lx-idea">
           {IDEA.map((line, row) => (
             <span key={line.role} className="lx-idea-line">

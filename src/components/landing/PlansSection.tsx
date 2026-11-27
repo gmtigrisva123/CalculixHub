@@ -14,9 +14,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { m } from 'motion/react';
 import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
 import { billingConfig } from '../../services/data/plan';
-import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
+import { Arrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
 
-const AUDIENCE: Record<PlanId, string> = { free: 'For every learner', pro: 'For contest season', team: 'For clubs and schools' };
 
 export default function PlansSection({ onRegister }: { onRegister: () => void }) {
   const [cycle, setCycle] = useState<BillingCycle>('yearly');
@@ -30,8 +29,7 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
       <div className="lx-wrap">
         <header className="lx-section-head lx-plans-head">
           <div>
-            <Eyebrow index="08">Pricing</Eyebrow>
-            <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={'Free to practise.\n*Pro for the season.*'} />
+            <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={'Free to practise.\n*Pro* for the season.'} />
           </div>
           <Rise className="lx-cycle-wrap" delay={0.1}>
             <div className="lx-cycle" role="radiogroup" aria-label="Billing period">
@@ -50,7 +48,6 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
             const plan = PLANS[id];
             return (
               <PlanCard key={id} featured={id === 'pro'} delay={index * 0.08}>
-                <span className="lx-plan-status">{id === 'pro' && <span className="lx-live" aria-hidden="true" />}{AUDIENCE[id]}</span>
                 <h3 className="lx-plan-name">{plan.name}</h3>
                 <Price plan={plan} cycle={cycle} />
                 <p className="lx-plan-audience">{plan.audience}</p>

@@ -9,20 +9,34 @@
 
 import type { AuthorSummary, CommentWithAuthor, Reaction, ReactionCounts } from '../../services/database.types';
 import { apiUrl, isNativePlatform } from '../../services/apiBase';
+import { HINT_SOURCE, KIND_TAGS, MATH_SOURCE, POST_KINDS, VERBATIM_SOURCE, hiddenRanges, parsePost, redactSealed, type PostKind } from '../../../shared/postMarkup';
+
+export { POST_KINDS, composePost, parsePost, redactSealed, type ParsedPost, type PostKind } from '../../../shared/postMarkup';
 
 export interface ReactionMeta {
+  /** The mark's name, as the picker and the "who marked this" dialog show it. */
   label: string;
-  emoji: string;
+  /** What leaving this mark says, in the reader's own words. */
+  hint: string;
 }
 
+/**
+ * Margin marks.
+ *
+ * What a reader pencils beside a worked solution: a tick where they follow, a
+ * tombstone where the argument is elegant, a question mark where it loses
+ * them. The seven keys are the ones the database has always stored (its check
+ * constraint names them), so every mark left before this wording still counts
+ * and nothing has to migrate; what changed is what each one means here.
+ */
 export const REACTION_META: Record<Reaction, ReactionMeta> = {
-  like: { label: 'Like', emoji: '👍' },
-  love: { label: 'Love', emoji: '❤️' },
-  care: { label: 'Care', emoji: '🥰' },
-  haha: { label: 'Haha', emoji: '😆' },
-  wow: { label: 'Wow', emoji: '😮' },
-  sad: { label: 'Sad', emoji: '😢' },
-  angry: { label: 'Angry', emoji: '😡' },
+  like: { label: 'With you', hint: 'I can follow every step' },
+  love: { label: 'Elegant', hint: 'A beautiful argument' },
+  care: { label: 'Helped', hint: 'This got me unstuck' },
+  haha: { label: 'Sneaky', hint: 'I did not see that trick coming' },
+  wow: { label: 'Aha', hint: 'This made it click' },
+  sad: { label: 'Lost me', hint: 'I cannot follow a step' },
+  angry: { label: 'Check this', hint: 'A step looks wrong to me' },
 };
 
 export function authorName(author: Pick<AuthorSummary, 'display_name' | 'username'> | null | undefined): string {
@@ -129,19 +143,12 @@ export function shiftReaction(counts: ReactionCounts | undefined, from: Reaction
   return next;
 }
 
-/** "You and 3 others", "You", or the bare total. */
-export function reactionSentence(total: number, viewerReacted: boolean): string {
-  if (!viewerReacted) return compactCount(total);
-  if (total <= 1) return 'You';
-  return `You and ${plural(total - 1, 'other')}`;
-}
-
 export type CommentSort = 'relevant' | 'newest' | 'oldest';
 
 export const COMMENT_SORTS: Record<CommentSort, { label: string; hint: string }> = {
-  relevant: { label: 'Most relevant', hint: 'Most reacted and discussed first.' },
+  relevant: { label: 'Most marked', hint: 'Most marks and replies first.' },
   newest: { label: 'Newest', hint: 'The latest comments first.' },
-  oldest: { label: 'All comments', hint: 'Every comment, oldest first.' },
+  oldest: { label: 'Oldest first', hint: 'Every comment, in the order written.' },
 };
 
 export interface CommentThread {
@@ -214,35 +221,8 @@ export function shareLink(postId: string, commentId?: string | null, base: strin
 }
 
 // Math is matched first, so an `@` inside a formula is never read as a mention.
-const MATH = String.raw`\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$|\\begin\{(?<env>[a-z*]+)\}[\s\S]+?\\end\{\k<env>\}`;
+const MATH = MATH_SOURCE;
 const MENTION = String.raw`(?<![A-Za-z0-9_@.])@([A-Za-z0-9](?:[A-Za-z0-9_]{0,22}[A-Za-z0-9])?)(?![A-Za-z0-9_])`;
-
-export type RichSegment = { type: 'text'; value: string } | { type: 'mention'; value: string };
-
-/**
- * Split text into plain runs and `@username` mentions. Formulas stay inside
- * the plain runs whole, for MathText to render; an email address is not a
- * mention.
- */
-export function segmentMentions(text: string): RichSegment[] {
-  const pattern = new RegExp(`(${MATH})|${MENTION}`, 'g');
-  const segments: RichSegment[] = [];
-  let plain = '';
-  let last = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) {
-    const handle = match[3];
-    if (handle === undefined) continue; // a formula: leave it in the plain run
-    plain += text.slice(last, match.index);
-    if (plain) segments.push({ type: 'text', value: plain });
-    plain = '';
-    segments.push({ type: 'mention', value: handle });
-    last = match.index + match[0].length;
-  }
-  plain += text.slice(last);
-  if (plain) segments.push({ type: 'text', value: plain });
-  return segments;
-}
 
 /**
  * The `@query` being typed at the caret, if any: where it starts and what has
@@ -308,4 +288,392 @@ export function disambiguateTitles<T extends { id: string; title: string; level:
   const counts = new Map<string, number>();
   for (const problem of problems) counts.set(problem.title, (counts.get(problem.title) ?? 0) + 1);
   return new Map(problems.map((problem) => [problem.id, (counts.get(problem.title) ?? 0) > 1 ? `${problem.title} (${problem.level})` : problem.title]));
+}
+
+/* --------------------------------------------------------------------------
+ * Kinds, tags, sealed hints
+ *
+ * All three live in the text of a post rather than in columns of their own. A
+ * kind is the tag a post opens with ("#stuck"), a technique is a tag anywhere
+ * in it ("#inversion"), and a sealed hint is a fenced block. That keeps them
+ * working against any database the feed already works against, lets a post be
+ * copied, emailed or read by an older client without losing its meaning, and
+ * means filtering by one is an ordinary text match.
+ * ------------------------------------------------------------------------ */
+
+export interface KindMeta {
+  /** On the post, and on the filter chip for one. */
+  label: string;
+  /** On the filter chip, where the plural reads better. */
+  plural: string;
+  /** What the composer's button says. */
+  action: string;
+  /** What the composer asks for. */
+  prompt: string;
+  /** One line under the kind in the composer. */
+  blurb: string;
+}
+
+export const KIND_META: Record<PostKind, KindMeta> = {
+  solution: {
+    label: 'Solution',
+    plural: 'Solutions',
+    action: 'Write up a solution',
+    prompt: 'Walk through it step by step. Seal the key idea in a hint so nobody is spoiled.',
+    blurb: 'A full argument for a problem.',
+  },
+  stuck: {
+    label: 'Stuck',
+    plural: 'Stuck',
+    action: 'Ask for a nudge',
+    prompt: 'What have you tried, and where exactly does it stop working?',
+    blurb: 'Show where you are. People reply with hints, not answers.',
+  },
+  trick: {
+    label: 'Trick',
+    plural: 'Tricks',
+    action: 'Share a trick',
+    prompt: 'State the idea in one line, then show it working on a small example.',
+    blurb: 'A lemma, identity or habit worth keeping.',
+  },
+  challenge: {
+    label: 'Challenge',
+    plural: 'Challenges',
+    action: 'Set a challenge',
+    prompt: 'Pose the problem. Seal your own answer in a hint so others can try first.',
+    blurb: 'A problem of your own for others to try.',
+  },
+};
+
+/**
+ * The pattern a feed query uses to narrow to one kind. It is deliberately a
+ * plain prefix: the database keeps every post that could be one, and
+ * `isKind` then keeps exactly the ones that are.
+ */
+export const kindPattern = (kind: PostKind): string => `#${kind}%`;
+
+/** Whether a stored body is a post of this kind. For "stuck", only the ones still open. */
+export function isKind(body: string, kind: PostKind): boolean {
+  const parsed = parsePost(body);
+  return parsed.kind === kind && !parsed.resolved;
+}
+
+// Formulas and inline code are verbatim: `#include` is not a technique (see shared/postMarkup.ts).
+const VERBATIM = VERBATIM_SOURCE;
+
+// A tag starts a word, begins with a letter, and is short enough to be a name.
+const TAG_BODY = String.raw`[a-z][a-z0-9]*(?:-[a-z0-9]+)*`;
+const TAG = String.raw`(?<![A-Za-z0-9_&#/])#(${TAG_BODY})(?![A-Za-z0-9_])`;
+const TAG_MAX = 32;
+
+/** Normalise what someone typed into a tag, or null if it cannot be one. */
+export function normaliseTag(raw: string): string | null {
+  const tag = raw.trim().replace(/^#/, '').toLocaleLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-{2,}/g, '-').replace(/^-|-$/g, '');
+  if (!tag || tag.length > TAG_MAX || !/^[a-z]/.test(tag) || KIND_TAGS.has(tag)) return null;
+  return tag;
+}
+
+/**
+ * The technique tags in a post, in the order written, without repeats.
+ *
+ * Tags are read from the text a reader can see. A technique named only inside
+ * a sealed hint or between hidden-word bars is the idea the author sealed, and
+ * listing it under "Techniques in play" would give it away. `includeSealed` is
+ * for the composer, which must know every tag already typed.
+ */
+export function extractTags(body: string, includeSealed = false): string[] {
+  const pattern = new RegExp(`(${VERBATIM})|${TAG}`, 'gi');
+  const text = includeSealed ? body : redactSealed(body);
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const tag = match[3]?.toLowerCase();
+    if (!tag || tag.length > TAG_MAX || KIND_TAGS.has(tag)) continue;
+    seen.add(tag);
+  }
+  return [...seen];
+}
+
+/** The most used tags across a page of posts, each counted once per post. */
+export function tallyTags(bodies: string[], limit = 8): Array<{ tag: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const body of bodies) for (const tag of extractTags(body)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  return [...counts]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}
+
+/** Techniques the composer offers, so the same idea ends up under the same tag. */
+export const SUGGESTED_TAGS: readonly string[] = [
+  'vieta', 'am-gm', 'telescoping', 'symmetry', 'substitution', 'induction',
+  'angle-chasing', 'similar-triangles', 'power-of-a-point', 'inversion', 'coordinates',
+  'pigeonhole', 'invariant', 'bijection', 'casework', 'complementary-counting', 'recursion',
+  'mod-arithmetic', 'parity', 'lte', 'extremal', 'generating-functions',
+];
+
+export type BodySegment =
+  | { type: 'text'; value: string }
+  | { type: 'mention'; value: string }
+  | { type: 'tag'; value: string }
+  | { type: 'spoiler'; value: string };
+
+/** Plain runs, `@mentions` and `#tags` of a stretch of text that holds no hidden words. */
+function pushRuns(text: string, segments: BodySegment[]): void {
+  if (!text) return;
+  const pattern = new RegExp(`(${VERBATIM})|${MENTION}|${TAG}`, 'gi');
+  let plain = '';
+  let last = 0;
+  const flush = () => {
+    if (!plain) return;
+    const previous = segments[segments.length - 1];
+    if (previous?.type === 'text') previous.value += plain;
+    else segments.push({ type: 'text', value: plain });
+    plain = '';
+  };
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const [, verbatim, , handle, tag] = match;
+    if (verbatim !== undefined) continue;
+    let segment: BodySegment;
+    if (handle !== undefined) segment = { type: 'mention', value: handle };
+    else if (tag !== undefined && tag.length <= TAG_MAX && !KIND_TAGS.has(tag.toLowerCase())) segment = { type: 'tag', value: tag.toLowerCase() };
+    else continue;
+    plain += text.slice(last, match.index);
+    flush();
+    segments.push(segment);
+    last = match.index + match[0].length;
+  }
+  plain += text.slice(last);
+  flush();
+}
+
+/**
+ * Split running text into plain runs, `@mentions`, `#tags` and `||hidden words||`.
+ * Formulas and inline code are left whole inside the plain runs, so a norm like
+ * `$||x||$` or a `\#` in LaTeX is never mistaken for markup; hidden words keep
+ * whatever is inside them, a formula included, for the reader who opens them.
+ */
+export function segmentInline(text: string): BodySegment[] {
+  const segments: BodySegment[] = [];
+  let cursor = 0;
+  for (const [start, end] of hiddenRanges(text)) {
+    pushRuns(text.slice(cursor, start), segments);
+    segments.push({ type: 'spoiler', value: text.slice(start + 2, end - 2) });
+    cursor = end;
+  }
+  pushRuns(text.slice(cursor), segments);
+  return segments;
+}
+
+export type BodyBlock = { type: 'prose'; value: string } | { type: 'hint'; value: string; step: number; of: number };
+
+const HINT = new RegExp(HINT_SOURCE, 'gi');
+
+/**
+ * Split a post into prose and its sealed hints, numbering the hints as rungs
+ * of one ladder: "Hint 2 of 3". An unclosed fence is left as the author typed
+ * it, so a half-written post never swallows the rest of itself.
+ */
+export function segmentBlocks(text: string): BodyBlock[] {
+  const blocks: BodyBlock[] = [];
+  const hints: Array<{ type: 'hint'; value: string; step: number; of: number }> = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  HINT.lastIndex = 0;
+  while ((match = HINT.exec(text)) !== null) {
+    const before = text.slice(last, match.index);
+    if (before.trim()) blocks.push({ type: 'prose', value: before.replace(/^\n+|\n+$/g, '') });
+    const value = match[1]!.trim();
+    if (value) {
+      const hint = { type: 'hint' as const, value, step: hints.length + 1, of: 0 };
+      hints.push(hint);
+      blocks.push(hint);
+    }
+    last = match.index + match[0].length;
+  }
+  const rest = text.slice(last);
+  if (rest.trim() || blocks.length === 0) blocks.push({ type: 'prose', value: blocks.length === 0 ? rest : rest.replace(/^\n+|\n+$/g, '') });
+  for (const hint of hints) hint.of = hints.length;
+  return blocks;
+}
+
+/** How many sealed hints a post carries, for the line under its text. */
+export const countHints = (text: string): number => segmentBlocks(text).filter((block) => block.type === 'hint').length;
+
+/* --------------------------------------------------------------------------
+ * Today's board
+ * ------------------------------------------------------------------------ */
+
+const DAY_MS = 24 * HOUR;
+
+/** The UTC day a moment falls on, as whole days since the epoch. */
+export const boardDay = (now: number): number => Math.floor(now / DAY_MS);
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/**
+ * The one problem everyone is looking at today.
+ *
+ * Chosen from the date alone, so every learner in every timezone's "today"
+ * (UTC) sees the same one without the database having to pick it. The walk
+ * through the bank uses a stride coprime to its size, which visits every
+ * problem once before any repeats.
+ */
+export function boardProblem<T extends { id: string; proOnly?: boolean }>(problems: T[], now: number): T | null {
+  const pool = problems.filter((problem) => !problem.proOnly).sort((a, b) => a.id.localeCompare(b.id));
+  if (pool.length === 0) return null;
+  let stride = Math.min(pool.length - 1, 37) || 1;
+  while (gcd(stride, pool.length) !== 1) stride += 1;
+  return pool[(boardDay(now) * stride + 11) % pool.length] ?? null;
+}
+
+/** "9h 12m" until the board turns over; "under a minute" at the very end. */
+export function boardCountdown(now: number): string {
+  const left = (boardDay(now) + 1) * DAY_MS - now;
+  const hours = Math.floor(left / HOUR);
+  const minutes = Math.floor((left % HOUR) / MINUTE);
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  return minutes > 0 ? `${minutes}m` : 'under a minute';
+}
+
+/* --------------------------------------------------------------------------
+ * Notes on a line
+ *
+ * A comment may be about one line of a post rather than the whole of it. It
+ * says so the way plain-text mail does: it opens with the line, quoted behind
+ * a ">". Nothing new is stored, an older client shows the quote as text, and
+ * the thread can set the quoted line apart from what was said about it.
+ * ------------------------------------------------------------------------ */
+
+/** The most of a line a note quotes. Longer selections are cut at a word, never inside a formula. */
+export const QUOTE_MAX = 220;
+
+const QUOTED_LINE = /^[ \t]*>[ \t]?/;
+
+/** Separate the line a comment quotes, if it opens with one, from what was written about it. */
+export function splitQuote(body: string): { quote: string | null; text: string } {
+  const lines = body.split('\n');
+  let count = 0;
+  while (count < lines.length && QUOTED_LINE.test(lines[count]!)) count += 1;
+  const quote = lines
+    .slice(0, count)
+    .map((line) => line.replace(QUOTED_LINE, '').trim())
+    .filter(Boolean)
+    .join(' ');
+  if (!quote) return { quote: null, text: body };
+  return { quote, text: lines.slice(count).join('\n').replace(/^\n+/, '') };
+}
+
+/** One line, at most QUOTE_MAX long. A cut never lands inside `$…$`, and is marked with an ellipsis. */
+export function clipQuote(raw: string): string {
+  const flat = raw.replace(/\s+/g, ' ').trim();
+  if (flat.length <= QUOTE_MAX) return flat;
+  let cut = flat.slice(0, QUOTE_MAX);
+  // An odd number of dollars is an open formula: go back to before it began.
+  if ((cut.match(/\$/g) ?? []).length % 2 === 1) cut = cut.slice(0, cut.lastIndexOf('$'));
+  else cut = cut.replace(/\s+\S*$/, '');
+  return `${cut.trim()}…`;
+}
+
+/**
+ * The first line of a comment that quotes these words, ready to be typed
+ * after. `sealed` is for words taken from an opened hint or from hidden text:
+ * they are quoted hidden, so the note does not undo what the author sealed.
+ */
+export function quoteLine(raw: string, sealed = false): string {
+  const flat = clipQuote(raw.replace(/\|\|/g, ' '));
+  if (!flat) return '';
+  return `> ${sealed ? `||${flat}||` : flat}\n`;
+}
+
+/* --------------------------------------------------------------------------
+ * What the marks add up to
+ * ------------------------------------------------------------------------ */
+
+export interface Verdict {
+  tone: 'checked' | 'questioned' | 'lost';
+  text: string;
+}
+
+const CHECKED_AT = 5;
+const QUESTIONED_AT = 3;
+const LOST_AT = 3;
+
+/**
+ * The one line the marks on a post add up to, if they add up to anything.
+ *
+ * This is what makes a mark more than a reaction: enough readers saying "check
+ * this" is a warning to the next reader, enough saying they follow with nobody
+ * objecting is a reason to trust a write-up, and enough saying they are lost
+ * is something only the author can act on, so only the author is told.
+ */
+export function verdict(counts: ReactionCounts | undefined, isAuthor: boolean): Verdict | null {
+  const questioned = counts?.angry ?? 0;
+  const followed = counts?.like ?? 0;
+  const lost = counts?.sad ?? 0;
+
+  if (questioned >= QUESTIONED_AT) return { tone: 'questioned', text: `${compactCount(questioned)} readers question a step` };
+  if (isAuthor && lost >= LOST_AT) return { tone: 'lost', text: `${compactCount(lost)} readers got lost here. A hint might help.` };
+  if (followed >= CHECKED_AT && questioned === 0) return { tone: 'checked', text: `checked by ${compactCount(followed)} readers` };
+  return null;
+}
+
+/* --------------------------------------------------------------------------
+ * Who is helping
+ * ------------------------------------------------------------------------ */
+
+export interface Helper<A> {
+  id: string;
+  author: A | null;
+  posts: number;
+  /** Marks that say a post helped. "Lost me" and "Check this" are not among them. */
+  marks: number;
+}
+
+/** The marks a reader leaves when a post did them good. */
+const HELPFUL: readonly Reaction[] = ['like', 'love', 'care', 'haha', 'wow'];
+
+/** How many of a post's marks say it helped. Without a breakdown, the total stands in. */
+export function helpfulMarks(post: { like_count: number; reactions?: ReactionCounts }): number {
+  if (!post.reactions) return post.like_count;
+  return HELPFUL.reduce((sum, key) => sum + (post.reactions![key] ?? 0), 0);
+}
+
+/**
+ * The people whose posts on this page helped most: counted in the marks that
+ * say so, with posts only breaking a tie, so neither writing a lot nor drawing
+ * objections is a way onto the list. Someone with none is not listed.
+ */
+export function rankHelpers<A>(
+  posts: Array<{ author_id: string; author: A | null; like_count: number; reactions?: ReactionCounts }>,
+  limit = 5,
+): Helper<A>[] {
+  const people = new Map<string, Helper<A>>();
+  for (const post of posts) {
+    const entry = people.get(post.author_id) ?? { id: post.author_id, author: post.author, posts: 0, marks: 0 };
+    entry.posts += 1;
+    entry.marks += helpfulMarks(post);
+    people.set(post.author_id, entry);
+  }
+  return [...people.values()]
+    .filter((person) => person.marks > 0)
+    .sort((a, b) => b.marks - a.marks || b.posts - a.posts)
+    .slice(0, limit);
+}
+
+/* --------------------------------------------------------------------------
+ * The composer's symbol keys
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Whether the caret sits inside a formula, so a symbol key can insert bare
+ * LaTeX instead of wrapping it in a second pair of dollars. Decided from the
+ * opener still unclosed before the caret, whichever of `$`, `$$`, `\(` or
+ * `\[` it is; counting dollars alone gets `$$x + ` wrong.
+ */
+export function insideMath(value: string, caret: number): boolean {
+  const before = value.slice(0, caret).replace(/\\\$/g, '');
+  const unclosed = before.replace(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^$\n]+\$/g, '');
+  return /\$|\\\(|\\\[/.test(unclosed);
 }

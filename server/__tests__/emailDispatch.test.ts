@@ -34,6 +34,36 @@ describe('renderEmail', () => {
     expect(renderEmail({ ...post, recipient_email: null }, 'https://x.test')).toBeNull();
   });
 
+  it('names the kind of post and keeps what its author sealed out of the broadcast', () => {
+    const body = '#solution\nDrop the altitude first.\n[hint]\nThe height is 12.\n[/hint]\nSo the answer is ||one hundred||, and $||x|| \\le 1$ stays.';
+    const mail = renderEmail(job({ kind: 'new_post', payload: { post_id: 'p2', author: 'Priya', body, deleted: false } }), 'https://x.test')!;
+    expect(mail.subject).toBe('Priya: Drop the altitude first.');
+    expect(mail.text).toContain('Priya wrote up a solution');
+    for (const rendered of [mail.text, mail.html]) {
+      expect(rendered).not.toContain('#solution');
+      expect(rendered).not.toContain('The height is 12');
+      expect(rendered).not.toContain('one hundred');
+      expect(rendered).toContain('[sealed hint]');
+      expect(rendered).toContain('[hidden]');
+      expect(rendered).toContain('$||x|| \\le 1$');
+    }
+
+    const stuck = renderEmail(job({ kind: 'new_post', payload: { post_id: 'p3', author: 'Linh', body: '#stuck\nWhere does the minus come from?', deleted: false } }), 'https://x.test')!;
+    expect(stuck.text).toContain('Linh is stuck and asked for a nudge');
+    expect(stuck.subject).toBe('Linh: Where does the minus come from?');
+
+    // A post that is only its kind (the rest was images) still gets a subject.
+    const bare = renderEmail(job({ kind: 'new_post', payload: { post_id: 'p4', author: 'Omar', body: '#trick', deleted: false } }), 'https://x.test')!;
+    expect(bare.subject).toBe('Omar shared a trick');
+  });
+
+  it('keeps hidden words out of a notification that quotes a comment', () => {
+    const mail = renderEmail(job({ payload: { type: 'comment_reply', actor: 'Bob', body: 'Try it: ||n = 1||', post_id: 'p1', comment_id: 'c1' } }), 'https://x.test')!;
+    expect(mail.text).toContain('"Try it: [hidden]"');
+    expect(mail.text).not.toContain('n = 1');
+    expect(renderEmail(job({ payload: { type: 'post_like', actor: 'Bob', post_id: 'p1' } }), 'https://x.test')!.subject).toBe('Bob left a mark on your post');
+  });
+
   it('sends direct messages to the inbox', () => {
     const mail = renderEmail(job({ payload: { type: 'message', actor: 'Bob', body: 'hi', entity_type: 'conversation', entity_id: 'k' } }), 'https://x.test')!;
     expect(mail.subject).toBe('Bob sent you a message');

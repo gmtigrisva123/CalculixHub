@@ -5,16 +5,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
-import {
-  Brain, Trophy, Sparkles, Key, Mail, User, HelpCircle, ArrowRight,
-  ArrowLeft, CheckCircle2, ChevronRight, BookOpen, Activity, AlertTriangle, BarChart3,
-  Globe, Shield, TrendingUp, Users, Check, X, Download,
-  ThumbsUp, ThumbsDown, FileText, Moon, Sun, Facebook, Youtube, MessageSquare, Monitor
-} from 'lucide-react';
+import { Key, Mail, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, Check, Facebook, Monitor } from 'lucide-react';
 import { Level, Topic } from '../../shared/types';
 import MathText from './MathText';
 import BrandLogo from './BrandLogo';
-import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from './brand';
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { apiUrl } from '../services/apiBase';
 import InstallAppButton from './InstallAppButton';
@@ -633,121 +627,6 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
     onLoginSuccess(fullName || 'Calculix Student', calculatedLevel);
   };
 
-  // --- PDF IMPACT REPORT EXPORT ---
-  const handleExportImpactReport = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>CalculixHub - Impact & Research Report</title>
-          <style>
-            body { font-family: 'Georgia', serif; color: #0d1117; padding: 45px; line-height: 1.6; background: #ffffff; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1d4ed8; padding-bottom: 25px; margin-bottom: 35px; }
-            .logo { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 900; color: #161b22; text-transform: uppercase; letter-spacing: 1.5px; }
-            .logo svg { width: 34px; height: 34px; color: #366478; }
-            .subtitle { font-size: 11px; color: #4a5567; text-transform: uppercase; font-weight: 700; margin-top: 5px; }
-            .date { font-size: 13px; color: #4a5567; font-family: monospace; background: #eef1f5; padding: 5px 10px; border-radius: 6px; }
-            .section { margin-bottom: 40px; page-break-inside: avoid; }
-            h2 { font-size: 18px; color: #1d4ed8; border-left: 5px solid #3b82f6; padding-left: 12px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
-            p { font-size: 14px; color: #334155; text-align: justify; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
-            th { background-color: #f8fafc; font-weight: bold; color: #0f172a; }
-            .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 25px; }
-            .metric-card { border: 1px solid #e2e8f0; background: #f6f8fa; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-            .metric-val { font-size: 26px; font-weight: 800; color: #1d4ed8; font-family: monospace; margin: 8px 0; }
-            .metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: bold; }
-            .footer { margin-top: 60px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 25px; font-size: 11px; color: #64748b; }
-            @media print { body { padding: 25px; } .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <div class="logo"><svg viewBox="${MARK_VIEWBOX}" fill="none"><path d="${MARK_PATH}" stroke="currentColor" stroke-width="${MARK_STROKE}" stroke-linecap="round"/><circle cx="${MARK_DOT.cx}" cy="${MARK_DOT.cy}" r="${MARK_DOT.r}" fill="currentColor"/></svg>CalculixHub</div>
-              <div class="subtitle">A place to think</div>
-            </div>
-            <div class="date">Generated: ${new Date().toLocaleString('en-US')}</div>
-          </div>
-
-          <div class="section">
-            <h2>1. Strategic Overview</h2>
-            <p>CalculixHub is an integrated mathematics education ecosystem combining deep AI personalization (EduReach Core) with an adaptive testing model based on Item Response Theory (IRT). The platform replaces static, linear question delivery with a flexible knowledge graph tracking each student's zone of proximal development (ZPD).</p>
-          </div>
-
-          <div class="section">
-            <h2>2. Live Operating Metrics</h2>
-            <div class="metric-grid">
-              <div class="metric-card">
-                <div class="metric-label">Learners active</div>
-                <div class="metric-val">${statsAvailable ? liveStats.registeredUsers : 'Unavailable'}</div>
-                <div class="metric-label">Arrivals in the last 15 minutes</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">IRT assessments completed</div>
-                <div class="metric-val">${statsAvailable ? liveStats.testsCompleted : 'Unavailable'}</div>
-                <div class="metric-label">Since this instance started</div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Problems graded</div>
-                <div class="metric-val">${statsAvailable ? liveStats.problemsSolved : 'Unavailable'}</div>
-                <div class="metric-label">Since this instance started</div>
-              </div>
-            </div>
-            <p style="font-size:12px;color:#64748b;margin-top:18px;">These counters are held in the serving instance's memory and reset when it restarts; on a multi-instance deployment each instance counts only its own traffic. They are reported as operational signal, not as audited telemetry. A report with figures suitable for citation requires the database-backed aggregation that is not yet in place.</p>
-          </div>
-
-          <div class="section">
-            <h2>3. Assessment Bank</h2>
-            <p>The adaptive placement test administers provisional items spanning ${bank.conceptCount} tagged concepts across ${bank.domainCount} domains, sourced from ${bank.sources.join(', ')}. Every item carries 3PL parameters (discrimination a, difficulty b, pseudo-guessing c) that the engine selects on. Per-domain coverage:</p>
-            <table>
-              <thead>
-                <tr><th>Domain</th><th>Items</th><th>Concepts</th><th>Difficulty range (b)</th><th>Mean discrimination (a)</th></tr>
-              </thead>
-              <tbody>
-                ${bankProfiles
-                  .map(
-                    (profile) => `<tr>
-                  <td><strong>${profile.domain}</strong></td>
-                  <td>${profile.itemCount}</td>
-                  <td>${profile.conceptCount}</td>
-                  <td>${formatDifficulty(profile.easiestB)} to ${formatDifficulty(profile.hardestB)}</td>
-                  <td>${profile.meanDiscrimination.toFixed(2)}</td>
-                </tr>`,
-                  )
-                  .join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="section" style="page-break-before: always;">
-            <h2>4. Four Core Layers &amp; Methodology</h2>
-            <p>The system rests on four architectural pillars:</p>
-            <ul>
-              <li><strong>Learning Engine:</strong> Clear tiers (Foundation, Intermediate, Advanced, Olympiad) that adapt to each student.</li>
-              <li><strong>AI Personalization Layer:</strong> EduReach automatically isolates weak points (e.g. combinatorics) and restructures the learning path.</li>
-              <li><strong>Competition System:</strong> Live, ranked arenas organized weekly by age group and skill tier.</li>
-              <li><strong>Analytics Radar:</strong> Visualizes common misconceptions to support curriculum research.</li>
-            </ul>
-          </div>
-
-          <div class="footer">
-            <p>Compiled in the browser from the shipped item bank and the counters returned by /api/live-stats at the time shown above.</p>
-            <p>CalculixHub Science &amp; Technology Board - Tech for Social Impact (c) 2026</p>
-          </div>
-
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const IRT_FORMULA = '\\[P_i(\\theta) = \\frac{e^{\\theta - b_i}}{1 + e^{\\theta - b_i}}\\]';
 
   // --- LANDING PAGE RENDERING FUNCTION ---
   /*
@@ -780,16 +659,14 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
           <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
         </div>
         <div className="cq-auth-story-copy relative max-w-[40ch]">
-          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">One quick check, then you're in.</h2>
+          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Confirm your email first.</h2>
           <p className="type-lead mt-4.5 text-stone-400">Confirm that this email belongs to you before your first sign in.</p>
         </div>
-        <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">Your next question is waiting.</p>
       </div>
       <div className="cq-auth-form-wrap">
         <div className="cq-auth-form w-full" aria-live="polite">
           <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-accent-text"><Mail size={27} aria-hidden="true" /></div>
-          <p className="type-eyebrow text-accent-text">Verify your email</p>
-          <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
+          <h1 className="type-title text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Check your inbox</h1>
           <p className="type-body mt-3 text-content-subtle">If this address needs confirmation, look for a link at <strong className="text-content break-all">{confirmationEmail}</strong>. You can open it on any device, including your phone. This page continues by itself once you've confirmed.</p>
           <div className="mt-7 border-y border-line py-5 text-[13.5px] leading-[1.7] text-content-subtle">
             <p>It may take a minute to arrive. Check your spam folder. If you've used this address before, your account may already be verified. Sign in instead, or use “Forgot?” on the sign-in screen to reset your password.</p>
@@ -821,16 +698,14 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
           <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
         </div>
         <div className="cq-auth-story-copy relative max-w-[40ch]">
-          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Verified. Your next step is on the other screen.</h2>
+          <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">Confirmed. Carry on where you signed up.</h2>
           <p className="type-lead mt-4.5 text-stone-400">Your account is ready wherever you sign in.</p>
         </div>
-        <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">Your next question is waiting.</p>
       </div>
       <div className="cq-auth-form-wrap">
         <div className="cq-auth-form w-full" aria-live="polite">
           <div className="mb-7 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-line text-proof"><CheckCircle2 size={27} aria-hidden="true" /></div>
-          <p className="type-eyebrow text-proof">Email verified</p>
-          <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">You're all set</h1>
+          <h1 className="type-title text-[clamp(1.75rem,3vw,2.375rem)] font-normal">Email confirmed</h1>
           <p className="type-body mt-3 text-content-subtle">
             {verifiedEmail ? <><strong className="text-content break-all">{verifiedEmail}</strong> is confirmed.</> : 'Your email is confirmed.'} Go back to the device where you created your account to continue.
           </p>
@@ -890,24 +765,18 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
 
           <div className="cq-auth-brand relative flex items-center gap-3">
             <span className="cq-symbol" aria-hidden="true"><BrandLogo /></span>
-            <span className="flex flex-col leading-[1.15]">
-              <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
-              <span className="type-eyebrow text-stone-500">A place to think</span>
-            </span>
+            <span className="font-serif text-[19px] text-stone-50">CalculixHub</span>
           </div>
 
           <div className="cq-auth-story-copy relative max-w-[40ch]">
             <h2 className="type-hero text-[clamp(2rem,3.4vw,2.75rem)] text-stone-50">
-              Pick up where the estimate left off.
+              {isReset ? 'A new password, then back to work.' : isLogin ? 'Pick up where you left off.' : 'Keep what you solve.'}
             </h2>
             <p className="type-lead mt-4.5 text-stone-400">
               Your skill map, streak and every graded answer are tied to the account, not the browser.
             </p>
           </div>
 
-          <p className="type-eyebrow relative text-stone-500 tracking-[0.16em] text-[11px]">
-            A little room for your next good question.
-          </p>
         </div>
 
         {/* The form. */}
@@ -922,14 +791,13 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
               transition={spring.smooth}
               className="cq-auth-form w-full"
             >
-              <p className="type-eyebrow text-accent-text">{isReset ? 'Password recovery' : isLogin ? 'Sign in' : 'Create account'}</p>
-              <h1 className="type-title mt-3 text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
-                {isReset ? 'Choose a new password' : isLogin ? 'Welcome back' : 'Start measuring'}
+              <h1 className="type-title text-[clamp(1.75rem,3vw,2.375rem)] font-normal">
+                {isReset ? 'Choose a new password' : isLogin ? 'Sign in' : 'Create your account'}
               </h1>
               <p className="type-body mt-2.5 text-content-subtle">
-                {isReset ? 'Enter a new password to secure your account.' : isLogin
-                  ? 'Sign in to keep your streak, skill map and contest history.'
-                  : 'One account, and the placement test result stays with you.'}
+                {isReset ? 'At least 8 characters. It replaces the old one straight away.' : isLogin
+                  ? 'Your streak, skill map and contest history are where you left them.'
+                  : 'It is free. Practice, past papers and the Arena stay free.'}
               </p>
 
               {!isReset && <>
@@ -942,7 +810,6 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
                   <Facebook size={20} aria-hidden="true" className="text-[#1877F2]" />
                   {socialProvider === 'facebook' ? 'Opening Facebook…' : 'Continue with Facebook'}
                 </button>
-                <p className="text-xs text-content-subtle text-center">One secure sign-in for new and returning learners.</p>
               </div>
               <div className="my-5 flex items-center gap-3 text-xs text-content-subtle"><span className="h-px flex-1 bg-line"/>or use your email<span className="h-px flex-1 bg-line"/></div>
               </>}

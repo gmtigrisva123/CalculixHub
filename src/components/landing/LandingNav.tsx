@@ -18,13 +18,13 @@ import { Arrow, BrandMark, GLIDE } from './kit';
 import { scrollToTarget, setScrollLocked } from './smoothScroll';
 import { whenChapters } from './chapters';
 
-/** The chapters worth a jump, numbered as the page numbers them. */
+/** The chapters worth a jump. */
 export const NAV_LINKS = [
-  { id: 'engine', label: 'How it works', chapter: '02' },
-  { id: 'playground', label: 'Try one', chapter: '03' },
-  { id: 'topics', label: 'Topics', chapter: '04' },
-  { id: 'archive', label: 'Past papers', chapter: '05' },
-  { id: 'plans', label: 'Pricing', chapter: '08' },
+  { id: 'engine', label: 'How it works' },
+  { id: 'playground', label: 'Try one' },
+  { id: 'topics', label: 'Topics' },
+  { id: 'archive', label: 'Past papers' },
+  { id: 'plans', label: 'Pricing' },
 ] as const;
 
 /** Where a jump lands relative to its section, so a heading never hides under the island. */
@@ -248,7 +248,6 @@ function NavMenu({ onClose, onSignIn, onRegister, onGo }: NavMenuProps) {
               onClick={event => onGo(event, link.id)}
               variants={{ hidden: { y: '110%' }, shown: { y: '0%', transition: { duration: 0.8, ease: GLIDE } } }}
             >
-              <span className="lx-menu-index">{link.chapter}</span>
               {link.label}
             </m.a>
           </li>

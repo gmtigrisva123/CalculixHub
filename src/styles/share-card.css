@@ -5,7 +5,7 @@
 @keyframes sc-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
 .sc-dialog :is(h2, p) { margin: 0; }
 .sc-dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.sc-dialog h2 { font: 400 28px/1.1 'Newsreader', Georgia, serif; letter-spacing: -.025em; }
+.sc-dialog h2 { font: 560 22px/1.2 'Geist', system-ui, sans-serif; letter-spacing: -.03em; }
 .sc-dialog header p { margin-top: 6px; max-width: 52ch; font-size: 14px; line-height: 1.5; color: var(--ct-muted); }
 .sc-close { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 11px; color: var(--ct-muted); cursor: pointer; }
 .sc-close:hover { background: var(--sf-sunken); color: var(--ct); }
@@ -32,7 +32,7 @@
 
 @media (max-width: 560px) {
   .sc-dialog[open] { padding: 18px; border-radius: 22px; }
-  .sc-dialog h2 { font-size: 23px; }
+  .sc-dialog h2 { font-size: 20px; }
   .sc-dialog footer .sc-btn { flex: 1; }
   .sc-upsell { margin-left: 0; }
 }

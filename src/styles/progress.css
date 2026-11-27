@@ -28,9 +28,6 @@
 
 .pr-card { min-width: 0; padding: clamp(18px, 2vw, 26px); border: 1px solid var(--ln); border-radius: 20px; background: var(--sf-raised); }
 .pr-card-head { display: flex; align-items: flex-start; gap: 12px; }
-.pr-card-head > span { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 1px solid var(--ln); border-radius: 11px; background: var(--sf); color: var(--ac-text); }
-.pr-card-head.is-warm > span { border-color: color-mix(in srgb, #c8973a 35%, var(--ln)); background: color-mix(in srgb, #e6bd73 16%, var(--sf)); color: #a8742a; }
-[data-theme='dark'] .pr-card-head.is-warm > span { color: #e6bd73; }
 .pr-card-head h2 { margin: 0; font: 560 19px/1.25 'Geist', system-ui, sans-serif; letter-spacing: -.028em; }
 .pr-card-head p { margin: 3px 0 0; color: var(--ct-muted); font-size: 13.5px; line-height: 1.5; }
 
@@ -38,17 +35,17 @@
 .pr-radar text { fill: var(--ct-subtle); }
 .pr-radar .text-stone-200 { color: var(--ln); }
 
-.pr-topics { display: grid; gap: 18px; margin: 0; padding: 20px 0 0; border-top: 1px solid var(--ln-faint); list-style: none; }
+.pr-topics { display: grid; gap: 14px; margin: 0; padding: 20px 0 0; border-top: 1px solid var(--ln-faint); list-style: none; }
 .pr-topic { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; }
-.pr-topic strong { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 580; letter-spacing: -.012em; }
+/* Name and percentage share a baseline; the dot sits on it, which centres it on the lowercase letters. */
+.pr-topic strong { display: flex; align-items: baseline; align-self: baseline; gap: 8px; font-size: 14.5px; font-weight: 580; letter-spacing: -.012em; }
 .pr-topic strong i { width: 8px; height: 8px; border-radius: 50%; background: var(--cx-hue); }
 /* The four topic hues, as lib/topics.tsx assigns them. */
 .pr-topic.is-alg { --cx-hue: #c8842a; }
 .pr-topic.is-geo { --cx-hue: #2f9c8c; }
 .pr-topic.is-cmb { --cx-hue: #8b5cf6; }
 .pr-topic.is-nt { --cx-hue: #0ea5e9; }
-.pr-topic p { grid-column: 1; margin: 0; color: var(--ct-subtle); font-size: 13px; line-height: 1.45; }
-.pr-topic b { grid-area: 1 / 2 / 3 / 3; align-self: center; font: 560 20px/1 'Geist', system-ui, sans-serif; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pr-topic b { grid-area: 1 / 2; align-self: baseline; font: 560 17px/1 'Geist', system-ui, sans-serif; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .pr-topic b small { margin-left: 1px; color: var(--ct-subtle); font-size: 12px; font-weight: 450; }
 .pr-track { grid-column: 1 / -1; height: 6px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: var(--sf-sunken); }
 .pr-fill { height: 100%; border-radius: inherit; background: var(--cx-hue); }
@@ -57,10 +54,8 @@
 .pr-focus.is-set { border-color: color-mix(in srgb, #c8973a 36%, var(--ln)); background: color-mix(in srgb, #e6bd73 12%, var(--sf-raised)); color: var(--ct); }
 .pr-focus h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
 .pr-focus p { margin: 0; }
-.pr-steps { display: grid; gap: 10px; margin: 16px 0 0; padding: 16px 0 0; border-top: 1px solid var(--ln-faint); color: var(--ct-muted); font-size: 14px; line-height: 1.5; list-style: none; counter-reset: step; }
-.pr-steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; counter-increment: step; }
-.pr-steps li::before { content: counter(step); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--sf-sunken); color: var(--ct-muted); font: 600 11px/1 'Geist Mono', ui-monospace, monospace; }
-.pr-steps strong { color: var(--ct); font-weight: 600; }
+/* The one thing to do about it: open Learn on that topic. */
+.pr-focus + .pg-btn { margin-top: 14px; }
 
 .pr-chart { height: 208px; margin-top: 16px; }
 
@@ -72,6 +67,4 @@
   .pr-figures > div { padding: 16px; }
   .pr-figures > div:nth-child(odd) { border-left: 0; }
   .pr-figures > div:nth-child(n + 3) { border-top: 1px solid var(--ln-faint); }
-  .pr-print { width: 100%; justify-content: center; }
-  .pr .pg-aside { width: 100%; }
 }

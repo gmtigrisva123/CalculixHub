@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * CalculixHub Achievements & Unlock Tracking System.
+ * Badges: what earns each one, and which have been earned and announced.
  */
 
 import type { UserStats, Topic } from '../../shared/types';
@@ -10,66 +10,63 @@ import type { UserStats, Topic } from '../../shared/types';
 export interface Achievement {
   id: string;
   title: string;
+  /** What earned it, as a plain fact. */
   desc: string;
-  icon: string;
   condition: (stats: UserStats, completedCount: number) => boolean;
   /** How far along a learner is, for badges that are counted towards. */
   progress?: (stats: UserStats, completedCount: number) => { now: number; goal: number; unit: string };
 }
 
+/*
+ * Named for what was done, and described as a fact. The coin each is struck
+ * with is chosen by id in components/badgeIcons.ts.
+ */
 export const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'b1',
-    title: 'Getting Started',
-    desc: 'Joined CalculixHub and started your journey',
-    icon: '🌱',
+    title: 'Name on the cover',
+    desc: 'You have an account, so your work is kept.',
     condition: () => true,
   },
   {
     id: 'b2',
-    title: 'First Fifty',
-    desc: 'Reach 50 total points in problem solving',
-    icon: '📐',
+    title: 'First fifty',
+    desc: '50 points from problems you solved.',
     condition: (stats) => (stats?.points ?? 0) >= 50,
     progress: (stats) => ({ now: stats?.points ?? 0, goal: 50, unit: 'points' }),
   },
   {
     id: 'b3',
-    title: 'Combinatorics Warrior',
-    desc: 'Master discrete math (60%+ skill rating)',
-    icon: '🎲',
+    title: 'Counts without counting',
+    desc: 'A Combinatorics rating of 60% or better.',
     condition: (stats) => (stats?.skills?.Combinatorics ?? 0) >= 60,
     progress: (stats) => ({ now: Math.round(stats?.skills?.Combinatorics ?? 0), goal: 60, unit: '% in Combinatorics' }),
   },
   {
     id: 'b4',
-    title: 'Leaderboard Breaker',
-    desc: 'Cross 250 cumulative points',
-    icon: '🏆',
+    title: 'Two hundred and fifty',
+    desc: '250 points from problems you solved.',
     condition: (stats) => (stats?.points ?? 0) >= 250,
     progress: (stats) => ({ now: stats?.points ?? 0, goal: 250, unit: 'points' }),
   },
   {
     id: 'b5',
-    title: 'Unbreakable Streak',
-    desc: 'Hit a 3-day consecutive activity streak',
-    icon: '🔥',
+    title: 'Three days running',
+    desc: 'You practised three days in a row.',
     condition: (stats) => (stats?.streak ?? 0) >= 3,
     progress: (stats) => ({ now: stats?.streak ?? 0, goal: 3, unit: 'days in a row' }),
   },
   {
     id: 'b6',
-    title: 'Problem Solver',
-    desc: 'Solve 5 competition problems correctly',
-    icon: '⚡',
+    title: 'First five',
+    desc: 'Five problems solved.',
     condition: (stats, completedCount) => (completedCount ?? 0) >= 5 || (stats?.completedCount ?? 0) >= 5,
     progress: (stats, completedCount) => ({ now: Math.max(completedCount ?? 0, stats?.completedCount ?? 0), goal: 5, unit: 'solved' }),
   },
   {
     id: 'b7',
-    title: 'Master Strategist',
-    desc: 'Cross 500 cumulative points on the ladder',
-    icon: '👑',
+    title: 'Five hundred',
+    desc: '500 points from problems you solved.',
     condition: (stats) => (stats?.points ?? 0) >= 500,
     progress: (stats) => ({ now: stats?.points ?? 0, goal: 500, unit: 'points' }),
   },

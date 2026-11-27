@@ -53,7 +53,7 @@ const CHAPTERS: Chapter[] = [
   { id: 'idea', label: 'The idea', title: 'Just right', fig: 'bell', figName: 'A Gaussian bell', note: 'the sweet spot sits in the middle' },
   { id: 'engine', label: 'How it works', title: 'Finding your level', fig: 'hyperboloid', figName: 'Hyperboloid', note: 'straight lines, curved surface' },
   { id: 'playground', label: 'Try one', title: 'Two chords', fig: 'chords', figName: 'Circle & two chords', note: 'PA · PB = PC · PD' },
-  { id: 'topics', label: 'Topics', title: 'Four rooms', fig: 'trefoil', figName: 'Trefoil knot', note: 'the simplest knot that won’t undo' },
+  { id: 'topics', label: 'Topics', title: 'Four topics', fig: 'trefoil', figName: 'Trefoil knot', note: 'the simplest knot that won’t undo' },
   { id: 'archive', label: 'Past papers', title: 'Since 1959', fig: 'helix', figName: 'Double helix', note: 'one more rung every year' },
   { id: 'workspace', label: 'Practise', title: 'Get unstuck', fig: 'mobius', figName: 'Möbius strip', note: 'one side, one edge — keep going' },
   { id: 'plans', label: 'Pricing', title: 'Free to practise', fig: 'tesseract', figName: 'Tesseract', note: 'a cube, one dimension further' },
@@ -97,7 +97,6 @@ export default function MarginRails() {
 function Rails() {
   const reduce = Boolean(useReducedMotion());
   const [active, setActive] = useState(0);
-  const [dir, setDir] = useState(1);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
@@ -109,8 +108,6 @@ function Rails() {
   const fillRef = useRef<HTMLSpanElement>(null);
   const cometRef = useRef<HTMLSpanElement>(null);
   const pctRef = useRef<HTMLSpanElement>(null);
-  const velRef = useRef<HTMLSpanElement>(null);
-  const arrowRef = useRef<HTMLSpanElement>(null);
   const activeRef = useRef(0);
 
   const rendered = useMemo(
@@ -133,7 +130,7 @@ function Rails() {
     // The drifting patterns, and the last value written to each thing that is only touched on change.
     const grids = Array.from(root.querySelectorAll<HTMLElement>('.mr-grid > i'));
     const rulers = Array.from(root.querySelectorAll<HTMLElement>('.mr-ruler > i'));
-    const written = { arrive: '', tail: '', reading: '', heading: '', moving: false };
+    const written = { arrive: '', tail: '' };
     // The ink stages, and the archive's full-bleed marquee. Where one reaches into a margin, the margin steps aside for it.
     const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee'));
     const hero = document.querySelector<HTMLElement>('.lx-hero-stage');
@@ -409,7 +406,6 @@ function Rails() {
       const along = clamp((index + frac) / (CHAPTERS.length - 1));
 
       if (index !== activeRef.current) {
-        setDir(index > activeRef.current ? 1 : -1);
         activeRef.current = index;
         setActive(index);
         morphTo(index, now);
@@ -437,9 +433,6 @@ function Rails() {
       const speed = clamp(Math.abs(vel) / 40);
       const tail = speed.toFixed(2);
       if (tail !== written.tail && cometRef.current) { written.tail = tail; cometRef.current.style.setProperty('--mr-v', tail); }
-      // The numeral inks in while the page is moving. A switch with some slack either side, so it does not flicker at the threshold.
-      const moving = written.moving ? speed > 0.04 : speed > 0.12;
-      if (moving !== written.moving) { written.moving = moving; root.toggleAttribute('data-moving', moving); }
 
       if (fillRef.current) fillRef.current.style.transform = `scaleY(${along})`;
       if (cometRef.current) cometRef.current.style.transform = `translate3d(0,${(along * 100).toFixed(3)}%,0)`;
@@ -449,10 +442,6 @@ function Rails() {
         shownPct = pct;
         pctRef.current.textContent = String(pct).padStart(3, '0');
       }
-      const reading = Math.abs(vel).toFixed(1).padStart(4, '0');
-      if (reading !== written.reading && velRef.current) { written.reading = reading; velRef.current.textContent = reading; }
-      const heading = Math.abs(vel) < 0.3 ? 'still' : vel > 0 ? 'down' : 'up';
-      if (heading !== written.heading && arrowRef.current) { written.heading = heading; arrowRef.current.dataset.dir = heading; }
 
       const rects: Box[] = stages.map(st => {
         const r = st.getBoundingClientRect();
@@ -492,7 +481,8 @@ function Rails() {
   }, [reduce, rendered]);
 
   const chapter = CHAPTERS[active];
-  const number = String(active + 1).padStart(2, '0');
+  // The turning figure is numbered like a plate in a textbook; the chapters themselves are not.
+  const plate = String(active + 1).padStart(2, '0');
 
   return (
     <div className="mr" ref={rootRef} aria-hidden="true">
@@ -504,26 +494,6 @@ function Rails() {
 
         <div className="mr-left-inner">
           <div className="mr-chapter">
-            <span className="mr-eyebrow"><i className="mr-pulse" /> Chapter</span>
-            <div className="mr-numeral">
-              {number.split('').map((digit, i) => (
-                <span className="mr-digit" key={i}>
-                  <AnimatePresence initial={false} custom={dir}>
-                    <m.span
-                      key={digit}
-                      custom={dir}
-                      variants={digitRoll}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.9, ease: GLIDE, delay: i * 0.06 }}
-                    >
-                      {digit}
-                    </m.span>
-                  </AnimatePresence>
-                </span>
-              ))}
-            </div>
             <div className="mr-stack mr-title">
               <AnimatePresence initial={false}>
                 <m.p
@@ -559,7 +529,6 @@ function Rails() {
                   }}
                 >
                   <i className="mr-dot" />
-                  <span className="mr-node-num">{String(i + 1).padStart(2, '0')}</span>
                   <span className="mr-node-label">{c.label}</span>
                 </button>
               </div>
@@ -568,12 +537,6 @@ function Rails() {
 
           <div className="mr-readout">
             <div><span className="mr-read-big" ref={pctRef}>000</span><span className="mr-read-unit">%</span></div>
-            <div className="mr-read-row">
-              <span className="mr-arrow" ref={arrowRef} data-dir="still">↓</span>
-              <span>v</span>
-              <span ref={velRef}>00.0</span>
-              <span className="mr-read-dim">px/f</span>
-            </div>
           </div>
         </div>
       </div>
@@ -617,7 +580,7 @@ function Rails() {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.7, ease: GLIDE }}
                 >
-                  <span className="mr-fig-tag">Fig. {number}</span>
+                  <span className="mr-fig-tag">Fig. {plate}</span>
                   <span className="mr-fig-name">
                     {chapter.figName.split('').map((ch, i) => (
                       <m.span
@@ -653,9 +616,3 @@ function Rails() {
     </div>
   );
 }
-
-const digitRoll = {
-  enter: (d: number) => ({ y: d > 0 ? '100%' : '-100%', opacity: 0 }),
-  center: { y: '0%', opacity: 1 },
-  exit: (d: number) => ({ y: d > 0 ? '-100%' : '100%', opacity: 0 }),
-};

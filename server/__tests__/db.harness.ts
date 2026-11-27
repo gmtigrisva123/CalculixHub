@@ -94,8 +94,14 @@ export interface TestDatabase {
   close(): Promise<void>;
 }
 
-/** Apply every migration in filename order, exactly as Supabase does. */
-export async function createTestDatabase(): Promise<TestDatabase> {
+/**
+ * Apply every migration in filename order, exactly as Supabase does.
+ *
+ * `scripts` replaces the migrations with the SQL given, in order. It is for a
+ * test that needs a database some of the files were never run on: a guard that
+ * only one file provides can hide what another file does without it.
+ */
+export async function createTestDatabase(options: { scripts?: string[] } = {}): Promise<TestDatabase> {
   const db = new PGlite();
   await db.exec(AUTH_STUB);
 
@@ -116,23 +122,31 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     grant usage on schema public, auth to authenticated, anon;
   `);
 
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((name) => name.endsWith('.sql'))
-    .sort();
+  if (options.scripts) {
+    for (const [index, sql] of options.scripts.entries()) {
+      try {
+        await db.exec(sql);
+      } catch (error) {
+        throw new Error(`Script ${index + 1} failed: ${(error as Error).message}`);
+      }
+    }
+  } else {
+    const files = readdirSync(MIGRATIONS_DIR)
+      .filter((name) => name.endsWith('.sql'))
+      .sort();
 
-  if (files.length === 0) throw new Error(`No migrations found in ${MIGRATIONS_DIR}`);
+    if (files.length === 0) throw new Error(`No migrations found in ${MIGRATIONS_DIR}`);
 
-  for (const file of files) {
-    const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
-    try {
-      await db.exec(sql);
-    } catch (error) {
-      throw new Error(`Migration ${file} failed: ${(error as Error).message}`);
+    for (const file of files) {
+      const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
+      try {
+        await db.exec(sql);
+      } catch (error) {
+        throw new Error(`Migration ${file} failed: ${(error as Error).message}`);
+      }
     }
   }
 
-  // Grant after the tables exist, mirroring Supabase's default grants. RLS is
-  // what constrains these roles; the grant only makes the tables reachable.
   await db.exec(`
     grant select, insert, update, delete on all tables in schema public to authenticated;
     grant select on all tables in schema public to anon;

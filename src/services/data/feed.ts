@@ -53,6 +53,9 @@ export type FeedSchema = 'social' | 'legacy';
 /** In the order the reaction picker shows them. */
 export const REACTIONS: readonly Reaction[] = ['like', 'love', 'care', 'haha', 'wow', 'sad', 'angry'];
 
+/** The mark a question's author leaves on the reply that got them unstuck. */
+export const CREDIT_MARK: Reaction = 'care';
+
 export const POST_MAX_LENGTH = 5000;
 export const COMMENT_MAX_LENGTH = 2000;
 
@@ -61,7 +64,7 @@ const POST_AUTHOR = `author:profiles!posts_author_id_fkey (${AUTHOR_COLUMNS})`;
 const POST_BASE = 'id, author_id, problem_id, community_id, body, like_count, comment_count, deleted_at, created_at, updated_at';
 const POST_COLUMNS = `${POST_BASE}, ${POST_AUTHOR}`;
 const SOCIAL_POST_COLUMNS = `${POST_BASE}, edited_at, shared_post_id, share_count, images, ${POST_AUTHOR}`;
-const SHARED_POST_COLUMNS = `id, author_id, problem_id, body, deleted_at, created_at, images, ${POST_AUTHOR}`;
+const SHARED_POST_COLUMNS = `id, author_id, problem_id, community_id, body, deleted_at, created_at, images, ${POST_AUTHOR}`;
 const COMMENT_AUTHOR = `author:profiles!comments_author_id_fkey (${AUTHOR_COLUMNS})`;
 const COMMENT_BASE = 'id, post_id, author_id, body, like_count, deleted_at, created_at';
 const COMMENT_COLUMNS = `${COMMENT_BASE}, ${COMMENT_AUTHOR}`;
@@ -88,6 +91,7 @@ function describeError(error: { message: string; code?: string }): string {
   }
   if (error.code === '23505') return 'That has already been done.';
   if (error.code === '23514') {
+    if (/private community/i.test(error.message)) return 'A post from a private circle can only be reposted inside it.';
     if (/no longer available/i.test(error.message)) return 'That post is no longer available to share.';
     if (/same post/i.test(error.message)) return 'That comment is no longer available to reply to.';
     return 'That content is not valid.';
@@ -141,6 +145,43 @@ function tally<K extends string>(rows: Array<Record<K, string> & { reaction: Rea
 }
 
 /**
+ * Which of these communities are closed, given the rows that could be read.
+ *
+ * It fails closed. A community is open only when its row came back and says
+ * so: one that could not be read (it is private and the viewer has left, or
+ * the lookup failed and `rows` is null) counts as closed.
+ */
+export function closedAmong(ids: readonly string[], rows: ReadonlyArray<{ id: string; is_private: boolean }> | null): Set<string> {
+  const open = new Set((rows ?? []).filter((row) => row.is_private === false).map((row) => row.id));
+  return new Set(ids.filter((id) => !open.has(id)));
+}
+
+/**
+ * Mark each post, and each original it shares, that sits inside a closed
+ * community.
+ *
+ * Who is reading or typing travels over channels anyone can join, and a share
+ * carries the id of what it shares. The feed needs to know which posts must
+ * stay out of both. One query for the page, and none when no post is in a
+ * community at all.
+ */
+async function markWalled(client: NonNullable<typeof supabase>, posts: PostWithAuthor[]): Promise<void> {
+  const subjects: Array<{ community_id?: string | null; walled?: boolean }> = [];
+  for (const post of posts) {
+    subjects.push(post);
+    if (post.shared_post) subjects.push(post.shared_post);
+  }
+
+  const ids = [...new Set(subjects.map((subject) => subject.community_id).filter((id): id is string => Boolean(id)))];
+  let closed = new Set<string>();
+  if (ids.length > 0) {
+    const { data, error } = await client.from('communities').select('id, is_private').in('id', ids);
+    closed = closedAmong(ids, error ? null : ((data ?? []) as Array<{ id: string; is_private: boolean }>));
+  }
+  for (const subject of subjects) subject.walled = Boolean(subject.community_id && closed.has(subject.community_id));
+}
+
+/**
  * Attach reactions, saves and share originals to a page of posts.
  *
  * Each is one set-membership query over the page rather than a correlated
@@ -177,6 +218,7 @@ async function decoratePosts(
         post.viewer_has_saved = savedIds.has(post.id);
       }
     }
+    await markWalled(client, posts);
     return posts;
   }
 
@@ -212,6 +254,7 @@ async function decoratePosts(
       post.viewer_has_saved = savedIds.has(post.id);
     }
   }
+  await markWalled(client, posts);
   return posts;
 }
 
@@ -220,11 +263,12 @@ async function decorateComments(
   comments: CommentWithAuthor[],
   viewerId: string | null,
   schema: FeedSchema,
+  creditFrom: string | null = null,
 ): Promise<CommentWithAuthor[]> {
   if (comments.length === 0) return comments;
   const ids = comments.map((comment) => comment.id);
 
-  const [counts, mine] = await Promise.all([
+  const [counts, mine, credits] = await Promise.all([
     schema === 'social'
       ? rowsOf<{ comment_id: string; reaction: Reaction; total: number }>(
           client.from('comment_reaction_counts').select('comment_id, reaction, total').in('comment_id', ids),
@@ -239,13 +283,21 @@ async function decorateComments(
             .in('comment_id', ids),
         )
       : Promise.resolve([]),
+    // The "Helped" mark the asker left on a comment is the credit for getting them unstuck.
+    creditFrom && schema === 'social'
+      ? rowsOf<{ comment_id: string }>(
+          client.from('comment_likes').select('comment_id').eq('user_id', creditFrom).eq('reaction', CREDIT_MARK).in('comment_id', ids),
+        )
+      : Promise.resolve([]),
   ]);
 
+  const credited = new Set(credits.map((row) => row.comment_id));
   const reactionsByComment = tally(counts, 'comment_id');
   const viewerReactions = new Map(mine.map((row) => [row.comment_id, row.reaction ?? 'like']));
 
   for (const comment of comments) {
     comment.reactions = reactionsByComment.get(comment.id) ?? (comment.like_count > 0 ? { like: comment.like_count } : {});
+    comment.credited = credited.has(comment.id) && comment.author_id !== creditFrom;
     if (viewerId) comment.viewer_reaction = viewerReactions.get(comment.id) ?? null;
   }
   return comments;
@@ -263,11 +315,43 @@ export interface PostFeed extends QueryState<PostWithAuthor[]> {
   reload: () => Promise<void>;
 }
 
-/** Which posts a feed shows: everyone's, the viewer's saved posts, or the viewer's own. */
-export type FeedView = 'all' | 'saved' | 'mine';
+/**
+ * Whose posts a feed shows: everyone's, the people the viewer follows, the
+ * viewer's saved posts, or the viewer's own.
+ */
+export type FeedView = 'all' | 'following' | 'saved' | 'mine';
+
+/** Newest first, or the posts that drew the most marks in the last week. */
+export type FeedSort = 'latest' | 'top';
+
+const TOP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const FOLLOWING_LIMIT = 150;
+
+export interface FeedOptions {
+  problemId?: string;
+  viewerId?: string | null;
+  view?: FeedView;
+  /**
+   * Keep posts whose text starts with this, as a `LIKE` pattern ("#stuck%").
+   * A post's kind is the tag it opens with; see `kindPattern` in the model.
+   */
+  startsWith?: string | null;
+  /** Keep posts that carry this technique tag, without the `#`. */
+  tag?: string | null;
+  /** Keep one person's posts. */
+  authorId?: string | null;
+  /** Keep the posts made inside one circle. */
+  circleId?: string | null;
+  sort?: FeedSort;
+  limit?: number;
+}
+
+/** Only what a tag can be made of ever reaches a pattern, so none of it is a wildcard. */
+const safeTag = (tag: string): string => tag.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
 /**
- * Live discussion feed, optionally scoped to one problem.
+ * Live discussion feed, optionally narrowed to a problem, a kind of post, a
+ * technique, or a set of people.
  *
  * `limit` is deliberately not part of the live-query key: raising it to load
  * more keeps the posts already on screen until the longer page arrives,
@@ -279,10 +363,9 @@ export type FeedView = 'all' | 'saved' | 'mine';
  * author until the next full load. Refetching costs one indexed query per
  * change and keeps every row complete.
  */
-export function usePostFeed(
-  options: { problemId?: string; viewerId?: string | null; view?: FeedView; limit?: number } = {},
-): PostFeed {
-  const { problemId, viewerId, limit = 30 } = options;
+export function usePostFeed(options: FeedOptions = {}): PostFeed {
+  const { problemId, viewerId, limit = 30, startsWith = null, authorId = null, circleId = null, sort = 'latest' } = options;
+  const tag = options.tag ? safeTag(options.tag) : null;
   const view = viewerId ? options.view ?? 'all' : 'all';
   const load = useCallback(async (): Promise<FeedPage> => {
     const client = supabase;
@@ -293,11 +376,33 @@ export function usePostFeed(
       .from('posts')
       .select(schema === 'social' ? SOCIAL_POST_COLUMNS : POST_COLUMNS)
       .is('deleted_at', null)
-      .order('created_at', { ascending: false })
       .limit(limit);
 
+    // "Top" is this week's posts by the marks they drew; ties fall back to recency.
+    if (sort === 'top') query = query.gte('created_at', new Date(Date.now() - TOP_WINDOW_MS).toISOString()).order('like_count', { ascending: false });
+    query = query.order('created_at', { ascending: false });
+
     if (problemId && problemId !== 'All') query = query.eq('problem_id', problemId);
+    if (startsWith) query = query.ilike('body', startsWith);
+    if (tag) query = query.ilike('body', `%#${tag}%`);
+    if (authorId) query = query.eq('author_id', authorId);
+    if (circleId) query = query.eq('community_id', circleId);
     if (view === 'mine' && viewerId) query = query.eq('author_id', viewerId);
+    if (view === 'following' && viewerId) {
+      // The ids travel in the request line, at about forty bytes each, and a
+      // gateway refuses a line much past 8 KB. So the newest follows are read,
+      // not all of them, and a failed read is an error rather than "nobody".
+      const followed = await client
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', viewerId)
+        .order('created_at', { ascending: false })
+        .limit(FOLLOWING_LIMIT);
+      if (followed.error) throw Error(describeError(followed.error));
+      const ids = ((followed.data ?? []) as Array<{ following_id: string }>).map((row) => row.following_id);
+      if (ids.length === 0) return { schema, posts: [] };
+      query = query.in('author_id', ids);
+    }
     if (view === 'saved' && viewerId) {
       // Saves are private rows, so the set is read first and the posts second.
       const saved = await rowsOf<{ post_id: string }>(
@@ -312,15 +417,17 @@ export function usePostFeed(
 
     const posts = (data ?? []) as unknown as PostWithAuthor[];
     return { schema, posts: await decoratePosts(client, posts, viewerId ?? null, schema) };
-  }, [problemId, viewerId, view, limit]);
+  }, [problemId, viewerId, view, limit, startsWith, tag, authorId, circleId, sort]);
 
-  const state = useLiveQuery(`posts:${problemId ?? 'All'}:${view}:${viewerId ?? 'guest'}`, EMPTY_FEED, load);
+  const key = `posts:${problemId ?? 'All'}:${view}:${viewerId ?? 'guest'}:${startsWith ?? ''}:${tag ?? ''}:${authorId ?? ''}:${circleId ?? ''}:${sort}`;
+  const state = useLiveQuery(key, EMPTY_FEED, load);
   useRealtimeSubscription({ table: 'posts', onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'post_likes' }, () => void state.reload());
   useRealtimeSubscription({ table: 'profiles' }, () => void state.reload());
   useRealtimeSubscription({ table: 'communities', onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'community_members', enabled: Boolean(viewerId), onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'saved_posts', filter: viewerId ? `user_id=eq.${viewerId}` : undefined, enabled: Boolean(viewerId) }, () => void state.reload());
+  useRealtimeSubscription({ table: 'follows', filter: viewerId ? `follower_id=eq.${viewerId}` : undefined, enabled: Boolean(viewerId) && view === 'following' }, () => void state.reload());
 
   return {
     data: state.data.posts,
@@ -354,6 +461,19 @@ export async function fetchPost(postId: string, viewerId: string | null): Promis
   return post ?? null;
 }
 
+/**
+ * How many posts a problem's thread holds, without reading any of them.
+ * Resolves to null when it cannot be counted, so a caller shows no figure
+ * rather than a wrong zero.
+ */
+export async function countThread(problemId: string): Promise<number | null> {
+  const client = supabase;
+  if (!client) return null;
+
+  const { count, error } = await client.from('posts').select('id', { count: 'exact', head: true }).eq('problem_id', problemId).is('deleted_at', null);
+  return error ? null : count ?? 0;
+}
+
 interface CommentPage {
   schema: FeedSchema | null;
   comments: CommentWithAuthor[];
@@ -366,8 +486,13 @@ export interface CommentFeed extends QueryState<CommentWithAuthor[]> {
   reload: () => Promise<void>;
 }
 
-/** Live comments for one post, replies included, oldest first. */
-export function useComments(postId: string | null, viewerId: string | null = null): CommentFeed {
+/**
+ * Live comments for one post, replies included, oldest first.
+ *
+ * `creditFrom` is the author of a question that has been marked unstuck: the
+ * comment that author marked "Helped" comes back with `credited` set.
+ */
+export function useComments(postId: string | null, viewerId: string | null = null, creditFrom: string | null = null): CommentFeed {
   const load = useCallback(async (): Promise<CommentPage> => {
     const client = supabase;
     if (!client || !postId) return EMPTY_COMMENTS;
@@ -383,10 +508,10 @@ export function useComments(postId: string | null, viewerId: string | null = nul
     if (error) throw Error(describeError(error));
 
     const comments = (data ?? []) as unknown as CommentWithAuthor[];
-    return { schema, comments: await decorateComments(client, comments, viewerId, schema) };
-  }, [postId, viewerId]);
+    return { schema, comments: await decorateComments(client, comments, viewerId, schema, creditFrom) };
+  }, [postId, viewerId, creditFrom]);
 
-  const state = useLiveQuery('comments:' + (postId ?? 'none') + ':' + (viewerId ?? 'guest'), EMPTY_COMMENTS, load);
+  const state = useLiveQuery('comments:' + (postId ?? 'none') + ':' + (viewerId ?? 'guest') + ':' + (creditFrom ?? ''), EMPTY_COMMENTS, load);
   useRealtimeSubscription({ table: 'comments', filter: postId ? `post_id=eq.${postId}` : undefined, enabled: Boolean(postId), onReconnect: state.reload }, () => void state.reload());
   useRealtimeSubscription({ table: 'comment_likes', enabled: Boolean(postId) }, () => void state.reload());
   useRealtimeSubscription({ table: 'profiles', enabled: Boolean(postId) }, () => void state.reload());
@@ -398,6 +523,20 @@ export function useComments(postId: string | null, viewerId: string | null = nul
     error: state.error,
     reload: state.reload,
   };
+}
+
+/** The top-level comments on a post, oldest first: the replies a question's author chooses from. */
+export async function fetchTopLevelComments(postId: string): Promise<CommentWithAuthor[]> {
+  const client = supabase;
+  if (!client) return [];
+
+  const schema = await detectFeedSchema();
+  let query = client.from('comments').select(schema === 'social' ? SOCIAL_COMMENT_COLUMNS : COMMENT_COLUMNS).eq('post_id', postId).is('deleted_at', null);
+  if (schema === 'social') query = query.is('parent_id', null);
+  const { data, error } = await query.order('created_at', { ascending: true }).limit(60);
+
+  if (error) throw Error(describeError(error));
+  return (data ?? []) as unknown as CommentWithAuthor[];
 }
 
 /**

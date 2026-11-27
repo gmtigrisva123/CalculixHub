@@ -10,6 +10,8 @@ import {
   pointsCurve,
   solvedDots,
   sparkPaths,
+  standing,
+  thinnestTopic,
   weekTotal,
 } from './dashboardModel';
 import { buildMachine, dft, FIGURES, gcd, koch, resample, starPolygon, tipAt, type Point } from './fourier';
@@ -165,5 +167,56 @@ describe('the drawing machine', () => {
       ...machine.path.map(([x, y]) => Math.min(...centred.map(([cx, cy]) => Math.hypot(cx - x, cy - y)))),
     );
     expect(worst).toBeLessThan(0.02);
+  });
+});
+
+describe('where to practise next', () => {
+  const topics = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'] as const;
+
+  it('names the topic with the least mastery, beside the one with the most', () => {
+    expect(thinnestTopic({ Algebra: 62, Geometry: 71, Combinatorics: 38, 'Number Theory': 47 }, topics)).toEqual({
+      topic: 'Combinatorics',
+      mastery: 38,
+      ahead: { topic: 'Geometry', mastery: 71 },
+    });
+  });
+
+  it('breaks a tie by the order the topics are listed in', () => {
+    expect(thinnestTopic({ Algebra: 20, Geometry: 10, Combinatorics: 10, 'Number Theory': 30 }, topics)?.topic).toBe('Geometry');
+  });
+
+  it('has nothing to compare when every topic stands level', () => {
+    expect(thinnestTopic({ Algebra: 40, Geometry: 40, Combinatorics: 40, 'Number Theory': 40 }, topics)).toEqual({ topic: 'Algebra', mastery: 40, ahead: null });
+  });
+
+  it('recommends nothing before any practice', () => {
+    expect(thinnestTopic({}, topics)).toBeNull();
+    expect(thinnestTopic({ Algebra: 0, Geometry: 0, Combinatorics: 0, 'Number Theory': 0 }, topics)).toBeNull();
+  });
+
+  it('treats a rating outside 0 to 100, or not a number, as the nearest end', () => {
+    expect(thinnestTopic({ Algebra: -5, Geometry: 140, Combinatorics: Number.NaN, 'Number Theory': 12 }, topics)).toEqual({
+      topic: 'Algebra',
+      mastery: 0,
+      ahead: { topic: 'Geometry', mastery: 100 },
+    });
+  });
+});
+
+describe('standing', () => {
+  it('says so when nothing has been solved', () => {
+    expect(standing({ streak: 0, weekPoints: 0, solved: 0 })).toBe('Nothing solved yet. Your first answers set your level in each topic.');
+  });
+
+  it('reports a streak and the week together, or whichever there is', () => {
+    expect(standing({ streak: 6, weekPoints: 45, solved: 38 })).toBe('6 days in a row, and 45 points this week.');
+    expect(standing({ streak: 3, weekPoints: 0, solved: 9 })).toBe('3 days in a row.');
+    expect(standing({ streak: 1, weekPoints: 1, solved: 1 })).toBe('1 point this week.');
+    expect(standing({ streak: 0, weekPoints: 1250, solved: 80 })).toBe('1,250 points this week.');
+  });
+
+  it('does not invent progress for a quiet week', () => {
+    expect(standing({ streak: 0, weekPoints: 0, solved: 12 })).toBe('No practice yet this week.');
+    expect(standing({ streak: 1, weekPoints: 0, solved: 12 })).toBe('No practice yet this week.');
   });
 });

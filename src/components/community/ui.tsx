@@ -63,9 +63,9 @@ export function Avatar({
   className?: string;
 }) {
   // The name is always printed beside the avatar, so the image itself is
-  // decorative and is not announced a second time. Without a photo -- or
-  // signed out -- it is the default silhouette.
-  return <UserAvatar src={author?.avatar_url} className={`cm-avatar ${className}`} style={{ width: size, height: size }} />;
+  // decorative and is not announced a second time. Without a photo it is the
+  // person's own figure, drawn from their id; signed out, the plain silhouette.
+  return <UserAvatar src={author?.avatar_url} seed={author?.id} className={`cm-avatar ${className}`} style={{ width: size, height: size }} />;
 }
 
 // ---------------------------------------------------------------------------

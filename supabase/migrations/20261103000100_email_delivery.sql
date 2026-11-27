@@ -5,7 +5,9 @@ begin;
 -- Two rules, both enforced in the database so no client can skip them:
 --
 --   1. Every notification a learner receives is also emailed to them.
---   2. Every new post is emailed to every other learner on the server.
+--   2. Every new post is emailed to every other learner who can read it: all
+--      of them, unless the post is in a private community, when only its
+--      members are told.
 --
 -- Mail is never sent from inside a transaction. The triggers below only write
 -- rows into `email_outbox`, in the same transaction as the notification or the
@@ -158,6 +160,11 @@ create trigger notifications_enqueue_email
 
 -- Rule 2. One row per learner, so each delivery is tracked and retried on its
 -- own. The author is not told about their own post.
+--
+-- A post in a private community goes to its members and nobody else. This
+-- function runs as the owner, so row-level security does not apply to it: the
+-- wall has to be written out here, or the post is mailed, quoted, to everyone
+-- on the server.
 create or replace function public.enqueue_post_broadcast()
 returns trigger
 language plpgsql
@@ -171,6 +178,17 @@ begin
   where u.id <> new.author_id
     and public.email_recipient_ok(u.id)
     and public.email_same_cohort(u.id, new.author_id)
+    and (
+      new.community_id is null
+      or not exists (
+        select 1 from public.communities c
+        where c.id = new.community_id and c.is_private
+      )
+      or exists (
+        select 1 from public.community_members m
+        where m.community_id = new.community_id and m.user_id = u.id
+      )
+    )
   on conflict do nothing;
   return null;
 end;
@@ -258,6 +276,11 @@ $$;
 -- queue instead of sending everything twice. A row left in `sending` by a
 -- dispatcher that died is reclaimed after ten minutes. Everything the email
 -- needs is returned with the row, so rendering costs no further queries.
+--
+-- The email is written from the post or notification as it is now, not as it
+-- was when the row was queued, so what the recipient may read is asked again
+-- first: community-privacy-setup.sql, where it is installed, sets aside mail
+-- for anyone who has left a private community in the meantime.
 create or replace function public.claim_email_outbox(batch_size integer default 50)
 returns table (
   id bigint,
@@ -273,6 +296,10 @@ set search_path = public, pg_temp
 as $$
 #variable_conflict use_column
 begin
+  if to_regprocedure('privacy.sweep_email_outbox()') is not null then
+    execute 'select privacy.sweep_email_outbox()';
+  end if;
+
   return query
   with picked as (
     select o.id
@@ -334,5 +361,21 @@ $$;
 
 revoke all on function public.claim_email_outbox(integer) from public, anon, authenticated;
 grant execute on function public.claim_email_outbox(integer) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- Private communities
+-- ---------------------------------------------------------------------------
+
+-- community-privacy-setup.sql guards the queue itself, so that a notification
+-- about a private post is never mailed to someone outside it either. It can
+-- only do that once the queue exists. Applied before this file, it left the
+-- guard to be attached here; applied after, it attaches the guard itself.
+do $$
+begin
+  if to_regprocedure('privacy.wire_email()') is not null then
+    execute 'select privacy.wire_email()';
+  end if;
+end;
+$$;
 
 commit;

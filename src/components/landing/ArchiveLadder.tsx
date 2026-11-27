@@ -17,7 +17,7 @@ import { m, useReducedMotion, useScroll, useSpring, useTransform, useVelocity, t
 import MathText from '../MathText';
 import { ARCHIVE_CONTESTS, ARCHIVE_FIGURES } from './archiveFigures';
 import { ARCHIVE_SAMPLES } from './archiveSamples';
-import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SplitText } from './kit';
+import { Arrow, CountUp, GLIDE, Magnetic, Rise, SplitText } from './kit';
 
 /** Each bank's step, as a share of the tallest: a staircase of difficulty, not of size. */
 const STEP = [0.44, 0.61, 0.8, 1];
@@ -34,12 +34,9 @@ export default function ArchiveLadder() {
     <section className="lx-archive" id="archive" data-tone="paper" aria-labelledby="lx-archive-title">
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
-          <div>
-            <Eyebrow index="05">Past papers</Eyebrow>
-            <SplitText as="h2" id="lx-archive-title" className="lx-h2" text={'Every past paper,\n*from AMC to IMO.*'} />
-          </div>
+          <SplitText as="h2" id="lx-archive-title" className="lx-h2" text={'Every past paper,\nfrom *AMC to IMO.*'} />
           <Rise as="p" className="lx-lead" delay={0.1}>
-            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} problems from {ARCHIVE_FIGURES.papers} past exams, every one of them worth an afternoon. Take a whole paper, or one problem at a time.
+            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} problems from {ARCHIVE_FIGURES.papers} past exams, {ARCHIVE_FIGURES.firstYear} to {ARCHIVE_FIGURES.lastYear}. Take a whole paper, or one problem at a time.
           </Rise>
         </header>
       </div>

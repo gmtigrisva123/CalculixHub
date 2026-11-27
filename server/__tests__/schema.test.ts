@@ -346,11 +346,14 @@ describe('private communities', () => {
     ).rejects.toThrow(/row-level security/i);
   });
 
-  it('reveals the community once the learner joins', async () => {
-    await db.asUser(eve, 'insert into public.community_members (community_id, user_id) values ($1, $2)', [
-      communityId,
-      eve,
-    ]);
+  it('refuses a self-join, and reveals the community once the learner is added', async () => {
+    // Knowing the id is not an invitation (see communityRoles.test.ts).
+    await expect(
+      db.asUser(eve, 'insert into public.community_members (community_id, user_id) values ($1, $2)', [communityId, eve]),
+    ).rejects.toThrow(/cannot join this community/i);
+
+    // Until there is an invitation flow, the service role adds members to a private community.
+    await db.query('insert into public.community_members (community_id, user_id) values ($1, $2)', [communityId, eve]);
 
     expect(await db.asUser(eve, 'select id from public.communities where id = $1', [communityId])).toHaveLength(1);
     expect(await db.asUser(eve, 'select id from public.posts where community_id = $1', [communityId])).toHaveLength(1);

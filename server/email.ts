@@ -18,6 +18,8 @@
  * deployment that has not configured mail loses nothing.
  */
 
+import { parsePost, redactSealed, type PostKind } from '../shared/postMarkup';
+
 export interface ClaimedEmail {
   id: number;
   kind: 'notification' | 'new_post';
@@ -66,8 +68,8 @@ export function notificationHeadline(payload: Record<string, unknown>): string {
   const who = str(payload.actor) || 'Someone';
   switch (payload.type) {
     case 'follow': return `${who} started following you`;
-    case 'post_like': return `${who} reacted to your post`;
-    case 'comment_like': return `${who} reacted to your comment`;
+    case 'post_like': return `${who} left a mark on your post`;
+    case 'comment_like': return `${who} left a mark on your comment`;
     case 'post_comment': return `${who} commented on your post`;
     case 'comment_reply': return `${who} replied to your comment`;
     case 'mention': return payload.entity_type === 'comment' ? `${who} mentioned you in a comment` : `${who} mentioned you in a post`;
@@ -87,6 +89,25 @@ function notificationLink(siteUrl: string, payload: Record<string, unknown>): st
   }
   return `${siteUrl}/?tab=inbox`;
 }
+
+/**
+ * What a post or comment may show of itself in an email.
+ *
+ * The kind tag a post opens with is a filing instruction, not prose, so it is
+ * read and dropped. Sealed hints and hidden words are replaced by a note that
+ * they exist: a broadcast goes to every member, and the whole point of sealing
+ * a step is that nobody meets it before they ask to.
+ */
+function quotable(body: string, max: number): string {
+  return clip(redactSealed(parsePost(body).text), max);
+}
+
+const POST_HEADLINE: Record<PostKind, (author: string) => string> = {
+  solution: author => `${author} wrote up a solution`,
+  stuck: author => `${author} is stuck and asked for a nudge`,
+  trick: author => `${author} shared a trick`,
+  challenge: author => `${author} set a challenge`,
+};
 
 /* One layout for every message: table-based and inline-styled, because that is
  * what Gmail, Outlook and Apple Mail all render the same way. */
@@ -114,7 +135,7 @@ export function renderEmail(job: ClaimedEmail, siteUrl: string): RenderedEmail |
 
   if (job.kind === 'notification') {
     const headline = notificationHeadline(payload);
-    const quote = payload.type !== 'system' && str(payload.body) ? clip(str(payload.body), 400) : undefined;
+    const quote = (payload.type !== 'system' && quotable(str(payload.body), 400)) || undefined;
     const href = notificationLink(siteUrl, payload);
     const cta = payload.type === 'message' ? 'Open your inbox' : payload.type === 'follow' ? 'See your notifications' : 'View it on CalculixHub';
     return {
@@ -127,9 +148,10 @@ export function renderEmail(job: ClaimedEmail, siteUrl: string): RenderedEmail |
 
   if (payload.deleted) return null;
   const author = str(payload.author) || 'A learner';
-  const body = clip(str(payload.body).trim(), 600);
+  const { kind } = parsePost(str(payload.body));
+  const body = quotable(str(payload.body), 600);
   const href = `${siteUrl}/?${new URLSearchParams({ tab: 'community', post: str(payload.post_id) })}`;
-  const headline = `${author} posted in Community`;
+  const headline = kind ? POST_HEADLINE[kind](author) : `${author} posted in Community`;
   return {
     to: job.recipient_email,
     subject: clip(body ? `${author}: ${body.split('\n')[0]}` : headline, 120),

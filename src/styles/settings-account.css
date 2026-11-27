@@ -83,7 +83,7 @@
 .se-confirm form { display: grid; gap: 16px; padding: 26px; }
 .se-confirm-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: color-mix(in srgb, #b13a26 12%, transparent); color: #b13a26; }
 :root[data-theme='dark'] .se-confirm-mark { color: #f0957c; }
-.se-confirm h2 { margin: 0; font: 400 26px/1.15 'Newsreader', Georgia, serif; letter-spacing: -.02em; }
+.se-confirm h2 { margin: 0; font: 600 22px/1.2 'Geist', system-ui, sans-serif; letter-spacing: -.03em; }
 .se-confirm ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .se-confirm li { position: relative; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--ct-muted); }
 .se-confirm li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }

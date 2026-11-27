@@ -1,5 +1,5 @@
-import { forwardRef, useMemo, useRef } from 'react';
-import { ArrowDownUp, Search } from 'lucide-react';
+import { forwardRef, useMemo, useRef, useState } from 'react';
+import { ArrowDownUp, ChevronDown, Search } from 'lucide-react';
 import { ARCHIVE_FAMILIES, ARCHIVE_SOURCES, type ArchiveFamily, type ArchivePaper } from '../../domain/examArchive';
 import type { ArchiveProgressMap } from '../../services/data/examArchiveProgress';
 import PaperPlate from './PaperPlate';
@@ -30,7 +30,16 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'saved', label: 'Saved for later' },
 ];
 
-/** The shelves: every paper, filterable, grouped by decade, with a ruler to jump through time. */
+/** How many papers of a decade are on show before the rest are asked for: two rows on a wide screen. */
+const SHELF = 8;
+/** A decade this close to one shelf is simply shown whole. */
+const SHELF_SLACK = 4;
+
+/**
+ * The shelves: every paper, filterable, grouped by decade, with a ruler to jump
+ * through time. A long decade shows its first two rows and keeps the rest one
+ * press away, so the page is a list of decades rather than three hundred cards.
+ */
 const PaperLibrary = forwardRef<HTMLHeadingElement, LibraryProps>(function PaperLibrary(props, headingRef) {
   const { papers, progress, family, onFamily, status, onStatus, query, onQuery, sort, onSort, saveLabel, onOpen, onToggleSave, onPrefetch, reduce } = props;
   const visible = useMemo(() => filterPapers(papers, { family, status, query, progress }), [papers, family, status, query, progress]);
@@ -52,6 +61,15 @@ const PaperLibrary = forwardRef<HTMLHeadingElement, LibraryProps>(function Paper
     }
     return [...byName.values()];
   }, [papers]);
+
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleDecade = (key: string) =>
+    setOpened(current => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const toolbarRef = useRef<HTMLDivElement>(null);
   const jump = (key: string) => {
@@ -118,15 +136,24 @@ const PaperLibrary = forwardRef<HTMLHeadingElement, LibraryProps>(function Paper
       </li>)}</ol>
     </nav>}
 
-    {groups.map(group => <section key={group.key} className="xa-decade" id={`xa-decade-${group.key}`} aria-labelledby={`xa-decade-title-${group.key}`}>
-      <div className="xa-decade-head">
-        <h3 id={`xa-decade-title-${group.key}`} tabIndex={-1}>{group.label}</h3>
-        <p>{group.papers.length} {group.papers.length === 1 ? 'paper' : 'papers'} · {group.papers.reduce((sum, paper) => sum + paper.questions.length, 0).toLocaleString('en-US')} problems</p>
-      </div>
-      <ol className="xa-plates">
-        {group.papers.map(paper => <PaperPlate key={paper.id} paper={paper} progress={progress[paper.id]} onOpen={onOpen} onToggleSave={onToggleSave} onPrefetch={onPrefetch} />)}
-      </ol>
-    </section>)}
+    {groups.map(group => {
+      const long = group.papers.length > SHELF + SHELF_SLACK;
+      const open = !long || opened.has(group.key);
+      const shown = open ? group.papers : group.papers.slice(0, SHELF);
+      return <section key={group.key} className="xa-decade" id={`xa-decade-${group.key}`} aria-labelledby={`xa-decade-title-${group.key}`}>
+        <div className="xa-decade-head">
+          <h3 id={`xa-decade-title-${group.key}`} tabIndex={-1}>{group.label}</h3>
+          <p>{group.papers.length} {group.papers.length === 1 ? 'paper' : 'papers'} · {group.papers.reduce((sum, paper) => sum + paper.questions.length, 0).toLocaleString('en-US')} problems</p>
+        </div>
+        <ol className="xa-plates" id={`xa-plates-${group.key}`}>
+          {shown.map(paper => <PaperPlate key={paper.id} paper={paper} progress={progress[paper.id]} onOpen={onOpen} onToggleSave={onToggleSave} onPrefetch={onPrefetch} />)}
+        </ol>
+        {long && <button type="button" className="xa-more" aria-expanded={open} aria-controls={`xa-plates-${group.key}`} onClick={() => toggleDecade(group.key)}>
+          <ChevronDown size={15} aria-hidden="true" />
+          {open ? `Show the first ${SHELF} only` : `Show the other ${group.papers.length - SHELF} from ${group.label === 'Adapted sets' ? 'the adapted sets' : `the ${group.label}`}`}
+        </button>}
+      </section>;
+    })}
 
     {!visible.length && <div className="xa-empty">
       <p>{status === 'saved' ? 'No saved papers here yet. Use the bookmark on any paper to keep it for later.'

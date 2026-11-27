@@ -221,14 +221,14 @@ async function runBot(person, browser) {
         const grid = page.getByRole('group', { name: /^Digit 1$/ });
         if (await visible(grid)) {
           const columns = await page.getByRole('group', { name: /^Digit \d+$/ }).count();
-          for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Column ${c}, digit ${Math.floor(random() * 10)}` }).click();
+          for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Digit ${c}: ${Math.floor(random() * 10)}`, exact: true }).click();
         } else if (await visible(page.getByPlaceholder(/numerical or algebraic/))) {
           await page.getByPlaceholder(/numerical or algebraic/).fill(String(Math.floor(random() * 200)));
         } else {
           const options = page.locator('main .space-y-2 > button');
           if (await options.count()) await options.nth(Math.floor(random() * (await options.count()))).click();
         }
-        await page.getByRole('button', { name: /^Submit (Your )?Answer/ }).click();
+        await page.getByRole('button', { name: /^Submit (your )?answer/i }).click();
         await settle(page, 900);
         outcomes.push((await page.locator('[role=status], [role=alert]').allInnerTexts().catch(() => [])).join(' ').slice(0, 120) || 'submitted');
         await navigate(page, 'Learn');
@@ -238,12 +238,15 @@ async function runBot(person, browser) {
 
     await step('community-post', async () => {
       await navigate(page, 'Community');
-      await page.getByRole('region', { name: 'Create a post' }).getByRole('button').first().click();
-      const box = page.getByRole('textbox', { name: 'Create post' });
+      // Four ways to write on a wide screen, one button on a phone. Any of them opens the composer.
+      const ways = page.getByRole('region', { name: 'Write a post' }).getByRole('button');
+      await ways.nth(Math.floor(random() * (await ways.count()))).click();
+      const composer = page.getByRole('dialog');
+      const box = composer.getByRole('textbox').first();
       await box.waitFor();
       await box.click();
       await page.keyboard.type(pick(POSTS), { delay: 8 });
-      await page.getByRole('button', { name: 'Post', exact: true }).click();
+      await composer.getByRole('button', { name: 'Post', exact: true }).click();
       await box.waitFor({ state: 'hidden', timeout: 15_000 });
       await settle(page, 800);
       return 'posted';
@@ -251,16 +254,25 @@ async function runBot(person, browser) {
 
     await step('community-comment-react', async () => {
       const feed = page.getByRole('region', { name: 'Community feed' });
-      const posts = feed.locator('article');
+      const posts = feed.locator('article[id^="post-"]');
       const total = await posts.count();
       if (total === 0) return 'feed empty';
       const target = posts.nth(Math.floor(random() * Math.min(total, 6)));
       await target.scrollIntoViewIfNeeded();
-      const like = target.getByRole('button', { name: 'Like' }).first();
-      if (await visible(like)) await like.click();
-      const commentButton = target.getByRole('button', { name: /^Comment/ }).first();
+      // A write-up of a problem this learner has not solved is covered until asked for.
+      const cover = target.getByRole('button', { name: 'Show the solution' }).first();
+      if (await visible(cover)) await cover.click();
+      // One of the seven margin marks, from the strip the margin's "Mark" button opens.
+      const opener = target.getByRole('button', { name: /^(Leave a mark|Your mark)/ }).first();
+      if (await visible(opener)) {
+        await opener.click();
+        const marks = page.getByRole('toolbar', { name: 'The seven marks' }).getByRole('button');
+        await marks.nth(Math.floor(random() * (await marks.count()))).click();
+      }
+      // The comment button reads "N comments", "Comment", or "Give a nudge" on an open question.
+      const commentButton = target.getByRole('button', { name: /^(\d+ comments?|Comment|Give a nudge)$/ }).first();
       if (await visible(commentButton)) await commentButton.click();
-      const input = page.getByRole('textbox', { name: /Write a comment|Be the first to comment/ }).first();
+      const input = page.getByRole('textbox', { name: /Write a comment|Give a nudge/ }).first();
       await input.waitFor({ timeout: 10_000 });
       await input.click();
       await page.keyboard.type(pick(COMMENTS), { delay: 8 });
@@ -287,14 +299,14 @@ async function runBot(person, browser) {
         await settle(page, 300);
         if (random() < 0.15) { await page.getByRole('button', { name: /Pass this question/ }).click(); await settle(page, 500); continue; }
         const columns = await page.getByRole('group', { name: /^Digit \d+$/ }).count();
-        for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Column ${c}, digit ${Math.floor(random() * 10)}` }).click();
+        for (let c = 1; c <= columns; c += 1) await page.getByRole('button', { name: `Digit ${c}: ${Math.floor(random() * 10)}`, exact: true }).click();
         await page.getByRole('button', { name: 'Submit answer' }).click();
         await settle(page, 700);
         submitted += 1;
       }
       await page.getByRole('button', { name: /Finish my match/ }).click();
       await page.getByRole('button', { name: 'Confirm finish' }).click();
-      await page.getByText('Your match, in perspective.').waitFor({ timeout: 20_000 });
+      await page.getByText('Your match result').waitFor({ timeout: 20_000 });
       return `${submitted} answers in ${rounds} questions`;
     });
 

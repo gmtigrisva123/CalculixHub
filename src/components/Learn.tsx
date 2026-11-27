@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { CheckCircle, HelpCircle, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, Sparkles, BookOpenCheck } from 'lucide-react';
+import { CheckCircle, HelpCircle, ChevronRight, ArrowLeft, RefreshCw, AlertCircle, MessageCircleQuestion, BookOpenCheck } from 'lucide-react';
 import { Problem, Topic, Level, SmartFeedback, UserStats } from '../../shared/types';
 import NumericAnswerGrid from './NumericAnswerGrid';
 import GeometryDiagram from './GeometryDiagram';
@@ -16,7 +16,6 @@ import { TOPIC_META } from '../lib/topics';
 import { apiUrl, apiFetch } from '../services/apiBase';
 import { gradeLocally } from '../platform/offline';
 import { duration, ease, spring, travel } from '../lib/motion';
-import { useAmbient } from '../hooks/useAmbient';
 import { Collapse } from './motion';
 import { EMPTY_PRACTICE, submitPractice } from '../../shared/practiceRules';
 
@@ -101,7 +100,11 @@ export default function Learn({
 
   const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
   const attempt = activeProblem ? attempts[activeProblem.id] : undefined;
-  const locked = Boolean(activeProblem?.proOnly || attempt?.finished || completedProblems.includes(activeProblem?.id ?? ''));
+  const solved = completedProblems.includes(activeProblem?.id ?? '');
+  const locked = Boolean(activeProblem?.proOnly || attempt?.finished || solved);
+  // How many answers this question allows, and how many are spent: the same reading the catalogue card gives.
+  const cap = activeProblem?.maxAttempts ?? maxAttempts;
+  const used = Math.min(attempt?.count ?? 0, cap);
   const [answerInput, setAnswerInput] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
@@ -109,6 +112,9 @@ export default function Learn({
   const [saveError, setSaveError] = useState<SaveError | null>(null);
   const [showFullSolution, setShowFullSolution] = useState(false);
   const [revealedWithoutScore, setRevealedWithoutScore] = useState(false);
+  // A solved or closed question shows its solution whenever that becomes known: the
+  // learner's record can arrive after the question was opened from a link.
+  const solutionOpen = Boolean(activeProblem && !activeProblem.proOnly && (showFullSolution || solved || attempt?.finished));
 
   useEffect(() => {
     if (initialFilters) setView({ ...INITIAL_VIEW, topic: initialFilters.topic ?? 'All', level: initialFilters.level ?? 'All' });
@@ -278,7 +284,7 @@ export default function Learn({
         {
           correct,
           explanation: correct
-            ? 'Correct! Your answer matches the worked solution.'
+            ? 'Correct. Your answer matches the worked solution.'
             : 'Not quite. Check your reasoning and try again while attempts remain.',
           guidance:
             "Answer checked in this browser. Online feedback is currently unavailable.",
@@ -298,8 +304,6 @@ export default function Learn({
     if(live!==activeProblem)setActiveProblem(live);
     if(user&&savedAttempts?.[activeProblem.id]?.finished){setShowFullSolution(!live.proOnly);setRevealedWithoutScore(Boolean(savedAttempts[activeProblem.id].forfeited));}
   },[problems,savedAttempts,user?.id]);
-
-  const idleSparkleRef = useAmbient<SVGSVGElement>();
 
   return (
     <div className="space-y-6">
@@ -330,7 +334,7 @@ export default function Learn({
             {/* Where this question sits: the way back, and what kind of question it is. */}
             <div className="ls-bar">
               <m.button type="button" onClick={handleCloseWorkspace} whileTap={{ scale: 0.96 }} className="ls-back">
-                <ArrowLeft size={16} aria-hidden="true" /> Back to Problem List
+                <ArrowLeft size={16} aria-hidden="true" /> Back to all questions
               </m.button>
               <p className="ls-facts" style={TOPIC_META[activeProblem.topic].vars}>
                 <span className="ls-topic"><i aria-hidden="true" />{activeProblem.topic}</span>
@@ -353,7 +357,7 @@ export default function Learn({
                   {activeProblem.hint && (
                     <div className="ls-hint">
                       <button type="button" onClick={() => setShowHint(!showHint)} aria-expanded={showHint}>
-                        <HelpCircle size={16} aria-hidden="true" /> {showHint ? 'Hide Hint' : 'Need a Hint?'}
+                        <HelpCircle size={16} aria-hidden="true" /> {showHint ? 'Hide hint' : 'Need a hint?'}
                       </button>
                       <Collapse open={showHint}>
                         <div className="ls-hint-body">
@@ -364,9 +368,9 @@ export default function Learn({
                   )}
                 </article>
 
-                {showFullSolution && activeProblem.solution && (
+                {solutionOpen && activeProblem.solution && (
                   <article className="ls-sheet ls-solution">
-                    <h3><BookOpenCheck size={16} aria-hidden="true" /> Worked Solution</h3>
+                    <h3><BookOpenCheck size={16} aria-hidden="true" /> Worked solution</h3>
                     <div className="ls-statement">
                       <MathText text={activeProblem.solution} />
                     </div>
@@ -382,11 +386,15 @@ export default function Learn({
                   <button disabled className="ls-submit">Pro coming soon</button>
                 </section> : <form onSubmit={handleSubmitAnswer} className="ls-panel">
                   <div className="ls-panel-head">
-                    <h3>Submit Your Answer</h3>
-                    <p className="ls-count">
-                      <span className="ls-tries" aria-hidden="true">{[1, 2, 3].map(step => <i key={step} data-used={step <= Math.min(attempt?.count ?? 0, 3)} />)}</span>
-                      {Math.min(attempt?.count ?? 0, 3)} of 3 attempts used{attempt?.forfeited ? ' · No points available' : ''}
-                    </p>
+                    <h3>{solved ? 'Solved' : attempt?.finished ? 'Answers closed' : 'Submit your answer'}</h3>
+                    {solved ? (
+                      <p className="ls-count">You answered this correctly.{solutionOpen && activeProblem.solution ? ' The worked solution is open.' : ''}</p>
+                    ) : (
+                      <p className="ls-count">
+                        <span className="ls-tries" aria-hidden="true">{Array.from({ length: cap }, (_, index) => <i key={index} data-used={index < used} />)}</span>
+                        {used} of {cap} attempts used{attempt?.forfeited ? ' · No points available' : ''}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -406,20 +414,23 @@ export default function Learn({
                     />}
                   </div>
 
-                  <m.button
-                    type="submit"
-                    disabled={!answerInput.trim() || answerInput.includes('_') || evaluating || locked}
-                    whileTap={{ scale: 0.97 }}
-                    className="ls-submit"
-                  >
-                    {evaluating ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Evaluating...
-                      </>
-                    ) : (
-                      'Submit Answer'
-                    )}
-                  </m.button>
+                  {/* A solved or closed question takes no more answers, so it is not offered a button that cannot be pressed. */}
+                  {!locked && (
+                    <m.button
+                      type="submit"
+                      disabled={!answerInput.trim() || answerInput.includes('_') || evaluating}
+                      whileTap={{ scale: 0.97 }}
+                      className="ls-submit"
+                    >
+                      {evaluating ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" /> Checking…
+                        </>
+                      ) : (
+                        'Submit answer'
+                      )}
+                    </m.button>
+                  )}
                 </form>}
 
                 {/* Save failure: not a verdict on the answer, so it is styled and worded apart from one. */}
@@ -434,8 +445,8 @@ export default function Learn({
                   <div className={`ls-verdict ${smartFeedback.correct ? 'is-right' : 'is-wrong'}`}>
                     <strong>
                       {smartFeedback.correct
-                        ? <><CheckCircle size={17} aria-hidden="true" /> Correct!</>
-                        : <><AlertCircle size={17} aria-hidden="true" /> Not quite correct</>}
+                        ? <><CheckCircle size={17} aria-hidden="true" /> Correct</>
+                        : <><AlertCircle size={17} aria-hidden="true" /> Incorrect</>}
                     </strong>
                     <MathText as="p" text={smartFeedback.explanation} />
                     {smartFeedback.guidance && <MathText as="p" className="ls-verdict-note" text={smartFeedback.guidance} />}
@@ -444,15 +455,14 @@ export default function Learn({
 
                 <div className="ls-help">
                   <m.button type="button" onClick={() => onOpenTutor()} whileTap={{ scale: 0.97 }} className="ls-help-item">
-                    <Sparkles ref={idleSparkleRef} size={17} aria-hidden="true" />
-                    <span>Ask Socratic AI Tutor about this problem<small>It asks you questions; it does not hand over the answer.</small></span>
+                    <MessageCircleQuestion size={17} aria-hidden="true" />
+                    <span>Ask the tutor about this problem<small>It asks you questions; it does not hand over the answer.</small></span>
                     <ChevronRight size={16} aria-hidden="true" />
                   </m.button>
-                  {!showFullSolution && !activeProblem.proOnly && (
+                  {!solutionOpen && !activeProblem.proOnly && (
                     <m.button type="button" onClick={handleRevealSolution} disabled={evaluating} whileTap={{ scale: 0.97 }} className="ls-help-item is-reveal">
                       <BookOpenCheck size={17} aria-hidden="true" />
-                      <span>I can&apos;t solve this — show me<small>Opens the worked solution. This problem then earns no points.</small></span>
-                      <em>No points</em>
+                      <span>Show the worked solution<small>The question then earns no points, and the tutor opens to explain it.</small></span>
                     </m.button>
                   )}
                 </div>

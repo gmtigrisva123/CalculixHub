@@ -54,7 +54,7 @@
 
 .scratch-head { display: flex; align-items: center; gap: 12px; padding: 14px 12px 12px 20px; border-bottom: 1px solid var(--scratch-rule-strong); }
 .scratch-head > div:first-child { flex: 1; min-width: 0; }
-.scratch-head h2 { font: italic 400 22px/1.1 'Newsreader', Georgia, serif; letter-spacing: -.01em; }
+.scratch-head h2 { font: 600 18px/1.2 'Geist', system-ui, sans-serif; letter-spacing: -.025em; }
 .scratch-head p { margin-top: 3px; font-size: 12px; opacity: .62; }
 .scratch kbd { padding: 1px 6px; border: 1px solid var(--scratch-rule-strong); border-radius: 5px; font: 600 11px/1.4 'Geist Mono', ui-monospace, monospace; }
 .scratch-pages { display: flex; align-items: center; gap: 2px; }

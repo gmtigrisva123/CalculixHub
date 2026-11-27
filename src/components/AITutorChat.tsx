@@ -11,7 +11,7 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { ArrowUp, Check, ChevronDown, Copy, Maximize2, Minimize2, RotateCcw, Sigma, Sparkles, Square, SquarePen, TriangleAlert, X, Zap } from 'lucide-react';
+import { ArrowUp, Check, ChevronDown, Copy, Maximize2, MessageCircleQuestion, Minimize2, RotateCcw, Sigma, Square, SquarePen, TriangleAlert, X, Zap } from 'lucide-react';
 import MathText from './MathText';
 import TutorConnect from './tutor/TutorConnect';
 import { apiUrl } from '../services/apiBase';
@@ -248,7 +248,7 @@ export default function AITutorChat({ request }: AITutorChatProps) {
       {!isOpen && (
         <m.button id="btn-ai-tutor-toggle" aria-label="Ask the tutor" onClick={() => setIsOpen(true)} whileTap={{ scale: 0.95 }} transition={spring.press}
           className="tutor-fab fixed right-3.5 md:right-6 bottom-20 md:bottom-6 top-auto h-auto max-h-12 z-50 flex items-center gap-2.5 font-semibold text-xs px-4 md:px-5 py-3 rounded-full group cursor-pointer">
-          <Sparkles ref={sparkleRef} className="tutor-fab-spark w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
+          <MessageCircleQuestion ref={sparkleRef} className="tutor-fab-spark w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
           <span className="tutor-fab-label text-xs md:text-sm">Ask the tutor</span>
           {messages.length > 0 && <span className="tu-fab-note" aria-label="Conversation in progress" />}
         </m.button>
@@ -262,7 +262,7 @@ export default function AITutorChat({ request }: AITutorChatProps) {
             {!floats && <span className="tu-grab" aria-hidden="true" />}
 
             <header className="tu-head">
-              <span className="tu-mark" aria-hidden="true"><Sparkles size={17} /></span>
+              <span className="tu-mark" aria-hidden="true"><MessageCircleQuestion size={17} /></span>
               <div className="tu-title">
                 <h2>Tutor</h2>
                 <button type="button" className={`tu-status is-${status.tone}`} onClick={() => setView(view === 'connect' ? 'chat' : 'connect')} aria-expanded={view === 'connect'}>
@@ -279,7 +279,6 @@ export default function AITutorChat({ request }: AITutorChatProps) {
             {view === 'connect' ? (
               <div className="tu-body tu-connect" ref={scroller}>
                 <div className="tu-connect-head">
-                  <p className="tu-kicker">Live tutor</p>
                   <h3>{pending ? 'This explanation needs the live tutor' : key && model ? 'You’re connected' : 'Get real answers, not ready-made hints'}</h3>
                   <p>{pending ? 'Connect once and the explanation you asked for starts straight away.' : 'The tutor answers with Google’s Gemini. It needs a free key from your own Google account, which takes about a minute to get.'}</p>
                 </div>

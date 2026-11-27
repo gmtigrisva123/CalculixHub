@@ -11,7 +11,7 @@
  * described.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import type { LeaderboardRow, ProfileRow, SkillMasteryRow, Topic, UserStatsRow } from '../database.types';
 import type { QueryState } from './feed';
@@ -118,4 +118,83 @@ export async function fetchFollowingIds(viewerId: string): Promise<Set<string>> 
 
   const { data } = await supabase.from('follows').select('following_id').eq('follower_id', viewerId);
   return new Set((data ?? []).map((row) => (row as { following_id: string }).following_id));
+}
+
+const PROFILE_COLUMNS = 'id, username, display_name, avatar_url, bio, country, level, follower_count, following_count, onboarded_at, created_at';
+
+/** One learner's public profile, or null when there is none this viewer may see. */
+export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).maybeSingle();
+  if (error) throw new Error('Could not load that profile. Please try again.');
+  return (data as ProfileRow | null) ?? null;
+}
+
+export interface Following {
+  /** Ids the viewer follows. Empty for a guest, and until the first load lands. */
+  ids: ReadonlySet<string>;
+  /** Follow or unfollow, shown at once and rolled back if the database refuses. */
+  toggle: (targetId: string) => Promise<{ ok: boolean; error?: string; following: boolean }>;
+}
+
+/**
+ * Who the viewer follows, and the one action on it.
+ *
+ * The follow rule lives in the database (a learner may only write their own
+ * follow rows, and never one that points at themselves); this hook only keeps
+ * the screen in step with it.
+ */
+export function useFollowing(viewerId: string | null): Following {
+  const [ids, setIds] = useState<ReadonlySet<string>>(() => new Set());
+  const current = useRef(ids);
+  current.current = ids;
+  // A read that started before a press must not land after it and undo what the
+  // press showed; a second press on the same person waits for the first.
+  const sequence = useRef(0);
+  const pending = useRef(new Set<string>());
+
+  const load = useCallback(async () => {
+    const mine = ++sequence.current;
+    const next = viewerId ? await fetchFollowingIds(viewerId) : new Set<string>();
+    if (mine === sequence.current) setIds(next);
+  }, [viewerId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+  useRealtimeSubscription({ table: 'follows', filter: viewerId ? `follower_id=eq.${viewerId}` : undefined, enabled: Boolean(viewerId), onReconnect: load }, () => void load());
+
+  const toggle = useCallback<Following['toggle']>(
+    async (targetId) => {
+      const following = current.current.has(targetId);
+      if (!viewerId) return { ok: false, error: 'Sign in to follow people.', following };
+      if (pending.current.has(targetId)) return { ok: true, following };
+
+      pending.current.add(targetId);
+      sequence.current += 1;
+      const optimistic = new Set(current.current);
+      if (following) optimistic.delete(targetId);
+      else optimistic.add(targetId);
+      setIds(optimistic);
+
+      try {
+        const result = await setFollowing({ followerId: viewerId, targetId, following });
+        if (!result.ok) {
+          sequence.current += 1;
+          const reverted = new Set(current.current);
+          if (following) reverted.add(targetId);
+          else reverted.delete(targetId);
+          setIds(reverted);
+          return { ...result, following };
+        }
+        return { ok: true, following: !following };
+      } finally {
+        pending.current.delete(targetId);
+      }
+    },
+    [viewerId],
+  );
+
+  return { ids, toggle };
 }

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { ArrowRight, ArrowUpRight, Check, Flame, LocateFixed, RefreshCw, Search, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, Flame, LocateFixed, RefreshCw, Search, Trophy } from 'lucide-react';
 import type { LeaderboardRow } from '../services/database.types';
 import { spring, staggerDelay } from '../lib/motion';
 import UserAvatar from './UserAvatar';
@@ -31,7 +31,7 @@ const METALS = ['gold', 'silver', 'bronze'] as const;
 const HEADROOM = 0.78;
 
 function Avatar({ row, className }: { row: LeaderboardRow; className: string }) {
-  return <span className={`lb-avatar ${className}`} aria-hidden="true"><UserAvatar src={row.avatar_url} /></span>;
+  return <span className={`lb-avatar ${className}`} aria-hidden="true"><UserAvatar src={row.avatar_url} seed={row.user_id} /></span>;
 }
 
 /*
@@ -152,8 +152,7 @@ export default function Leaderboard({ rows, loading, error, onRefresh, currentUs
   return <div className="leaderboard-page">
     <header className="lb-hero">
       <div className="lb-hero-copy">
-        <p className="lb-eyebrow"><span className="lb-pulse" aria-hidden="true" />Live standings · Global · All time</p>
-        <h1>Every solved problem <em>raises the curve.</em></h1>
+        <h1>Every solved problem raises <em>the curve.</em></h1>
         <p className="lb-lede">Learners ranked by the points their saved practice earns. The board moves as new answers come in.</p>
         {rows.length > 0 && <dl className="lb-ledger">
           <div><dt>Learners ranked</dt><dd>{rows.length}</dd></div>
@@ -170,15 +169,14 @@ export default function Leaderboard({ rows, loading, error, onRefresh, currentUs
       {Array.from({ length: 6 }, (_, index) => <span key={index} className="lb-skeleton" style={{ '--i': index } as Vars} />)}
       <p>Opening the standings…</p>
     </div> : rows.length === 0 ? <section className="lb-empty">
-      <span className="lb-empty-mark" aria-hidden="true"><Sparkles size={22} strokeWidth={1.6} /></span>
-      <p className="lb-kicker">The first page is blank</p>
-      <h2>There’s room for your name.</h2>
+      <span className="lb-empty-mark" aria-hidden="true"><Trophy size={22} strokeWidth={1.6} /></span>
+      <h2>No one is ranked yet.</h2>
       <p>Standings appear after real learners submit practice answers. Placement alone does not earn points.</p>
       <button onClick={onPractice}>{currentUserId ? 'Choose a question' : 'Sign in to begin'} <ArrowUpRight size={17} /></button>
     </section> : <div className="lb-lower">
       <section className="lb-standings" aria-labelledby="lb-standings-title">
         <div className="lb-standings-head">
-          <div><p className="lb-kicker">Top {limit} · by learning points</p><h2 id="lb-standings-title">Standings</h2></div>
+          <h2 id="lb-standings-title">Standings</h2>
           <button className="lb-refresh" onClick={() => void onRefresh()} disabled={loading} aria-label="Refresh leaderboard"><RefreshCw size={16} className={loading ? 'is-loading' : ''} /></button>
         </div>
         <div className="lb-toolbar">
@@ -203,13 +201,13 @@ export default function Leaderboard({ rows, loading, error, onRefresh, currentUs
             <span className="lb-row-measure" aria-hidden="true" />
           </m.li>;
         })}</ol> : <p className="lb-no-results">No learner matches that search in the selected range.</p>}
-        <p className="lb-method">Global rank is based on saved learning points, then problems solved. Accuracy and streak are shown as context, not as extra points. The line under each learner is drawn to scale against the leader.</p>
+        <p className="lb-method">Rank is by points, then by problems solved. Accuracy and streak are shown for context and add nothing. The line under each learner is drawn to scale against the leader.</p>
       </section>
 
       <aside className="lb-aside">
         <section className="lb-you" ref={ownCard} aria-labelledby="lb-your-title">
           <div className="lb-you-head"><p className="lb-kicker">Your place</p>{me && me.current_streak > 0 && <span className="lb-you-streak"><Flame size={14} aria-hidden="true" />{me.current_streak} {me.current_streak === 1 ? 'day' : 'days'} in a row</span>}</div>
-          <h2 id="lb-your-title" className={`lb-you-rank${currentUserId && myRank ? '' : ' is-text'}`}>{currentUserId ? (myRank ? <><span>#</span>{myRank}</> : 'A place to begin') : 'Join the board'}</h2>
+          <h2 id="lb-your-title" className={`lb-you-rank${currentUserId && myRank ? '' : ' is-text'}`}>{currentUserId ? (myRank ? <><span>#</span>{myRank}</> : 'Not ranked yet') : 'Join the board'}</h2>
           <p className="lb-you-note">{standing}</p>
           <dl className="lb-you-numbers">
             <div><dt>Points</dt><dd>{currentUserId ? myPoints.toLocaleString() : '—'}</dd></div>
@@ -227,7 +225,7 @@ export default function Leaderboard({ rows, loading, error, onRefresh, currentUs
           <button className="lb-you-cta" onClick={onPractice}><span>{currentUserId ? 'Back to practice' : 'Sign in or create account'}</span><ArrowRight size={17} /></button>
           {currentUserId && <button className="lb-you-find" onClick={findMe} disabled={!me}><LocateFixed size={15} aria-hidden="true" /> Find my place</button>}
         </section>
-        <div className="lb-rule"><p className="lb-kicker">How the order works</p><p>Only saved practice contributes. The board starts empty, updates from real submissions, and never counts a placement test as points.</p></div>
+        <div className="lb-rule"><h3>How the order works</h3><p>Points come from practice answers saved to your account. A placement test adds none. Ties go to whoever has solved more problems.</p></div>
       </aside>
     </div>}
   </div>;

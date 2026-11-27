@@ -82,6 +82,37 @@ export function bestDay(daily: DayPoints[]): number {
   return best;
 }
 
+/** Where to practise next: the topic with the least mastery, set beside the one with the most. */
+export interface Focus {
+  topic: Topic;
+  mastery: number;
+  /** The strongest topic, for comparison; absent when every topic stands level. */
+  ahead: { topic: Topic; mastery: number } | null;
+}
+
+/**
+ * The topic the learner has practised least, by mastery. Ties go to whichever
+ * comes first in `topics`. Null before any practice at all: with every topic at
+ * zero there is nothing to compare, and the dashboard says "start anywhere".
+ */
+export function thinnestTopic(skills: Partial<Record<Topic, number>>, topics: readonly Topic[]): Focus | null {
+  const rated = topics.map((topic) => ({ topic, mastery: clampPercent(skills[topic] ?? 0) }));
+  if (rated.length === 0 || rated.every((entry) => entry.mastery === 0)) return null;
+  const low = rated.reduce((least, entry) => (entry.mastery < least.mastery ? entry : least));
+  const high = rated.reduce((most, entry) => (entry.mastery > most.mastery ? entry : most));
+  return { ...low, ahead: high.mastery > low.mastery ? high : null };
+}
+
+/** One plain sentence on where the learner stands today, from their own numbers. */
+export function standing({ streak, weekPoints, solved }: { streak: number; weekPoints: number; solved: number }): string {
+  if (solved <= 0 && weekPoints <= 0) return 'Nothing solved yet. Your first answers set your level in each topic.';
+  const points = `${weekPoints.toLocaleString('en-US')} ${weekPoints === 1 ? 'point' : 'points'} this week`;
+  if (streak >= 2 && weekPoints > 0) return `${streak} days in a row, and ${points}.`;
+  if (streak >= 2) return `${streak} days in a row.`;
+  if (weekPoints > 0) return `${points.charAt(0).toUpperCase()}${points.slice(1)}.`;
+  return 'No practice yet this week.';
+}
+
 export function greeting(hour: number): string {
   if (hour < 5) return 'Up late';
   if (hour < 12) return 'Good morning';

@@ -67,6 +67,11 @@ create trigger messages_touch_conversation
 -- SECURITY DEFINER for the same reason as `is_community_member`: a policy on
 -- conversation_participants that queries conversation_participants would
 -- recurse into itself.
+--
+-- And narrowed the same way, so that it cannot be called as an RPC to ask who
+-- is in a conversation. One more caller is answered here: a participant, who
+-- can read the list of participants anyway. start_conversation relies on that
+-- to find the thread two people already share.
 create or replace function public.is_conversation_participant(target uuid, who uuid)
 returns boolean
 language sql
@@ -77,6 +82,23 @@ as $$
   select exists (
     select 1 from public.conversation_participants p
     where p.conversation_id = target and p.user_id = who
+  )
+  and coalesce(
+    who = auth.uid()
+    or pg_trigger_depth() > 0
+    or exists (
+      select 1 from public.conversation_participants me
+      where me.conversation_id = target and me.user_id = auth.uid()
+    )
+    or (
+      coalesce(current_setting('role', true), '') not in ('anon', 'authenticated')
+      and coalesce(
+        nullif(current_setting('request.jwt.claim.role', true), ''),
+        nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+        'service_role'
+      ) = 'service_role'
+    ),
+    false
   );
 $$;
 

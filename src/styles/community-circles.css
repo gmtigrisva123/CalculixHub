@@ -1,0 +1,101 @@
+/*
+ * Circles, inside Community. See components/community/Circles.tsx.
+ *
+ * A circle is drawn as its members: one point on a ring for each. Everything
+ * else here is the Community's own vocabulary (styles/community.css), which
+ * also supplies the `--cm-*` properties these rules read.
+ */
+
+.cc-ring { flex: none; overflow: visible; }
+.cc-ring-line { stroke: var(--ln-strong); stroke-width: 1.2; }
+.cc-ring-point { fill: var(--ac-text); }
+
+.cc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cm-side-card .cc-head h3 { margin: 0; }
+.cc-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  color: var(--ac-text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cc-start:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.cc-list { margin: 0 -6px; padding: 0; list-style: none; }
+.cc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px;
+  border-radius: 10px;
+  text-align: left;
+  transition: background-color .16s;
+}
+.cc-row:hover { background: var(--cm-hover); }
+.cc-row[aria-pressed='true'] { background: var(--ac-muted); }
+.cc-row[aria-pressed='true'] .cc-ring-line { stroke: var(--ac-text); }
+.cc-row-name { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.cc-row-name strong { font-size: 14px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-row-name small { color: var(--ct-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cc-in { display: inline-flex; align-items: center; gap: 3px; flex: none; color: var(--cm-ink-like); font-size: 12px; font-weight: 600; }
+
+/* The header a circle gets above its own feed: set on the paper, with a rule under it. */
+.cc-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 4px 16px;
+  margin: 2px 0 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--ln);
+}
+.cc-header .cc-ring { grid-row: span 2; margin-top: 2px; }
+.cc-header .cc-ring-line { stroke-width: .9; }
+.cc-header-text { min-width: 0; }
+.cc-header-text h2 { margin: 0; font-size: clamp(20px, 2.2vw, 24px); font-weight: 600; line-height: 1.2; letter-spacing: -.028em; overflow-wrap: anywhere; }
+.cc-header-about { max-width: 58ch; margin: 6px 0 0; font-size: 15px; line-height: 1.5; text-wrap: pretty; overflow-wrap: anywhere; }
+.cc-header-meta { margin: 6px 0 0; color: var(--ct-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.cc-header-actions { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; }
+.cc-header-back { color: var(--ac-text); font-size: 13.5px; font-weight: 600; }
+
+.cc-form { display: grid; gap: 14px; }
+.cc-form-lede { margin: 0; font-size: 14px; line-height: 1.5; }
+.cc-field { display: grid; gap: 6px; }
+.cc-field > span { font-size: 13.5px; font-weight: 650; }
+.cc-field small { margin-left: 6px; color: var(--ct-subtle); font-size: 12px; font-weight: 500; }
+.cc-field input,
+.cc-field textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--ln-strong);
+  border-radius: 10px;
+  background: var(--sf);
+  color: var(--ct);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: none;
+  transition: border-color .16s, box-shadow .16s;
+}
+.cc-field input::placeholder,
+.cc-field textarea::placeholder { color: var(--ct-subtle); }
+.cc-field input:focus-visible,
+.cc-field textarea:focus-visible { border-color: var(--ac); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 18%, transparent); }
+.cc-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+/* On a post: the circle it was made in. */
+.cm-circle-tag { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; color: var(--ct-muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-circle-tag:hover { color: var(--ct); text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 520px) {
+  .cc-header { grid-template-columns: minmax(0, 1fr); }
+  .cc-header .cc-ring { display: none; }
+  .cc-header-actions { grid-column: 1; }
+  .cc-form-actions .cm-button { flex: 1; }
+}

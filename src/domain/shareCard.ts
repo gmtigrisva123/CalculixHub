@@ -21,7 +21,9 @@ export type CardDesign = 'night' | 'paper' | 'brass';
 export interface CardData {
   name: string;
   handle: string | null;
+  /** Printed as given, so each says what it is ("Advanced rank", "Advanced level"): ranks and practice levels share two names. */
   tier: string;
+  /** null until the learner has been placed. */
   level: string | null;
   points: number;
   solved: number;
@@ -39,7 +41,8 @@ export const DESIGNS: Record<CardDesign, { label: string; pro: boolean; palette:
   brass: { label: 'Brass', pro: true, palette: { ground: ['#f2d498', '#d39f47'], glow: '#fff8e666', ink: '#21180a', soft: '#5a4318', faint: '#7a5e26', accent: '#21180a', rule: '#21180a33' } },
 };
 
-const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#209d8c', Combinatorics: '#8b5cf6', 'Number Theory': '#0484c0' };
+/* The same four hues the profile draws its topics in (lib/topics.tsx). */
+const TOPIC_HUE: Record<Topic, string> = { Algebra: '#c8842a', Geometry: '#2f9c8c', Combinatorics: '#8b5cf6', 'Number Theory': '#0ea5e9' };
 const TOPICS: readonly Topic[] = ['Algebra', 'Geometry', 'Combinatorics', 'Number Theory'];
 
 const SERIF = `'Newsreader', Georgia, serif`;
@@ -125,9 +128,10 @@ export function drawShareCard(context: CanvasRenderingContext2D, data: CardData,
   const nameSize = fitText(context, data.name, W * 0.56, size => `400 ${size}px ${SERIF}`, 84, 44);
   context.fillStyle = palette.ink;
   context.fillText(data.name, pad, 232);
-  context.font = `500 22px ${MONO}`;
-  context.fillStyle = palette.soft;
   const line = [data.handle ? `@${data.handle}` : null, data.tier, data.level].filter(Boolean).join('  ·  ');
+  // Kept to the name's width: a long handle with both labels would otherwise run under the mastery bars.
+  fitText(context, line, W * 0.56, size => `500 ${size}px ${MONO}`, 22, 14);
+  context.fillStyle = palette.soft;
   context.fillText(line, pad, 232 + Math.max(40, nameSize * 0.56));
 
   // Four figures on one baseline.

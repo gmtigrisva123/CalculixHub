@@ -10,7 +10,7 @@
 
 import { useLayoutEffect, useRef } from 'react';
 import { m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
-import { Arrow, Eyebrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
+import { Arrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
 
 /*
  * The line keeps to the floor of the stage under the words, then climbs behind
@@ -70,24 +70,20 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
 
         <div className="lx-wrap lx-final-grid">
           <div className="lx-final-letter">
-            <Eyebrow>A note before you begin</Eyebrow>
             <SplitText as="h2" id="lx-final-title" className="lx-h2" text={'You’re allowed\nto *not know yet.*'} />
             <Rise as="p" className="lx-lead">Cross things out. Try a smaller case. Come back tomorrow.</Rise>
-            <Rise as="p" className="lx-final-signoff" delay={0.08}>Bring a little patience. We’ll bring the questions.</Rise>
           </div>
 
           <div className="lx-final-paths">
             <PathCard
-              note="Follow your curiosity"
-              title="Explore a problem"
+              title="Try a problem"
               copy="Pick one and give it a go."
               action="Open practice"
               href="/?auth=signup&tab=learn"
               delay={0}
             />
             <PathCard
-              note="Find your starting point"
-              title="Discover your level"
+              title="Find your level"
               copy="A quiz that adapts as you answer."
               action="Create a free account"
               onClick={onRegister}
@@ -103,7 +99,6 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
 }
 
 interface PathCardProps {
-  note: string;
   title: string;
   copy: string;
   action: string;
@@ -113,11 +108,10 @@ interface PathCardProps {
   delay: number;
 }
 
-function PathCard({ note, title, copy, action, href, onClick, featured = false, delay }: PathCardProps) {
+function PathCard({ title, copy, action, href, onClick, featured = false, delay }: PathCardProps) {
   const ref = useSpotlight<HTMLAnchorElement & HTMLButtonElement>();
   const body = (
     <>
-      <span className="lx-path-note">{note}</span>
       <span className="lx-path-title">
         {title}
         <span className="lx-path-icon" aria-hidden="true"><Arrow size={18} /></span>

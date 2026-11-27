@@ -12,14 +12,13 @@ import { AnimatePresence, m, useInView, useReducedMotion, useScroll, useTransfor
 import MathText from '../MathText';
 import { ENGINE_RUN } from './engineRun';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
-import { Arrow, Eyebrow, GLIDE, Rise, SplitText } from './kit';
+import { Arrow, GLIDE, Rise, SplitText } from './kit';
 
 interface JourneyStackProps {
   onRegister: () => void;
 }
 
 interface Step {
-  label: string;
   title: string;
   copy: string;
   action: string;
@@ -33,16 +32,14 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
   const { scrollYProgress } = useScroll({ target: stackRef, offset: ['start start', 'end end'] });
   const steps: Step[] = [
     {
-      label: 'Find your level',
-      title: 'Start in the right place.',
+      title: 'Find your level.',
       copy: 'A quiz that adapts to every answer you give.',
       action: 'Find my level',
       tone: 'paper',
       visual: <PlacementVisual />,
     },
     {
-      label: 'Practise',
-      title: 'Learn by doing.',
+      title: 'Practise with hints and solutions.',
       copy: 'Try a problem, take a hint, then read the full solution.',
       action: 'Start practising',
       href: '/?auth=signup&tab=learn',
@@ -50,8 +47,7 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
       visual: <LearnVisual />,
     },
     {
-      label: 'Compete',
-      title: 'Race the clock.',
+      title: 'Compete in timed contests.',
       copy: 'Live, timed contests against other students.',
       action: 'See the Arena',
       href: '/?auth=signup&tab=compete',
@@ -59,10 +55,9 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
       visual: <ArenaVisual />,
     },
     {
-      label: 'Get help',
       title: 'A nudge, not the answer.',
-      copy: 'Stuck? The tutor asks the question that gets you moving again.',
-      action: 'Visit the community',
+      copy: 'Stuck? The tutor asks a guiding question. You can also post the problem in the community.',
+      action: 'Ask in the community',
       href: '/?auth=signup&tab=community',
       tone: 'cream',
       visual: <TutorVisual />,
@@ -72,11 +67,8 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
   return (
     <section className="lx-journey" id="workspace" data-tone="paper" aria-labelledby="lx-journey-title">
       <div className="lx-wrap">
-        <header className="lx-section-head lx-section-head-split">
-          <div>
-            <Eyebrow index="06">What’s inside</Eyebrow>
-            <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'Practise, compete,\n*get unstuck.*'} />
-          </div>
+        <header className="lx-section-head">
+          <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'Practise, compete,\nget *unstuck.*'} />
         </header>
         <div className="lx-stack" ref={stackRef}>
           {steps.map((step, index) => (
@@ -99,8 +91,6 @@ function StackCard({ step, index, total, progress, onRegister }: { step: Step; i
     <div className="lx-stack-slot" style={{ ['--i' as string]: index }}>
       <m.article className="lx-card" data-card-tone={step.tone} data-tone={step.tone === 'ink' ? 'ink' : undefined} style={{ scale }}>
         <div className="lx-card-copy">
-          <span className="lx-card-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-          <span className="lx-card-label">{step.label}</span>
           <h3 className="lx-card-title">{step.title}</h3>
           <p className="lx-card-text">{step.copy}</p>
           {step.href

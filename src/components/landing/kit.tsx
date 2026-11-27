@@ -54,9 +54,10 @@ export const useFinePointer = () => useMediaQuery('(hover: hover) and (pointer: 
 interface Segment { text: string; em: boolean }
 
 /**
- * `*asterisks*` mark emphasis (set in Newsreader italic) and may span words;
- * `\n` breaks a line. Each word becomes one masked unit, carrying its own
- * punctuation so "*question*." rises as one piece.
+ * `*asterisks*` mark emphasis and may span words; `\n` breaks a line. Emphasis
+ * is never a change of face: the words stay in the heading's own roman and the
+ * phrase is underlined in pencil. Each word becomes one masked unit, carrying
+ * its own punctuation so "*question*." rises as one piece.
  */
 export function splitEmphasis(source: string): Segment[][][] {
   let em = false;
@@ -73,6 +74,20 @@ export function splitEmphasis(source: string): Segment[][][] {
     if (current) segments.push({ text: current, em });
     return segments;
   }));
+}
+
+interface Run { em: boolean; words: { segments: Segment[]; index: number }[] }
+
+/** Neighbouring emphasised words on a line, gathered so one pencil stroke can run under the whole phrase. */
+function runsOf(words: Segment[][]): Run[] {
+  const runs: Run[] = [];
+  words.forEach((segments, index) => {
+    const em = segments.some(segment => segment.em);
+    const last = runs[runs.length - 1];
+    if (last && last.em === em) last.words.push({ segments, index });
+    else runs.push({ em, words: [{ segments, index }] });
+  });
+  return runs;
 }
 
 const lineContainer: Variants = {
@@ -107,31 +122,44 @@ interface SplitTextProps {
 export function SplitText({ text, as = 'h2', className, id, delay = 0, stagger = 0.055, trigger = 'view', play: playing = true }: SplitTextProps) {
   const Tag = m[as];
   const lines = splitEmphasis(text);
-  // Once the last word has landed the masks are lifted, so no descender or italic overhang is ever clipped.
+  // Once the last word has landed the masks are lifted, so no descender is ever clipped.
   const [settled, setSettled] = useState(false);
+  // The pencil stroke under an emphasised phrase is drawn as the words arrive (see .lx-em).
+  const [entered, setEntered] = useState(false);
   const lastLine = lines.length - 1;
   const lastWord = lines[lastLine].length - 1;
-  const play = trigger === 'mount' ? { animate: playing ? 'shown' : 'hidden' } : { whileInView: 'shown', viewport: { once: true, amount: 0.5 } };
-  const classes = ['lx-split', className, settled && 'is-settled'].filter(Boolean).join(' ');
+  const play = trigger === 'mount'
+    ? { animate: playing ? 'shown' : 'hidden' }
+    : { whileInView: 'shown', viewport: { once: true, amount: 0.5 }, onViewportEnter: () => setEntered(true) };
+  const drawn = trigger === 'mount' ? playing : entered;
+  const classes = ['lx-split', className, drawn && 'is-shown', settled && 'is-settled'].filter(Boolean).join(' ');
   return (
     <Tag id={id} className={classes} initial="hidden" {...play} variants={lineContainer} custom={{ delay, stagger }}>
       {lines.map((words, lineIndex) => (
         <Fragment key={lineIndex}>
           {lineIndex > 0 && <br />}
-          {words.map((segments, wordIndex) => (
-            <Fragment key={wordIndex}>
-              {wordIndex > 0 && ' '}
-              <span className="lx-w">
-                <m.span
-                  className="lx-wi"
-                  variants={wordRise}
-                  onAnimationComplete={lineIndex === lastLine && wordIndex === lastWord ? (definition: unknown) => { if (definition === 'shown') setSettled(true); } : undefined}
-                >
-                  {segments.map((segment, index) => segment.em ? <em key={index}>{segment.text}</em> : <Fragment key={index}>{segment.text}</Fragment>)}
-                </m.span>
-              </span>
-            </Fragment>
-          ))}
+          {runsOf(words).map((run, runIndex) => {
+            const phrase = run.words.map(({ segments, index: wordIndex }, position) => (
+              <Fragment key={wordIndex}>
+                {position > 0 && ' '}
+                <span className="lx-w">
+                  <m.span
+                    className="lx-wi"
+                    variants={wordRise}
+                    onAnimationComplete={lineIndex === lastLine && wordIndex === lastWord ? (definition: unknown) => { if (definition === 'shown') setSettled(true); } : undefined}
+                  >
+                    {segments.map((segment, index) => segment.em ? <em key={index}>{segment.text}</em> : <Fragment key={index}>{segment.text}</Fragment>)}
+                  </m.span>
+                </span>
+              </Fragment>
+            ));
+            return (
+              <Fragment key={runIndex}>
+                {runIndex > 0 && ' '}
+                {run.em ? <span className="lx-em">{phrase}</span> : phrase}
+              </Fragment>
+            );
+          })}
         </Fragment>
       ))}
     </Tag>
@@ -410,18 +438,14 @@ export function BrandMark({ draw = false }: { draw?: boolean }) {
 
 interface EyebrowProps {
   children: ReactNode;
-  index?: string;
-  live?: boolean;
   className?: string;
 }
 
-/** The small label above a heading: a chapter number or a live dot, then the words. */
-export function Eyebrow({ children, index, live, className }: EyebrowProps) {
-  return (
-    <span className={className ? `lx-eyebrow ${className}` : 'lx-eyebrow'}>
-      {live && <span className="lx-live" aria-hidden="true" />}
-      {index && <span className="lx-eyebrow-index">{index}</span>}
-      <span>{children}</span>
-    </span>
-  );
+/**
+ * The one small label the page keeps: the line over the hero headline that
+ * says what the product is about. Sections do not carry one; their headings
+ * say what they are.
+ */
+export function Eyebrow({ children, className }: EyebrowProps) {
+  return <span className={className ? `lx-eyebrow ${className}` : 'lx-eyebrow'}>{children}</span>;
 }

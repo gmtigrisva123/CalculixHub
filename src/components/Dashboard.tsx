@@ -1,10 +1,17 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R4 V5 */
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'motion/react';
 import { MoonStar, Sun, Sunrise, Sunset } from 'lucide-react';
 import type { UserStats, WeeklyChallenge, Contest, Topic, Level } from '../../shared/types';
+import { useAuth } from '../context/AuthContext';
+import { RACE_STORAGE, parseRaceDay } from '../domain/raceDay';
 import { getLastNDateKeys } from '../domain/streak';
-import { ease, spring } from '../lib/motion';
+import { spring } from '../lib/motion';
+import { TOPIC_LIST } from '../lib/topics';
 import '../styles/dashboard-refresh.css';
 import DashboardHero from './dashboard/DashboardHero';
 import Instruments from './dashboard/Instruments';
@@ -13,27 +20,36 @@ import MomentumChart from './dashboard/MomentumChart';
 import ProofTile from './dashboard/ProofTile';
 import NextAdventure from './dashboard/NextAdventure';
 import RaceDay from './dashboard/RaceDay';
-import { activeDays, dailyPoints, greeting, pointsCurve, weekTotal } from './dashboard/dashboardModel';
+import { activeDays, dailyPoints, greeting, pointsCurve, standing, thinnestTopic, weekTotal } from './dashboard/dashboardModel';
 
 interface DashboardProps { minutesPerDay?: number; userStats: UserStats; weeklyChallenges: WeeklyChallenge[]; contests: Contest[]; onNavigateToTab: (tab: string, arg?: { topic?: Topic; level?: Level }) => void; onJoinChallenge: (id: string) => void; onJoinContest: (id: string) => void; onRewardPoints?: (pts: number) => void; }
 
-const QUOTE = 'Mathematics is the art of giving the same name to different things.';
+/** Whether a contest day has been set on this device, read once when the page opens. */
+const hasRaceDay = (): boolean => {
+  try { return Boolean(parseRaceDay(localStorage.getItem(RACE_STORAGE))); } catch { return false; }
+};
 
 /**
- * The workspace home.
+ * The workspace home, in the order a learner uses it:
  *
- * Presentation only: every figure is read from the props exactly as before,
- * and every action calls the same handler with the same arguments. What
- * changed is how it looks and moves -- a night stage with a drawing machine,
- * instruments that draw their own numbers, and four topic medallions that keep
- * a small proof running. All of it stops on the hero's pause control, off
- * screen, in a hidden tab, and under reduced motion.
+ *   1. what to do next (and the countdown, for someone training for a date);
+ *   2. where they stand: the four figures, then this week day by day, beside
+ *      what is coming up;
+ *   3. the four topics, to choose from;
+ *   4. one proof to look at.
+ *
+ * Presentation only: every figure is read from the props, and every action
+ * calls the handler it always did. The animation stops on the hero's pause
+ * control, off screen, in a hidden tab, and under reduced motion.
  */
 export default function Dashboard({ minutesPerDay = 30, userStats: stats, weeklyChallenges, contests, onNavigateToTab: navigate, onJoinChallenge, onJoinContest }: DashboardProps) {
   const still = Boolean(useReducedMotion());
+  const { profile } = useAuth();
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((value) => !value), []);
   const rootRef = useSpotlight<HTMLDivElement>();
+  // A countdown someone set is the first thing they want; the offer to set one can wait below.
+  const [training] = useState(hasRaceDay);
 
   const days = getLastNDateKeys(7);
   const timeline = stats.learningTimeline || [];
@@ -46,45 +62,39 @@ export default function Dashboard({ minutesPerDay = 30, userStats: stats, weekly
     active: practised[i],
     today: i === days.length - 1,
   }));
+  const focus = thinnestTopic(stats.skills, TOPIC_LIST);
 
   const now = new Date();
   const hour = now.getHours();
   const GreetingIcon = hour < 5 ? MoonStar : hour < 12 ? Sunrise : hour < 18 ? Sun : Sunset;
+  const firstName = (profile?.display_name || '').trim().split(/\s+/)[0] ?? '';
   const intro = (delay: number) => ({
     initial: still ? (false as const) : { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
     transition: { ...spring.smooth, delay },
   });
 
+  const raceDay = <RaceDay skills={stats.skills} minutesPerDay={minutesPerDay} navigate={navigate} still={still} />;
+
   return (
     <div className="dh" ref={rootRef} data-dh-paused={paused || undefined}>
       <header className="dh-head">
         <m.p className="dh-greeting" {...intro(0)}>
           <GreetingIcon size={15} aria-hidden="true" />
-          <span>{greeting(hour)}</span>
-          <span className="dh-greeting-dot" aria-hidden="true" />
           <span>{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
         </m.p>
         <m.h1 className="dh-title" {...intro(0.04)}>
-          A little time{' '}
-          <span className="dh-title-accent">
-            to understand.
-            <svg className="dh-title-underline" viewBox="0 0 300 16" preserveAspectRatio="none" aria-hidden="true">
-              <m.path
-                d="M3 11 C 70 3, 170 2, 297 8"
-                initial={still ? false : { pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ delay: 0.55, duration: 0.8, ease: ease.standard }}
-              />
-            </svg>
-          </span>
+          {greeting(hour)}
+          {firstName ? `, ${firstName}` : ''}.
         </m.h1>
         <m.p className="dh-sub" {...intro(0.1)}>
-          Pick something interesting. Take it at your own pace.
+          {standing({ streak: stats.streak, weekPoints, solved: stats.completedCount })}
         </m.p>
       </header>
 
-      <DashboardHero still={still} paused={paused} onTogglePause={togglePause} onBegin={() => navigate('learn')} />
+      <DashboardHero still={still} paused={paused} focus={focus} onTogglePause={togglePause} onBegin={(topic) => navigate('learn', topic ? { topic } : undefined)} />
+
+      {training && raceDay}
 
       <Instruments
         points={stats.points}
@@ -97,10 +107,6 @@ export default function Dashboard({ minutesPerDay = 30, userStats: stats, weekly
         still={still}
       />
 
-      <RaceDay skills={stats.skills} minutesPerDay={minutesPerDay} navigate={navigate} still={still} />
-
-      <TopicTiles skills={stats.skills} still={still} paused={paused} navigate={navigate} />
-
       <div className="dh-bento">
         <MomentumChart daily={daily} weekPoints={weekPoints} still={still} onProgress={() => navigate('progress')} />
         <NextAdventure
@@ -111,32 +117,13 @@ export default function Dashboard({ minutesPerDay = 30, userStats: stats, weekly
           navigate={navigate}
           still={still}
         />
-        <ProofTile still={still} paused={paused} navigate={navigate} />
       </div>
 
-      <figure className="dh-quote">
-        <blockquote>
-          <p>
-            <span aria-hidden="true">“</span>
-            {QUOTE.split(' ').map((word, i) => (
-              <Fragment key={`${word}-${i}`}>
-                {i > 0 && ' '}
-                <m.span
-                  className="dh-quote-word"
-                  initial={still ? false : { opacity: 0, y: 8, filter: 'blur(6px)' }}
-                  whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  viewport={{ once: true, amount: 0.6 }}
-                  transition={{ duration: 0.55, delay: i * 0.045, ease: ease.standard }}
-                >
-                  {word}
-                </m.span>
-              </Fragment>
-            ))}
-            <span aria-hidden="true">”</span>
-          </p>
-        </blockquote>
-        <figcaption>Henri Poincaré</figcaption>
-      </figure>
+      {!training && raceDay}
+
+      <TopicTiles skills={stats.skills} still={still} paused={paused} navigate={navigate} />
+
+      <ProofTile still={still} paused={paused} navigate={navigate} />
     </div>
   );
 }

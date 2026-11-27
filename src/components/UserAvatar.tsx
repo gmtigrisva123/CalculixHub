@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { figureFor } from '../domain/figure';
 
 /*
  * Instagram's default profile picture: a white head-and-shoulders silhouette on
@@ -26,15 +27,30 @@ export function DefaultAvatar({ className, style }: { className?: string; style?
   );
 }
 
+/** The curve that stands in for someone with no photo. See domain/figure.ts. */
+export function FigureAvatar({ seed, className, style }: { seed: string; className?: string; style?: React.CSSProperties }) {
+  const figure = figureFor(seed);
+  return (
+    <svg className={className} style={{ ...FILL, ...style }} viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+      <title>{figure.name}</title>
+      <rect width="100" height="100" fill={figure.ground} />
+      <path d={figure.path} fill="none" stroke={figure.ink} strokeWidth="1.35" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      {/* A rim in the figure's own ink: the dark grounds would otherwise sink into a dark page. */}
+      <circle cx="50" cy="50" r="49.25" fill="none" stroke={figure.ink} strokeOpacity=".38" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 /**
- * A learner's photo, or the default silhouette when there is none or it fails
- * to load. Decorative by default, since a name is always printed beside it.
+ * A photo if there is one; otherwise the person's own figure when `seed` (their
+ * id) is known, and the plain silhouette for a guest, who has no id to draw
+ * from. Decorative by default, since a name is always printed beside it.
  */
-export default function UserAvatar({ src, className, style, alt = '' }: { src?: string | null; className?: string; style?: React.CSSProperties; alt?: string }) {
+export default function UserAvatar({ src, seed, className, style, alt = '' }: { src?: string | null; seed?: string | null; className?: string; style?: React.CSSProperties; alt?: string }) {
   // Keyed by URL, so a newly uploaded photo gets its own chance to load.
   const [failed, setFailed] = useState<string | null>(null);
   if (src && failed !== src) {
     return <img src={src} alt={alt} className={className} style={{ ...FILL, ...style }} loading="lazy" decoding="async" onError={() => setFailed(src)} />;
   }
-  return <DefaultAvatar className={className} style={style} />;
+  return seed ? <FigureAvatar seed={seed} className={className} style={style} /> : <DefaultAvatar className={className} style={style} />;
 }

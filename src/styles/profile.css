@@ -3,9 +3,8 @@
  *
  * The same three materials as the rest of the workspace: a night stage for who
  * you are and where you stand, paper cards for the record underneath, and brass
- * for anything earned. The ring round the photo and the ladder beside it are
- * the same fact drawn twice, how far to the next rank, once at a glance and
- * once in full.
+ * for anything earned. How far it is to the next rank is drawn once, on the
+ * ladder; the ring round the photo is only a frame.
  *
  * Namespaced `pf-`. Follows the theme through the app's semantic colours.
  */
@@ -99,10 +98,7 @@
   padding: clamp(24px, 3.4vw, 44px) clamp(22px, 3.4vw, 44px) 0;
   border-radius: 28px;
   color: var(--pf-chalk);
-  background:
-    radial-gradient(55% 80% at 92% 0%, #e6bd731f, transparent 62%),
-    radial-gradient(50% 70% at 0% 100%, #4fb8a814, transparent 64%),
-    linear-gradient(158deg, var(--pf-night-hi), var(--pf-night) 62%);
+  background: linear-gradient(158deg, var(--pf-night-hi), var(--pf-night) 62%);
   box-shadow: inset 0 1px 0 #fff1d812, inset 0 0 0 1px #e6bd7314, 0 34px 70px -38px var(--pf-shade), 0 14px 28px -20px var(--pf-shade);
 }
 /* Graph paper, fading out toward the name so nothing sits behind the text. */
@@ -123,11 +119,9 @@
 
 .pf-hero-main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(18px, 2.4vw, 30px); align-items: start; min-width: 0; animation: pf-fade-up .6s var(--pf-ease) both; }
 
-/* The photo, inside a ring that fills toward the next rank. */
+/* The photo, inside a hairline ring. */
 .pf-face-wrap { position: relative; width: 124px; height: 124px; padding: 10px; }
-.pf-face-ring { position: absolute; inset: 0; width: 100%; height: 100%; rotate: -90deg; fill: none; stroke-width: 3; }
-.pf-face-ring circle:first-child { stroke: #f2ece11f; }
-.pf-face-ring circle:last-child { stroke: var(--pf-spark); stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--p)); animation: pf-ring 1.2s var(--pf-ease) .2s both; }
+.pf-face-ring { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #f2ece11f; stroke-width: 3; }
 .pf-face { position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 50%; background: #0a1519; }
 .pf-face > :first-child { width: 100%; height: 100%; }
 .pf-face.is-editable { cursor: pointer; }
@@ -139,7 +133,6 @@
 .pf-identity h1 { margin-top: 8px; font: 560 clamp(30px, 3.5vw, 44px)/1.04 var(--pf-sans); letter-spacing: -.042em; overflow-wrap: anywhere; text-wrap: balance; }
 .pf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .pf-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px #f2ece12e; color: var(--pf-chalk); font-size: 12.5px; font-weight: 550; font-variant-numeric: tabular-nums; }
-.pf-chip.is-tier { background: #e6bd7326; box-shadow: inset 0 0 0 1px #e6bd7359; color: #f3d6a0; }
 .pf-bio { max-width: 56ch; margin-top: 16px; color: var(--pf-chalk); font-size: 15.5px; line-height: 1.6; text-wrap: pretty; overflow-wrap: anywhere; }
 .pf-bio.is-empty { color: var(--pf-chalk-faint); }
 .pf-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; color: var(--pf-chalk-muted); font-size: 13.5px; }
@@ -151,7 +144,7 @@
 /* The ladder */
 .pf-ladder { min-width: 0; padding: 20px 22px 22px; border: 1px solid #f2ece11f; border-radius: 20px; background: #0a151980; animation: pf-fade-up .7s var(--pf-ease) .08s both; }
 .pf-ladder-kicker { color: var(--pf-chalk-faint); font: 500 10.5px/1 var(--pf-mono); letter-spacing: .12em; text-transform: uppercase; }
-.pf-ladder-name { margin-top: 10px; font: 400 34px/1 'Newsreader', Georgia, serif; letter-spacing: -.02em; }
+.pf-ladder-name { margin-top: 10px; font: 560 30px/1.05 var(--pf-sans); letter-spacing: -.035em; }
 .pf-ladder-next { margin-top: 8px; color: var(--pf-chalk-muted); font-size: 13.5px; }
 .pf-ladder-next b { color: var(--pf-spark); font-weight: 600; font-variant-numeric: tabular-nums; }
 /* Four rungs on one line; the lit part of the line runs from the first rung to where you are. */
@@ -171,8 +164,7 @@
 
 /* The five numbers, along the foot of the stage */
 .pf-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0 calc(-1 * clamp(22px, 3.4vw, 44px)); border-top: 1px solid #f2ece11a; background: #0a151966; }
-.pf-stats > div { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label label' 'figure mini'; align-items: end; column-gap: 10px; min-width: 0; padding: 18px clamp(16px, 2.4vw, 30px) 20px; transition: background-color .3s; }
-.pf-stats > div:hover { background: #f2ece10a; }
+.pf-stats > div { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label label' 'figure mini'; align-items: end; column-gap: 10px; min-width: 0; padding: 18px clamp(16px, 2.4vw, 30px) 20px; }
 .pf-stats dt { grid-area: label; }
 .pf-stats dd { grid-area: figure; }
 .pf-stats > div:first-child { padding-left: clamp(22px, 3.4vw, 44px); }
@@ -185,17 +177,12 @@
 .pf-mini { grid-area: mini; align-self: end; margin-bottom: 2px; }
 svg.pf-mini { width: 64px; height: 26px; overflow: visible; }
 .pf-mini-line { fill: none; stroke: var(--pf-spark); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: pf-draw 1.2s var(--pf-ease) .5s forwards; }
-svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; stroke-width: 3.5; }
-.pf-mini.is-dial circle:first-child { stroke: #f2ece11f; }
-.pf-mini.is-dial circle:last-child { stroke: #5fd0bd; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--p)); animation: pf-ring 1.1s var(--pf-ease) .45s both; }
 .pf-mini.is-split { display: flex; gap: 2px; width: 60px; height: 6px; margin-bottom: 6px; }
 .pf-mini.is-split i { min-width: 3px; border-radius: 2px; transform-origin: left; animation: pf-grow .8s var(--pf-ease) .5s both; }
 .pf-mini.is-week { display: flex; gap: 4px; margin-bottom: 6px; }
 .pf-mini.is-week i { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #f2ece133; }
 .pf-mini.is-week i.is-on { background: var(--pf-spark); box-shadow: none; }
 .pf-mini.is-week i:last-child { outline: 1.5px solid #f2ece14d; outline-offset: 2px; }
-.pf-mini.is-bars { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
-.pf-mini.is-bars i { width: 5px; border-radius: 2px; background: #f2ece147; transform-origin: bottom; animation: pf-rise .7s var(--pf-ease) .5s both; }
 
 /* --------------------------------------------------------------------------
  * A profile that is not finished yet
@@ -217,14 +204,11 @@ svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; str
  * ------------------------------------------------------------------------ */
 
 .pf-next { display: grid; gap: 14px; margin-top: 6px; }
-.pf-next-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.pf-goal { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; padding: 18px 20px 20px; border: 1px solid var(--pf-line); border-radius: 20px; background: var(--pf-surface); box-shadow: var(--pf-shadow); color: var(--pf-ink); font-family: var(--pf-sans); text-align: left; }
+.pf-next-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.pf-goal { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; padding: 18px 20px 20px; border: 1px solid var(--pf-line); border-radius: 20px; background: var(--pf-surface); box-shadow: var(--pf-shadow); color: var(--pf-ink); font-family: var(--pf-sans); text-align: left; }
 .pf-goal.is-action { cursor: pointer; transition: border-color .25s, box-shadow .3s var(--pf-ease), translate .3s var(--pf-ease); }
 .pf-goal.is-action:hover { border-color: var(--ln-strong); translate: 0 -2px; box-shadow: 0 2px 4px rgb(41 61 70 / .05), 0 24px 44px -26px rgb(41 61 70 / .42); }
 .pf-goal.is-action:active { translate: 0 0; }
-.pf-goal-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: color-mix(in srgb, var(--pf-brass) 12%, var(--pf-surface)); color: var(--pf-brass); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pf-brass) 24%, transparent); }
-.pf-goal-icon.is-topic { --hue-or: var(--hue, var(--pf-brass)); background: color-mix(in srgb, var(--hue-or) 12%, var(--pf-surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hue-or) 26%, transparent); }
-.pf-goal-icon.is-topic i { width: 12px; height: 12px; border-radius: 4px; background: var(--hue-or); }
 .pf-goal-kicker { color: var(--pf-subtle); font: 500 10.5px/1 var(--pf-mono); letter-spacing: .1em; text-transform: uppercase; }
 .pf-goal h3 { margin-top: 8px; font-size: 16.5px; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
 .pf-goal h3 + p { margin-top: 4px; color: var(--pf-muted); font-size: 13.5px; line-height: 1.5; font-variant-numeric: tabular-nums; text-wrap: pretty; }
@@ -252,7 +236,7 @@ svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; str
 .pf-activity-cells i { display: block; aspect-ratio: 1; border-radius: 4px; background: var(--pf-heat-0); }
 .pf-legend i { display: block; width: 11px; height: 11px; border-radius: 3px; background: var(--pf-heat-0); }
 .pf-activity { position: relative; }
-.pf-activity-cells i { transition: transform .15s var(--pf-ease); animation: pf-cell .5s var(--pf-ease) both; animation-delay: calc(var(--c) * 14ms + 120ms); }
+.pf-activity-cells i { transition: transform .15s var(--pf-ease); }
 .pf-day-tip { position: absolute; z-index: 3; display: grid; gap: 2px; padding: 8px 11px; translate: -50% calc(-100% - 9px); border-radius: 10px; background: #14262e; color: #f4f1e8; font-size: 12px; line-height: 1.3; white-space: nowrap; pointer-events: none; box-shadow: 0 10px 24px -10px #0b161bb3; animation: pf-tip .16s var(--pf-ease); }
 .pf-day-tip::after { content: ''; position: absolute; left: 50%; bottom: -4px; width: 9px; height: 9px; translate: -50% 0; rotate: 45deg; border-radius: 2px; background: inherit; }
 .pf-day-tip.is-right { translate: -18px calc(-100% - 9px); } .pf-day-tip.is-right::after { left: 18px; }
@@ -420,20 +404,10 @@ svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; str
 @keyframes pf-grow { from { transform: scaleX(0); } }
 @keyframes pf-widen { from { width: 0; } }
 @keyframes pf-ring { from { stroke-dashoffset: 1; } }
-@keyframes pf-rise { from { transform: scaleY(0); } }
-@keyframes pf-cell { from { opacity: 0; scale: .6; } }
 @keyframes pf-tip { from { opacity: 0; translate: -50% calc(-100% - 3px); } }
 @keyframes pf-bloom { from { opacity: 0; scale: .2; } }
-@keyframes pf-settle { from { opacity: .35; translate: 0 22px; scale: .985; } }
 @keyframes pf-spin { to { rotate: 360deg; } }
 @keyframes pf-dialog-in { from { opacity: 0; scale: .96; } }
-
-/* Cards settle in as they are scrolled to, where the browser can do that without script. */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .profile-page :is(.pf-card, .pf-goal) { animation: pf-settle linear both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
-  }
-}
 
 @media (max-width: 1180px) {
   .pf-hero { grid-template-columns: minmax(0, 1fr); }
@@ -446,9 +420,11 @@ svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; str
 }
 @media (max-width: 760px) {
   .pf-side { grid-template-columns: minmax(0, 1fr); }
-  .pf-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .pf-stats > div:nth-child(4) { border-left: 0; padding-left: clamp(22px, 3.4vw, 44px); }
-  .pf-stats > div:nth-child(n + 4) { border-top: 1px solid #f2ece114; }
+  /* Five figures: points across the top, then two pairs, so no cell is left empty. */
+  .pf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pf-stats > div:first-child { grid-column: 1 / -1; }
+  .pf-stats > div:nth-child(n + 2) { border-top: 1px solid #f2ece114; }
+  .pf-stats > div:nth-child(even) { border-left: 0; padding-left: clamp(22px, 3.4vw, 44px); }
   .pf-stats dd { font-size: 24px; }
   .pf-ladder { max-width: none; }
 }
@@ -460,7 +436,7 @@ svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; str
   .pf-face-wrap { width: 104px; height: 104px; padding: 9px; }
   .pf-actions .pf-btn { flex: 1 1 auto; }
   .pf-stats > div { padding: 14px 14px 16px; }
-  .pf-stats > div:first-child, .pf-stats > div:nth-child(4) { padding-left: 22px; }
+  .pf-stats > div:first-child { padding-left: 22px; }
   .pf-stats dd { font-size: 22px; }
   .profile-page .pf-stats .pf-mini { display: none; }
   .pf-nudge { flex-wrap: wrap; }
@@ -472,9 +448,9 @@ svg.pf-mini.is-dial { width: 28px; height: 28px; rotate: -90deg; fill: none; str
   .pf-medal-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pf-activity-cells i, .pf-shape-area, .pf-mini *, .pf-coin-wrap > svg circle, .pf-day-tip { animation: none !important; }
+  .pf-shape-area, .pf-mini *, .pf-coin-wrap > svg circle, .pf-day-tip { animation: none !important; }
   .pf-mini-line { stroke-dashoffset: 0; }
-  .pf-hero-main, .pf-ladder, .pf-curve-line, .pf-curve-area, .pf-meter span, .pf-topic-track span, .pf-rungs::after, .pf-face-ring circle:last-child { animation: none !important; }
+  .pf-hero-main, .pf-ladder, .pf-curve-line, .pf-curve-area, .pf-meter span, .pf-topic-track span, .pf-rungs::after { animation: none !important; }
   .pf-curve-line { stroke-dashoffset: 0; }
   .pf-curve-area { opacity: 1; }
   .pf-photo-dialog[open], .pf-edit[open] { animation: none; }

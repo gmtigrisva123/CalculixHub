@@ -5,7 +5,7 @@
 
 import React, { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { m } from 'motion/react';
-import { Bell, Check, Command, Download, Eraser, FileJson, Flag, KeyRound, LogOut, Mail, Monitor, Moon, Palette, RotateCcw, Save, ShieldAlert, Sparkles, Sun, Target, Timer, Trash2, UserRound, type LucideIcon } from 'lucide-react';
+import { Bell, Check, Command, Download, Eraser, FileJson, Flag, KeyRound, LogOut, Mail, MessageCircleQuestion, Monitor, Moon, Palette, RotateCcw, Save, ShieldAlert, Sun, Target, Timer, Trash2, UserRound, type LucideIcon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { reminderHour } from '../platform/reminders';
 import type { ThemePreference } from '../lib/theme';
@@ -74,7 +74,7 @@ const GROUPS: readonly { id: string; label: string; items: readonly { id: string
   ] },
   { id: 'device', label: 'This device', items: [
     { id: 'appearance', label: 'Appearance', Icon: Palette },
-    { id: 'tutor', label: 'Live tutor', Icon: Sparkles },
+    { id: 'tutor', label: 'Live tutor', Icon: MessageCircleQuestion },
     { id: 'shortcuts', label: 'Shortcuts', Icon: Command },
   ] },
   { id: 'account', label: 'Account', items: [
@@ -346,8 +346,7 @@ export default function Settings({
     <div className="settings-page">
       <header className="se-hero">
         <div className="se-hero-copy">
-          <p className="se-eyebrow"><span aria-hidden="true" />Make this space yours</p>
-          <h1>A rhythm that works <em>for you.</em></h1>
+          <h1>Set your goal, pace <em>and reminders.</em></h1>
           <p className="se-summary">
             Aiming for <b>{goal?.short ?? customGoal}</b>, <b>{minutes} minutes</b> a day{studyReminders ? <>, with a reminder at <b>{reminderTime}</b></> : <>, no reminders</>}.
           </p>
@@ -382,7 +381,7 @@ export default function Settings({
           <section id="se-goal" className="se-card" aria-labelledby="se-goal-title">
             <div className="se-card-head">
               <span className="se-card-icon" aria-hidden="true"><Target size={18} /></span>
-              <div><h2 id="se-goal-title">Where you are headed</h2><p>Your target competition shapes the problems Learn puts in front of you.</p></div>
+              <div><h2 id="se-goal-title">Your goal</h2><p>Your target competition shapes the problems Learn puts in front of you.</p></div>
               <SaveNote state={saveState} />
             </div>
             <fieldset className="se-ascent">
@@ -463,7 +462,7 @@ export default function Settings({
 
           <section id="se-tutor" className="se-card" aria-labelledby="se-tutor-title">
             <div className="se-card-head">
-              <span className="se-card-icon" aria-hidden="true"><Sparkles size={18} /></span>
+              <span className="se-card-icon" aria-hidden="true"><MessageCircleQuestion size={18} /></span>
               <div><h2 id="se-tutor-title">Live tutor</h2><p>The tutor answers with Google’s Gemini. Connect it once with a free key from your own Google account and it will work through your actual question, not a ready-made hint.</p></div>
               <span className={`se-key-state is-${keyState}`}>{keyState === 'verified' ? 'On' : keyState === 'saved' ? 'Not checked' : 'Off'}</span>
             </div>
@@ -533,7 +532,7 @@ export default function Settings({
             {profile && user ? (
               <>
                 <div className="se-identity">
-                  <span className="se-identity-face"><UserAvatar src={profile.avatar_url} /></span>
+                  <span className="se-identity-face"><UserAvatar src={profile.avatar_url} seed={profile.id} /></span>
                   <div><b>{profile.display_name}</b><span>@{profile.username}</span></div>
                   <span className="se-identity-mail"><Mail size={14} aria-hidden="true" />{user.email ?? 'No email on file'}</span>
                 </div>

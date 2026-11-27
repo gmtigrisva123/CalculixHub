@@ -86,9 +86,9 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'dashboard', group: 'home', label: 'Home', shortLabel: 'Home', hint: 'Today at a glance', icon: House, inTabBar: true, shortcut: 'h' },
 
-  { key: 'learn', group: 'train', label: 'Learn', shortLabel: 'Learn', hint: 'Problems chosen for your level', icon: PencilLine, inTabBar: true, shortcut: 'l' },
+  { key: 'learn', group: 'train', label: 'Learn', shortLabel: 'Learn', hint: 'Training questions by topic, level and contest', icon: PencilLine, inTabBar: true, shortcut: 'l' },
   { key: 'archive', group: 'train', label: 'Exam Archive', shortLabel: 'Exams', hint: 'Every past paper, AMC to IMO', icon: LibraryBig, inTabBar: false, shortcut: 'e' },
-  { key: 'progress', group: 'train', label: 'Progress', shortLabel: 'Progress', hint: 'What you know, and what is next', icon: TrendingUp, inTabBar: false, shortcut: 'p' },
+  { key: 'progress', group: 'train', label: 'Progress', shortLabel: 'Progress', hint: 'Your figures and mastery by topic', icon: TrendingUp, inTabBar: false, shortcut: 'p' },
 
   { key: 'compete', group: 'compete', label: 'Arena', shortLabel: 'Arena', hint: 'Live timed contests', icon: Swords, inTabBar: true, shortcut: 'a' },
   { key: 'leaderboard', group: 'compete', label: 'Leaderboard', shortLabel: 'Ranks', hint: 'Where you stand', icon: Trophy, inTabBar: false, shortcut: 'r' },

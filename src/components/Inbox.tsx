@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, AtSign, Bell, Check, CheckCheck, CornerDownLeft, Heart, Mail, Megaphone, MessageCircle, MessageSquare, Repeat2, Search, Send, UserPlus, Users, X } from 'lucide-react';
+import { ArrowLeft, AtSign, Bell, Check, CheckCheck, CornerDownLeft, Mail, Megaphone, MessageCircle, MessageSquare, Repeat2, Search, Send, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { useNotifications, describeNotification, notificationLink } from '../services/data/notifications';
@@ -7,6 +7,7 @@ import { useConversations, useMessages, type ConversationWithPeople } from '../s
 import { searchProfiles } from '../services/data/people';
 import type { NotificationWithActor, ProfileRow } from '../services/database.types';
 import { Linkified } from '../lib/linkify';
+import { parsePost, redactSealed } from '../../shared/postMarkup';
 import UserAvatar from './UserAvatar';
 import '../styles/inbox.css';
 
@@ -15,7 +16,7 @@ type Filter = 'all' | 'unread' | 'replies' | 'messages' | 'social';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' }, { key: 'unread', label: 'Unread' }, { key: 'replies', label: 'Replies & mentions' },
-  { key: 'messages', label: 'Messages' }, { key: 'social', label: 'Reactions & follows' },
+  { key: 'messages', label: 'Messages' }, { key: 'social', label: 'Marks & follows' },
 ];
 const matches = (n: NotificationWithActor, filter: Filter) =>
   filter === 'all' ? true
@@ -25,11 +26,19 @@ const matches = (n: NotificationWithActor, filter: Filter) =>
   : ['follow', 'post_like', 'comment_like', 'post_share'].includes(n.type);
 
 const KIND: Record<string, { icon: typeof Bell; tone: string }> = {
-  follow: { icon: UserPlus, tone: 'is-sky' }, post_like: { icon: Heart, tone: 'is-rose' }, comment_like: { icon: Heart, tone: 'is-rose' },
+  follow: { icon: UserPlus, tone: 'is-sky' }, post_like: { icon: Check, tone: 'is-mint' }, comment_like: { icon: Check, tone: 'is-mint' },
   post_comment: { icon: MessageCircle, tone: 'is-indigo' }, comment_reply: { icon: MessageCircle, tone: 'is-indigo' },
   mention: { icon: AtSign, tone: 'is-amber' }, post_share: { icon: Repeat2, tone: 'is-mint' }, message: { icon: MessageSquare, tone: 'is-violet' },
   system: { icon: Megaphone, tone: 'is-slate' },
 };
+
+/**
+ * The words a notification quotes are the first 140 characters of a post or
+ * comment, cut by the database. The line that files a post is not part of what
+ * was said, and a hint or hidden word the writer sealed stays sealed here,
+ * including one the cut left unclosed.
+ */
+const quoted = (body: string) => redactSealed(parsePost(body).text, { truncated: true });
 
 const rtf = typeof Intl !== 'undefined' ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' }) : null;
 function relative(iso: string, now = Date.now()) {
@@ -166,8 +175,8 @@ export default function Inbox() {
         <p>{notifications.unreadCount ? `${notifications.unreadCount} unread · ` : 'All caught up · '}{conversations.data.length} {conversations.data.length === 1 ? 'conversation' : 'conversations'}</p>
       </div>
       <div className="ib-status">
-        <span className={`ib-pill ${errors.length ? 'is-warn' : 'is-live'}`}><i aria-hidden="true" />{errors.length ? 'Degraded' : 'Realtime'}</span>
-        {mailbox && <span className="ib-pill is-mail" title="Every notification is also delivered to your email address"><Mail size={13} aria-hidden="true" />Email copies → <code>{mailbox}</code></span>}
+        {errors.length > 0 && <span className="ib-pill is-warn"><i aria-hidden="true" />Not everything loaded</span>}
+        {mailbox && <span className="ib-pill is-mail"><Mail size={13} aria-hidden="true" />Copies go to <code>{mailbox}</code></span>}
       </div>
     </header>
 
@@ -187,18 +196,18 @@ export default function Inbox() {
         <button className="ib-btn" onClick={() => void notifications.markAllRead()} disabled={!notifications.unreadCount}><CheckCheck size={15} />Mark all read</button>
       </div>
       {notifications.loading ? <div className="ib-skeleton" role="status" aria-label="Loading notifications">{[0, 1, 2, 3].map(i => <span key={i} />)}</div>
-      : !shown.length ? <div className="ib-empty"><Bell size={22} /><h2>{filter === 'all' ? 'No notifications yet' : 'Nothing here'}</h2><p>{filter === 'all' ? 'Replies, reactions, follows and messages will show up here — and in your email.' : 'Try another filter.'}</p></div>
+      : !shown.length ? <div className="ib-empty"><Bell size={22} /><h2>{filter === 'all' ? 'No notifications yet' : 'Nothing here'}</h2><p>{filter === 'all' ? 'Replies, marks, follows and messages are listed here, and copied to your email.' : 'Try another filter.'}</p></div>
       : groups.map(group => <section key={group.label} className="ib-group" aria-label={group.label}>
           <h2 className="ib-group-label">{group.label}</h2>
           <ul>{group.items.map(n => {
             const kind = KIND[n.type] ?? KIND.system; const Icon = kind.icon;
             const clickable = Boolean(notificationLink(n)) || (n.type === 'message' && n.entity_id);
             return <li key={n.id} className={`ib-note${n.read_at ? '' : ' is-unread'}`}>
-              <span className={`ib-note-icon ${kind.tone}`} aria-hidden="true">{n.actor ? <span className="ib-note-face"><UserAvatar src={n.actor.avatar_url} /></span> : null}<Icon size={14} strokeWidth={2.2} /></span>
+              <span className={`ib-note-icon ${kind.tone}`} aria-hidden="true">{n.actor ? <span className="ib-note-face"><UserAvatar src={n.actor.avatar_url} seed={n.actor.id} /></span> : null}<Icon size={14} strokeWidth={2.2} /></span>
               <div className="ib-note-main">
                 {clickable ? <a href={notificationLink(n) ?? '?tab=inbox&view=messages'} onClick={event => { event.preventDefault(); void openNotification(n); }}><Headline n={n} /></a> : <p><Headline n={n} /></p>}
-                {n.body && n.type !== 'system' && <blockquote>{n.body}</blockquote>}
-                <p className="ib-note-meta"><time dateTime={n.created_at} title={new Date(n.created_at).toLocaleString()}>{relative(n.created_at)}</time><span><Mail size={11} aria-hidden="true" />Sent to email</span></p>
+                {n.body && n.type !== 'system' && <blockquote>{quoted(n.body)}</blockquote>}
+                <p className="ib-note-meta"><time dateTime={n.created_at} title={new Date(n.created_at).toLocaleString()}>{relative(n.created_at)}</time></p>
               </div>
               {n.read_at ? <span className="ib-note-read" title="Read"><Check size={14} /></span>
                 : <button className="ib-icon-btn" onClick={() => void notifications.markRead(n.id)} aria-label="Mark as read" title="Mark as read"><span className="ib-dot" /></button>}
@@ -215,7 +224,7 @@ export default function Inbox() {
           {query ? <button type="button" className="ib-icon-btn" aria-label="Clear search" onClick={() => { setQuery(''); setPeople([]); }}><X size={14} /></button> : <kbd>/</kbd>}
         </form>
         {people.length > 0 && <div className="ib-results"><p className="ib-list-label">Start a conversation</p>{people.map(p => <button className="ib-convo" key={p.id} onClick={() => void start(p.id)} disabled={busy}>
-          <span className="ib-avatar"><UserAvatar src={p.avatar_url} /></span><span className="ib-convo-text"><strong>{p.display_name || p.username}</strong><small>@{p.username}</small></span><Send size={14} className="ib-convo-go" />
+          <span className="ib-avatar"><UserAvatar src={p.avatar_url} seed={p.id} /></span><span className="ib-convo-text"><strong>{p.display_name || p.username}</strong><small>@{p.username}</small></span><Send size={14} className="ib-convo-go" />
         </button>)}</div>}
         <p className="ib-list-label">Conversations</p>
         {conversations.loading ? <div className="ib-skeleton is-tight" role="status" aria-label="Loading conversations">{[0, 1, 2].map(i => <span key={i} />)}</div>
@@ -225,7 +234,7 @@ export default function Inbox() {
             const mine = c.participants?.find(p => p.user_id === user.id);
             const unread = Boolean(c.last_message_at && mine && (!mine.last_read_at || Date.parse(mine.last_read_at) < Date.parse(c.last_message_at)));
             return <button className={`ib-convo${unread ? ' is-unread' : ''}`} aria-current={selected === c.id ? 'true' : undefined} key={c.id} data-conversation={c.id} onClick={() => { setSelected(c.id); setBody(''); }}>
-              <span className={`ib-avatar${faces.length > 1 ? ' is-group' : ''}`}>{faces.length > 1 ? <Users size={16} /> : <UserAvatar src={faces[0]?.avatar_url} />}</span>
+              <span className={`ib-avatar${faces.length > 1 ? ' is-group' : ''}`}>{faces.length > 1 ? <Users size={16} /> : <UserAvatar src={faces[0]?.avatar_url} seed={faces[0]?.id} />}</span>
               <span className="ib-convo-text"><strong>{conversationName(c, user.id)}</strong><small>{faces.length > 1 ? `${faces.length + 1} people` : faces[0] ? `@${faces[0].username}` : 'Direct conversation'}</small></span>
               <time dateTime={c.last_message_at ?? c.created_at}>{relative(c.last_message_at ?? c.created_at)}</time>
             </button>;
@@ -236,13 +245,12 @@ export default function Inbox() {
         {!active && !selected ? <div className="ib-empty is-thread"><MessageSquare size={24} /><h2>Pick a conversation</h2><p>Or press <kbd>/</kbd> to find a learner and start one.</p></div> : <>
           <header className="ib-thread-head">
             <button className="ib-icon-btn ib-back" onClick={() => setSelected(null)} aria-label="Back to conversations"><ArrowLeft size={17} /></button>
-            <span className={`ib-avatar${partner.length > 1 ? ' is-group' : ''}`}>{partner.length > 1 ? <Users size={16} /> : <UserAvatar src={partner[0]?.avatar_url} />}</span>
+            <span className={`ib-avatar${partner.length > 1 ? ' is-group' : ''}`}>{partner.length > 1 ? <Users size={16} /> : <UserAvatar src={partner[0]?.avatar_url} seed={partner[0]?.id} />}</span>
             <div><strong>{active ? conversationName(active, user.id) : 'Conversation'}</strong><small>{partner.length === 1 ? `@${partner[0].username}` : partner.length ? partner.map(p => `@${p.username}`).join(' · ') : 'Private conversation'}</small></div>
-            <span className="ib-pill is-live is-small"><i aria-hidden="true" />Live</span>
           </header>
           <div className="ib-history" ref={history} aria-live="polite">
             {messages.loading ? <div className="ib-skeleton is-bubbles" role="status" aria-label="Loading messages">{[0, 1, 2].map(i => <span key={i} />)}</div>
-            : messages.data.length === 0 ? <div className="ib-empty is-thread"><p>Say hello — the conversation is yours to begin.</p></div>
+            : messages.data.length === 0 ? <div className="ib-empty is-thread"><p>No messages yet. Write the first one below.</p></div>
             : messages.data.map((m, i) => {
                 const prev = messages.data[i - 1]; const next = messages.data[i + 1];
                 const newDay = !prev || dayKey(prev.created_at) !== dayKey(m.created_at);
@@ -253,7 +261,7 @@ export default function Inbox() {
                 return <React.Fragment key={m.id}>
                   {newDay && <p className="ib-day"><span>{dayLabel(m.created_at)}</span></p>}
                   <article className={`ib-msg${mine ? ' is-mine' : ''}${joinsPrev ? ' joins-prev' : ''}${joinsNext ? ' joins-next' : ''}`}>
-                    {!mine && <span className="ib-msg-face">{!joinsNext && <UserAvatar src={author?.avatar_url} />}</span>}
+                    {!mine && <span className="ib-msg-face">{!joinsNext && <UserAvatar src={author?.avatar_url} seed={author?.id} />}</span>}
                     <div className="ib-bubble">
                       {!mine && !joinsPrev && partner.length > 1 && <strong>{author?.display_name ?? author?.username ?? 'Learner'}</strong>}
                       <p><Linkified text={m.body} /></p>
