@@ -213,7 +213,10 @@ src/components/landing/
 ├── LandingChapters.tsx     one chapter per idle moment                                              (kept)
 ├── chapters.ts             chapter demand and arrival promises                                       (kept)
 ├── smoothScroll.ts         Lenis, now ticked by the director; scrollToTarget, setScrollLocked       (changed)
-├── kit.tsx                 motion vocabulary; adds DURATION, STAGGER, SPRING.tilt, useTilt           (changed)
+├── kit.tsx                 motion vocabulary; adds DURATION, STAGGER, SPRING.tilt, useTilt;          (changed)
+│                           static-mode and CSS-entrance paths; SIGNUP_HREF, linkAction
+├── staticMode.tsx          NEW (M1): the static-render context the build renders the first frame in
+├── entrance.ts             NEW (M1): the cue, the takeover's resume point, the count-up rule
 ├── copy.ts                 NEW: every visible string; one source for the live page, the static
 │                           page, JSON-LD and the honesty test
 ├── Opening.tsx             hero + sheet, split into surface and content layers (§2.5)                (changed)
@@ -251,12 +254,13 @@ src/components/landing/
 │   ├── thread/             thread.ts, paths.ts (pure, tested), thread.vert.glsl, thread.frag.glsl
 │   └── props/              sheetCurl.ts, belief.ts, chalk.ts, stacks.ts, desk.ts, finale.ts
 ├── static/
-│   ├── LandingStatic.tsx   the reading version, for no-JS visitors and non-JS crawlers
+│   ├── LandingReading.tsx  the reading version, for no-JS visitors and non-JS crawlers
+│   ├── jsonLd.ts           the page's structured data, from copy.ts and PLANS (§15.4)
 │   └── entry-static.tsx    build entry: the first frame + the reading version
 └── math/
     └── prebaked.ts         consumes virtual:landing-math; <PrebakedMath/> replaces MathText here
 
-scripts/prerender-landing.mjs      writes the static first frame into dist/index.html (§2.6)
+scripts/landing-static-plugin.mjs  Vite plugin: writes the static first frame into dist/index.html (§2.6)
 scripts/landing-math-plugin.mjs    Vite plugin: typesets every landing formula at build (§14.3)
 qa/landing/                        Playwright: visual, vitals, fallbacks, a11y; budgets.json (§16)
 ```
@@ -471,26 +475,26 @@ The opening, as markup (the hero is sticky within `.lx-opening`, as today):
 
 **Why.** The phone profile's LCP is 3,588 ms because nothing can paint before the entry bundle, the landing bundle and both stylesheets have arrived and run (§0.5). The first frame must come from the HTML.
 
-**Build.** After `vite build`, `scripts/prerender-landing.mjs` runs on every build path (`build`, `build:vercel`, `build:cloudflare`, and the Pages workflow's `vite build`, with its `--base`). It:
+**Build.** `scripts/landing-static-plugin.mjs`, a Vite plugin in `vite.config.ts`, runs in `writeBundle` on every client build, so every build path gets it with no extra step: `build`, `build:vercel`, `build:cloudflare`, `ios:sync` and the Pages workflow's `vite build --base=…`. Anything wrong fails the build, rather than shipping a page that silently lost its first frame. It:
 
-1. builds `static/entry-static.tsx` with `vite build --ssr`. That entry renders the real `LandingNav`, `Hero` and `Manifesto` components in their static mode, plus `LandingStatic` (the reading version of every chapter, §11.4), with `react-dom/server`'s `renderToStaticMarkup`. Static mode means no effects run, settled values are shown, and every control is a plain `<a href>`. The copy comes from `copy.ts` and the prebaked math, so the static page cannot drift from the live one;
-2. injects that markup into `dist/index.html` as `<div id="root"><div class="lx lx-static">…</div></div>`;
-3. inlines the **critical CSS**: tokens, the nav, the hero, the sheet, the pearl frame, the grain, the skip link and the reading styles, around 8 KB gzip. It also inlines the Geist `@font-face` with the hashed URL;
-4. replaces the stale Newsreader preload with nothing. Only Geist latin is preloaded;
-5. adds `<noscript><style>#boot{display:none}</style><link rel="stylesheet" href="…katex.css"></noscript>`;
-6. writes the JSON-LD and the canonical link (§15).
+1. loads `static/entry-static.tsx` in a Vite SSR server with the build's own mode, environment, aliases and constants, and renders the real `LandingPage` (nav, hero, sheet, the chapters' placeholder and the footer) in **static mode** (`staticMode.tsx`) with `react-dom/server`'s `renderToStaticMarkup`. The reading version of every chapter (`LandingReading`, §11.4) goes into the page's `readingVersion` slot. Static mode means no effects run, settled values are shown (words in place, figures at their values, drawings drawn), and every control that would open the forms is a plain `<a href>`. The copy comes from `copy.ts`, so the static page cannot drift from the live one;
+2. writes that markup into `dist/index.html` as `<div id="lx-static">…</div>` **immediately before** `<div id="root"></div>`, not inside it. The app's first commit is often a Suspense fallback while the landing chunk downloads; inside `#root` that commit would wipe the static frame and leave nothing on screen. As a sibling, the static frame stays until the landing itself commits (see Takeover);
+3. inlines the **critical CSS** as one `<style id="lx-static-css">` at the end of `<head>`, after the entry stylesheet, so the cascade is the live page's. It holds `landing-static.css` (who sees the static frame), the rules of the landing chunk's own emitted stylesheet that the static markup uses, picked by beasties, and the reading styles. Selectors on the boot state (`data-js`, `data-cue`, `data-landing`, `data-entrance`) are always kept, since they match nothing at build time. The Geist `@font-face` arrives with the entry stylesheet, which stays linked as before;
+4. writes the JSON-LD (§15.4) into `<head>` as data blocks.
+
+`index.html` itself drops the stale Newsreader preload (only Geist latin is preloaded), carries the canonical link (§15.1), and adds `<noscript><style>html #boot { display: none; }</style></noscript>` after the boot styles. The reading version's formulas are MathML typeset at build time, so no KaTeX stylesheet is needed without script.
 
 **Boot.** The inline boot script in `index.html` gains about ten lines (the CSP hash changes: §14.5):
 
 - `html[data-js]` is set at once. CSS hides the reading version under it, so JS visitors never see it.
-- For `data-boot="landing"`, `#boot` is not shown (`html[data-boot='landing'] #boot { display: none }`). **The static hero is the first paint: no cover, no preloader.**
-- The **cue**: `document.fonts.load("560 1em 'Geist'")` raced against 900 ms, then two `requestAnimationFrame`s. Then `html.dataset.cue = '1'` and `html.dataset.cueAt = performance.now()`. The hero's entrance is CSS keyed on `[data-cue]` (§3.3, scene 1), so it plays even while the bundles are still downloading.
-- For a workspace or paper boot, `html:not([data-boot='landing']) .lx-static { display: none }`, so the static landing costs no layout under the workspace cover.
+- `html[data-landing]` is set for a landing boot without a `?preview=` parameter, and under it `#boot` is not shown. **The static hero is the first paint: no cover, no preloader.** For every other boot (a stored session, a sign-in link, a preview), `html[data-js]:not([data-landing]) #lx-static { display: none }`, so the static landing costs no layout under the cover, and `src/boot/boot.ts` removes it as soon as the app's code runs.
+- `html[data-t0]` records the first animation frame, the phase of the hero's endless loops.
+- The **cue**: `new FontFace('Geist', 'url(<the preload's href>)').load()` raced against 900 ms, then two `requestAnimationFrame`s. Then `html[data-cue]`, `html[data-cue-at]` (`performance.now()`) and an `lx-cue` event. Not `document.fonts.load()`: the boot script runs before the stylesheet that declares the face is parsed, and with no matching `@font-face` that promise resolves at once. The hero's entrance is CSS keyed on `html[data-cue] .lx[data-entrance]` (§3.3, scene 1), so it plays even while the bundles are still downloading.
 
-**Takeover.** `createRoot` renders the live page into `#root`, replacing the static markup in a single commit. No frame is blank, because removal and insertion happen in one commit before the next paint. Because the live nav, hero and sheet render **the same markup and classes**, the frame after the swap is pixel-identical, with three provisions:
+**Takeover.** React renders the live page into `#root`. `Welcome` mounts `LandingPage` and `BootLift` in one Suspense boundary, and `BootLift`'s layout effect removes `#lx-static` in the same commit that inserts the live page, before the next paint: no frame is blank, and none shows both. Because the live nav, hero and sheet render **the same markup and classes**, the frame after the swap is pixel-identical, with three provisions:
 
-1. **Animations resume where they are.** The live root sets `--lx-elapsed: <now − cueAt> ms` before its first paint. Every entrance keyframe uses `animation-delay: calc(var(--d) - var(--lx-elapsed))`, so a word half-way up its rise continues from half-way.
-2. **Numbers never reset.** The hero's count-ups run only if the live hero commits before `cueAt + 700 ms` (when the stats begin to appear). Otherwise they keep the settled figures already on screen.
+1. **Animations resume where they are.** The live root sets `--lx-elapsed: <now − cueAt> ms` and `--lx-since: <now − t0> ms` before its first paint. Every entrance keyframe uses `animation-delay: calc(var(--d) - var(--lx-elapsed))`, so a word half-way up its rise continues from half-way, and the endless loops subtract `--lx-since` the same way, so they keep their phase.
+2. **Numbers never reset.** The hero's count-ups run only if the live hero commits before `cueAt + 650 ms`, 50 ms before the stats begin to appear (`STATS_APPEAR`, 700 ms). Otherwise they keep the settled figures already on screen.
 3. **No shift.** The swapped elements occupy identical boxes, so CLS stays 0. The LCP entry is the static `h1` at first paint. An identical replacement is not larger, so it does not create a later LCP entry.
 
 Before the takeover, every button is a working link (`Find your level` → `/?auth=signup`; `Try a problem` → `#playground`; `Scroll` → `#idea`). A click during download navigates rather than waiting for code.
@@ -505,7 +509,7 @@ From the first byte to the last prop, on the reference phone:
 | 2 | First paint | The static hero: night stage, pearl frame, words held in their masks. **LCP candidate.** |
 | 3 | Cue (font ready, or 900 ms; then 2 frames) | CSS entrance: headline word by word, then eyebrow, lead, buttons, stats, caption, cue line (§3.3). |
 | 4 | Entry JS | React, motion and the app gate (Supabase too until M11). The landing chunk (asked for at once, as `Welcome` does today). |
-| 5 | Takeover | `createRoot` swaps in the live first two screens (§2.6). The director starts; Lenis starts on fine pointers. |
+| 5 | Takeover | The landing's first commit swaps in the live first two screens (§2.6). The director starts; Lenis starts on fine pointers. |
 | 6 | cueAt + 1,350 ms, or the first wheel, touch or key | Chapters mount, one per idle moment (`whenIdle(…, 400)`), all at once for a hash or reduced motion (today's rule). |
 | 7 | Chapters mounted (or 5 s), then `whenIdle(…, 800)` | `import('./stage/Stage')`: three, renderer, capability check. Hero thread built; `compileAsync` of all nine programs in a still moment (no scroll for 300 ms); path textures uploaded with `initTexture`, one per idle callback. |
 | 8 | Programs ready | The thread's intro: assembly out of the shell, 2.6 s, on the wall clock from its first frame (today's rule). |
@@ -1272,9 +1276,9 @@ Triggered by `navigator.connection.saveData`, an `effectiveType` of `slow-2g`, `
 
 ### 11.4 JavaScript disabled
 
-- The static first frame (nav, hero, sheet) and the reading version of every chapter are real HTML in `#root` (§2.6). Without script, `html[data-js]` is never set, so the reading version shows and the hero sits in its settled state: the hidden entrance state applies only under `html[data-js]:not([data-cue])`.
-- `<noscript><style>#boot{display:none}</style></noscript>` keeps the night cover from sitting over the page.
-- Every link is a real `href`. Answers that need a click become `<details>` (§6.15). KaTeX's stylesheet arrives through `<noscript><link></noscript>`, so the prebaked formulas render.
+- The static first frame (nav, hero, sheet) and the reading version of every chapter are real HTML in `#lx-static`, beside `#root` (§2.6). Without script, `html[data-js]` is never set, so the reading version shows and the hero sits in its settled state: the hidden entrance state applies only under `html[data-js]:not([data-cue])`.
+- `<noscript><style>html #boot { display: none; }</style></noscript>`, after the boot styles and more specific than them, keeps the night cover from sitting over the page.
+- Every link is a real `href`. Answers that need a click become `<details>` (§6.15). The reading version's formulas are MathML, typeset at build time, which browsers render natively, so no stylesheet is needed.
 - The reading version's note says what needs JavaScript (§6.15).
 
 ### 11.5 WebGL context loss and recovery
@@ -1284,7 +1288,7 @@ Triggered by `navigator.connection.saveData`, an `effectiveType` of `slow-2g`, `
 - More than two losses in five minutes: tier S for the rest of the visit.
 - On unmount, `dispose()` and `forceContextLoss()` (kept).
 
-Older browsers: without `linear()`, the GLIDE fallback applies (kept). Without `svh`, the `vh` declared first applies. Without `document.fonts`, the cue fires after 900 ms.
+Older browsers: without `linear()`, the GLIDE fallback applies (kept). Without `svh`, the `vh` declared first applies. Without `FontFace`, the cue fires two frames after the boot script runs; a face that never loads is cued at 900 ms.
 
 ---
 
@@ -1415,7 +1419,7 @@ Kept exactly (`LandingChapters.tsx`): `count` starts at 1 and grows by one per `
 
 ### 15.1 Title, description, canonical
 
-The title and description are in §6.16 (both [NEW], pending the owner's choice in §18 Q1). Add `<link rel="canonical" href="https://calculixhub.com/">` [NEW], because `?home=1` and the preview parameters create duplicate URLs. Add `public/robots.txt` (allow all, point to the sitemap) and a one-URL `public/sitemap.xml` [NEW]. On GitHub Pages, both are written with the build's `--base`.
+The title and description are in §6.16 (both [NEW], pending the owner's choice in §18 Q1). Add `<link rel="canonical" href="https://calculixhub.com/">` [NEW], because `?home=1` and the preview parameters create duplicate URLs. Add `public/robots.txt` (allow all, point to the sitemap) and a one-URL `public/sitemap.xml` [NEW]. Both are static files naming the production origin. A crawler reads `robots.txt` only at a host's root, and the canonical link and the sitemap point a GitHub Pages mirror (served under a sub-path) at `calculixhub.com` rather than competing with it, so nothing is rewritten for `--base`.
 
 ### 15.2 OG image direction
 
@@ -1451,6 +1455,9 @@ Kept: all 25 cases. New:
 - The prebaked math covers every landing formula (§14.3).
 - **Honesty.** `copy.ts` contains no digit outside an allow-list of problem statements (each already checked against the archive). Every displayed figure is traced to `ARCHIVE_FIGURES`, `PLANS` or `ENGINE_RUN`.
 - The CSP guarantees test (kept), with the new hash.
+- **The entrance** (`entrance.test.ts`, M1): the takeover's resume point and the count-up rule; the figures' CSS delay equals `STATS_APPEAR`; the CSS waits for the face as long as the boot script; the CSS rise is motion's `arrive` spring, sampled.
+- **The static first frame** (`static/entry-static.test.ts`, M1): the headline as real text, nothing readable hidden by an inline style, settled figures, sign-up links, no inline script or handler, unique ids, the same HTML on every build.
+- **The reading version and the JSON-LD** (`static/reading.test.ts`, `static/jsonLd.test.ts`, `copy.test.ts`, M1): against `copy.ts`, `PLANS` and `ENGINE_RUN`, and every chapter renders its `copy.ts` strings.
 
 ### 16.2 Checklist per scene
 
@@ -1474,7 +1481,7 @@ Each scene passes in live, reduced-motion and no-WebGL modes, at desktop and pho
 
 ### 16.3 Playwright: screenshots, vitals and traces (`qa/landing/`)
 
-- **Screenshots** at fixed progress **0, 0.1, 0.2 … 1.0** (eleven points): `scrollTo(p × (docHeight − innerHeight))`, then `await __LX_TEST__.settled()`. At **desktop 1440 × 900** and **phone 390 × 844**. In the **light and dark themes** (`localStorage.calculix_theme`): the landing must look the same in both, and the dark run catches any app-level dark token leaking in and checks the `theme-color`. In three modes: **live** (WebGL; on CI, SwiftShader is allowed in test mode so the live path renders), **reduced motion**, **no WebGL**. That is 11 × 2 × 2 × 3 = 132 images, named `{mode}-{viewport}-{theme}-p{00..10}.png`. Tolerance: `maxDiffPixelRatio` 0.002 for DOM-only frames, 0.01 where the canvas draws.
+- **Screenshots** at fixed progress **0, 0.1, 0.2 … 1.0** (eleven points): `scrollTo(p × (docHeight − innerHeight))`, then `await __LX_TEST__.settled()` (from M2, when the director provides it; until then a fixed wait longer than the slowest spring). At **desktop 1440 × 900** and **phone 390 × 844**. In the **light and dark themes** (`localStorage.calculix_theme`): the landing must look the same in both, and the dark run catches any app-level dark token leaking in and checks the `theme-color`. In three modes: **live** (WebGL; on CI, SwiftShader is allowed in test mode so the live path renders), **reduced motion**, **no WebGL**. That is 11 × 2 × 2 × 3 = 132 images, named `{mode}-{viewport}-{theme}-p{00..10}.png`. Tolerance: `maxDiffPixelRatio` 0.002 for DOM-only frames, 0.01 where the canvas draws.
 - **Vitals** (blocking): the phone profile (412 × 823, Slow 4G 150 ms / 1.6 Mbps, 4× CPU), median of three runs. **LCP ≤ 2,500 ms, CLS ≤ 0.05**, and the LCP element must be the static `h1` (or its words).
 - **Scroll trace** (blocking): desktop 1440 × 900 at 4× CPU, the full page by wheel (100 px every 40 ms), with a Chrome trace (`devtools.timeline`) and a long-task observer. Pass: **0 long tasks over 50 ms after M10** (≤ 10 and none over 100 ms at M2); p95 main-thread work per frame ≤ 8 ms.
 - **INP proxy** (blocking): Event Timing over Check, a topic choice, an FAQ toggle, the billing toggle and a date change. The longest interaction must stay ≤ 200 ms at 4× CPU.
@@ -1507,10 +1514,10 @@ Every milestone ends with a page that can ship. A scene not yet rebuilt keeps to
 
 | Milestone | Scope | Definition of done | Retires |
 | --- | --- | --- | --- |
-| **M0** Harness and baseline | `qa/landing/` (Playwright, `__LX_TEST__`, the vitals, trace and budget scripts); snapshot today's page at all 132 points; a CI job, not yet blocking | The baseline numbers of §0.5 reproduced in CI. No product change. | — |
-| **M1** The first frame | Static first frame and reading version (§2.6, §11.4); boot cue; CSS hero entrance in the brief's order; drop the Newsreader preload; `#boot` off for landing boots; noscript block; JSON-LD, canonical, robots, sitemap; the new CSP hash in all three places | **LCP ≤ 2,500 ms** on the phone profile. JS-off pass. CLS 0. Takeover pixel-identical. The guarantees test green. | the hero's motion-driven entrance (`useHeroCue` moves into the boot script) |
+| **M0** Harness and baseline | `qa/landing/` (Playwright, the vitals, trace and budget scripts; the page side of `__LX_TEST__` arrives with the director in M2, since M0 changes no product code); snapshot today's page at all 132 points; a CI job, not yet blocking | The baseline numbers of §0.5 reproduced in CI. No product change. | — |
+| **M1** The first frame | Static first frame and reading version (§2.6, §11.4), with `copy.ts` as their single source; boot cue; CSS hero entrance in the brief's order; drop the Newsreader preload; `#boot` off for landing boots; noscript block; JSON-LD, canonical, robots, sitemap; the new CSP hash in all three places | **LCP ≤ 2,500 ms** on the phone profile. JS-off pass. CLS 0. Takeover pixel-identical. The guarantees test green. | the hero's motion-driven entrance (`useHeroCue` moves into the boot script) |
 | **M2** The director and the tokens | The one loop; `useScene` for every former `useScroll`; ground tones, nav, rails and spotlight on the director; the left rail's chapter numeral (§6.14); the layout cache; the contrast fixes (§12.2); roving tabindex on the two radio groups; `scroll-padding-top` | Screenshots ≤ 0.2 % different from M1. Scroll trace: ≤ 10 long tasks over 50 ms and none over 100 ms (today 67 and 108 ms). No layout read in a scroll path (a lint rule plus a trace check). | the rails' own rAF and per-frame rects and mask strings; the nav's two IntersectionObservers; Lenis `autoRaf` |
-| **M3** Copy and math | `copy.ts`; `virtual:landing-math` and `<PrebakedMath/>`; the honesty test | No KaTeX JS on the landing's network log. Chapters ≤ 40 KB gzip. | `MathText` and the `katex` import in landing code |
+| **M3** Copy and math | `virtual:landing-math` and `<PrebakedMath/>`; the honesty test (`copy.ts` itself arrives in M1) | No KaTeX JS on the landing's network log. Chapters ≤ 40 KB gzip. | `MathText` and the `katex` import in landing code |
 | **M4** The stage | One canvas, the layer contract (§2.5) across every section, capability and tiers, the governor, render-on-demand, context loss, the 2D fallback, the DOM-matched camera; the hero's thread in the stage (±5° / ±3°, curl-noise swirl, text-safe zone); `@types/three` pinned | Hero parity or better. No-WebGL and context-loss passes. 3D payload ≤ 180 KB gzip. | `ParticleField.tsx` and `useFieldCue`'s field |
 | **M5** Sheet and engine | Curl lip and contact shadow; hand-offs 1 → 2 and 2 → 3; ribbon, beads, slabs, rig, projected labels; the SVG becomes the fallback; the engine's live region | The scene 2–3 checklists. Reversal frames identical. `engineFrame` and `threadState` tests. | `EngineStory`'s own rAF and per-frame SVG writes in live mode |
 | **M6** Playground and topics | Hand-offs 3 → 4 and 4 → 5; the light circle; card tilt and sheen; dust, glyphs, bursts, ring and swirl; ghost depth layers | The scene 4–5 checklists. | the DOM symbols' role as the primary glyph (they remain as the fallback) |
@@ -1541,9 +1548,9 @@ Every milestone ends with a page that can ship. A scene not yet rebuilt keeps to
 | A11 | The pencil is drawn above the sheet's paper and below its 2D strokes. The stroke trails behind the tip and the pencil's body points away from it, so the two never visibly cross. |
 | A12 | The rails' turning figure stays a 2D canvas. It is drawn only on wide screens, and keeping it out of the stage keeps the stage's layering simple. |
 | A13 | `powerPreference: 'default'` replaces `'high-performance'` (§2.3.1). |
-| A14 | The static first frame is replaced by `createRoot`, not hydrated. The app's providers (auth, theme, motion) therefore need no server-rendering work, and only landing components render at build time. |
+| A14 | The static first frame is replaced by the landing's first commit, not hydrated. The app's providers (auth, theme, motion) therefore need no server-rendering work, and only landing components render at build time. |
 | A15 | No downloaded 3D assets: everything is procedural (§13). |
-| A16 | `@playwright/test` (dev only) is acceptable as the one new dependency; `@axe-core/playwright` is optional. |
+| A16 | The new dependencies are dev-only and never ship to the browser: `beasties` (the build's critical CSS), and in `qa/` `@playwright/test`, `pixelmatch` and `pngjs`. `@axe-core/playwright` is optional. |
 
 ### Open questions for the owner
 
