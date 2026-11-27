@@ -49,10 +49,20 @@ const scriptJson = value => JSON.stringify(value)
   .replaceAll(LINE_SEPARATOR, '\\u2028')
   .replaceAll(PARAGRAPH_SEPARATOR, '\\u2029');
 
-async function renderStatic(root) {
+/**
+ * Renders the static frame with the same mode, environment, aliases and
+ * constants as the build it belongs to, so `import.meta.env` and `@/` imports
+ * resolve exactly as they do in the bundle the live page runs.
+ */
+async function renderStatic(config) {
   const server = await createServer({
     configFile: false,
-    root,
+    root: config.root,
+    mode: config.mode,
+    envDir: config.envDir,
+    envPrefix: config.envPrefix,
+    define: config.define,
+    resolve: { alias: config.resolve.alias },
     logLevel: 'error',
     appType: 'custom',
     plugins: [react()],
@@ -117,7 +127,7 @@ export default function landingStatic() {
       }).join('\n');
       if (!landingCss.trim()) throw new Error('landing-static: the landing chunk imports no CSS');
 
-      const { markup, jsonLd } = await renderStatic(config.root);
+      const { markup, jsonLd } = await renderStatic(config);
       if (!markup.includes('id="lx-hero-title"')) throw new Error('landing-static: the rendered first frame has no hero headline');
 
       const [staticCss, readingCss] = await Promise.all([
