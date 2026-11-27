@@ -1,13 +1,15 @@
 import { useLayoutEffect } from 'react';
 import BrandLogo from '../components/BrandLogo';
-import { liftBoot } from './boot';
+import { dropStaticFrame, liftBoot } from './boot';
 
 /**
  * Rendered by each screen that can be the first one shown. Mounting it means
- * that screen is in the document, so the cover painted by index.html can go.
+ * that screen is in the document, so the cover painted by index.html can go,
+ * and so can the landing's static first frame (dropped before paint, in this
+ * same commit).
  */
 export default function BootLift() {
-  useLayoutEffect(() => { liftBoot(); }, []);
+  useLayoutEffect(() => { dropStaticFrame(); liftBoot(); }, []);
   return null;
 }
 

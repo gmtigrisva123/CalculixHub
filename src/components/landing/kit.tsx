@@ -10,10 +10,11 @@
  * script runs (the settled value, always).
  */
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from 'react';
 import { animate, m, useInView, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue, type Variants } from 'motion/react';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
 import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from '../brand';
+import { useStatic } from './staticMode';
 
 /** The page's signature curve: a fast departure that glides into place. Used for fades, where a spring has nothing to say. */
 export const GLIDE = [0.16, 1, 0.3, 1] as const;
@@ -46,6 +47,22 @@ export const SPRING = {
 export const fade = (delay = 0) => ({ duration: 0.55, ease: GLIDE, delay });
 
 export const useFinePointer = () => useMediaQuery('(hover: hover) and (pointer: fine)');
+
+/** Where the sign-up buttons go without script, and on a modified click: the sign-up form. */
+export const SIGNUP_HREF = '/?auth=signup';
+
+/**
+ * A real link that, once the page's code is running, acts in place instead
+ * (opening the sign-up form without a reload). Before the code arrives, and
+ * on any modified click (a new tab, a new window), it is simply the link.
+ */
+export function linkAction(handler: () => void) {
+  return (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    handler();
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Headings that rise into place, word by word
@@ -113,13 +130,58 @@ interface SplitTextProps {
   trigger?: 'mount' | 'view';
   /** With `trigger="mount"`: hold the words down until this turns true. */
   play?: boolean;
+  /**
+   * `css`: the words carry only classes and their order (`--i`), and the rise
+   * is CSS (landing-entrance.css). The hero uses it, so its headline can rise
+   * from the static HTML before any script has run.
+   */
+  entrance?: 'motion' | 'css';
 }
 
 /**
  * The words are real text in the heading, separated by real spaces, so the
  * accessible name is the sentence as written and nothing needs an aria-label.
  */
-export function SplitText({ text, as = 'h2', className, id, delay = 0, stagger = 0.055, trigger = 'view', play: playing = true }: SplitTextProps) {
+export function SplitText(props: SplitTextProps) {
+  const isStatic = useStatic();
+  return props.entrance === 'css' || isStatic ? <CssSplitText {...props} /> : <MotionSplitText {...props} />;
+}
+
+/** The same markup as the motion version, with no motion: each word knows its place in the order, and CSS does the rest. */
+function CssSplitText({ text, as = 'h2', className, id }: SplitTextProps) {
+  const Tag = as;
+  const lines = splitEmphasis(text);
+  let order = 0;
+  return (
+    <Tag id={id} className={['lx-split', 'lx-split-css', className].filter(Boolean).join(' ')}>
+      {lines.map((words, lineIndex) => (
+        <Fragment key={lineIndex}>
+          {lineIndex > 0 && <br />}
+          {runsOf(words).map((run, runIndex) => {
+            const phrase = run.words.map(({ segments, index: wordIndex }, position) => (
+              <Fragment key={wordIndex}>
+                {position > 0 && ' '}
+                <span className="lx-w">
+                  <span className="lx-wi" style={{ ['--i' as string]: order++ }}>
+                    {segments.map((segment, index) => segment.em ? <em key={index}>{segment.text}</em> : <Fragment key={index}>{segment.text}</Fragment>)}
+                  </span>
+                </span>
+              </Fragment>
+            ));
+            return (
+              <Fragment key={runIndex}>
+                {runIndex > 0 && ' '}
+                {run.em ? <span className="lx-em">{phrase}</span> : phrase}
+              </Fragment>
+            );
+          })}
+        </Fragment>
+      ))}
+    </Tag>
+  );
+}
+
+function MotionSplitText({ text, as = 'h2', className, id, delay = 0, stagger = 0.055, trigger = 'view', play: playing = true }: SplitTextProps) {
   const Tag = m[as];
   const lines = splitEmphasis(text);
   // Once the last word has landed the masks are lifted, so no descender is ever clipped.
@@ -199,6 +261,12 @@ interface RiseProps {
  * cost a mid-range phone its frame rate.)
  */
 export function Rise({ children, className, delay = 0, y = 34, as = 'div', amount = 0.25, id, panel = false }: RiseProps) {
+  const isStatic = useStatic();
+  // Rendered into the HTML at build time: settled and visible, with nothing to rise from.
+  if (isStatic) {
+    const Plain = as;
+    return <Plain id={id} className={className}>{children}</Plain>;
+  }
   const Tag = m[as];
   return (
     <Tag
@@ -244,6 +312,11 @@ interface StaggerProps {
  * own spring. One observer for the group rather than one per item.
  */
 export function Stagger({ children, className, as = 'div', gap = 0.07, delay = 0, amount = 0.2 }: StaggerProps) {
+  const isStatic = useStatic();
+  if (isStatic) {
+    const Plain = as;
+    return <Plain className={className}>{children}</Plain>;
+  }
   const Tag = m[as];
   return (
     <Tag className={className} initial="hidden" whileInView="shown" viewport={{ once: true, amount }} variants={staggerGroup} custom={{ gap, delay }}>
@@ -253,6 +326,11 @@ export function Stagger({ children, className, as = 'div', gap = 0.07, delay = 0
 }
 
 export function StaggerItem({ children, className, as = 'div', y = 22 }: { children: ReactNode; className?: string; as?: 'div' | 'li' | 'article'; y?: number }) {
+  const isStatic = useStatic();
+  if (isStatic) {
+    const Plain = as;
+    return <Plain className={className}>{children}</Plain>;
+  }
   const Tag = m[as];
   return <Tag className={className} variants={staggerChild} custom={y}>{children}</Tag>;
 }
@@ -262,52 +340,63 @@ export function StaggerItem({ children, className, as = 'div', y = 22 }: { child
 // ---------------------------------------------------------------------------
 
 const grouped = (value: number) => Math.round(value).toLocaleString('en-US');
+const plainNumber = (value: number) => String(Math.round(value));
 
 interface CountUpProps {
   value: number;
   delay?: number;
   className?: string;
-  /** Hold at zero until this turns true. */
+  /** Hold at the starting figure until this turns true. */
   start?: boolean;
+  /** Where the count starts (0 unless given): a range like 1959–2026 counts its end from 1959. */
+  from?: number;
+  /** Digits only, without grouping commas: for years. */
+  plain?: boolean;
+  /**
+   * False keeps the settled figure and never counts: a figure the reader has
+   * already seen (the static first frame showed it) must not reset.
+   */
+  play?: boolean;
 }
 
 /**
  * The settled figure is what the markup holds, and what a screen reader hears:
  * the animated digits are hidden from assistive technology, and swapped for
- * zero only once script is running and motion is allowed.
+ * the starting figure only once script is running and motion is allowed.
  */
-export function CountUp({ value, delay = 0, className, start = true }: CountUpProps) {
+export function CountUp({ value, delay = 0, className, start = true, from = 0, plain = false, play = true }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
   const inView = useInView(ref, { once: true, amount: 0.8 });
+  const format = plain ? plainNumber : grouped;
 
   useLayoutEffect(() => {
-    if (!reduce && ref.current) ref.current.textContent = grouped(0);
-  }, [reduce]);
+    if (!reduce && play && ref.current) ref.current.textContent = format(from);
+  }, [reduce, play, from, format]);
 
   useEffect(() => {
-    if (reduce || !inView || !start) return;
+    if (reduce || !play || !inView || !start) return;
     const node = ref.current;
-    const controls = animate(0, value, {
+    const controls = animate(from, value, {
       duration: 1.9,
       delay,
       ease: GLIDE,
-      onUpdate: latest => { if (node) node.textContent = grouped(latest); },
+      onUpdate: latest => { if (node) node.textContent = format(latest); },
     });
     return () => controls.stop();
-  }, [inView, reduce, value, delay, start]);
+  }, [inView, reduce, value, delay, start, from, play, format]);
 
-  // Hold the settled figure's width from the start, so counting up from 0
+  // Hold the settled figure's width from the start, so counting up
   // never pushes its neighbours along. Digits are tabular (1ch each); a
   // grouping comma is about a third of that.
-  const settled = grouped(value);
+  const settled = format(value);
   const commas = settled.split(',').length - 1;
   const reserve = { display: 'inline-block', minWidth: `${(settled.length - commas * 0.68).toFixed(2)}ch` } as const;
 
   return (
     <span className={className}>
-      <span ref={ref} aria-hidden="true" className="lx-tabular" style={reserve}>{grouped(value)}</span>
-      <span className="sr-only">{grouped(value)}</span>
+      <span ref={ref} aria-hidden="true" className="lx-tabular" style={reserve}>{settled}</span>
+      <span className="sr-only">{settled}</span>
     </span>
   );
 }

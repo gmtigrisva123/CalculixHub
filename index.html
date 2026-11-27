@@ -19,6 +19,8 @@
     <meta property="og:description" content="Stay with the question. Contest math from AMC to IMO, with problems picked to fit your level and talked through one step at a time." />
     <meta property="og:site_name" content="CalculixHub" />
     <meta property="og:url" content="https://calculixhub.com/" />
+    <!-- One address for the page, whatever query it was opened with (?home=1, a preview). -->
+    <link rel="canonical" href="https://calculixhub.com/" />
     <!--
       The card shown when the link is shared. Chat apps and social networks need
       an absolute URL here, and they cache it by URL: when the picture changes,
@@ -54,15 +56,16 @@
       come back from the first of them. Now the only thing between the HTML and
       text on screen is this site's own CSS.
 
-      The two files below are the faces the landing hero is set in: Geist for
-      "Stay with the", Newsreader's italic for "question". Preloading starts
-      them downloading alongside the stylesheet, so the headline is normally
-      drawn in its real type on the first frame instead of arriving in a
-      fallback and jumping. Everything else (Geist Mono, the upright
-      Newsreader, Caveat) is fetched when a page first uses it.
+      The file below is the face the landing hero is set in: Geist, every word
+      of the headline included ("question" is Geist too, underlined in
+      pencil). Preloading starts it downloading alongside the stylesheet, so
+      the headline is drawn in its real type instead of arriving in a fallback
+      and jumping; the boot script below also waits for it before the hero
+      moves. Everything else (Geist Mono, Newsreader, Caveat) is fetched when a
+      page first uses it. Newsreader's italic used to be preloaded too, for a
+      headline that no longer uses it: 147 KB competing with the first paint.
     -->
     <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2" />
-    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2" />
 
     <!--
       The colour the browser tints its own chrome with. Declared before the
@@ -92,8 +95,21 @@
          forms; anything else is a first visit, and gets the night. The app
          reads the same answer from src/boot/boot.ts.
 
+      3. The landing's first frame (scripts/landing-static-plugin.mjs). The
+         build writes the hero into this file, so a first visit paints the
+         hero rather than a cover. `data-js` says script runs (the reading
+         version for visitors without it is then hidden), `data-landing`
+         says this visit opens on the landing, and `data-cue` says the hero
+         may move: once its display face has loaded, capped at 900 ms, and
+         two frames have been painted. Its entrance is CSS keyed on that
+         (styles/landing-entrance.css), so it plays before the bundles land.
+         The face is checked by loading the preloaded file above itself: the
+         stylesheet that declares it has not been parsed yet at this point.
+
       Deliberately inline and synchronous: a module script is deferred by
-      definition and would run after paint.
+      definition and would run after paint. Any change to the script changes
+      its CSP hash: update THEME_BOOT_SCRIPT_HASH in server/security.ts and
+      the policy in vercel.json, and rebuild api/ (`node scripts/build-vercel-api.mjs`).
     -->
     <script>
       (function () {
@@ -118,9 +134,33 @@
           boot = query.get('preview') === 'ios' ? 'paper' : session && !query.has('recovery') ? 'workspace' : guest ? 'workspace' : link ? 'paper' : 'landing';
         } catch (e) {}
         root.dataset.boot = boot;
+        root.dataset.js = '';
+        try {
+          if (boot === 'landing' && !new URLSearchParams(location.search).has('preview')) root.dataset.landing = '';
+        } catch (e) {}
 
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', boot === 'landing' ? '#f8f4ed' : resolved === 'dark' ? '#141d22' : '#efece4');
+
+        var cued = false;
+        var cue = function () {
+          if (cued) return;
+          cued = true;
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              root.dataset.cueAt = String(Math.round(performance.now()));
+              root.dataset.cue = '';
+              window.dispatchEvent(new Event('lx-cue'));
+            });
+          });
+        };
+        requestAnimationFrame(function () { root.dataset.t0 = String(Math.round(performance.now())); });
+        try {
+          var face = document.querySelector('link[rel="preload"][as="font"]');
+          if (face && window.FontFace) new FontFace('Geist', 'url(' + face.href + ')', { weight: '100 900' }).load().then(cue, cue);
+          else cue();
+        } catch (e) { cue(); }
+        setTimeout(cue, 900);
       })();
     </script>
 
@@ -187,6 +227,12 @@
         .boot-mark path { animation: none; stroke-dashoffset: 0; }
       }
     </style>
+    <!--
+      Without script the cover would never lift, so it is not drawn: the
+      static landing shows instead. After the boot styles above, and more
+      specific than them, so it wins over their `display: grid`.
+    -->
+    <noscript><style>html #boot { display: none; }</style></noscript>
 
     <!--
       Installable web app.

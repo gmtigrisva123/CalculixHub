@@ -52,6 +52,27 @@ export function liftBoot(): void {
 /** Whether the cover is still up. The landing hero waits for it before it starts to move. */
 export const bootLifted = (): boolean => lifted;
 
+/**
+ * Remove the static first frame: the landing's first two screens, written into
+ * the HTML at build time (scripts/landing-static-plugin.mjs) so that a first
+ * visit paints the hero itself instead of a cover. Called from the layout
+ * effect of the first real screen, in the same commit that put that screen in
+ * the document, so no frame is ever painted with neither of them. When that
+ * screen is the landing, it is the same markup, continuing the same entrance
+ * (src/components/landing/entrance.ts). Calling it again does nothing.
+ *
+ * Unlike the cover it is never removed on a timer: if the page's code never
+ * arrives, the static frame is the best thing left to read.
+ */
+export function dropStaticFrame(): void {
+  if (typeof document === 'undefined') return;
+  document.getElementById('lx-static')?.remove();
+}
+
+// A visit that will not open on the landing (index.html's boot script decided)
+// has no use for its static frame; it was never shown, so it goes at once.
+if (typeof document !== 'undefined' && document.documentElement.dataset.landing === undefined) dropStaticFrame();
+
 // If nothing ever asks for the cover to lift (a script failed, say), it must
 // not sit over the page for good.
 if (typeof window !== 'undefined') window.setTimeout(liftBoot, 12000);

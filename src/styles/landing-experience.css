@@ -475,6 +475,10 @@
 
 .lx-nav-actions { display: flex; align-items: center; gap: 6px; margin-left: 10px; }
 .lx-nav-signin {
+  /* A link that opens the forms (before the code arrives, the only way to reach them): laid out as the button it replaced. */
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
   height: 42px;
   padding: 0 16px;
   border-radius: 8px;

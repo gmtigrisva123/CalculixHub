@@ -10,50 +10,28 @@
  *
  * The idea is the page's thesis in three short lines, lit word by word as they
  * are read: dim words ahead of the reader, full ink behind.
+ *
+ * Both screens are rendered twice. Once into the HTML at build time
+ * (staticMode.tsx), so the hero is the first thing a visitor sees, and once
+ * live. The hero's entrance is CSS keyed on the boot script's cue
+ * (landing-entrance.css), so it plays from the HTML while the bundles are
+ * still on their way, and the live page continues it from wherever it has got
+ * to (entrance.ts). The markup is the same in both; only what follows the
+ * scroll and what answers a click is added live.
  */
 
 import { forwardRef, lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { ARCHIVE_FIGURES } from './archiveFigures';
-import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SPRING, SplitText, fade } from './kit';
+import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SIGNUP_HREF, SplitText, linkAction } from './kit';
 import { jumpTo } from './LandingNav';
 import HeroGlow from './HeroGlow';
 import { whenIdle } from '../../lib/lazy';
 import { afterChapters } from './chapters';
+import { useStatic } from './staticMode';
+import { STATS_APPEAR, useEntranceState } from './entrance';
 
 const ParticleField = lazy(() => import('./ParticleField'));
-
-/**
- * The moment the hero may start to move.
- *
- * The page is mounted in one go: ten sections, some twenty screens tall. The
- * browser then has to lay all of it out and paint the first screen, and for
- * that stretch the main thread is busy. An entrance that starts at mount runs
- * straight into it: the clock keeps going while no frames are drawn, so the
- * headline skips half its rise and lands with a jolt. That was the stutter on
- * arrival.
- *
- * So the entrance waits for two things. First, for the browser to have drawn a
- * frame of the finished layout (two animation frames after mount: one for the
- * layout, one to prove the next frame came). Second, for the display face, so
- * the words rise in their real type rather than swapping part-way up; it is
- * preloaded and normally already in hand, and the wait is capped so a slow
- * font can only delay the entrance by a moment, never hold it.
- */
-function useHeroCue(): boolean {
-  const [cued, setCued] = useState(false);
-  useEffect(() => {
-    let live = true;
-    const fonts = typeof document.fonts?.load === 'function'
-      ? document.fonts.load("560 1em 'Geist'").catch(() => undefined)
-      : Promise.resolve();
-    const painted = new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    const cap = new Promise<void>(resolve => window.setTimeout(resolve, 900));
-    void Promise.all([painted, Promise.race([fonts, cap])]).then(() => { if (live) setCued(true); });
-    return () => { live = false; };
-  }, []);
-  return cued;
-}
 
 /**
  * The butterfly's code is three.js, most of half a megabyte. Asking for it at
@@ -101,18 +79,26 @@ export default function Opening({ onRegister }: OpeningProps) {
 // Hero
 // ---------------------------------------------------------------------------
 
+/** The hero's figures, and when each starts to count after the cue (s): just after it appears. */
+const COUNT_AT = [STATS_APPEAR + 0.05, STATS_APPEAR + 0.12, STATS_APPEAR + 0.19];
+
 function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: () => void }) {
   const reduce = Boolean(useReducedMotion());
+  const isStatic = useStatic();
+  const entrance = useEntranceState();
   const [ready, setReady] = useState(false);
-  const cued = useHeroCue();
+  // The entrance has begun: the cue has fired for this page.
+  const cued = !isStatic && entrance.startedAt !== null;
   const field = useFieldCue(cued);
-  const shown = cued ? { opacity: 1, y: 0 } : undefined;
   const stageScale = useTransform(cover, [0, 1], [1, reduce ? 1 : 0.9]);
   const stageY = useTransform(cover, [0, 1], ['0vh', reduce ? '0vh' : '-4vh']);
   const copyY = useTransform(cover, [0, 0.8], ['0vh', reduce ? '0vh' : '-16vh']);
   const copyOpacity = useTransform(cover, [0.05, 0.6], [1, 0]);
   const shade = useTransform(cover, [0, 1], [0, 0.55]);
   const release = useTransform(cover, [0, 1], [0, 1]);
+  // A count resumes from the static frame's clock: by the time the live page arrives, part of the wait has passed.
+  const countDelay = (at: number) => Math.max(0, at - entrance.elapsed / 1000);
+  const counting = { start: cued, play: entrance.countUps };
 
   return (
     <section className="lx-hero" id="top" data-tone="ink" aria-labelledby="lx-hero-title">
@@ -131,52 +117,59 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
 
         <m.div className="lx-hero-copy" style={{ y: copyY, opacity: copyOpacity }}>
           {/*
-            The opening choreography: eyebrow, headline word by word, lead, then
-            the two ways in. The buttons are on screen inside the first second,
-            and can be clicked from the first frame; nothing waits on a flourish.
+            The opening choreography (landing-entrance.css): the headline word
+            by word, then the eyebrow, the lead and the two ways in. The buttons
+            are on screen inside the first second, and work from the first
+            frame: before the page's code arrives they are plain links.
           */}
-          <m.div initial={{ opacity: 0, y: 14 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.02, opacity: fade(0.02) }}>
+          <div className="lx-in lx-in-eyebrow">
             <Eyebrow>Competition mathematics · AMC to IMO</Eyebrow>
-          </m.div>
-          <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" play={cued} delay={0.1} stagger={0.07} />
-          <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.38, opacity: fade(0.38) }}>
+          </div>
+          <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} entrance="css" />
+          <p className="lx-hero-lead lx-in lx-in-lead">
             Contest problems chosen to fit your level, each with a hint and a full solution.
-          </m.p>
-          <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.48, opacity: fade(0.48) }}>
+          </p>
+          <div className="lx-hero-actions lx-in lx-in-actions">
             <Magnetic>
-              <button type="button" className="lx-btn lx-btn-cream" onClick={onRegister}>
+              <a className="lx-btn lx-btn-cream" href={SIGNUP_HREF} onClick={linkAction(onRegister)}>
                 <span>Find your level</span>
                 <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
-              </button>
+              </a>
             </Magnetic>
             <a className="lx-btn lx-btn-glass" href="#playground" onClick={event => jumpTo(event, 'playground')}>
               <span>Try a problem</span>
               <Arrow direction="down" size={15} />
             </a>
-          </m.div>
+          </div>
         </m.div>
 
         <m.div className="lx-hero-foot" style={{ opacity: copyOpacity }}>
-          <m.dl className="lx-hero-stats" initial="hidden" animate={cued ? 'shown' : 'hidden'} variants={{ shown: { transition: { staggerChildren: 0.07, delayChildren: 0.7 } } }}>
-            <HeroStat label="past problems"><CountUp value={ARCHIVE_FIGURES.problems} delay={0.75} start={cued} /></HeroStat>
-            <HeroStat label="real exams"><CountUp value={ARCHIVE_FIGURES.papers} delay={0.82} start={cued} /></HeroStat>
-            <HeroStat label="years of contests">{ARCHIVE_FIGURES.firstYear}<span className="lx-dash">–</span>{ARCHIVE_FIGURES.lastYear}</HeroStat>
-          </m.dl>
-          <m.p className="lx-hero-caption" initial={{ opacity: 0 }} animate={cued ? { opacity: 1 } : undefined} transition={{ duration: 1, delay: 1.3 }}>
+          <dl className="lx-hero-stats">
+            <HeroStat index={0} label="past problems"><CountUp value={ARCHIVE_FIGURES.problems} delay={countDelay(COUNT_AT[0])} {...counting} /></HeroStat>
+            <HeroStat index={1} label="real exams"><CountUp value={ARCHIVE_FIGURES.papers} delay={countDelay(COUNT_AT[1])} {...counting} /></HeroStat>
+            <HeroStat index={2} label="years of contests">
+              {ARCHIVE_FIGURES.firstYear}<span className="lx-dash">–</span>
+              {/* The range opens: its end counts up from the first year. */}
+              <CountUp value={ARCHIVE_FIGURES.lastYear} from={ARCHIVE_FIGURES.firstYear} plain delay={countDelay(COUNT_AT[2])} {...counting} />
+            </HeroStat>
+          </dl>
+          <p className="lx-hero-caption lx-in-caption">
             <svg className="lx-hero-scribble" viewBox="0 0 150 120" fill="none" aria-hidden="true">
-              <m.path
+              <path
+                className="lx-draw lx-draw-stroke"
+                pathLength={1}
                 d="M136 112C92 114 40 100 26 62C20 44 30 26 48 12"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                initial={{ pathLength: 0 }} animate={cued ? { pathLength: 1 } : undefined} transition={{ duration: 1.1, ease: GLIDE, delay: 1.5 }}
               />
-              <m.path
+              <path
+                className="lx-draw lx-draw-head"
+                pathLength={1}
                 d="M34 12 49 11 47 27"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                initial={{ pathLength: 0 }} animate={cued ? { pathLength: 1 } : undefined} transition={{ duration: 0.4, ease: GLIDE, delay: 2.4 }}
               />
             </svg>
             <span>Three short equations draw this one path. It never repeats, never crosses itself — <em>chaos, but it never gets lost.</em></span>
-          </m.p>
+          </p>
           <a className="lx-scroll-cue" href="#idea" onClick={event => jumpTo(event, 'idea')}>
             <span>Scroll</span>
             <span className="lx-scroll-line" aria-hidden="true" />
@@ -189,12 +182,13 @@ function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: (
   );
 }
 
-function HeroStat({ label, children }: { label: string; children: ReactNode }) {
+/** One of the hero's figures. Its place in the row sets when it arrives (`--n`, landing-entrance.css). */
+function HeroStat({ label, index, children }: { label: string; index: number; children: ReactNode }) {
   return (
-    <m.div className="lx-hero-stat" variants={{ hidden: { opacity: 0, y: 16 }, shown: { opacity: 1, y: 0, transition: { ...SPRING.arrive, opacity: fade() } } }}>
+    <div className="lx-hero-stat lx-in lx-in-stat" style={{ ['--n' as string]: index }}>
       <dt>{label}</dt>
       <dd>{children}</dd>
-    </m.div>
+    </div>
   );
 }
 
@@ -221,6 +215,9 @@ const IDEA_WORDS = IDEA.flatMap((line, row) => line.words.map((text, position) =
 
 const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
   const reduce = Boolean(useReducedMotion());
+  const isStatic = useStatic();
+  // Rendered into the HTML, every word is already lit: a reader without script sees the settled sheet.
+  const still = reduce || isStatic;
   const textRef = useRef<HTMLHeadingElement>(null);
   const { scrollYProgress } = useScroll({ target: textRef, offset: ['start 0.85', 'end 0.5'] });
   const total = IDEA_WORDS.length;
@@ -238,7 +235,7 @@ const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
                   role={word.role}
                   progress={scrollYProgress}
                   range={[index / total, Math.min(1, (index + 2) / total)]}
-                  still={reduce}
+                  still={still}
                 />
               ))}
             </span>

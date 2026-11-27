@@ -1,0 +1,21 @@
+/*
+ * The landing's static first frame (scripts/landing-static-plugin.mjs).
+ *
+ * The build writes the first two screens, and the chapters as plain reading
+ * matter, into dist/index.html as #lx-static, before #root. These rules decide
+ * who sees what before the page's code arrives. They are inlined with that
+ * markup and never imported by the live page.
+ *
+ *   - A first visit (the boot script set data-landing) sees the static hero
+ *     at once: the night cover painted by index.html is not needed.
+ *   - Any other visit (a stored session, a sign-in link, a preview) never sees
+ *     it; src/boot/boot.ts removes it as soon as the app's code runs.
+ *   - With script, the chapters' blank paper holds their place until the live
+ *     chapters mount, exactly as on the live page, and the reading version is
+ *     not shown. Without script, the reading version is the rest of the page.
+ */
+
+html[data-landing] #boot { display: none; }
+html[data-js]:not([data-landing]) #lx-static { display: none; }
+html[data-js] #lx-static .lx-reading { display: none; }
+html:not([data-js]) #lx-static .lx-chapters-hold { display: none; }

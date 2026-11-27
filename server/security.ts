@@ -78,7 +78,7 @@ const GEMINI_ORIGIN = 'https://generativelanguage.googleapis.com';
  * test recomputes it from `index.html`, so editing the script without updating
  * this fails CI instead of silently reintroducing the flash.
  */
-export const THEME_BOOT_SCRIPT_HASH = "'sha256-0R2f3BewG9QeV0msArT8ZOcfIz57ij6i1nSbYJZcfHA='";
+export const THEME_BOOT_SCRIPT_HASH = "'sha256-NBCSdIXo20eM5sHWhV8CT1O8W8RvqIhWwndvCRp1M/w='";
 
 const DOCUMENT_CSP = [
   "default-src 'self'",

@@ -1,0 +1,131 @@
+/*
+ * The hero's entrance, in CSS (see src/components/landing/entrance.ts).
+ *
+ * The first two screens are already in the HTML. The inline boot script in
+ * index.html sets `html[data-cue]` once the display face has loaded (capped at
+ * 900 ms) and two frames have been painted, and everything below plays from
+ * that moment, before any of the page's code has arrived. The order is the
+ * brief's: the headline word by word, then the eyebrow, the lead and the two
+ * buttons, then the figures and the handwritten note.
+ *
+ * Three states:
+ *   - no script at all: nothing here applies, and the hero stands settled;
+ *   - script, not yet cued: everything waits in its starting pose;
+ *   - cued: the entrance plays. The live page carries `--lx-elapsed` (how far
+ *     the static frame's entrance had got when the live page took over) and
+ *     `--lx-since` (how long the frame had been on screen), and every delay
+ *     subtracts them, so the takeover continues each animation where it is.
+ *
+ * The rise is motion's own `arrive` spring (SPRING.arrive in kit.tsx:
+ * visualDuration 0.8, bounce 0.12), sampled into `linear()`. A browser without
+ * `linear()` takes the glide curve declared before it.
+ */
+
+.lx {
+  --lx-elapsed: 0ms;
+  --lx-since: 0ms;
+  --lx-arrive-time: 0.96s;
+  --lx-arrive: var(--lx-glide);
+  --lx-arrive: linear(0, 0.011, 0.041, 0.084, 0.137, 0.195, 0.257, 0.32, 0.382, 0.442, 0.5, 0.555, 0.606, 0.653, 0.696, 0.736, 0.771, 0.803, 0.831, 0.857, 0.879, 0.898, 0.915, 0.93, 0.942, 0.953, 0.962, 0.97, 0.977, 0.982, 0.987, 0.991, 0.994, 0.996, 0.998, 0.999, 1.001, 1.001, 1.002, 1.002, 1);
+  /*
+   * The live page replaces the static frame in one commit, and the content
+   * above the reading position briefly changes as it does. Nothing on the
+   * landing needs scroll anchoring (chapters only ever mount below the
+   * reader), so it is switched off rather than risk a jump at the swap.
+   */
+  overflow-anchor: none;
+}
+
+/* When each part arrives, in seconds after the cue. The figures' time is STATS_APPEAR in entrance.ts. */
+.lx-hero .lx-in-eyebrow { --d: 0.3s; --lx-rise: 14px; }
+.lx-hero .lx-in-lead { --d: 0.4s; --lx-rise: 18px; }
+.lx-hero .lx-in-actions { --d: 0.48s; --lx-rise: 18px; }
+.lx-hero .lx-in-stat { --d: calc(0.7s + var(--n, 0) * 0.07s); --lx-rise: 16px; }
+.lx-hero-title { --lx-unmask-at: 1.3s; }
+
+/* Without script the underline under "question" is simply drawn. */
+.lx-hero-title em::after { clip-path: none; animation: none; }
+/* The hand-drawn arrow: one dash as long as the path (pathLength 1), fully shown at rest. */
+.lx-hero .lx-draw { stroke-dasharray: 1; stroke-dashoffset: 0; }
+
+/* ---------------------------------------------------------------- waiting */
+
+html[data-js]:not([data-cue]) .lx-hero .lx-wi,
+html[data-js] .lx:not([data-entrance]) .lx-hero .lx-wi { transform: translateY(112%) rotate(2.5deg); }
+
+html[data-js]:not([data-cue]) :is(.lx-hero .lx-in, .lx-hero .lx-in-caption, .lx-nav-bar),
+html[data-js] .lx:not([data-entrance]) :is(.lx-hero .lx-in, .lx-hero .lx-in-caption, .lx-nav-bar) { opacity: 0; }
+
+html[data-js]:not([data-cue]) .lx-hero .lx-draw,
+html[data-js] .lx:not([data-entrance]) .lx-hero .lx-draw { stroke-dashoffset: 1; }
+
+html[data-js]:not([data-cue]) .lx-hero-title em::after,
+html[data-js] .lx:not([data-entrance]) .lx-hero-title em::after { clip-path: inset(0 100% 0 0); }
+
+/* ---------------------------------------------------------------- playing */
+
+html[data-cue] .lx[data-entrance] .lx-hero-title .lx-wi {
+  animation: lx-word var(--lx-arrive-time) var(--lx-arrive) calc(0.08s + var(--i, 0) * 0.07s - var(--lx-elapsed)) both;
+}
+/* Once the last word has landed the masks are lifted, so no descender is ever clipped. */
+html[data-cue] .lx[data-entrance] .lx-hero-title .lx-w {
+  animation: lx-unmask 1ms linear calc(var(--lx-unmask-at) - var(--lx-elapsed)) forwards;
+}
+html[data-cue] .lx[data-entrance] .lx-hero-title em::after {
+  clip-path: inset(0 100% 0 0);
+  animation: lx-underline 1.2s var(--lx-glide) calc(1.15s - var(--lx-elapsed)) forwards;
+}
+
+html[data-cue] .lx[data-entrance] .lx-hero .lx-in {
+  animation:
+    lx-in-rise var(--lx-arrive-time) var(--lx-arrive) calc(var(--d) - var(--lx-elapsed)) both,
+    lx-in-fade 0.55s var(--lx-glide) calc(var(--d) - var(--lx-elapsed)) both;
+}
+html[data-cue] .lx[data-entrance] .lx-hero .lx-in-caption {
+  animation: lx-in-fade 1s ease-out calc(1.3s - var(--lx-elapsed)) both;
+}
+html[data-cue] .lx[data-entrance] .lx-hero .lx-draw-stroke {
+  animation: lx-draw 1.1s var(--lx-glide) calc(1.5s - var(--lx-elapsed)) both;
+}
+html[data-cue] .lx[data-entrance] .lx-hero .lx-draw-head {
+  animation: lx-draw 0.4s var(--lx-glide) calc(2.4s - var(--lx-elapsed)) both;
+}
+
+/* The island drops into place with the hero. */
+html[data-cue] .lx[data-entrance] .lx-nav-bar {
+  animation:
+    lx-nav-drop 0.7s var(--lx-glide) calc(0s - var(--lx-elapsed)) both,
+    lx-in-fade 0.6s ease calc(0.15s - var(--lx-elapsed)) both;
+}
+
+/* The hero's endless loops keep their phase across the takeover. */
+.lx .lxg-spin { animation-delay: calc(0s - var(--lx-since)); }
+.lx .lxg-sheen { animation-delay: calc(1.2s - var(--lx-since)); }
+.lx .lx-scroll-line::after { animation-delay: calc(0s - var(--lx-since)); }
+
+@keyframes lx-word { from { transform: translateY(112%) rotate(2.5deg); } to { transform: none; } }
+@keyframes lx-unmask { to { overflow: visible; } }
+@keyframes lx-in-rise { from { translate: 0 var(--lx-rise, 18px); } to { translate: none; } }
+@keyframes lx-in-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes lx-nav-drop { from { translate: 0 -28px; } to { translate: none; } }
+
+/* ---------------------------------------------------------- reduced motion */
+
+/* Nothing travels: the words stand in place at once, and the rest only fades in. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-js]:not([data-cue]) .lx-hero .lx-wi,
+  html[data-js] .lx:not([data-entrance]) .lx-hero .lx-wi { transform: none; }
+  html[data-cue] .lx[data-entrance] .lx-hero-title .lx-wi,
+  html[data-cue] .lx[data-entrance] .lx-hero-title .lx-w { animation: none; }
+  html[data-cue] .lx[data-entrance] .lx-hero-title .lx-w { overflow: visible; }
+  html[data-cue] .lx[data-entrance] .lx-hero .lx-in { animation: lx-in-fade 0.55s var(--lx-glide) calc(var(--d) - var(--lx-elapsed)) both; }
+  html[data-cue] .lx[data-entrance] .lx-nav-bar { animation: lx-in-fade 0.6s ease calc(0.15s - var(--lx-elapsed)) both; }
+  html[data-js]:not([data-cue]) .lx-hero .lx-draw,
+  html[data-js] .lx:not([data-entrance]) .lx-hero .lx-draw,
+  html[data-cue] .lx[data-entrance] .lx-hero .lx-draw-stroke,
+  html[data-cue] .lx[data-entrance] .lx-hero .lx-draw-head { stroke-dashoffset: 0; animation: none; }
+  html[data-js]:not([data-cue]) .lx-hero-title em::after,
+  html[data-js] .lx:not([data-entrance]) .lx-hero-title em::after,
+  html[data-cue] .lx[data-entrance] .lx-hero-title em::after { clip-path: none; animation: none; }
+}

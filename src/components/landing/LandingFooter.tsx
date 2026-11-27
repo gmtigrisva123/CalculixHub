@@ -12,6 +12,7 @@ import type { RefObject } from 'react';
 import { m, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { Arrow, BrandMark } from './kit';
 import { scrollToTarget } from './smoothScroll';
+import { useStatic } from './staticMode';
 
 const WORD = 'calculixhub';
 
@@ -20,7 +21,9 @@ interface LandingFooterProps {
 }
 
 export default function LandingFooter({ contentRef }: LandingFooterProps) {
-  const reduce = Boolean(useReducedMotion());
+  const reduceMotion = Boolean(useReducedMotion());
+  // Rendered into the HTML at build time the footer is simply there, its wordmark standing.
+  const reduce = useStatic() || reduceMotion;
   // 0 when the sheet's bottom edge reaches the bottom of the screen, 1 when it has cleared the top.
   const { scrollYProgress: lift } = useScroll({ target: contentRef, offset: ['end end', 'end start'] });
   const drift = useTransform(lift, [0, 0.35], ['-18%', '0%']);
@@ -46,9 +49,9 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
         <div className="lx-footer-bottom lx-wrap">
           <a className="lx-top" href="/?preview=ios">iPhone preview <Arrow size={13} /></a>
           <a className="lx-top" href="/?preview=mac">MacBook preview <Arrow size={13} /></a>
-          <button type="button" className="lx-top" onClick={() => scrollToTarget(0)}>
+          <a className="lx-top" href="#top" onClick={event => { event.preventDefault(); scrollToTarget(0); }}>
             Back to top <Arrow direction="up" size={13} />
-          </button>
+          </a>
         </div>
       </m.div>
     </footer>

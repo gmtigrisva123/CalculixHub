@@ -14,7 +14,9 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
-import { Arrow, BrandMark, GLIDE } from './kit';
+import { Arrow, BrandMark, GLIDE, SIGNUP_HREF, linkAction } from './kit';
+import { useStatic } from './staticMode';
+import { useEntranceState } from './entrance';
 import { scrollToTarget, setScrollLocked } from './smoothScroll';
 import { whenChapters } from './chapters';
 
@@ -53,6 +55,8 @@ interface LandingNavProps {
 }
 
 export default function LandingNav({ onSignIn, onRegister, chapters }: LandingNavProps) {
+  const isStatic = useStatic();
+  const entrance = useEntranceState();
   const [hidden, setHidden] = useState(false);
   const [tone, setTone] = useState<'ink' | 'paper'>('ink');
   const [active, setActive] = useState<string | null>(null);
@@ -152,14 +156,17 @@ export default function LandingNav({ onSignIn, onRegister, chapters }: LandingNa
         className="lx-nav"
         data-tone={open ? 'paper' : tone}
         data-lifted={lifted || undefined}
-        initial={{ y: -28, opacity: 0 }}
-        animate={{ y: hidden && !open ? -120 : 0, opacity: 1 }}
-        transition={{ y: { duration: 0.7, ease: GLIDE }, opacity: { duration: 0.6, delay: 0.15 } }}
+        /* The island's arrival is CSS, keyed on the boot script's cue with the hero's entrance
+           (landing-entrance.css). Motion only moves it out of the way while the reader scrolls down. */
+        initial={false}
+        animate={{ y: hidden && !open ? -120 : 0 }}
+        transition={{ y: { duration: 0.7, ease: GLIDE } }}
       >
         <div className="lx-nav-bar">
           <a className="lx-brand" href="/?home=1" aria-label="CalculixHub, back to the top" onClick={event => { event.preventDefault(); setOpen(false); scrollToTarget(0); }}>
             <span className="lx-brand-mark" onPointerEnter={() => setWave(value => value + 1)}>
-              <BrandMark key={wave} draw />
+              {/* The mark draws itself on arrival, unless it is continuing the static frame, where it was already drawn. */}
+              <BrandMark key={wave} draw={wave > 0 || (!isStatic && !entrance.takeover)} />
             </span>
             <span className="lx-brand-word">calculix<span>hub</span></span>
           </a>
@@ -172,11 +179,12 @@ export default function LandingNav({ onSignIn, onRegister, chapters }: LandingNa
             ))}
           </nav>
           <div className="lx-nav-actions">
-            <button type="button" className="lx-nav-signin" onClick={onSignIn}>Sign in</button>
-            <button type="button" className="lx-nav-cta" onClick={onRegister}>
+            {/* Links first: before the page's code arrives they open the forms; then they open them in place. */}
+            <a className="lx-nav-signin" href={SIGNUP_HREF} onClick={linkAction(onSignIn)}>Sign in</a>
+            <a className="lx-nav-cta" href={SIGNUP_HREF} onClick={linkAction(onRegister)}>
               <span>Start free</span>
               <span className="lx-nav-cta-icon" aria-hidden="true"><Arrow size={13} /></span>
-            </button>
+            </a>
             <button
               ref={toggleRef}
               type="button"

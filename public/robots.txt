@@ -1,0 +1,5 @@
+# The whole site may be crawled; the public page is the landing at the root.
+User-agent: *
+Allow: /
+
+Sitemap: https://calculixhub.com/sitemap.xml
