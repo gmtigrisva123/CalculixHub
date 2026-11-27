@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ITEM_BANK } from '../../domain/itemBank';
 import { estimateAbility, evaluatePlacement, TARGET_SEM, type ResponseRecord } from '../../domain/irt';
-import { ENGINE_RUN, SIMULATED_LEARNER, TIER_BANDS, certainty, simulatePlacement } from './engineRun';
+import { ENGINE_RUN, SIMULATED_LEARNER, TIER_BANDS, simulatePlacement } from './engineRun';
 
 describe('the landing page placement replay', () => {
   it('is deterministic, so every visitor watches the same placement', () => {
@@ -24,8 +24,6 @@ describe('the landing page placement replay', () => {
       const estimate = estimateAbility(responses);
       expect(step.theta).toBeCloseTo(estimate.theta, 9);
       expect(step.sem).toBeCloseTo(estimate.sem, 9);
-      const total = step.weights.reduce((sum, weight) => sum + weight, 0);
-      expect(total).toBeCloseTo(1, 9);
     }
     expect(evaluatePlacement(responses, ITEM_BANK)).toEqual(ENGINE_RUN.decision);
   });
@@ -43,19 +41,13 @@ describe('the landing page placement replay', () => {
     expect(Math.abs(last.theta - SIMULATED_LEARNER.theta)).toBeLessThan(2 * last.sem);
   });
 
-  it('fills the "How sure" meter from empty at the prior to full when it stops', () => {
-    const sure = ENGINE_RUN.steps.map((_, index) => certainty(ENGINE_RUN, index));
-    expect(sure[0]).toBe(0);
-    expect(sure[sure.length - 1]).toBe(1);
-    for (const value of sure) {
-      expect(value).toBeGreaterThanOrEqual(0);
-      expect(value).toBeLessThanOrEqual(1);
+  it('narrows its margin of error from the prior to the stopping target', () => {
+    const margins = ENGINE_RUN.steps.map(step => step.sem);
+    expect(margins[margins.length - 1]).toBeLessThan(margins[0] / 2);
+    // Every step is filed under the level the engine's own rule gives its estimate.
+    for (const step of ENGINE_RUN.steps) {
+      const band = TIER_BANDS.find(entry => step.theta >= entry.from && step.theta < entry.to);
+      expect(band?.tier).toBe(step.tier);
     }
-  });
-
-  it('covers the whole ability scale with its tier bands', () => {
-    expect(TIER_BANDS[0].from).toBeLessThanOrEqual(Math.min(...ENGINE_RUN.grid));
-    expect(TIER_BANDS[TIER_BANDS.length - 1].to).toBeGreaterThanOrEqual(Math.max(...ENGINE_RUN.grid));
-    for (let i = 1; i < TIER_BANDS.length; i += 1) expect(TIER_BANDS[i].from).toBe(TIER_BANDS[i - 1].to);
   });
 });

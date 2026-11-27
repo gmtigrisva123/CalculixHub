@@ -45,24 +45,7 @@ export function tween(ms: number, frame: (progress: number) => void): () => void
   return () => cancelAnimationFrame(raf);
 }
 
-/** True once the element has come into view. It stays true: nothing on the page plays twice. */
-export function useSeen<T extends Element>(amount = 0.35): [React.RefObject<T | null>, boolean] {
-  const ref = useRef<T>(null);
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || seen) return;
-    if (typeof IntersectionObserver !== 'function') { setSeen(true); return; }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setSeen(true); observer.disconnect(); }
-    }, { threshold: amount });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [amount, seen]);
-  return [ref, seen];
-}
-
-/** Whether the element is on screen right now. Unlike `useSeen`, it goes back to false when the element leaves. */
+/** Whether the element is on screen right now. It goes back to false when the element leaves. */
 export function useOnScreen<T extends Element>(amount = 0.25): [React.RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [on, setOn] = useState(false);

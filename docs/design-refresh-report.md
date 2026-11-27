@@ -96,3 +96,33 @@ Pages open the same way through `PageHead` and `styles/page.css`, which also hol
 ### Not verified here
 
 This environment has no Supabase project and no GPU. Signed-in states (the live Inbox, the Community feed, the Arena lobby, the leaderboard table) were checked for layout in the new frame but not with real data, and the frame-time figures are from software rendering, which overstates what painting costs on a real GPU.
+
+## The landing page as a paper
+
+The landing page was rebuilt from nothing. It is a contest paper, and the visitor sits it: the first thing on the page is a real past problem chosen by the placement engine, and answering it redraws the engine's belief about them (Fig. 1) with the same arithmetic the app uses. The earlier stage-and-particles page, its chapters and its six stylesheets are gone, and with them the `lenis` dependency. `HeroGlow.tsx`, `ParticleField.tsx` and the other files the section above names no longer exist.
+
+### What is on it
+
+- **The sheet** (`ProblemSheet.tsx`, `sitting.ts`). `src/domain/irt.ts` run over a separate bank of 16 AMC 12 problems (`paperBank.ts`), quoted verbatim from the archive and checked against it by `paperBank.test.ts`. None of them is in the placement's own `ITEM_BANK`, so sitting the landing paper cannot spoil a real placement. Choosing an answer and handing it in are two steps; "I don't know yet" counts as a miss; scratch paper opens under the problem. The sitting lives in memory only: nothing is stored and nothing is sent.
+- **Fig. 1** (`BeliefFigure.tsx`): the posterior itself, with the estimate, its margin of error and the odds for each level.
+- **Fig. 2** (`Method.tsx`): a whole simulated placement row by row, or the visitor's own answers so far.
+- **Fig. 3** (`Proposition.tsx`): Euclid III.35 in Oliver Byrne's manner with a chord to drag, then the problem that uses it, a scripted nudge and the worked solution.
+- **Fig. 4** (`ArchiveShelf.tsx`): the archive as one square per paper by year, read with a pointer or the arrow keys. Every square is checked against the catalog by `archiveFigures.test.ts`.
+- **The timetable** (`Desk.tsx`): `trainingPlan` from `src/domain/raceDay.ts` for a date the visitor names. **Fees** (`Fees.tsx`) and the FAQ read prices from `shared/plans.ts`.
+
+### How it is made
+
+Computer Modern (the KaTeX faces the app already ships) for problems and headings, Geist for the product's own voice. One sheet of paper, ink, and three pens with fixed meanings: red is the marker and "you", blue is what the engine believes, yellow is the highlighter. Tokens are the `.p1` block of `tokens.css`; the styles are `src/styles/landing-paper.css`. Nothing takes over the scroll and nothing fades in on scroll: the one entrance is the prior rising in Fig. 1, and after that things move only when the visitor acts.
+
+The first screen arrives in three steps: masthead, heading and Fig. 1; then the sheet, which brings KaTeX; then everything below, once the browser is idle. Public anchors are unchanged (`#engine`, `#playground`, `#archive`, `#plans`, `#faq`), and the "Sign up" button keeps its name for the QA agent.
+
+### Checked
+
+- `npm run lint`, `npm test` (416 tests) and `npm run build` pass.
+- Layout at 320, 360, 375, 414, 480, 640, 768, 900, 1024, 1280, 1440 and 1920 px: no horizontal overflow, nothing clipped, no clickable label on two lines, no punctuation carried over to start a line.
+- axe-core reports no violations at desktop and phone widths. The sheet, the chord and the shelf work from the keyboard. With reduced motion nothing animates and each figure shows its new state at once.
+- First load of the production build, against the previous page on the same machine: desktop LCP 732 ms to 496 ms; JavaScript 1,582 KB to 987 KB; fonts 439 KB to 95 KB; layout shift 0. On a phone profile (4x CPU, slow 4G) LCP went from 6.5 s to 5.2 s, where it is held by the app's own entry bundle, which this change does not touch. The page is about 7,700 px tall at 1440 px, down from about 20,300.
+
+### Not touched, and not verified
+
+No user data is involved: `supabase/`, authentication, storage keys and the data services are unchanged, and so is the inline boot script in `index.html` (same CSP hash). Checked in headless Chromium only: Safari, Firefox and physical phones were not tested, and the timings come from software rendering.

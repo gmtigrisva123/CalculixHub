@@ -17,10 +17,10 @@
  */
 
 import { memo, useRef, useState } from 'react';
-import MathText from '../MathText';
 import { ARCHIVE_FIGURES, ARCHIVE_SHELF, ARCHIVE_UNDATED, shelfAt, yearsOf } from './archiveFigures';
 import { ARCHIVE_SAMPLES } from './archiveSamples';
 import { Arrow } from './kit';
+import Tex from './Tex';
 
 const FIRST = ARCHIVE_FIGURES.firstYear;
 const LAST = ARCHIVE_FIGURES.lastYear;
@@ -141,7 +141,7 @@ export default function ArchiveShelf() {
         <div className="p1-archive-foot">
           <article className="p1-specimen" aria-live="polite">
             <p className="p1-specimen-ref">{shown.ref.replace(' · ', ', ')}</p>
-            <MathText as="p" className="p1-specimen-text" text={shown.prompt} />
+            <Tex as="p" className="p1-specimen-text" text={shown.prompt} />
             {NOTES[shown.id] && <p className="p1-caption">{NOTES[shown.id]}</p>}
             <button type="button" className="p1-textbtn" onClick={another}>Another from the shelf</button>
           </article>

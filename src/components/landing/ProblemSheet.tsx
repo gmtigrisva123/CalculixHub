@@ -15,9 +15,9 @@
  */
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import MathText from '../MathText';
 import { recommendedSource } from '../../domain/irt';
 import { Arrow, PenCross, PenRing, PenTick } from './kit';
+import Tex from './Tex';
 import { PAPER_BANK } from './paperBank';
 import ScratchPad from './ScratchPad';
 import { pitchOfNext, remarkOn, sitting, useSitting, type Mark, type Remark, type Sitting } from './sitting';
@@ -34,11 +34,12 @@ const REMARKS: Record<Remark, string> = {
 
 const PITCH = { harder: 'a step harder', easier: 'a step gentler', level: 'at about the same level' } as const;
 
+/** Why the engine stopped, by the reason it gives (see evaluatePlacement). */
 const STOPPED: Record<string, string> = {
-  precision: 'Its margin of error is as small as it asks for.',
-  classification: 'It is sure of your level.',
-  'limited-information': 'Nothing left on this short paper would tell it much more.',
-  'bank-exhausted': 'You have answered every problem on this paper.',
+  precision: 'It stopped because its margin of error is as small as it asks for.',
+  classification: 'It stopped because the odds it gives that level have passed 95 in 100.',
+  'limited-information': 'It stopped because nothing left on this short paper would tell it much more.',
+  'bank-exhausted': 'It stopped because you have answered every problem on this paper.',
 };
 
 const margin = (sem: number) => `±${sem.toFixed(2)}`;
@@ -149,7 +150,7 @@ export default function ProblemSheet({ onRegister }: ProblemSheetProps) {
           onSubmit={event => { event.preventDefault(); if (status === 'open' && choice !== null) handIn(choice); }}
         >
           <p className="p1-sheet-ref">{item.domain}<span aria-hidden="true"> · </span><span className="sr-only">, from </span>{item.ref.replace(' · ', ', ')}</p>
-          <MathText as="div" className="p1-sheet-question" text={item.question} />
+          <Tex as="div" className="p1-sheet-question" text={item.question} />
 
           <fieldset ref={choicesRef} className="p1-opts" data-setting={setting} disabled={status !== 'open'}>
             <legend className="sr-only">Your answer</legend>
@@ -161,7 +162,7 @@ export default function ProblemSheet({ onRegister }: ProblemSheetProps) {
                   <input type="radio" name={name} value={index} checked={chosen} onChange={() => setChoice(index)} />
                   <span className="p1-opt-face">
                     <span className="p1-opt-letter">({LETTERS[index]})</span>
-                    <MathText className="p1-opt-text" text={option} />
+                    <Tex className="p1-opt-text" text={option} />
                     {outcome === 'key' && <PenRing className="p1-opt-ring" />}
                   </span>
                   {outcome === 'right' && <PenTick className="p1-opt-pen" />}
@@ -192,7 +193,7 @@ export default function ProblemSheet({ onRegister }: ProblemSheetProps) {
                 {!marked.correct && <>The answer is ({LETTERS[item.correctIdx]}). </>}
                 <span className="p1-verdict-margin">{marginLine(marked)}</span>
               </p>
-              <p className="p1-verdict-why"><b>Why.</b> <MathText text={item.reason} /></p>
+              <p className="p1-verdict-why"><b>Why.</b> <Tex text={item.reason} /></p>
               <div className="p1-sheet-foot">
                 <button ref={onwardRef} type="button" className="p1-btn" onClick={onward}>
                   <span>{state.upNext ? 'Next problem' : 'See where it puts you'}</span>
@@ -238,16 +239,16 @@ function Tally({ marks }: { marks: readonly Mark[] }) {
 function Closed({ state, onRegister, onAgain }: { state: Sitting; onRegister: () => void; onAgain: () => void }) {
   const { belief, marks, decision } = state;
   const right = marks.filter(mark => mark.correct).length;
-  const sure = Math.round(decision.confidence * 100);
+  const tally = right === 0 ? 'none of them right' : right === marks.length ? 'all of them right' : `${right} of them right`;
   return (
     <div className="p1-sheet-body p1-closed" role="status">
       <p className="p1-closed-lead">
-        After {marks.length} problems, {right} of them right, it places you at <b>{belief.tier}</b>, give or take {belief.sem.toFixed(2)}.
+        After {marks.length} problems, {tally}, it places you at <b>{belief.tier}</b>, give or take {belief.sem.toFixed(2)}.
         It would start you on {recommendedSource(belief.theta)} problems.
       </p>
       <p className="p1-closed-note">
-        {STOPPED[decision.reason] ?? ''} It is {sure}% sure of the level. This paper is {PAPER_BANK.length} multiple-choice problems;
-        the placement in the app draws on a wider range, harder and gentler, and starts fresh.
+        {STOPPED[decision.reason] ?? ''} This paper is {PAPER_BANK.length} multiple-choice problems; the placement in the app
+        draws on a wider range, harder and gentler, and starts fresh.
       </p>
       <div className="p1-sheet-foot">
         <button type="button" className="p1-btn" onClick={onRegister}>

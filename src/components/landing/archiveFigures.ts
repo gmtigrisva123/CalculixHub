@@ -19,8 +19,6 @@ export interface ArchiveFamilyFigure {
   problems: number;
   /** How a problem in this bank is answered. */
   format: string;
-  /** The contests filed under this bank. */
-  contests: string[];
 }
 
 export const ARCHIVE_FIGURES = {
@@ -30,15 +28,12 @@ export const ARCHIVE_FIGURES = {
   firstYear: 1959,
   lastYear: 2026,
   families: [
-    { family: 'AMC 12', papers: 27, problems: 580, format: 'Multiple choice', contests: ['AMC 12A', 'AMC 12B'] },
-    { family: 'AIME', papers: 39, problems: 550, format: 'Answers 0 to 999', contests: ['AIME', 'AIME I', 'AIME II'] },
-    { family: 'USAMO', papers: 96, problems: 540, format: 'Written proofs', contests: ['USAMO', 'USAJMO', 'USA TST', 'USA TSTST'] },
-    { family: 'IMO', papers: 71, problems: 525, format: 'Written proofs', contests: ['IMO', 'IMO Shortlist'] },
+    { family: 'AMC 12', papers: 27, problems: 580, format: 'Multiple choice' },
+    { family: 'AIME', papers: 39, problems: 550, format: 'Answers 0 to 999' },
+    { family: 'USAMO', papers: 96, problems: 540, format: 'Written proofs' },
+    { family: 'IMO', papers: 71, problems: 525, format: 'Written proofs' },
   ] satisfies ArchiveFamilyFigure[],
 } as const;
-
-/** Every contest in the archive, in the order a student usually meets them. */
-export const ARCHIVE_CONTESTS = ['AMC 12A', 'AMC 12B', 'AIME I', 'AIME II', 'USAJMO', 'USAMO', 'USA TSTST', 'USA TST', 'IMO', 'IMO Shortlist'] as const;
 
 /** One contest, and the years the archive holds its paper for: "1959-1979,1981-2025". */
 export interface ShelfContest {

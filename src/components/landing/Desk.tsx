@@ -116,7 +116,7 @@ export default function Desk({ onRegister }: { onRegister: () => void }) {
                       <th scope="row" className="p1-num">{week.index}</th>
                       <td className="p1-num">{day(week.start)}</td>
                       <td><span className="p1-key" data-phase={week.phase} aria-hidden="true" />{PHASE_LABEL[week.phase]}</td>
-                      <td>{week.phase === 'build' ? week.focus : week.phase === 'sharpen' ? 'Mixed, timed' : 'Review'}</td>
+                      <td className="is-wrap">{week.phase === 'build' ? week.focus : week.phase === 'sharpen' ? 'Mixed, timed' : 'Review'}</td>
                       <td className="is-num p1-num">{week.problemsPerDay}</td>
                     </tr>
                   ) : (

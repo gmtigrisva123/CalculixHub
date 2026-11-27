@@ -5,10 +5,10 @@
  * paper — so the picture changes only when the catalog or the learner's work does. Stars a
  * learner has worked on burn brighter; right answers and proofs marked solved turn gold.
  *
- * On cost, the same rules as the landing hero's stage: named three.js imports, device pixel
- * ratio capped at 2, and a render loop that only runs while the canvas is on screen and the
- * tab is visible. With reduced motion the sky holds still and renders only when something
- * changes (a hover, a pick, new progress). Without WebGL it draws a still 2D version.
+ * On cost: named three.js imports, device pixel ratio capped at 2, and a render loop that
+ * only runs while the canvas is on screen and the tab is visible. With reduced motion the sky
+ * holds still and renders only when something changes (a hover, a pick, new progress).
+ * Without WebGL it draws a still 2D version.
  */
 import { useEffect, useRef } from 'react';
 import {

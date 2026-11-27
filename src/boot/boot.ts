@@ -4,8 +4,8 @@
  *
  * The first frame.
  *
- * index.html paints a ground before any script has loaded: night for a visitor
- * about to see the landing page, the workspace's paper and rails for someone
+ * index.html paints a ground before any script has loaded: the landing page's
+ * sheet of paper for a first visit, the workspace's desk and rails for someone
  * coming back to their work. It is a single fixed element, `#boot`, drawn by
  * inline CSS, so it appears with the HTML itself. The page then never shows
  * white, and never shows a ground of the wrong colour that has to be corrected.

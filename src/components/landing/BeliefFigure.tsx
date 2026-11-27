@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AXIS, BAND_SHARES, TIER_BANDS, along } from './levels';
+import { AXIS, BAND_SHARES, TIER_BANDS, along, breakable } from './levels';
 import { PenCross, PenTick, smoothPath, tween, useOnScreen } from './kit';
 import { GRID, tierShares, useSitting, type Belief, type Mark } from './sitting';
 
@@ -70,6 +70,8 @@ export default function BeliefFigure() {
   const shareRefs = useRef<(HTMLElement | null)[]>([]);
   /** What is on screen now, so a new belief starts from there even if it arrives mid-flight. */
   const shown = useRef<Belief>(NOTHING);
+  /** The plot's size in CSS pixels: the curve is stretched to it, but the label has to be placed in it. */
+  const size = useRef({ width: 0, height: 0 });
 
   const draw = (now: Belief) => {
     const points = DRAWN.map(({ theta, index }) => [along(theta) * W, yOf(now.weights[index])] as const);
@@ -89,7 +91,8 @@ export default function BeliefFigure() {
       spanRef.current.setAttribute('x2', (along(now.theta + now.sem) * W).toFixed(1));
     }
     if (youRef.current) {
-      youRef.current.style.transform = `translate(${(x * 100).toFixed(2)}%, ${top.toFixed(2)}%)`;
+      const { width, height } = size.current;
+      youRef.current.style.transform = `translate(${(x * width).toFixed(1)}px, ${((top / H) * height).toFixed(1)}px)`;
       youRef.current.dataset.side = x > 0.86 ? 'end' : x < 0.14 ? 'start' : 'middle';
     }
     const shares = tierShares(now.weights);
@@ -100,7 +103,19 @@ export default function BeliefFigure() {
   };
 
   // Before the first paint: the axis with nothing on it, so the hill can rise rather than appear.
-  useLayoutEffect(() => { draw(shown.current); }, []);
+  useLayoutEffect(() => {
+    const node = plotRef.current;
+    if (!node) return;
+    const measure = () => {
+      size.current = { width: node.clientWidth, height: node.clientHeight };
+      draw(shown.current);
+    };
+    measure();
+    if (typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!onScreen) return;
@@ -108,8 +123,9 @@ export default function BeliefFigure() {
     const to = belief;
     const mix = (a: number, b: number, t: number) => a + (b - a) * t;
     // The first belief drawn is the prior, lifting off the axis: the page's one entrance.
+    // It holds for a moment so that index.html's cover has faded and the rise is seen whole.
     const first = from === NOTHING;
-    const stop = tween(first ? 1100 : 760, t => {
+    const run = () => tween(first ? 1100 : 760, t => {
       const now: Belief = {
         ...to,
         theta: mix(from.theta, to.theta, t),
@@ -119,7 +135,10 @@ export default function BeliefFigure() {
       shown.current = now;
       draw(now);
     });
-    return stop;
+    if (!first) return run();
+    let stop = () => {};
+    const held = window.setTimeout(() => { stop = run(); }, 360);
+    return () => { window.clearTimeout(held); stop(); };
   }, [belief, onScreen]);
 
   const levels = stackLevels(marks);
@@ -160,7 +179,7 @@ export default function BeliefFigure() {
       <dl className="p1-fig-bands" style={{ ['--bands' as string]: BAND_SHARES.map(share => `${(share * 100).toFixed(3)}fr`).join(' ') }}>
         {TIER_BANDS.map((band, index) => (
           <div key={band.tier} className={index === leading && answered ? 'p1-fig-band is-leading' : 'p1-fig-band'}>
-            <dt><span>{band.tier}</span></dt>
+            <dt><span>{breakable(band.tier)}</span></dt>
             <dd className="p1-fig-share p1-num" ref={node => { shareRefs.current[index] = node; }}>{Math.round(belief.shares[index] * 100)}%</dd>
             <dd className="p1-fig-starts">{band.starts}{index === TIER_BANDS.length - 1 ? ', IMO' : ''}</dd>
           </div>

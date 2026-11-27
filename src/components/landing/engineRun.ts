@@ -19,11 +19,9 @@ import { ITEM_BANK } from '../../domain/itemBank';
 import {
   estimateAbility,
   evaluatePlacement,
-  posteriorCurve,
   probCorrect,
   recommendedSource,
   selectNextItem,
-  TARGET_SEM,
   tierForTheta,
   type IRTItem,
   type ItemSource,
@@ -53,28 +51,22 @@ export interface EngineStep {
   correct: boolean | null;
   theta: number;
   sem: number;
-  /** Posterior weights on the engine's quadrature grid. */
-  weights: number[];
   tier: Tier;
 }
 
 export interface EngineRun {
   learnerTheta: number;
-  /** The quadrature nodes the weights are given on. */
-  grid: number[];
   /** steps[0] is the prior; steps[k] follows the k-th answer. */
   steps: EngineStep[];
   decision: PlacementDecision;
   tier: Tier;
   source: ItemSource;
-  /** The tallest posterior weight across the run, so the chart keeps one vertical scale. */
-  peak: number;
 }
 
 /**
- * The learner the landing page follows. Chosen so the replay shows both kinds
- * of evidence — right answers that lift the estimate and misses that pull it
- * back — and ends the way most placements should, on precision.
+ * The learner the landing page follows. Chosen so the figure shows both kinds
+ * of evidence (right answers that lift the estimate, and misses that pull it
+ * back) and ends the way most placements should, on precision.
  */
 export const SIMULATED_LEARNER = { theta: 1.1, seed: 5, maxItems: 18 } as const;
 
@@ -86,7 +78,7 @@ export function simulatePlacement(
   const responses: ResponseRecord[] = [];
   const snapshot = (item: IRTItem | null, correct: boolean | null): EngineStep => {
     const { theta, sem } = estimateAbility(responses);
-    return { item, correct, theta, sem, weights: posteriorCurve(responses).weight, tier: tierForTheta(theta) };
+    return { item, correct, theta, sem, tier: tierForTheta(theta) };
   };
 
   const steps: EngineStep[] = [snapshot(null, null)];
@@ -103,25 +95,11 @@ export function simulatePlacement(
   const last = steps[steps.length - 1];
   return {
     learnerTheta: learner.theta,
-    grid: posteriorCurve([]).theta,
     steps,
     decision,
     tier: last.tier,
     source: recommendedSource(last.theta),
-    peak: Math.max(...steps.flatMap(step => step.weights)),
   };
 }
 
 export const ENGINE_RUN: EngineRun = simulatePlacement();
-
-/**
- * How sure the engine is after a step, from 0 at the prior to 1 when it is sure
- * enough to stop, for the page's "How sure" meter. This run stops on precision,
- * so the meter is the margin of error closing from the prior's towards the
- * stopping target; the final step of a finished run always reads as full.
- */
-export function certainty(run: EngineRun, index: number): number {
-  if (index === run.steps.length - 1 && run.decision.stop) return 1;
-  const prior = run.steps[0].sem;
-  return Math.max(0, Math.min(1, (prior - run.steps[index].sem) / (prior - TARGET_SEM)));
-}

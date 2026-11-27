@@ -35,3 +35,16 @@ export const along = (theta: number): number =>
 
 /** Each band's share of the drawn axis, in order. They add up to 1. */
 export const BAND_SHARES: readonly number[] = TIER_BANDS.map(band => along(band.to) - along(band.from));
+
+/**
+ * A level's name with the places it may be broken marked by soft hyphens. On a
+ * phone the four names share the width of a figure, and "Intermediate" is
+ * wider than a quarter of it; broken as a compositor would break it, it fits.
+ */
+const BREAKS: Record<Tier, string> = {
+  Foundation: 'Founda\u00adtion',
+  Intermediate: 'Inter\u00admediate',
+  Advanced: 'Ad\u00advanced',
+  Olympiad: 'Olym\u00adpiad',
+};
+export const breakable = (tier: Tier): string => BREAKS[tier];

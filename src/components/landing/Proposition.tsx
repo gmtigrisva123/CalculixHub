@@ -2,7 +2,7 @@
  * "Try one", and Fig. 3: a theorem to pick up and turn.
  *
  * Two chords of a circle cross at P. Point C can be dragged round the circle
- * (or turned from the keyboard), and the two rectangles beside the figure show
+ * (or turned from the keyboard), and the two rectangles under the statement show
  * what Euclid proved: the parts of one chord make a rectangle exactly as large
  * as the parts of the other, however the chord is turned. The figure is drawn
  * after Oliver Byrne's 1847 Euclid, which told its proofs in four colours where
@@ -15,9 +15,9 @@
  */
 
 import { useId, useRef, useState } from 'react';
-import MathText from '../MathText';
 import { CHORD_POINT, CHORD_RADIUS, INITIAL_CHORD_ANGLE, chordEndpoints } from './chords';
 import { PenCross, PenTick } from './kit';
+import Tex from './Tex';
 
 // The figure, in viewBox units: the circle's centre, and how many units one unit of length takes.
 const SIZE = 400;
@@ -90,17 +90,28 @@ export default function Proposition() {
   };
 
   // One unit of length in the rectangles, in rem. The tallest they are asked to stand is PD at its start, 27 units.
-  const unit = 0.3;
+  const unit = 0.34;
   const rem = (length: number) => `${(length * unit).toFixed(3)}rem`;
 
   return (
     <section className="p1-sec p1-prop" id="playground" aria-labelledby="p1-prop-title">
       <div className="p1-wrap p1-prop-grid">
+        <div className="p1-prop-head">
+          <h2 id="p1-prop-title" className="p1-title">Two chords cross. One number will not move.</h2>
+          <p className="p1-prop-statement">
+            If two chords of a circle cut one another, the rectangle under the two parts of one,{' '}
+            <Part of="pa" name="PA" /> and <Part of="pb" name="PB" then="," /> is equal to the rectangle under the two parts of the other,{' '}
+            <Part of="pc" name="PC" /> and <Part of="pd" name="PD" then="." />
+          </p>
+        </div>
+
         <figure className="p1-chords" aria-labelledby={`${id}-caption`}>
           <svg
             ref={svg}
             className={dragging ? 'p1-chords-svg is-dragging' : 'p1-chords-svg'}
             viewBox={`0 0 ${SIZE} ${SIZE}`}
+            role="group"
+            aria-label="A circle with two chords, AB and CD, crossing at the point P"
             onPointerMove={dragging ? follow : undefined}
             onPointerUp={() => setDragging(false)}
             onPointerCancel={() => setDragging(false)}
@@ -145,42 +156,38 @@ export default function Proposition() {
             </g>
           </svg>
 
+          <figcaption id={`${id}-caption`} className="p1-caption">
+            <b>Fig. 3.</b> Drag <i>C</i> round the circle, or focus it and use the arrow keys. After Euclid, <i>Elements</i> III.35,
+            drawn in the manner of Oliver Byrne’s 1847 edition, which used colour where other books used letters.
+            {moved && <> <button type="button" className="p1-textbtn is-inline" onClick={() => setAngle(INITIAL_CHORD_ANGLE)}>Put C back</button></>}
+          </figcaption>
+        </figure>
+
+        <div className="p1-prop-equal">
           <div className="p1-rects" aria-hidden="true">
             <div className="p1-rect">
               <span className="p1-rect-box is-ab" style={{ width: rem(PA), height: rem(PB) }} />
               <span className="p1-rect-sides p1-num">{PA} × {PB} = <b>{chord.power}</b></span>
             </div>
+            <span className="p1-rects-equals">=</span>
             <div className="p1-rect">
               <span className="p1-rect-box is-cd" style={{ width: rem(chord.near), height: rem(chord.far) }} />
               <span className="p1-rect-sides p1-num">{chord.near.toFixed(2)} × {chord.far.toFixed(2)} = <b>{chord.power}</b></span>
             </div>
           </div>
-
-          <figcaption id={`${id}-caption`} className="p1-caption">
-            <b>Fig. 3.</b> Drag <i>C</i> round the circle, or focus it and use the arrow keys. The two parts of chord <i>CD</i> change;
-            the rectangle they make does not. After Euclid, <i>Elements</i> III.35, drawn in the manner of Oliver Byrne’s 1847 edition,
-            which used colour where other books used letters.
-            {moved && <> <button type="button" className="p1-textbtn is-inline" onClick={() => setAngle(INITIAL_CHORD_ANGLE)}>Put C back</button></>}
-          </figcaption>
-        </figure>
-
-        <div className="p1-prop-copy">
-          <h2 id="p1-prop-title" className="p1-title">Two chords cross. One number will not move.</h2>
-          <p className="p1-prop-statement">
-            If two chords of a circle cut one another, the rectangle under the two parts of one,{' '}
-            <Part of="pa" name="PA" /> and <Part of="pb" name="PB" />, is equal to the rectangle under the two parts of the other,{' '}
-            <Part of="pc" name="PC" /> and <Part of="pd" name="PD" />.
-          </p>
           <p className="p1-prose">
-            That is the whole of the idea, and it is easier to see than to be told. Now use it.
+            That is the whole of the idea, and it is easier to see than to be told. Drag <i>C</i> and the second rectangle
+            changes its shape and keeps its size. Now use it.
           </p>
+        </div>
 
+        <div className="p1-prop-task">
           <form className="p1-task" onSubmit={event => { event.preventDefault(); if (answer) setChecked(true); }}>
             <p className="p1-task-text">
-              <MathText text="In the figure as it first stands, $PA=9$, $PB=21$, $PC=7$, $PD=27$ and $\cos\angle APC=\tfrac35$. What is the square of the circle’s radius?" />
+              <Tex text="In the figure as it first stands, $PA=9$, $PB=21$, $PC=7$, $PD=27$ and $\cos\angle APC=\tfrac35$. What is the square of the circle’s radius?" />
             </p>
             <div className="p1-task-row">
-              <label htmlFor={`${id}-answer`}><MathText text="$r^2=$" /></label>
+              <label htmlFor={`${id}-answer`}><Tex text="$r^2=$" /></label>
               <input
                 id={`${id}-answer`}
                 className="p1-input"
@@ -227,7 +234,7 @@ export default function Proposition() {
           )}
           {solved && (
             <ol id={`${id}-solution`} className="p1-reveal p1-solution">
-              {SOLUTION.map((step, index) => <li key={index}><MathText text={step} /></li>)}
+              {SOLUTION.map((step, index) => <li key={index}><Tex text={step} /></li>)}
             </ol>
           )}
         </div>
@@ -236,12 +243,16 @@ export default function Proposition() {
   );
 }
 
-/** One part of a chord, named in the sentence by its colour, as Byrne named them. */
-function Part({ of, name }: { of: 'pa' | 'pb' | 'pc' | 'pd'; name: string }) {
+/**
+ * One part of a chord, named in the sentence by its colour, as Byrne named them.
+ * Any punctuation that follows it is set inside it (`then`), so a narrow column
+ * can never carry the comma over to start the next line on its own.
+ */
+function Part({ of, name, then = '' }: { of: 'pa' | 'pb' | 'pc' | 'pd'; name: string; then?: string }) {
   return (
     <span className="p1-part">
       <span className={`p1-part-bar is-${of}`} aria-hidden="true" />
-      <span className="p1-part-name">{name}</span>
+      <span><span className="p1-part-name">{name}</span>{then}</span>
     </span>
   );
 }

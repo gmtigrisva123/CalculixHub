@@ -13,13 +13,13 @@
  * placement bank, answering to a simulated student whose ability is known, so
  * the figure can also show the thing a real placement never can, which is
  * where the truth was all along. Once the visitor has answered something, the
- * figure can show their own sitting instead.
+ * figure can be switched to their own sitting instead.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { ENGINE_RUN, SIMULATED_LEARNER } from './engineRun';
 import { PenCross, PenTick, prefersReducedMotion } from './kit';
-import { BAND_SHARES, TIER_BANDS, along } from './levels';
+import { BAND_SHARES, TIER_BANDS, along, breakable } from './levels';
 import { useSitting } from './sitting';
 
 /** One question of a placement, as the figure needs it. */
@@ -87,9 +87,8 @@ export default function Method() {
     })),
   };
   const hasMine = mine.rows.length > 0;
-  // The visitor's own sitting is shown as soon as there is one, unless they have asked for the other.
-  const [picked, setPicked] = useState<'whole' | 'mine' | null>(null);
-  const view = picked ?? (hasMine ? 'mine' : 'whole');
+  // The whole placement is what the figure is for, so it is what is shown; the visitor's own is one press away.
+  const [view, setView] = useState<'whole' | 'mine'>('whole');
   const run = view === 'mine' && hasMine ? mine : SIMULATED;
   const whole = run === SIMULATED;
 
@@ -134,8 +133,8 @@ export default function Method() {
         <figure className="p1-run" aria-labelledby="p1-run-caption">
           <div className="p1-run-bar">
             <div className="p1-seg" role="group" aria-label="Which placement to show">
-              <button type="button" aria-pressed={whole} onClick={() => setPicked('whole')}>A whole placement</button>
-              <button type="button" aria-pressed={!whole} disabled={!hasMine} onClick={() => setPicked('mine')}>
+              <button type="button" aria-pressed={whole} onClick={() => setView('whole')}>A full placement</button>
+              <button type="button" aria-pressed={!whole} disabled={!hasMine} onClick={() => setView('mine')}>
                 {hasMine ? `Yours so far (${mine.rows.length})` : 'Yours so far'}
               </button>
             </div>
@@ -145,7 +144,7 @@ export default function Method() {
           <div className="p1-run-sheet">
             <ol className="p1-run-rows">
               <li className="p1-run-row">
-                <span className="p1-run-no" aria-hidden="true" />
+                <span className="p1-run-no p1-num" aria-hidden="true">0</span>
                 <span className="p1-run-track" aria-hidden="true">
                   <Span theta={run.start.theta} sem={run.start.sem} />
                 </span>
@@ -179,7 +178,7 @@ export default function Method() {
 
             <div className="p1-run-axis" aria-hidden="true">
               <div className="p1-levels" style={{ ['--bands' as string]: BAND_SHARES.map(share => `${(share * 100).toFixed(3)}fr`).join(' ') }}>
-                {TIER_BANDS.map(tier => <span key={tier.tier}>{tier.tier}</span>)}
+                {TIER_BANDS.map(tier => <span key={tier.tier}>{breakable(tier.tier)}</span>)}
               </div>
             </div>
           </div>

@@ -54,15 +54,17 @@
       come back from the first of them. Now the only thing between the HTML and
       text on screen is this site's own CSS.
 
-      The two files below are the faces the landing hero is set in: Geist for
-      "Stay with the", Newsreader's italic for "question". Preloading starts
-      them downloading alongside the stylesheet, so the headline is normally
-      drawn in its real type on the first frame instead of arriving in a
-      fallback and jumping. Everything else (Geist Mono, the upright
-      Newsreader, Caveat) is fetched when a page first uses it.
+      The two files below are the faces the landing page opens in: Computer
+      Modern's bold for the headline (the file KaTeX ships as KaTeX_Main, which
+      the page's formulas use anyway) and Geist for everything said around it.
+      Preloading starts them downloading alongside the stylesheet, so the
+      headline is normally drawn in its real type on the first frame instead of
+      arriving in a fallback and jumping. Everything else (Geist Mono,
+      Newsreader, Caveat, the rest of the maths faces) is fetched when a page
+      first uses it.
     -->
     <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2" />
-    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-opsz-italic.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/node_modules/katex/dist/fonts/KaTeX_Main-Bold.woff2" />
 
     <!--
       The colour the browser tints its own chrome with. Declared before the
@@ -85,12 +87,13 @@
          this one.
 
       2. Which ground to paint while the app loads (`data-boot`). The landing
-         page opens on a night stage and the workspace on paper, so a single
-         neutral colour would be wrong for one of them and would have to be
-         swapped under the visitor's eyes. A stored session or a guest pass
-         means the workspace; a sign-in or recovery link means the paper of the
-         forms; anything else is a first visit, and gets the night. The app
-         reads the same answer from src/boot/boot.ts.
+         page is one sheet of warm paper and the workspace is a desk with a
+         rail and a sheet on it, so a single picture would be wrong for one of
+         them and would have to be swapped under the visitor's eyes. A stored
+         session or a guest pass means the workspace; a sign-in or recovery
+         link means the paper of the forms; anything else is a first visit, and
+         gets the landing page's paper. The app reads the same answer from
+         src/boot/boot.ts.
 
       Deliberately inline and synchronous: a module script is deferred by
       definition and would run after paint.
@@ -130,10 +133,10 @@
 
       `#boot` is one fixed element over the page. It is drawn entirely with
       backgrounds: no images, no fonts, nothing to fetch. Its colours repeat
-      what the real screens use (the landing's night stage in
-      styles/landing-experience.css, the workspace's desk and sheet in
-      styles/shell.css), so when src/boot/boot.ts fades it out, what is
-      underneath is already the same picture.
+      what the real screens use (the landing page's paper, `--color-paper` in
+      tokens.css; the workspace's desk and sheet in styles/shell.css), so when
+      src/boot/boot.ts fades it out, what is underneath is already the same
+      picture.
 
       The mark in the middle holds back for a third of a second. On a fast
       connection the app is ready before then and the visitor sees only the
@@ -153,17 +156,13 @@
       #boot.is-leaving { opacity: 0; pointer-events: none; }
       .boot-hold { position: static; min-height: 100dvh; }
 
-      /* Landing: paper frame, night stage. */
+      /* Landing: one sheet of paper. The stage is the workspace's and the forms' to draw. */
       #boot { background: #f8f4ed; }
-      .boot-stage { position: absolute; inset: clamp(8px, 1.05vw, 16px); border-radius: clamp(10px, 1.1vw, 16px);
-        background:
-          radial-gradient(26% 34% at 72% 46%, rgba(0, 78, 88, .55), transparent 70%),
-          radial-gradient(52% 62% at 70% 44%, rgba(0, 58, 72, .85), transparent 72%),
-          linear-gradient(170deg, #001822 0%, #000c15 100%); }
+      .boot-stage { display: none; position: absolute; }
 
       /* Workspace: the desk, the rail, the sheet. Widths match styles/shell.css. */
       html[data-boot='workspace'] #boot { background: #efece4; }
-      html[data-boot='workspace'] .boot-stage { inset: 0 0 0 264px; border-radius: 22px 0 0 0; background: #f7f5ef; box-shadow: 0 0 0 1px #e2dfd5; }
+      html[data-boot='workspace'] .boot-stage { display: block; inset: 0 0 0 264px; border-radius: 22px 0 0 0; background: #f7f5ef; box-shadow: 0 0 0 1px #e2dfd5; }
       html[data-boot='paper'] #boot { background: #f7f5ef; }
       html[data-boot='paper'] .boot-stage { display: none; }
       html[data-theme='dark'][data-boot='workspace'] #boot { background: #141d22; }
@@ -171,8 +170,7 @@
       html[data-theme='dark'][data-boot='paper'] #boot { background: #1b272d; }
       @media (max-width: 767px) { html[data-boot='workspace'] .boot-stage { inset: 0; border-radius: 0; } }
 
-      .boot-mark { position: relative; width: 44px; height: 44px; color: #7ddfee; opacity: 0; animation: boot-in .5s .34s ease forwards; }
-      html[data-boot='workspace'] .boot-mark, html[data-boot='paper'] .boot-mark, .boot-hold .boot-mark { color: #426c7b; }
+      .boot-mark { position: relative; width: 44px; height: 44px; color: #426c7b; opacity: 0; animation: boot-in .5s .34s ease forwards; }
       html[data-theme='dark'][data-boot='workspace'] .boot-mark, html[data-theme='dark'][data-boot='paper'] .boot-mark, html[data-theme='dark'] .boot-hold .boot-mark { color: #afcbd3; }
       @media (min-width: 768px) { html[data-boot='workspace'] #boot .boot-mark { left: 132px; } }
       .boot-mark svg { display: block; width: 100%; height: 100%; }
