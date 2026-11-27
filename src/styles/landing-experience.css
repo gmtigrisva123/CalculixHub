@@ -765,6 +765,14 @@
   position: relative;
   justify-self: end;
   max-width: 330px;
+  /*
+   * Three lines tall whatever the font. The note is three lines in Caveat at
+   * this width, but the fallback face wraps it to four until Caveat arrives,
+   * and a foot that grew and shrank with it moved its visible rule: a layout
+   * shift on every first visit. A fallback fourth line now hangs below for a
+   * moment instead, unseen, because the note only fades in later.
+   */
+  height: calc(4px + 3 * 1.12em);
   padding-top: 4px;
   font-family: var(--lx-hand);
   font-size: 23px;
