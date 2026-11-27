@@ -1,0 +1,16 @@
+/*
+ * The engine replay (#engine) and the chord playground (#playground).
+ *
+ * Part of the landing page's "pencil, then light" pass: a figure is drawn the
+ * way it would be made on paper, then lit. Loaded by LandingPage.tsx after
+ * landing-experience.css (so a rule here wins over an older one of the same
+ * weight) and before landing-motion.css (which is last and wins over this).
+ *
+ * House rules: during scroll animate transform, opacity, or clip-path on a
+ * small element only; hover effects only inside
+ * @media (hover: hover) and (pointer: fine); every keyframe animation added
+ * here gets an explicit rule in this file's prefers-reduced-motion block.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+}

@@ -17,6 +17,13 @@ import '../../styles/landing-experience.css';
 import '../../styles/landing-frame.css';
 import '../../styles/landing-desk.css';
 import '../../styles/landing-plans.css';
+// One sheet per part of the page, so each can change without touching the others.
+import '../../styles/landing-hero.css';
+import '../../styles/landing-engine.css';
+import '../../styles/landing-topics.css';
+import '../../styles/landing-journey.css';
+import '../../styles/landing-close.css';
+import '../../styles/landing-system.css';
 import '../../styles/landing-motion.css';
 
 type Chapters = typeof import('./LandingChapters');

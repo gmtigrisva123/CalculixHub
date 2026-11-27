@@ -39,11 +39,28 @@ export const SPRING = {
   arrive: { type: 'spring', visualDuration: 0.8, bounce: 0.12 },
   settle: { type: 'spring', visualDuration: 0.9, bounce: 0.06 },
   press: { type: 'spring', visualDuration: 0.28, bounce: 0.28 },
+  /** A small mark landing: a dot, a chip, a tick. Quick, with a visible bounce. */
+  pop: { type: 'spring', visualDuration: 0.5, bounce: 0.35 },
+  /** Something crossing a short distance sideways: a pill, a swapped label. */
+  slide: { type: 'spring', visualDuration: 0.5, bounce: 0.2 },
   follow: { stiffness: 170, damping: 26, mass: 0.5 },
 } as const;
 
-/** Opacity is not a position, so it fades on a curve while the transform springs. */
-export const fade = (delay = 0) => ({ duration: 0.55, ease: GLIDE, delay });
+/**
+ * Named durations, in seconds, for the things that are timed rather than
+ * sprung (fades, strokes being drawn). The CSS mirrors them as --lx-t-*.
+ */
+export const TIME = { tap: 0.1, quick: 0.25, base: 0.5, slow: 0.8, draw: 1.1 } as const;
+
+/**
+ * Opacity is not a position, so it fades on a curve while the transform springs.
+ *
+ * With no delay given, the key is left out altogether rather than set to 0:
+ * Motion merges a group's stagger delay underneath each value's own
+ * transition, and an explicit `delay: 0` here would override it, so items in
+ * a staggered group would all fade in at once and then hop into place.
+ */
+export const fade = (delay?: number) => ({ duration: 0.55, ease: GLIDE, ...(delay === undefined ? {} : { delay }) });
 
 export const useFinePointer = () => useMediaQuery('(hover: hover) and (pointer: fine)');
 
@@ -398,6 +415,65 @@ export function useSpotlight<T extends HTMLElement>() {
     };
   }, [fine]);
   return ref;
+}
+
+// ---------------------------------------------------------------------------
+// Pencil strokes drawn as they are reached
+// ---------------------------------------------------------------------------
+
+interface DrawProps {
+  /** SVG path data, in the enclosing <svg>'s own units. */
+  d: string;
+  className?: string;
+  /** Seconds after the trigger before the pencil touches the paper. */
+  delay?: number;
+  /** Seconds the stroke takes to draw. */
+  duration?: number;
+  /**
+   * Leave undefined to draw once the stroke is scrolled into view. Pass a
+   * boolean to drive it instead (true draws it, false rubs it out again).
+   */
+  play?: boolean;
+  /** Share of the stroke's box that must be on screen, with `play` undefined. */
+  amount?: number;
+  strokeWidth?: number;
+}
+
+/**
+ * The page's signature gesture: a figure is constructed before it is lit.
+ *
+ * One path, drawn from its start to its end on the house curve, the way a
+ * pencil would draw it. It must sit inside an <svg>; colour and weight come
+ * from CSS (`stroke: currentColor` by default) so the same stroke reads as
+ * graphite on paper and as light on an ink stage. Round caps are kept hidden
+ * until the stroke has length, so nothing shows as a stray dot before it
+ * starts. Under reduced motion the stroke is simply there.
+ */
+export function Draw({ d, className, delay = 0, duration = TIME.draw, play, amount = 0.6, strokeWidth = 2 }: DrawProps) {
+  const reduce = useReducedMotion();
+  const hidden = { pathLength: 0, opacity: 0 };
+  const shown = {
+    pathLength: 1,
+    opacity: 1,
+    transition: { pathLength: { duration, ease: GLIDE, delay }, opacity: { duration: 0.01, delay } },
+  };
+  const drive = reduce
+    ? { initial: false as const }
+    : play === undefined
+      ? { initial: hidden, whileInView: shown, viewport: { once: true, amount } }
+      : { initial: hidden, animate: play ? shown : hidden };
+  return (
+    <m.path
+      d={d}
+      className={className ? `lx-draw ${className}` : 'lx-draw'}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...drive}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
