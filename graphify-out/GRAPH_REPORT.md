@@ -6,12 +6,12 @@
 - Unclassified: 106 file(s) not represented in the graph (top: .csv 51, .css 37, (none) 8)
 
 ## Summary
-- 7735 nodes · 13092 edges · 454 communities (406 shown, 48 thin omitted)
+- 7735 nodes · 13089 edges · 454 communities (406 shown, 48 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 181 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b0678941`
+- Built from commit: `a8d01292`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -459,14 +459,14 @@
 ## Surprising Connections (you probably didn't know these)
 - `What is on it` --references--> `trainingPlan()`  [INFERRED]
   docs/design-refresh-report.md → src/domain/raceDay.ts
+- `RecordAttemptInput` --references--> `Problem`  [EXTRACTED]
+  server/attempts.ts → shared/types.ts
+- `emailRoutes()` --indirect_call--> `dispatch()`  [INFERRED]
+  api/live-stats/event.mjs → server/routes/email.ts
 - `emailRoutes()` --indirect_call--> `dispatch()`  [INFERRED]
   api/[...path].mjs → server/routes/email.ts
 - `emailRoutes()` --indirect_call--> `dispatch()`  [INFERRED]
   api/arena/action.mjs → server/routes/email.ts
-- `emailRoutes()` --indirect_call--> `dispatch()`  [INFERRED]
-  api/email/dispatch.mjs → server/routes/email.ts
-- `emailRoutes()` --indirect_call--> `dispatch()`  [INFERRED]
-  api/live-stats/event.mjs → server/routes/email.ts
 
 ## Import Cycles
 - None detected.
@@ -2098,7 +2098,7 @@ Cohesion: 0.67
 Nodes (3): secondary-foreground, $type, $value
 
 ## Knowledge Gaps
-- **4 isolated node(s):** `UIKit`, `Capacitor`, `PackageDescription`, `RFC-9457`
+- **4 isolated node(s):** `Capacitor`, `UIKit`, `RFC-9457`, `PackageDescription`
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4101 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -2106,16 +2106,16 @@ Nodes (3): secondary-foreground, $type, $value
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `LearnCatalog.tsx` to `Comments.tsx`, `react`, `PostCard.tsx`, `ArchiveShelf.tsx`, `lucide-react`, `EpicycleStage.tsx`, `kit.tsx`, `feed.ts`, `DeskSection.tsx`, `RaceDay.tsx`, `MathText`, `Dashboard.tsx`, `Profile.tsx`, `Workspace.tsx`, `Settings.tsx`, `irt.ts`, `package.json`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `Desk.tsx`, `dependencies`, `plan.ts`, `geminiClient.ts`, `ExamArchive.tsx`, `model.ts`, `macbookStage.ts`, `WorkspaceShell.tsx`, `ThemeContext.tsx`, `lobbyModel.test.ts`, `ArenaHero.tsx`, `AITutorChat.tsx`, `WelcomeScreen.tsx`, `ArchiveHero.tsx`, `archiveModel.ts`, `Community.tsx`, `shareCard.ts`, `Media.tsx`, `InstallAppButton.tsx`, `types.ts`, `ProblemSheet.tsx`, `BeliefFigure.tsx`, `Proposition.tsx`, `sitting.ts`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `UIKit`, `Capacitor`, `PackageDescription` to the rest of the system?**
+- **What connects `Capacitor`, `UIKit`, `RFC-9457` to the rest of the system?**
   _4 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `.agents/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
-- **Why does `vitest` connect `vitest` to `react`, `ArchiveShelf.tsx`, `LearnCatalog.tsx`, `kit.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `Dashboard.tsx`, `examArchive.ts`, `pipeline.ts`, `Workspace.tsx`, `Settings.tsx`, `irt.ts`, `gemini.ts`, `package.json`, `arenaResponse.ts`, `ai.ts`, `geminiClient.ts`, `model.ts`, `lobbyModel.test.ts`, `WelcomeScreen.tsx`, `WelcomeScreen`, `archiveModel.ts`, `routes/billing.ts`, `Media.tsx`, `admin.ts`, `routes/email.ts`, `ProblemSheet.tsx`, `Proposition.tsx`, `sitting.ts`, `offline.ts`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+- **Why does `@supabase/supabase-js` connect `generate.ts` to `package.json`, `admin.ts`, `routes/email.ts`, `react`, `dependencies`, `event.mjs`, `[...path].mjs`, `routes/billing.ts`, `action.mjs`, `dispatch.mjs`, `config.ts`, `app.ts`, `WelcomeScreen.tsx`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Should `.claude/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
-- **Why does `@supabase/supabase-js` connect `generate.ts` to `package.json`, `admin.ts`, `routes/email.ts`, `react`, `dependencies`, `event.mjs`, `[...path].mjs`, `routes/billing.ts`, `action.mjs`, `dispatch.mjs`, `config.ts`, `app.ts`, `WelcomeScreen.tsx`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `vitest` connect `vitest` to `react`, `ArchiveShelf.tsx`, `LearnCatalog.tsx`, `kit.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `Dashboard.tsx`, `examArchive.ts`, `pipeline.ts`, `Workspace.tsx`, `Settings.tsx`, `irt.ts`, `gemini.ts`, `package.json`, `arenaResponse.ts`, `ai.ts`, `geminiClient.ts`, `model.ts`, `lobbyModel.test.ts`, `WelcomeScreen.tsx`, `WelcomeScreen`, `archiveModel.ts`, `routes/billing.ts`, `Media.tsx`, `admin.ts`, `routes/email.ts`, `ProblemSheet.tsx`, `Proposition.tsx`, `sitting.ts`, `offline.ts`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
