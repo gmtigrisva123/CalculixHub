@@ -1,13 +1,15 @@
 /**
  * One adaptive placement, run by the real engine against the real item bank,
- * for the landing page to replay as the reader scrolls.
+ * for the landing page to show whole.
  *
- * Nothing in the "Watch it find your level" section is animated by hand. A
- * simulated learner of known ability answers whatever `selectNextItem` hands
- * them, correct with exactly the probability the 3PL model gives; the estimate,
- * the margin of error and the stopping decision are the engine's own, and the
- * curve on screen is `posteriorCurve` at each step. If the item bank or the
- * selection rule changes, the story on the landing page changes with it.
+ * The page lets a visitor start a placement of their own, but most will answer
+ * a problem or two, and the point of the engine is what happens over a full
+ * one. So the page also prints one from beginning to end (Fig. 2). Nothing in
+ * it is drawn by hand. A simulated learner of known ability answers whatever
+ * `selectNextItem` hands them, correct with exactly the probability the 3PL
+ * model gives; the estimate, the margin of error and the stopping decision are
+ * the engine's own. If the item bank or the selection rule changes, the figure
+ * on the landing page changes with it.
  *
  * The run is computed once, at import, and is deterministic: a seeded
  * generator decides each answer, so every visitor watches the same placement.
@@ -29,7 +31,21 @@ import {
   type ResponseRecord,
   type Tier,
 } from '../../domain/irt';
-import { mulberry32 } from './particleShapes';
+import { TIER_BANDS } from './levels';
+
+export { TIER_BANDS };
+
+/** A small seeded generator (mulberry32): the same seed always yields the same answers. */
+function seeded(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 export interface EngineStep {
   /** The item answered to reach this step; null for the prior. */
@@ -66,7 +82,7 @@ export function simulatePlacement(
   learner: { theta: number; seed: number; maxItems: number } = SIMULATED_LEARNER,
   bank: IRTItem[] = ITEM_BANK,
 ): EngineRun {
-  const random = mulberry32(learner.seed);
+  const random = seeded(learner.seed);
   const responses: ResponseRecord[] = [];
   const snapshot = (item: IRTItem | null, correct: boolean | null): EngineStep => {
     const { theta, sem } = estimateAbility(responses);
@@ -97,14 +113,6 @@ export function simulatePlacement(
 }
 
 export const ENGINE_RUN: EngineRun = simulatePlacement();
-
-/** Provisional tier boundaries on the ability scale, as `tierForTheta` draws them. */
-export const TIER_BANDS: readonly { tier: Tier; from: number; to: number }[] = [
-  { tier: 'Foundation', from: -4, to: -0.8 },
-  { tier: 'Intermediate', from: -0.8, to: 0.4 },
-  { tier: 'Advanced', from: 0.4, to: 1.2 },
-  { tier: 'Olympiad', from: 1.2, to: 4 },
-];
 
 /**
  * How sure the engine is after a step, from 0 at the prior to 1 when it is sure

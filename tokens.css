@@ -27,3 +27,63 @@
   --dur-short: 160ms; --dur-reveal: 240ms;
   --radius-control: 4px; --radius-round: 50%;
 }
+
+/*
+ * CalculixHub landing page ("Paper One"): a contest paper you can sit.
+ * Warm paper, blue-black ink, and the three pens on a contest student's desk.
+ * Each pen means one thing wherever it appears: red is the marking pen (marks,
+ * and "you"), blue is the engine's ink (what it believes), yellow is the
+ * highlighter (what to look at). Gold joins them only where a figure needs a
+ * fourth colour to tell four things apart. Type is Computer Modern, the face
+ * contest papers are set in, beside Geist. Read by src/styles/landing-paper.css.
+ */
+.p1 {
+  --color-paper: oklch(97% 0.012 85);
+  --color-paper-2: oklch(94.4% 0.016 85);
+  --color-paper-3: oklch(90.5% 0.02 85);
+  --color-sheet: oklch(99% 0.006 85);
+  --color-ink: oklch(21% 0.024 255);
+  --color-ink-2: oklch(36% 0.024 255);
+  --color-muted: oklch(46% 0.02 255);
+  --color-rule: oklch(21% 0.024 255);
+  --color-rule-2: oklch(82% 0.018 85);
+  --color-accent: oklch(54% 0.2 28);
+  --color-accent-ink: oklch(98.5% 0.008 85);
+  --color-blue: oklch(44% 0.13 255);
+  --color-blue-wash: oklch(91.5% 0.035 250);
+  --color-highlight: oklch(90% 0.13 98);
+  --color-gold: oklch(66% 0.135 80);
+  --color-focus: oklch(52% 0.2 255);
+  --color-transparent: transparent;
+
+  --font-display: 'KaTeX_Main', 'CMU Serif', 'Latin Modern Roman', 'Computer Modern', 'Times New Roman', serif;
+  --font-math: 'KaTeX_Math', 'KaTeX_Main', 'CMU Serif', 'Times New Roman', serif;
+  --font-body: 'Geist', 'Inter Tight', system-ui, -apple-system, sans-serif;
+
+  --space-3xs: 0.125rem; --space-2xs: 0.25rem; --space-xs: 0.5rem; --space-sm: 0.75rem;
+  --space-md: 1rem; --space-ml: 1.25rem; --space-lg: 1.5rem; --space-xl: 2rem;
+  --space-2xl: 3rem; --space-3xl: 4rem; --space-4xl: 6rem; --space-5xl: 9rem;
+  --page-gutter: clamp(1rem, 4vw, 4rem);
+  --page-max: 82rem;
+  --banner-height: 3.25rem;
+  --control-height: 3rem;
+
+  --text-display: clamp(2.75rem, 5vw + 1rem, 5.5rem);
+  --text-title: clamp(2rem, 2.2vw + 1.2rem, 3.25rem);
+  --text-lg: 1.3125rem;
+  --text-md: 1rem;
+  --text-sm: 0.8125rem;
+  --text-wordmark: clamp(1.3125rem, 1vw + 1.1rem, 1.75rem);
+  --lh-tight: 1.02;
+  --lh-snug: 1.28;
+  --lh-body: 1.55;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+
+  --rule-hair: 1px; --rule-bold: 2px; --rule-double: 3px;
+  --radius-control: 2px; --radius-round: 50%;
+  --z-base: 1; --z-raised: 10; --z-sticky: 200; --z-sticky-nav: 300;
+}

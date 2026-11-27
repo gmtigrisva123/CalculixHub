@@ -1,375 +1,142 @@
 /**
- * The landing page's motion vocabulary.
+ * The small parts every section of the landing page shares.
  *
- * A handful of primitives every section shares, so a heading in the engine
- * chapter arrives exactly like a heading in the plans, and a count-up in the
- * hero settles like one in the archive. They read the house motion rules from
- * MotionConfig — `reducedMotion="user"` drops transforms and keeps fades — and
- * add the two decisions Motion cannot make for them: what happens on a coarse
- * pointer (no magnetism, no spotlight), and what the text says before any
- * script runs (the settled value, always).
+ * The page is a contest paper, and it is marked by hand: the tick, the cross
+ * and the ring below are what a marker's red pen leaves, drawn as strokes so
+ * they can be written onto the sheet rather than switched on. The rest is
+ * plumbing: the house arrow, the mark, and a way to move a figure from one
+ * state to another without it lurching.
  */
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { animate, m, useInView, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue, type Variants } from 'motion/react';
-import { useMediaQuery } from '../../hooks/useBreakpoint';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from '../brand';
 
-/** The page's signature curve: a fast departure that glides into place. Used for fades, where a spring has nothing to say. */
-export const GLIDE = [0.16, 1, 0.3, 1] as const;
-/** For things that travel on screen rather than arrive. */
-export const SWEEP = [0.65, 0, 0.35, 1] as const;
+// ---------------------------------------------------------------------------
+// Motion
+// ---------------------------------------------------------------------------
+
+/** Whether the visitor has asked for less motion. Read live: the setting can change while the page is open. */
+export function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** A fast departure that settles without overshoot: the page's one curve, as a function. */
+export const easeOut = (t: number): number => (t >= 1 ? 1 : 1 - 2 ** (-10 * t));
 
 /**
- * The page's springs.
- *
- * Anything that moves through space is on one of these rather than on a timed
- * curve. A timed curve always takes its full duration and always ends dead on
- * its target; a spring carries its own momentum, so it can be interrupted and
- * redirected mid-flight without a jump, and it settles the way a real object
- * does. `visualDuration` is how long it appears to take to arrive, `bounce`
- * how far it carries past before settling (0 is none).
- *
- *   arrive   text coming to rest: light, with a breath of overshoot
- *   settle   cards and panels: heavier, and barely past the line
- *   press    things under a pointer or a finger: quick and a little elastic
- *   follow   a value chasing the scroll position: close behind, never rubbery
+ * Run `frame` with a value easing from 0 to 1 over `ms`, once per animation
+ * frame. Returns a function that stops it where it is. With reduced motion the
+ * value is 1 at once: the figure shows its new state without travelling to it.
  */
-export const SPRING = {
-  arrive: { type: 'spring', visualDuration: 0.8, bounce: 0.12 },
-  settle: { type: 'spring', visualDuration: 0.9, bounce: 0.06 },
-  press: { type: 'spring', visualDuration: 0.28, bounce: 0.28 },
-  follow: { stiffness: 170, damping: 26, mass: 0.5 },
-} as const;
-
-/** Opacity is not a position, so it fades on a curve while the transform springs. */
-export const fade = (delay = 0) => ({ duration: 0.55, ease: GLIDE, delay });
-
-export const useFinePointer = () => useMediaQuery('(hover: hover) and (pointer: fine)');
-
-// ---------------------------------------------------------------------------
-// Headings that rise into place, word by word
-// ---------------------------------------------------------------------------
-
-interface Segment { text: string; em: boolean }
-
-/**
- * `*asterisks*` mark emphasis (set in Newsreader italic) and may span words;
- * `\n` breaks a line. Each word becomes one masked unit, carrying its own
- * punctuation so "*question*." rises as one piece.
- */
-export function splitEmphasis(source: string): Segment[][][] {
-  let em = false;
-  return source.split('\n').map(line => line.split(' ').filter(Boolean).map(word => {
-    const segments: Segment[] = [];
-    let current = '';
-    for (const char of word) {
-      if (char === '*') {
-        if (current) segments.push({ text: current, em });
-        current = '';
-        em = !em;
-      } else current += char;
-    }
-    if (current) segments.push({ text: current, em });
-    return segments;
-  }));
+export function tween(ms: number, frame: (progress: number) => void): () => void {
+  if (prefersReducedMotion() || ms <= 0) {
+    frame(1);
+    return () => {};
+  }
+  let raf = 0;
+  const started = performance.now();
+  const tick = (time: number) => {
+    const t = Math.min(1, (time - started) / ms);
+    frame(easeOut(t));
+    if (t < 1) raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
 }
 
-const lineContainer: Variants = {
-  hidden: {},
-  shown: (custom: { delay: number; stagger: number }) => ({ transition: { delayChildren: custom.delay, staggerChildren: custom.stagger } }),
-};
-
-const wordRise: Variants = {
-  hidden: { y: '112%', rotate: 2.5 },
-  shown: { y: '0%', rotate: 0, transition: SPRING.arrive },
-};
-
-interface SplitTextProps {
-  text: string;
-  as?: 'h1' | 'h2' | 'h3' | 'p' | 'span';
-  className?: string;
-  id?: string;
-  /** Seconds before the first word moves. */
-  delay?: number;
-  /** Seconds between words. */
-  stagger?: number;
-  /** Rise when mounted (the hero) or when scrolled into view (everything else). */
-  trigger?: 'mount' | 'view';
-  /** With `trigger="mount"`: hold the words down until this turns true. */
-  play?: boolean;
-}
-
-/**
- * The words are real text in the heading, separated by real spaces, so the
- * accessible name is the sentence as written and nothing needs an aria-label.
- */
-export function SplitText({ text, as = 'h2', className, id, delay = 0, stagger = 0.055, trigger = 'view', play: playing = true }: SplitTextProps) {
-  const Tag = m[as];
-  const lines = splitEmphasis(text);
-  // Once the last word has landed the masks are lifted, so no descender or italic overhang is ever clipped.
-  const [settled, setSettled] = useState(false);
-  const lastLine = lines.length - 1;
-  const lastWord = lines[lastLine].length - 1;
-  const play = trigger === 'mount' ? { animate: playing ? 'shown' : 'hidden' } : { whileInView: 'shown', viewport: { once: true, amount: 0.5 } };
-  const classes = ['lx-split', className, settled && 'is-settled'].filter(Boolean).join(' ');
-  return (
-    <Tag id={id} className={classes} initial="hidden" {...play} variants={lineContainer} custom={{ delay, stagger }}>
-      {lines.map((words, lineIndex) => (
-        <Fragment key={lineIndex}>
-          {lineIndex > 0 && <br />}
-          {words.map((segments, wordIndex) => (
-            <Fragment key={wordIndex}>
-              {wordIndex > 0 && ' '}
-              <span className="lx-w">
-                <m.span
-                  className="lx-wi"
-                  variants={wordRise}
-                  onAnimationComplete={lineIndex === lastLine && wordIndex === lastWord ? (definition: unknown) => { if (definition === 'shown') setSettled(true); } : undefined}
-                >
-                  {segments.map((segment, index) => segment.em ? <em key={index}>{segment.text}</em> : <Fragment key={index}>{segment.text}</Fragment>)}
-                </m.span>
-              </span>
-            </Fragment>
-          ))}
-        </Fragment>
-      ))}
-    </Tag>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Blocks that settle in as they are scrolled to
-// ---------------------------------------------------------------------------
-
-interface RiseProps {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-  /** Distance travelled, in px. */
-  y?: number;
-  as?: 'div' | 'p' | 'li' | 'ol' | 'ul' | 'article' | 'section' | 'header' | 'figure';
-  amount?: number;
-  id?: string;
-  /**
-   * A card or panel rather than a line of text: it lands on the heavier spring.
-   * Panels are deliberately not scaled on the way in. Many of them hold SVG
-   * drawings, and an SVG under a changing scale is laid out and re-drawn on
-   * every frame; measured on the topic boards, that alone quadrupled the time
-   * the page spent in long tasks during a scroll.
-   */
-  panel?: boolean;
-}
-
-/**
- * Something settling into place as it is scrolled to.
- *
- * Only transform and opacity move, so the browser can run the whole entrance
- * on the compositor without re-laying-out or repainting anything. (Entrances
- * used to soften in through a blur filter; a filter has to be re-rasterised on
- * every frame, across the element's whole area, which is the first thing to
- * cost a mid-range phone its frame rate.)
- */
-export function Rise({ children, className, delay = 0, y = 34, as = 'div', amount = 0.25, id, panel = false }: RiseProps) {
-  const Tag = m[as];
-  return (
-    <Tag
-      id={id}
-      className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount }}
-      transition={{ ...(panel ? SPRING.settle : SPRING.arrive), delay, opacity: fade(delay) }}
-    >
-      {children}
-    </Tag>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Groups that arrive one after another
-// ---------------------------------------------------------------------------
-
-const staggerGroup: Variants = {
-  hidden: {},
-  shown: (custom: { gap: number; delay: number }) => ({ transition: { staggerChildren: custom.gap, delayChildren: custom.delay } }),
-};
-
-const staggerChild: Variants = {
-  hidden: (y: number) => ({ opacity: 0, y }),
-  shown: { opacity: 1, y: 0, transition: { ...SPRING.arrive, opacity: fade() } },
-};
-
-interface StaggerProps {
-  children: ReactNode;
-  className?: string;
-  as?: 'div' | 'ul' | 'ol';
-  /** Seconds between one child and the next. */
-  gap?: number;
-  delay?: number;
-  amount?: number;
-}
-
-/**
- * A list whose items rise in turn. The group decides when to start (once it
- * is on screen) and how far apart the items are; each `StaggerItem` brings its
- * own spring. One observer for the group rather than one per item.
- */
-export function Stagger({ children, className, as = 'div', gap = 0.07, delay = 0, amount = 0.2 }: StaggerProps) {
-  const Tag = m[as];
-  return (
-    <Tag className={className} initial="hidden" whileInView="shown" viewport={{ once: true, amount }} variants={staggerGroup} custom={{ gap, delay }}>
-      {children}
-    </Tag>
-  );
-}
-
-export function StaggerItem({ children, className, as = 'div', y = 22 }: { children: ReactNode; className?: string; as?: 'div' | 'li' | 'article'; y?: number }) {
-  const Tag = m[as];
-  return <Tag className={className} variants={staggerChild} custom={y}>{children}</Tag>;
-}
-
-// ---------------------------------------------------------------------------
-// Numbers that count up once
-// ---------------------------------------------------------------------------
-
-const grouped = (value: number) => Math.round(value).toLocaleString('en-US');
-
-interface CountUpProps {
-  value: number;
-  delay?: number;
-  className?: string;
-  /** Hold at zero until this turns true. */
-  start?: boolean;
-}
-
-/**
- * The settled figure is what the markup holds, and what a screen reader hears:
- * the animated digits are hidden from assistive technology, and swapped for
- * zero only once script is running and motion is allowed.
- */
-export function CountUp({ value, delay = 0, className, start = true }: CountUpProps) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const reduce = useReducedMotion();
-  const inView = useInView(ref, { once: true, amount: 0.8 });
-
-  useLayoutEffect(() => {
-    if (!reduce && ref.current) ref.current.textContent = grouped(0);
-  }, [reduce]);
-
-  useEffect(() => {
-    if (reduce || !inView || !start) return;
-    const node = ref.current;
-    const controls = animate(0, value, {
-      duration: 1.9,
-      delay,
-      ease: GLIDE,
-      onUpdate: latest => { if (node) node.textContent = grouped(latest); },
-    });
-    return () => controls.stop();
-  }, [inView, reduce, value, delay, start]);
-
-  // Hold the settled figure's width from the start, so counting up from 0
-  // never pushes its neighbours along. Digits are tabular (1ch each); a
-  // grouping comma is about a third of that.
-  const settled = grouped(value);
-  const commas = settled.split(',').length - 1;
-  const reserve = { display: 'inline-block', minWidth: `${(settled.length - commas * 0.68).toFixed(2)}ch` } as const;
-
-  return (
-    <span className={className}>
-      <span ref={ref} aria-hidden="true" className="lx-tabular" style={reserve}>{grouped(value)}</span>
-      <span className="sr-only">{grouped(value)}</span>
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Stages that come forward as they are scrolled to
-// ---------------------------------------------------------------------------
-
-/**
- * A night stage arriving: it starts a little small and a little low, and grows
- * to full size as its top edge travels up the screen.
- *
- * The scroll position sets where it should be; a spring carries it there. So
- * the stage follows the scroll exactly while the reader is scrolling, and
- * eases to rest when they stop, instead of freezing mid-way. Scale and
- * translate only: the stage is one composited layer being moved, and nothing
- * inside it is laid out again.
- */
-export function useStageArrival(ref: RefObject<HTMLElement | null>): { scale: MotionValue<number>; y: MotionValue<number> } | undefined {
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 0.3'] });
-  const eased = useSpring(scrollYProgress, SPRING.follow);
-  const scale = useTransform(eased, [0, 1], [0.94, 1]);
-  const y = useTransform(eased, [0, 1], [56, 0]);
-  return reduce ? undefined : { scale, y };
-}
-
-// ---------------------------------------------------------------------------
-// Pointer physics
-// ---------------------------------------------------------------------------
-
-/**
- * Pulls its child a little toward the pointer and springs back on leave. Only
- * on a fine pointer: on touch there is no hover to respond to, and a control
- * that slides under a finger is one the finger misses.
- */
-export function Magnetic({ children, strength = 0.28, className }: { children: ReactNode; strength?: number; className?: string }) {
-  const fine = useFinePointer();
-  const reduce = useReducedMotion();
-  const x = useSpring(0, { stiffness: 260, damping: 20, mass: 0.5 });
-  const y = useSpring(0, { stiffness: 260, damping: 20, mass: 0.5 });
-  const live = fine && !reduce;
-  return (
-    <m.span
-      className={className ? `lx-magnetic ${className}` : 'lx-magnetic'}
-      style={{ x, y }}
-      onPointerMove={live ? event => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        x.set((event.clientX - (rect.left + rect.width / 2)) * strength);
-        y.set((event.clientY - (rect.top + rect.height / 2)) * strength);
-      } : undefined}
-      onPointerLeave={live ? () => { x.set(0); y.set(0); } : undefined}
-    >
-      {children}
-    </m.span>
-  );
-}
-
-/**
- * A light that follows the pointer across a card and along its border, written
- * to two custom properties once per frame at most. The card's own CSS decides
- * what the light looks like.
- */
-export function useSpotlight<T extends HTMLElement>() {
+/** True once the element has come into view. It stays true: nothing on the page plays twice. */
+export function useSeen<T extends Element>(amount = 0.35): [React.RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
-  const fine = useFinePointer();
+  const [seen, setSeen] = useState(false);
   useEffect(() => {
-    const element = ref.current;
-    if (!element || !fine) return;
-    let frame = 0;
-    let x = 0;
-    let y = 0;
-    const move = (event: PointerEvent) => {
-      const rect = element.getBoundingClientRect();
-      x = event.clientX - rect.left;
-      y = event.clientY - rect.top;
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        element.style.setProperty('--sx', `${x}px`);
-        element.style.setProperty('--sy', `${y}px`);
-      });
-    };
-    element.addEventListener('pointermove', move);
-    return () => {
-      element.removeEventListener('pointermove', move);
-      cancelAnimationFrame(frame);
-    };
-  }, [fine]);
-  return ref;
+    const node = ref.current;
+    if (!node || seen) return;
+    if (typeof IntersectionObserver !== 'function') { setSeen(true); return; }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setSeen(true); observer.disconnect(); }
+    }, { threshold: amount });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [amount, seen]);
+  return [ref, seen];
+}
+
+/** Whether the element is on screen right now. Unlike `useSeen`, it goes back to false when the element leaves. */
+export function useOnScreen<T extends Element>(amount = 0.25): [React.RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (typeof IntersectionObserver !== 'function') { setOn(true); return; }
+    const observer = new IntersectionObserver(([entry]) => setOn(entry.isIntersecting), { threshold: amount });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [amount]);
+  return [ref, on];
+}
+
+// ---------------------------------------------------------------------------
+// Curves
+// ---------------------------------------------------------------------------
+
+/**
+ * A smooth path through the points, as an SVG `d` string. Each stretch is a
+ * cubic whose handles follow the line between its neighbours (a Catmull-Rom
+ * spline), so the curve passes through every point exactly.
+ */
+export function smoothPath(points: readonly (readonly [number, number])[]): string {
+  if (points.length === 0) return '';
+  let d = `M${points[0][0].toFixed(1)} ${points[0][1].toFixed(2)}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const before = points[Math.max(0, index - 1)];
+    const from = points[index];
+    const to = points[index + 1];
+    const after = points[Math.min(points.length - 1, index + 2)];
+    const c1x = from[0] + (to[0] - before[0]) / 6;
+    const c1y = from[1] + (to[1] - before[1]) / 6;
+    const c2x = to[0] - (after[0] - from[0]) / 6;
+    const c2y = to[1] - (after[1] - from[1]) / 6;
+    d += `C${c1x.toFixed(1)} ${c1y.toFixed(2)} ${c2x.toFixed(1)} ${c2y.toFixed(2)} ${to[0].toFixed(1)} ${to[1].toFixed(2)}`;
+  }
+  return d;
+}
+
+// ---------------------------------------------------------------------------
+// The marker's red pen
+// ---------------------------------------------------------------------------
+
+/** A tick, as a marker writes one: down, then up and away. */
+export function PenTick({ className }: { className?: string }) {
+  return (
+    <svg className={className ? `p1-pen ${className}` : 'p1-pen'} viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <path pathLength={1} d="M4.5 15.5c2.2 2.1 4 4.6 5.4 7.4C13.6 14.2 18.3 8.3 24.5 4" />
+    </svg>
+  );
+}
+
+/** A cross: two strokes, the second written after the first. */
+export function PenCross({ className }: { className?: string }) {
+  return (
+    <svg className={className ? `p1-pen ${className}` : 'p1-pen'} viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <path pathLength={1} d="M5.5 5c5.3 5.2 11 11.3 17.5 18.5" />
+      <path pathLength={1} className="p1-pen-second" d="M23 4.5C16.8 10.7 10.9 16.7 4.5 23.5" />
+    </svg>
+  );
+}
+
+/**
+ * The ring a marker draws round the right answer: one loop that overshoots
+ * where it began. It is stretched to whatever it circles, so its stroke is
+ * kept at a constant width on screen rather than scaled with it.
+ */
+export function PenRing({ className }: { className?: string }) {
+  return (
+    <svg className={className ? `p1-ring ${className}` : 'p1-ring'} viewBox="0 0 100 40" preserveAspectRatio="none" fill="none" aria-hidden="true">
+      <path d="M12 9C30 2 72 1 90 9c9 4.5 9 20-3 25.5C70 41 28 40.5 11 33.5-2 27.5 0 12 18 6.5 30 3 44 3 52 4.5" />
+    </svg>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -377,51 +144,46 @@ export function useSpotlight<T extends HTMLElement>() {
 // ---------------------------------------------------------------------------
 
 /** The house arrow, drawn at the page's stroke weight rather than an icon set's. */
-export function Arrow({ direction = 'up-right', size = 16 }: { direction?: 'right' | 'up-right' | 'down' | 'up'; size?: number }) {
+export function Arrow({ direction = 'right', size = 16 }: { direction?: 'right' | 'up-right' | 'down' | 'up'; size?: number }) {
   const rotate = { right: 0, 'up-right': -45, down: 90, up: -90 }[direction];
   return (
-    <svg className="lx-arrow" width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: `rotate(${rotate}deg)` }}>
+    <svg className="p1-arrow" width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: `rotate(${rotate}deg)` }}>
       <path d="M2.5 8h10.5M9 3.5 13.5 8 9 12.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-/** The CalculixHub mark (see brand.ts), able to draw itself in. */
-export function BrandMark({ draw = false }: { draw?: boolean }) {
+/** The CalculixHub mark, read from brand.ts like every other surface that draws it. */
+export function BrandMark() {
   return (
-    <svg className="lx-mark" viewBox={MARK_VIEWBOX} fill="none" aria-hidden="true">
-      <m.path
-        d={MARK_PATH}
-        stroke="currentColor" strokeWidth={MARK_STROKE} strokeLinecap="round"
-        initial={draw ? { pathLength: 0 } : false}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 1.4, ease: GLIDE, delay: 0.2 }}
-      />
-      <m.circle
-        cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill="currentColor"
-        initial={draw ? { scale: 0, opacity: 0 } : false}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5, ease: GLIDE, delay: 1.2 }}
-        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
-      />
+    <svg className="p1-mark" viewBox={MARK_VIEWBOX} fill="none" aria-hidden="true">
+      <path d={MARK_PATH} stroke="currentColor" strokeWidth={MARK_STROKE} strokeLinecap="round" />
+      <circle cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} fill="currentColor" />
     </svg>
   );
 }
 
-interface EyebrowProps {
-  children: ReactNode;
-  index?: string;
-  live?: boolean;
-  className?: string;
-}
-
-/** The small label above a heading: a chapter number or a live dot, then the words. */
-export function Eyebrow({ children, index, live, className }: EyebrowProps) {
+/** The wordmark as the product writes it everywhere: "calculix" set heavy, "hub" light. */
+export function Wordmark() {
   return (
-    <span className={className ? `lx-eyebrow ${className}` : 'lx-eyebrow'}>
-      {live && <span className="lx-live" aria-hidden="true" />}
-      {index && <span className="lx-eyebrow-index">{index}</span>}
-      <span>{children}</span>
+    <span className="p1-wordmark">
+      <BrandMark />
+      <span className="p1-wordmark-word">calculix<span>hub</span></span>
     </span>
   );
+}
+
+/** A phrase run over with the highlighter. Emphasis in a heading is colour here, never italics. */
+export function Hl({ children, swipe = false }: { children: ReactNode; swipe?: boolean }) {
+  return <span className={swipe ? 'p1-hl is-swipe' : 'p1-hl'}>{children}</span>;
+}
+
+/** Go to a section of the page. Native scrolling: the page never takes the scroll away from the reader. */
+export function goTo(id: string): void {
+  const target = document.getElementById(id);
+  if (!target) return;
+  target.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  // Move focus with the view, so the next Tab starts from the section and not from the link.
+  if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+  target.focus({ preventScroll: true });
 }
