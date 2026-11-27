@@ -28,8 +28,8 @@ import { useStatic } from './staticMode';
 /** How long after the cue the hero's figures first appear; a count-up after this point would reset a figure already shown. */
 export const STATS_APPEAR = 0.7;
 
-/** The longest the entrance waits for the display face. */
-const FONT_PATIENCE = 900;
+/** The longest the entrance waits for the display face; the boot script in index.html waits the same. */
+export const FONT_PATIENCE = 900;
 
 /** Whether this load painted the static first frame. Read once, before the frame is removed. */
 const PAINTED_STATIC = typeof document !== 'undefined'
