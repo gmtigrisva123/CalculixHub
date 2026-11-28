@@ -24,14 +24,16 @@
  *   - It stops while the tab is hidden. A software rasteriser never gets it;
  *     the DOM drawings stay instead (data-gl="off"). A lost context hands the
  *     page back to those drawings at once and takes over again on restore.
- *   - Shaders are compiled asynchronously in an idle moment before the first
- *     frame is shown, so no frame waits on a compile.
+ *   - Shaders are compiled one object at a time in idle moments before the
+ *     first frame is shown, so no frame waits on a compile.
  */
 
 import {
   AddEquation, BufferAttribute, BufferGeometry, CustomBlending, DataTexture, FloatType, Matrix4, NearestFilter, OneFactor,
   OneMinusSrcAlphaFactor, PerspectiveCamera, Points, RGBAFormat, Scene, ShaderMaterial, Vector2, Vector3, Vector4, WebGLRenderer,
+  type Mesh, type Object3D,
 } from 'three';
+import { whenIdle } from '../../lib/lazy';
 import { PRIORITY, onTick, wake, type Tick } from './pageClock';
 import { onMeasure } from './stageLayout';
 import { COUNTS, QUALITY, deviceTier, isSoftwareRenderer, shuffleRecords } from './ParticleField';
@@ -428,21 +430,42 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
   canvas.addEventListener('webglcontextrestored', onRestored);
 
   resize();
-  // Compile every program while nothing on screen is moving, then show the first frame.
-  const hidden = scene.children.filter(child => !child.visible);
-  for (const child of hidden) child.visible = true;
-  const compiled = typeof gl.compileAsync === 'function' ? gl.compileAsync(scene, camera) : Promise.resolve(gl.compile(scene, camera));
-  void Promise.resolve(compiled).catch(() => undefined).then(() => {
-    for (const child of hidden) child.visible = false;
+  /*
+   * Compile every program before the first frame is shown, while nothing on
+   * screen is moving, and one object at a time in successive idle moments.
+   * Where the driver cannot link shaders in the background
+   * (KHR_parallel_shader_compile), every link holds the main thread; compiled
+   * all at once, the stage's dozen programs made one task long enough to drop
+   * frames if the reader had already started to scroll.
+   */
+  const queue: Object3D[] = [];
+  scene.traverse(object => { if ((object as Mesh).isMesh || (object as Points).isPoints) queue.push(object); });
+  let cancelIdle = () => {};
+  const compileNext = () => {
     if (!alive) return;
-    ready = true;
-    dirty = true;
-    wake();
-    requestAnimationFrame(() => { if (alive && !lost) onReady(); });
-  });
+    const object = queue.shift();
+    if (!object) {
+      ready = true;
+      dirty = true;
+      wake();
+      requestAnimationFrame(() => { if (alive && !lost) onReady(); });
+      return;
+    }
+    // Hidden objects (and hidden parents) are skipped by three's compile: show them for the moment it takes.
+    const shown: Object3D[] = [];
+    for (let node: Object3D | null = object; node; node = node.parent) {
+      if (!node.visible) { node.visible = true; shown.push(node); }
+    }
+    void gl.compileAsync(object, camera, scene).catch(() => undefined).then(() => {
+      for (const node of shown) node.visible = false;
+      cancelIdle = whenIdle(compileNext, 250);
+    });
+  };
+  compileNext();
 
   return () => {
     alive = false;
+    cancelIdle();
     stopTick();
     stopMeasure();
     resizeObserver.disconnect();
