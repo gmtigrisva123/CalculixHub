@@ -50,7 +50,11 @@ concurrency:
 jobs:
   landing-qa:
     name: landing-qa
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: that is Ubuntu 26.04 now, and the harness's Playwright
+    # (1.56, pinned to match the browser the development containers ship) will
+    # not install Chromium's dependencies there ("Playwright does not support
+    # chromium on ubuntu26.04-x64"). Move both jobs with the Playwright upgrade.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     # M0: report, do not block.
     continue-on-error: true
@@ -110,7 +114,8 @@ jobs:
   landing-visual:
     name: landing-visual
     if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
+    # ubuntu-24.04 for Playwright 1.56, as above.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     # M0: report, do not block.
     continue-on-error: true
