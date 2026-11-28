@@ -53,3 +53,9 @@ supabase/.temp/
 
 # graphify local cache
 graphify-out/cache/
+
+# Landing QA harness output (qa/landing/README.md): screenshots, reports and
+# Playwright's per-test files are written by every run and never committed.
+qa/landing/.snapshots/
+qa/landing/report/
+qa/test-results/

@@ -72,3 +72,4 @@ image folders to delete by hand.
 | `confirm.mjs` | Hands confirmation links to waiting bots and agents |
 | `cleanup.sql` | Removes the QA cohort |
 | `out/` | Everything a run writes (git-ignored: it holds passwords) |
+| `landing/` | Separate from all of the above: the landing page's QA harness (screenshots, vitals, scroll trace, fallbacks, the static-frame takeover, bundle budgets), run against a local build rather than the live site, with no accounts. See `landing/README.md`. |

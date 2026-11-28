@@ -1,0 +1,33 @@
+{
+  "$comment": [
+    "Bundle budgets for the landing (docs/landing-3d/SPEC.md §9.2), read by budgets.mjs against a built dist/.",
+    "Sizes are gzip (level 9) in kB as Vite prints them (1 kB = 1000 bytes).",
+    "pieces: what is measured. A file is a path or a glob relative to dist/; '@entry-js' and '@entry-css' are the module script and the stylesheet that dist/index.html links; '@inline:<id>' is the text of the element with that id in dist/index.html. A piece marked optional may be absent from a build (it measures 0 then): MathText goes in M3, ParticleField in M4, the stage chunk arrives in M4.",
+    "budgets: each sums pieces (formula, 'a + b') or lists its own files, and applies from the milestone in 'from' (to the one in 'until', if any). LX_STAGE says which milestone the build is at; with LX_ENFORCE=1, an over budget that applies at LX_STAGE fails the run. Budgets that apply later are measured and shown, never enforced."
+  ],
+  "pieces": {
+    "html": { "files": ["index.html"], "what": "dist/index.html: the static first frame, the reading version, the inline critical CSS, the boot script and the JSON-LD" },
+    "criticalCss": { "files": ["@inline:lx-static-css"], "what": "the inline critical CSS (<style id=\"lx-static-css\">)", "optional": true },
+    "entry": { "files": ["@entry-js"], "what": "the entry chunk (the module script in dist/index.html)" },
+    "entryCss": { "files": ["@entry-css"], "what": "the entry stylesheet (the stylesheet link in dist/index.html)" },
+    "landingShell": { "files": ["assets/LandingPage-*.js"], "what": "the landing shell chunk" },
+    "landingCss": { "files": ["assets/LandingPage-*.css"], "what": "the CSS the landing chunk imports" },
+    "landingChapters": { "files": ["assets/LandingChapters-*.js"], "what": "the chapters chunk" },
+    "mathText": { "files": ["assets/MathText-*.js"], "what": "KaTeX, through MathText (retired in M3)", "optional": true },
+    "three": { "files": ["assets/three.module-*.js"], "what": "three.js", "optional": true },
+    "particleField": { "files": ["assets/ParticleField-*.js"], "what": "today's 3D code, the hero's field (retired in M4)", "optional": true },
+    "stage": { "files": ["assets/Stage-*.js"], "what": "the stage code and shaders (from M4, SPEC §2.7: import('./stage/Stage'))", "optional": true }
+  },
+  "budgets": [
+    { "name": "html", "formula": "html", "limitKB": 32, "from": "M1", "spec": "§9.2 HTML (gzip), including the static first frame, the reading version, inline critical CSS, the boot script and JSON-LD" },
+    { "name": "inlineCriticalCss", "formula": "criticalCss", "limitKB": 9, "from": "M1", "spec": "§9.2 Inline critical CSS (gzip)" },
+    { "name": "jsBeforeTakeover", "formula": "entry + landingShell", "limitKB": 200, "from": "M1", "until": "M10", "spec": "§9.2 JS before takeover (gzip): entry + landing shell, <= 200 KB until M11" },
+    { "name": "jsBeforeTakeover", "formula": "entry + landingShell", "limitKB": 145, "from": "M11", "spec": "§9.2 JS before takeover (gzip), after M11" },
+    { "name": "entry", "formula": "entry", "limitKB": 115, "from": "M11", "spec": "§9.2 / §17 M11: entry <= 115 KB gzip" },
+    { "name": "landingShell", "formula": "landingShell", "limitKB": 25, "from": "M1", "spec": "§9.2 Landing shell chunk (gzip)" },
+    { "name": "chapters", "formula": "landingChapters + mathText", "limitKB": 40, "from": "M3", "spec": "§9.2 Chapters (gzip): JS (the KaTeX CSS allowance of 3.4 KB is not measured here)" },
+    { "name": "three", "formula": "three", "limitKB": 145, "from": "M4", "spec": "§9.2 Total 3D payload: three <= 145" },
+    { "name": "stageCode", "formula": "particleField + stage", "limitKB": 35, "from": "M4", "spec": "§9.2 Total 3D payload: stage code and shaders <= 35" },
+    { "name": "total3D", "formula": "three + particleField + stage", "limitKB": 180, "from": "M4", "spec": "§9.2 Total 3D payload (gzip) <= 180 KB" }
+  ]
+}
