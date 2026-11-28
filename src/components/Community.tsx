@@ -607,7 +607,7 @@ function CommunityFeed({ problems, solvedIds, onSolveProblem }: CommunityProps) 
 
   const openCreate = (options: { kind?: PostKind | null; problemId?: string | null } = {}) => {
     if (!viewer) {
-      window.location.assign('/?auth=signup');
+      window.location.assign('/?auth=signin');
       return;
     }
     setComposer({ mode: 'create', ...options, circleId: inCircle ? circleId : null });

@@ -28,7 +28,7 @@ import { AUTH_STORAGE_KEY, isBackendConfigured, supabase } from '../services/sup
 import { useRealtimeSubscription } from '../services/data/realtime';
 import { deriveSignupUsername } from '../services/authInput';
 import type { Level, ProfileRow } from '../services/database.types';
-import { clearPendingSignup, clearSocialCallback, emailConfirmationRedirect, initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback, markPendingSignup, passwordRecoveryRedirect, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
+import { clearPendingSignup, clearSocialCallback, emailConfirmationRedirect, initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback, markPendingSignup, passwordRecoveryRedirect, requestedAuthForm, safeAuthorizationUrl, socialRedirect, type SocialProvider } from '../services/socialAuth';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'unavailable';
 
@@ -120,7 +120,9 @@ function sessionMayExist(): boolean {
     return true; // Storage is unreadable, so let the SDK decide.
   }
   const url = new URL(window.location.href);
-  if (['code', 'auth', 'recovery', 'error', 'token_hash'].some(name => url.searchParams.has(name) && url.searchParams.get(name) !== 'signup')) return true;
+  if (['code', 'recovery', 'error', 'token_hash'].some(name => url.searchParams.has(name))) return true;
+  // `?auth=callback` and `?auth=confirm` can bring one; a link asking for a form (`?auth=signup`, `?auth=signin`) cannot.
+  if (url.searchParams.has('auth') && !requestedAuthForm(url.search)) return true;
   return /access_token=|refresh_token=|error=|type=/.test(url.hash);
 }
 

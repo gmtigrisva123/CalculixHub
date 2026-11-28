@@ -214,7 +214,7 @@ src/components/landing/
 ├── chapters.ts             chapter demand and arrival promises                                       (kept)
 ├── smoothScroll.ts         Lenis, now ticked by the director; scrollToTarget, setScrollLocked       (changed)
 ├── kit.tsx                 motion vocabulary; adds DURATION, STAGGER, SPRING.tilt, useTilt;          (changed)
-│                           static-mode and CSS-entrance paths; SIGNUP_HREF, linkAction
+│                           static-mode and CSS-entrance paths; SIGNUP_HREF, SIGNIN_HREF, linkAction
 ├── staticMode.tsx          NEW (M1): the static-render context the build renders the first frame in
 ├── entrance.ts             NEW (M1): the cue, the takeover's resume point, the count-up rule
 ├── copy.ts                 NEW: every visible string; one source for the live page, the static
@@ -497,7 +497,7 @@ The opening, as markup (the hero is sticky within `.lx-opening`, as today):
 2. **Numbers never reset.** The hero's count-ups run only if the live hero commits before `cueAt + 650 ms`, 50 ms before the stats begin to appear (`STATS_APPEAR`, 700 ms). Otherwise they keep the settled figures already on screen.
 3. **No shift.** The swapped elements occupy identical boxes, so CLS stays 0. The LCP entry is the static `h1` at first paint. An identical replacement is not larger, so it does not create a later LCP entry.
 
-Before the takeover, every button is a working link (`Find your level` → `/?auth=signup`; `Try a problem` → `#playground`; `Scroll` → `#idea`). A click during download navigates rather than waiting for code.
+Before the takeover, every button is a working link (`Find your level` → `/?auth=signup`; the nav's `Sign in` → `/?auth=signin`; `Try a problem` → `#playground`; `Scroll` → `#idea`). A click during download navigates rather than waiting for code.
 
 ### 2.7 Staged loading order
 
@@ -1564,7 +1564,7 @@ Every milestone ends with a page that can ship. A scene not yet rebuilt keeps to
 | Q6 | The engine's item bank labels some AMC 12 problems by an "AMC 10" source (for example `amc12-2022a-p10` appears in the ticker as "AMC 10 combinatorics"). That is the engine's own data and is kept. Is it intended? | Kept as is. |
 | Q7 | The page grows from about 21.9 to about 28.1 screens, mostly from the engine's fourth screen and the archive's track. Shorten the track to 200 vh? | Keep 280 vh. |
 | Q8 | `FAQPage` structured data earns no rich result for this site (§15.4). Include it anyway? | Include it. |
-| Q9 | There is no `?auth=signin` route. Before takeover, "Sign in" therefore links to `/?auth=signup`, where signing in is one tap away. Add a sign-in route? | No; link to the forms. |
+| Q9 | There was no `?auth=signin` route, so before takeover "Sign in" linked to `/?auth=signup`, one tap from signing in. Add a sign-in route? | **Answered: yes.** `/?auth=signin` opens the sign-in form for a signed-out visitor, and "Sign in" links to it (`SIGNIN_HREF`). |
 
 ---
 

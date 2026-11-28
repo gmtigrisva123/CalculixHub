@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useScroll, useSpring } from 'motion/react';
-import { Arrow, BrandMark, GLIDE, SIGNUP_HREF, linkAction } from './kit';
+import { Arrow, BrandMark, GLIDE, SIGNIN_HREF, SIGNUP_HREF, linkAction } from './kit';
 import { useStatic } from './staticMode';
 import { useEntranceState } from './entrance';
 import { scrollToTarget, setScrollLocked } from './smoothScroll';
@@ -180,7 +180,7 @@ export default function LandingNav({ onSignIn, onRegister, chapters }: LandingNa
           </nav>
           <div className="lx-nav-actions">
             {/* Links first: before the page's code arrives they open the forms; then they open them in place. */}
-            <a className="lx-nav-signin" href={SIGNUP_HREF} onClick={linkAction(onSignIn)}>Sign in</a>
+            <a className="lx-nav-signin" href={SIGNIN_HREF} onClick={linkAction(onSignIn)}>Sign in</a>
             <a className="lx-nav-cta" href={SIGNUP_HREF} onClick={linkAction(onRegister)}>
               <span>Start free</span>
               <span className="lx-nav-cta-icon" aria-hidden="true"><Arrow size={13} /></span>

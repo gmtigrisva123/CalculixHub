@@ -372,7 +372,7 @@ export default function Workspace({ onSignedOut }: WorkspaceProps) {
           {activeTab === 'archive' && <ExamArchive userId={isLoggedIn ? profile?.id ?? null : null} />}
 
           {activeTab === 'compete' && <Arena />}
-          {activeTab === 'leaderboard' && <Leaderboard rows={ranking.data} loading={ranking.loading} error={ranking.error} onRefresh={ranking.reload} currentUserId={profile?.id ?? null} currentRank={userStats.rank} currentPoints={userStats.points} currentSolved={userStats.completedCount} onPractice={() => { if (isLoggedIn) selectTab('learn'); else window.location.assign('/?auth=signup'); }} />}
+          {activeTab === 'leaderboard' && <Leaderboard rows={ranking.data} loading={ranking.loading} error={ranking.error} onRefresh={ranking.reload} currentUserId={profile?.id ?? null} currentRank={userStats.rank} currentPoints={userStats.points} currentSolved={userStats.completedCount} onPractice={() => { if (isLoggedIn) selectTab('learn'); else window.location.assign('/?auth=signin'); }} />}
           {activeTab === 'admin' && <AdminWorkspace onContentChange={() => void fetchProblems()} />}
 
           {activeTab === 'progress' && (

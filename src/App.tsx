@@ -11,6 +11,7 @@ import { openingTab, preloadScreen } from './lib/screens';
 import { bootVariant } from './boot/boot';
 import BootLift, { BootHold } from './boot/BootLift';
 import Welcome from './components/Welcome';
+import { requestedAuthForm } from './services/socialAuth';
 
 const IPhonePrototype = lazy(() => import('./components/prototype/IPhonePrototype'));
 const MacBookPrototype = lazy(() => import('./components/prototype/MacBookPrototype'));
@@ -67,9 +68,10 @@ function LearningApp() {
   if (authStatus === 'loading') return null;
 
   const params = new URLSearchParams(window.location.search);
-  const registrationRequested = params.get('auth') === 'signup';
+  // A link asked for the sign-up or the sign-in form. Only someone signed out is taken to it.
+  const formRequested = requestedAuthForm(window.location.search) !== null;
   const recoveryRequested = params.get('recovery') === '1';
-  if (confirmedElsewhere || (registrationRequested && !isLoggedIn) || recoveryRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
+  if (confirmedElsewhere || (formRequested && !isLoggedIn) || recoveryRequested || (!isLoggedIn && (!guestAllowed || authError)) || (isLoggedIn && !hasOnboarded)) {
     return <Welcome onLoginSuccess={handleLoginSuccess} />;
   }
 

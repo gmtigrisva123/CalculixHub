@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ARCHIVE_FIGURES } from '../archiveFigures';
-import { SIGNUP_HREF } from '../kit';
+import { SIGNIN_HREF, SIGNUP_HREF } from '../kit';
 import { renderLandingStatic } from './entry-static';
 
 /**
@@ -61,8 +61,14 @@ describe('the static first frame', () => {
 
   it('lets a visitor sign up before any code has arrived', () => {
     const signups = tags.filter(tag => tag.name === 'a' && tag.attr('href') === SIGNUP_HREF);
-    expect(signups.length).toBeGreaterThanOrEqual(3);
+    expect(signups.length).toBeGreaterThanOrEqual(2);
     expect(tags.some(tag => tag.name === 'button' && /sign|start|level/i.test(tag.attributes))).toBe(false);
+  });
+
+  it('takes "Sign in" to the sign-in form, not the sign-up form', () => {
+    const signIns = [...markup.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].filter(([, , inner]) => reading(inner) === 'Sign in');
+    expect(signIns.length).toBeGreaterThan(0);
+    for (const [, attributes] of signIns) expect(attributes).toContain(` href="${SIGNIN_HREF}"`);
   });
 
   it('holds the chapters\' place and carries their reading version', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailConfirmationRedirect, isEmailConfirmationLanding, passwordRecoveryRedirect, safeAuthorizationUrl, socialCallbackError, socialRedirect } from './socialAuth';
+import { emailConfirmationRedirect, isEmailConfirmationLanding, passwordRecoveryRedirect, requestedAuthForm, safeAuthorizationUrl, socialCallbackError, socialRedirect } from './socialAuth';
 
 describe('social sign-in boundaries', () => {
   it('returns to this deployment, including localhost and a subpath', () => {
@@ -32,6 +32,15 @@ describe('social sign-in boundaries', () => {
     expect(socialCallbackError('https://calculixhub.com/?error=access_denied&error_description=SECRET')).toContain('not completed');
     expect(socialCallbackError('https://calculixhub.com/#error=server_error&error_description=SECRET')).not.toContain('SECRET');
     expect(socialCallbackError('https://calculixhub.com/?code=secret')).toBeNull();
+  });
+  it('reads which form a link asked for, and nothing else, from ?auth', () => {
+    expect(requestedAuthForm('?auth=signup')).toBe('register');
+    expect(requestedAuthForm('?auth=signin')).toBe('login');
+    expect(requestedAuthForm('?auth=signin&tab=learn')).toBe('login');
+    expect(requestedAuthForm('?tab=archive&auth=signup')).toBe('register');
+    for (const search of ['', '?auth=callback', '?auth=confirm', '?auth=', '?auth=SIGNIN', '?tab=learn', '?code=signin']) {
+      expect(requestedAuthForm(search)).toBeNull();
+    }
   });
   it('only navigates to the configured project authorization endpoint', () => {
     const base='https://example.supabase.co';

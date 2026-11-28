@@ -78,7 +78,7 @@ export default function Arena() {
   {view?<header className="arena-heading"><div><h1>{view.arena.title}</h1><p>{view.arena.description}</p></div><button className="arena-quiet" onClick={()=>{setView(null);void catalog();}} disabled={busy}><RefreshCw size={16}/>All arenas</button></header>
    :<ArenaHero arenas={arenas} clock={clock} loaded={loaded} catalogError={catalogError} still={Boolean(reduce)}/>}
   {error && <div className="arena-notice" role="alert">{error}</div>}
-  {!user && <div className="arena-note">You can browse the schedule. <a href="/?auth=signup">Sign in or create an account</a> to register and save your match.</div>}
+  {!user && <div className="arena-note">You can browse the schedule. <a href="/?auth=signin">Sign in or create an account</a> to register and save your match.</div>}
   {!view ? <>
    <section className="al-board" aria-labelledby="arena-board-title">
     <div className="al-board-head"><div><h2 id="arena-board-title">The match board</h2><p className="al-board-count">{!loaded?'Checking the schedule…':catalogError?'Connection unavailable':arenas.length+' scheduled'}</p></div><button className="arena-quiet al-refresh" onClick={()=>{setView(null);void catalog();}} disabled={busy}><RefreshCw size={16}/>Refresh</button></div>

@@ -50,11 +50,13 @@ export const useFinePointer = () => useMediaQuery('(hover: hover) and (pointer: 
 
 /** Where the sign-up buttons go without script, and on a modified click: the sign-up form. */
 export const SIGNUP_HREF = '/?auth=signup';
+/** Where "Sign in" goes without script, and on a modified click: the sign-in form. */
+export const SIGNIN_HREF = '/?auth=signin';
 
 /**
  * A real link that, once the page's code is running, acts in place instead
- * (opening the sign-up form without a reload). Before the code arrives, and
- * on any modified click (a new tab, a new window), it is simply the link.
+ * (opening its form without a reload). Before the code arrives, and on any
+ * modified click (a new tab, a new window), it is simply the link.
  */
 export function linkAction(handler: () => void) {
   return (event: ReactMouseEvent<HTMLAnchorElement>) => {

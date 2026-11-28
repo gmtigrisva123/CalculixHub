@@ -96,6 +96,28 @@ export const initialConfirmationElsewhere = initialEmailConfirmation
 export const initialPasswordRecovery = typeof window !== 'undefined'
   && new URLSearchParams(window.location.search).get('recovery') === '1';
 
+/**
+ * The form a plain link asked to open on: `?auth=signup` for the sign-up form,
+ * `?auth=signin` for the sign-in form.
+ *
+ * This is how a link reaches the forms when no code is running to open them in
+ * place: the landing's static first frame, a link opened in a new tab, a "Sign
+ * in to post" in the workspace. Unlike `?auth=callback` and `?auth=confirm`,
+ * neither carries a session: each is a signed-out visitor's request.
+ */
+export function requestedAuthForm(search: string): 'register' | 'login' | null {
+  const auth = new URLSearchParams(search).get('auth');
+  return auth === 'signup' ? 'register' : auth === 'signin' ? 'login' : null;
+}
+
+/** Once the visitor is signed in, the request for a form has been answered: take it out of the address. */
+export function clearAuthFormRequest(): void {
+  const url = new URL(window.location.href);
+  if (!requestedAuthForm(url.search)) return;
+  url.searchParams.delete('auth');
+  window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+}
+
 export function clearSocialCallback(): void {
   const url = new URL(window.location.href);
   if (!initialSocialCallback.returning && !initialSocialCallback.error && !initialEmailConfirmation && !initialPasswordRecovery) return;

@@ -42,7 +42,7 @@ import {
   formatDifficulty,
 } from '../domain/skillGraph';
 import { useAuth } from '../context/AuthContext';
-import { initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback } from '../services/socialAuth';
+import { clearAuthFormRequest, initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, initialSocialCallback, requestedAuthForm } from '../services/socialAuth';
 // The paper-and-ink ground the sign-in, sign-up and placement screens stand on.
 import '../styles/landing-refresh.css';
 
@@ -160,7 +160,10 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
     if (initialConfirmationElsewhere) return 'confirmed';
     if (initialEmailConfirmation) return 'login';
     if (initialMode) return initialMode;
-    return new URLSearchParams(window.location.search).get('auth') === 'signup' ? 'register' : 'landing';
+    const requested = requestedAuthForm(window.location.search);
+    // Signed in already, a visitor has no use for the sign-in form: start where a visit that asked for nothing does.
+    if (requested === 'login' && authStatus === 'authenticated') return 'landing';
+    return requested ?? 'landing';
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -188,7 +191,9 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
   useEffect(() => {
     if (recoveringPassword && initialPasswordRecovery) { setAuthMode('reset'); setErrorMessage(''); }
     else if (authError) { setAuthMode('login'); setErrorMessage(authError); }
-    else if (authStatus === 'authenticated' && !hasOnboarded && !recoveringPassword && !initialPasswordRecovery && new URLSearchParams(window.location.search).get('auth') !== 'signup') setAuthMode('placement');
+    // Signed in, a visitor moves on to placement unless the visit asked for the sign-up form.
+    // Asking for the sign-in form does not hold them: it means nothing once they are signed in.
+    else if (authStatus === 'authenticated' && !hasOnboarded && !recoveringPassword && !initialPasswordRecovery && requestedAuthForm(window.location.search) !== 'register') setAuthMode('placement');
   }, [authError, authStatus, hasOnboarded, recoveringPassword]);
   const handleSocialSignIn = async (provider: 'google' | 'facebook') => {
     if (submitting) return;
@@ -331,11 +336,7 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
       return;
     }
 
-    const destination = new URL(window.location.href);
-    if (destination.searchParams.get('auth') === 'signup') {
-      destination.searchParams.delete('auth');
-      window.history.replaceState(window.history.state, '', destination.pathname + destination.search + destination.hash);
-    }
+    clearAuthFormRequest();
     setSuccessMessage('Welcome back! Resuming your placement test...');
     
     setTimeout(() => {
@@ -472,11 +473,7 @@ export default function WelcomeScreen({ onLoginSuccess, initialMode }: WelcomeSc
 
     if (result.ok) {
       pendingCredentials.current = null;
-      const destination = new URL(window.location.href);
-      if (destination.searchParams.get('auth') === 'signup') {
-        destination.searchParams.delete('auth');
-        window.history.replaceState(window.history.state, '', destination.pathname + destination.search + destination.hash);
-      }
+      clearAuthFormRequest();
       setErrorMessage('');
       setSuccessMessage('Email confirmed. Signing you in…');
       return;

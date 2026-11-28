@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { lazyWithPreload, whenIdle } from '../lib/lazy';
 import { bootVariant } from '../boot/boot';
 import BootLift, { BootHold } from '../boot/BootLift';
-import { initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery } from '../services/socialAuth';
+import { initialConfirmationElsewhere, initialEmailConfirmation, initialPasswordRecovery, requestedAuthForm } from '../services/socialAuth';
 
 /*
  * Two pieces of code, fetched separately.
@@ -32,7 +32,7 @@ const NO_STATS = { registeredUsers: 0, testsCompleted: 0, problemsSolved: 0 };
 /** True when this page load opens on the landing page rather than on a form. */
 const opensOnLanding = (): boolean =>
   !initialPasswordRecovery && !initialConfirmationElsewhere && !initialEmailConfirmation
-  && new URLSearchParams(window.location.search).get('auth') !== 'signup';
+  && requestedAuthForm(window.location.search) === null;
 
 interface WelcomeProps {
   onLoginSuccess: (name: string, level: Level) => void;
