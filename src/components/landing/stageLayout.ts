@@ -24,7 +24,7 @@
  * one number.
  */
 
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { frame, motionValue, type MotionValue } from 'motion/react';
 import { PRIORITY, currentTick, onTick, wake } from './pageClock';
 
@@ -167,4 +167,64 @@ export function useStageScroll(ref: RefObject<HTMLElement | null>, edges: readon
   }, [ref, progress, from, to]);
 
   return progress;
+}
+
+// ---------------------------------------------------------------------------
+// Values that chase the scroll on the page's `follow` spring, shared with the stage
+// ---------------------------------------------------------------------------
+
+const published = new Map<string, MotionValue<number>>();
+
+/** A value the WebGL stage may read by name: the same number the DOM is drawing with this frame. */
+export function readStageValue(key: string): number | undefined {
+  return published.get(key)?.get();
+}
+
+/** One step of the follow spring (stiffness 170, damping 26, mass 0.5), sub-stepped for stability. */
+export function followStep(state: { x: number; v: number }, target: number, dt: number): void {
+  const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+  const h = dt / steps;
+  for (let i = 0; i < steps; i += 1) {
+    const acceleration = (-170 * (state.x - target) - 26 * state.v) / 0.5;
+    state.v += acceleration * h;
+    state.x += state.v * h;
+  }
+}
+
+/**
+ * `source` followed on the page's follow spring, integrated by the page clock
+ * (not by Motion's own spring), so it is computed once per frame and, when
+ * given a `key`, the WebGL stage reads exactly the value the DOM draws with.
+ * With `still` it simply equals the source.
+ */
+export function useStageSpring(source: MotionValue<number>, { key, still = false }: { key?: string; still?: boolean } = {}): MotionValue<number> {
+  const value = useRef<MotionValue<number> | null>(null);
+  value.current ??= motionValue(source.get());
+  const out = value.current;
+
+  useLayoutEffect(() => {
+    const state = { x: source.get(), v: 0 };
+    out.set(state.x);
+    const stop = onTick(tick => {
+      const target = source.get();
+      if (still) {
+        state.x = target;
+        state.v = 0;
+      } else {
+        followStep(state, target, tick.dt);
+        if (Math.abs(state.x - target) < 1e-4 && Math.abs(state.v) < 1e-3) { state.x = target; state.v = 0; }
+      }
+      if (state.x !== out.get()) out.set(state.x);
+      return state.x !== target;
+    }, PRIORITY.progress + 1);
+    return stop;
+  }, [source, out, still]);
+
+  useEffect(() => {
+    if (!key) return;
+    published.set(key, out);
+    return () => { if (published.get(key) === out) published.delete(key); };
+  }, [key, out]);
+
+  return out;
 }

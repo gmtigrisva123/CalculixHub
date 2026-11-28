@@ -38,7 +38,7 @@ import { COUNTS, QUALITY, deviceTier, isSoftwareRenderer, shuffleRecords } from 
 import { flowLayout, lorenzPath, mulberry32 } from './particleShapes';
 import { DATA_ROWS, PATH_LENGTH, PATH_WIDTH, SHAPE, STAGE_COMMON, THREAD_FRAGMENT, THREAD_VERTEX } from './threadShaders';
 import { POLY_SAMPLES, cssColorToSrgb } from './threadShapes';
-import { createScenes } from './threadScenes';
+import { createScenes } from './threadRegistry';
 import { createExtras } from './threadExtras';
 import type { Extra, InkRect, Leg, Slot, StageFrame, ThreadScene, TimelineState } from './threadTypes';
 
@@ -279,34 +279,39 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
 
   // --- The timeline ----------------------------------------------------------------
   const timeline: TimelineState = { a: 'hero', b: 'hero', morph: 0 };
+  const arrivals = new Map(legs.map(leg => [leg.to, leg]));
+  /**
+   * Which scene holds the thread at this scroll position, and how far it is
+   * on its way to the next. Legs are walked in page order; each must start
+   * no earlier than the last one ended, so the thread is never in two
+   * journeys at once and scrolling back retraces it exactly.
+   */
   const evaluate = (frame: StageFrame) => {
-    const order = scenes.list.filter(entry => entry.present()).map(entry => entry.id);
-    let current = order[0] ?? 'hero';
+    const present = scenes.list.filter(entry => entry.present());
+    let current = present[0]?.id ?? 'hero';
     timeline.a = current;
     timeline.b = current;
     timeline.morph = 0;
-    let look: Leg | null = null;
     let floor = -Infinity;
-    for (const leg of legs) {
-      if (!byId.get(leg.from)?.present() || !byId.get(leg.to)?.present()) continue;
-      const window = leg.window(frame);
-      if (!window) continue;
+    for (let i = 1; i < present.length; i += 1) {
+      const leg = arrivals.get(present[i].id);
+      const window = leg?.window(frame);
+      if (!leg || !window) continue;
       const start = Math.max(window[0], floor);
       const end = Math.max(window[1], start + 1);
       floor = end;
       if (frame.y < start) break;
       if (frame.y <= end) {
-        timeline.a = leg.from;
+        timeline.a = current;
         timeline.b = leg.to;
         timeline.morph = (frame.y - start) / (end - start);
-        look = leg;
-        return look;
+        return leg;
       }
       current = leg.to;
       timeline.a = current;
       timeline.b = current;
     }
-    return look;
+    return null;
   };
 
   const writeSlot = (target: Slot, row: number, id: string, frame: StageFrame) => {
@@ -338,7 +343,7 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
   let lost = false;
   let ready = false;
   let alive = true;
-  const frame: StageFrame = { y: 0, vy: 0, vw: 1, vh: 1, cw, ch, time: 0, dt: 0, now: 0, still, pointer };
+  const frame: StageFrame = { y: 0, vy: 0, vw: 1, vh: 1, cw, ch, dpr: maxRatio, time: 0, dt: 0, now: 0, still, pointer };
 
   const draw = (tick: Tick): boolean => {
     if (!alive || lost || !visible || !ready) return false;
@@ -353,6 +358,7 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
     frame.vh = tick.vh;
     frame.cw = cw;
     frame.ch = ch;
+    frame.dpr = gl.getPixelRatio();
     frame.time = time;
     frame.dt = quiet ? 0 : tick.dt;
     frame.now = tick.now;

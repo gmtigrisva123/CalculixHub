@@ -11,7 +11,8 @@
  */
 
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { animate, m, useInView, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue, type Variants } from 'motion/react';
+import { animate, m, useInView, useReducedMotion, useSpring, useTransform, type MotionValue, type Variants } from 'motion/react';
+import { useStageScroll, useStageSpring } from './stageLayout';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
 import { MARK_DOT, MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from '../brand';
 
@@ -326,14 +327,19 @@ export function CountUp({ value, delay = 0, className, start = true }: CountUpPr
  * translate only: the stage is one composited layer being moved, and nothing
  * inside it is laid out again.
  */
-export function useStageArrival(ref: RefObject<HTMLElement | null>): { scale: MotionValue<number>; y: MotionValue<number> } | undefined {
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 0.3'] });
-  const eased = useSpring(scrollYProgress, SPRING.follow);
-  const scale = useTransform(eased, [0, 1], [0.94, 1]);
-  const y = useTransform(eased, [0, 1], [56, 0]);
+export function useStageArrival(ref: RefObject<HTMLElement | null>, key?: string): { scale: MotionValue<number>; y: MotionValue<number> } | undefined {
+  const reduce = Boolean(useReducedMotion());
+  // On the page clock rather than Motion's useScroll and useSpring: with a `key`, the WebGL
+  // stage reads this very value (readStageValue), so a stage and the 3D drawn on it arrive together.
+  const progress = useStageScroll(ref, ['start end', 'start 0.3']);
+  const eased = useStageSpring(progress, { key, still: reduce });
+  const scale = useTransform(eased, [0, 1], [STAGE_ARRIVAL.scale, 1]);
+  const y = useTransform(eased, [0, 1], [STAGE_ARRIVAL.y, 0]);
   return reduce ? undefined : { scale, y };
 }
+
+/** Where an arriving stage starts: what useStageArrival and the 3D stage both assume. */
+export const STAGE_ARRIVAL = { scale: 0.94, y: 56 } as const;
 
 // ---------------------------------------------------------------------------
 // Pointer physics

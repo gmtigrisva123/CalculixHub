@@ -433,7 +433,7 @@ export function createEngineExtra(engine: EngineScene, style: CSSStyleDeclaratio
       group.matrix.copy(chart.matrix);
       group.matrixWorldNeedsUpdate = true;
       shared.uView.value.set(frame.cw, frame.ch);
-      shared.uDpr.value = window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1;
+      shared.uDpr.value = frame.dpr;
       shared.uClip.value.set(chart.stage.x, chart.stage.y, chart.stage.w, chart.stage.h);
       shared.uClipR.value = chart.stage.r;
       shared.uFade.value = presence;

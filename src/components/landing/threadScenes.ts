@@ -15,63 +15,16 @@
  * DOM uses for its own transforms, so the light sits exactly on the page.
  */
 
-import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
+import { Matrix4, Vector3 } from 'three';
 import { docBox, progressAt, type Box } from './stageLayout';
+import { EMPTY_BOX as EMPTY, cameraDistance, follow, place, query, resetSlot, stageRadius, stickyTop } from './threadKit';
 import { POLY_SAMPLES, clamp01, curveHeights, lerp, smoothstep } from './threadShapes';
 import { SHAPE } from './threadShaders';
 import { CHART, REPLAY_START, RUN, replayAt, weightAt } from './engineReplay';
 import { TILT, TURN } from './ParticleField';
 import type { InkRect, Leg, Slot, StageFrame, ThreadScene } from './threadTypes';
 
-// ---------------------------------------------------------------------------
-// Shared helpers
-// ---------------------------------------------------------------------------
-
-const EMPTY: Box = { top: 0, left: 0, width: 0, height: 0 };
-const query = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector);
-
-/** Where a `position: sticky; top: 0` element sits on screen, from its static box and its container's. */
-export function stickyTop(element: Box, container: Box, y: number, top = 0): number {
-  return Math.min(Math.max(element.top - y, top), container.top + container.height - element.height - y);
-}
-
-/** The page's stage radius, read from its token once per measure. */
-export function stageRadius(): number {
-  const root = query('.lx');
-  if (!root) return 14;
-  const probe = Number.parseFloat(getComputedStyle(root).getPropertyValue('--lx-stage-r'));
-  // clamp(10px, 1.1vw, 16px): resolve the vw term ourselves when the token is not a plain length.
-  return Number.isFinite(probe) && probe > 0 ? probe : Math.min(16, Math.max(10, window.innerWidth * 0.011));
-}
-
-const position = new Vector3();
-const quaternion = new Quaternion();
-const scaling = new Vector3();
-const euler = new Euler();
-
-/** Place a shape: its origin at screen point (sx, sy), scaled, then turned. */
-export function place(out: Matrix4, frame: StageFrame, sx: number, sy: number, scale = 1, depth = scale, turn?: [number, number, number], z = 0): Matrix4 {
-  position.set(sx - frame.cw / 2, frame.ch / 2 - sy, z);
-  if (turn) quaternion.setFromEuler(euler.set(turn[0], turn[1], turn[2]));
-  else quaternion.identity();
-  scaling.set(scale, scale, depth);
-  return out.compose(position, quaternion, scaling);
-}
-
-export function resetSlot(slot: Slot): void {
-  slot.shape = SHAPE.none;
-  slot.matrix.identity();
-  for (const p of slot.p) p.set(0, 0, 0, 0);
-  slot.look.set(2, 1, 1, 0);
-  slot.clip.set(0, 0, 0, 0);
-  slot.shade.set(0, 2, 0, 0);
-  for (const o of slot.occ) o.set(0, 0, 0, 0);
-  slot.occR.set(0, 0, 0, 0);
-  slot.data = null;
-  slot.flowing = false;
-  slot.pointer = 0;
-  slot.pointerRadius = 150;
-}
+export { follow, place, resetSlot, stageRadius, stickyTop } from './threadKit';
 
 // ---------------------------------------------------------------------------
 // The hero: the butterfly
@@ -203,17 +156,6 @@ export class HeroScene implements ThreadScene {
   /** True while the intro is still assembling or the pointer springs are moving. */
   settling(frame: StageFrame) {
     return (!frame.still && frame.now - this.introAt < 2700) || Math.abs(this.yaw.v) + Math.abs(this.pitch.v) > 1e-4;
-  }
-}
-
-/** One step of the page's `follow` spring (stiffness 170, damping 26, mass 0.5). */
-export function follow(state: { x: number; v: number }, target: number, dt: number) {
-  const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
-  const h = dt / steps;
-  for (let i = 0; i < steps; i += 1) {
-    const acceleration = (-170 * (state.x - target) - 26 * state.v) / 0.5;
-    state.v += acceleration * h;
-    state.x += state.v * h;
   }
 }
 
@@ -353,7 +295,7 @@ export class EngineScene implements ThreadScene {
     const camera = engineCamera(playhead, frame.still);
     place(this.matrix, frame, sx, sy, unit * camera.zoom, unit * camera.zoom, [camera.pitch, camera.yaw, 0]);
     const matrix = this.matrix;
-    const distance = frame.ch / 2 / Math.tan((30 * Math.PI) / 360);
+    const distance = cameraDistance(frame.ch);
     const project = (x: number, y: number, z = 0): [number, number] => {
       chartPoint.set(x, y, z).applyMatrix4(matrix);
       const f = distance / (distance - chartPoint.z);
@@ -417,10 +359,9 @@ export class EngineScene implements ThreadScene {
 // The legs between them
 // ---------------------------------------------------------------------------
 
-export function createLegs(hero: HeroScene, idea: IdeaScene, engine: EngineScene): Leg[] {
+export function createLegs(hero: HeroScene, _idea: IdeaScene, engine: EngineScene): Leg[] {
   return [
     {
-      from: 'hero',
       to: 'idea',
       // While the sheet covers the hero: its particles are drawn into one thread hanging over the page.
       window: frame => {
@@ -434,7 +375,6 @@ export function createLegs(hero: HeroScene, idea: IdeaScene, engine: EngineScene
       lift: 140,
     },
     {
-      from: 'idea',
       to: 'engine',
       // While the engine's stage arrives: the rule peels off the sheet and drops onto the stage's axis.
       window: frame => {
@@ -448,11 +388,4 @@ export function createLegs(hero: HeroScene, idea: IdeaScene, engine: EngineScene
       lift: 90,
     },
   ];
-}
-
-export function createScenes() {
-  const hero = new HeroScene();
-  const idea = new IdeaScene();
-  const engine = new EngineScene();
-  return { hero, idea, engine, list: [hero, idea, engine] as ThreadScene[], legs: createLegs(hero, idea, engine) };
 }

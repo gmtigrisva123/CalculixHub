@@ -120,7 +120,7 @@ export function createPaperEdge(locate: (frame: StageFrame) => PaperEdge | null,
       }
       mesh.visible = true;
       uniforms.uView.value.set(frame.cw, frame.ch);
-      uniforms.uDpr.value = Math.min(window.devicePixelRatio || 1, 2);
+      uniforms.uDpr.value = frame.dpr;
       uniforms.uEdge.value.set(edge.x, edge.y, edge.w, edge.r);
       uniforms.uCurl.value = edge.curl;
       // The quad covers the edge with room for the shadow on one side and the lip on the other.

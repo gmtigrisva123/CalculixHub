@@ -22,6 +22,8 @@ export interface StageFrame {
   /** The canvas, in CSS px (on a phone it is as tall as the largest viewport). */
   cw: number;
   ch: number;
+  /** The renderer's pixel ratio this frame (capped, and lowered by the quality loop): gl_FragCoord / dpr = CSS px. */
+  dpr: number;
   /** Stage time in seconds: stands still under reduced motion. */
   time: number;
   dt: number;
@@ -59,8 +61,8 @@ export interface Slot {
 
 export interface InkRect { x: number; y: number; w: number; h: number; r: number }
 
+/** How the thread arrives in a scene, from whichever scene it is in at the time. */
 export interface Leg {
-  from: string;
   to: string;
   /** The stretch of scroll (start, end) over which the thread travels; null while an anchor is missing. */
   window(frame: StageFrame): [number, number] | null;
