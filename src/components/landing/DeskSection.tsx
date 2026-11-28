@@ -12,7 +12,7 @@
  * Both lie on a desk seen at a three-quarter angle: one plane of real elements
  * turned in CSS 3D, under a lamp. The WebGL stage, when there is one, draws a
  * pencil whose tip rides the triangle as it draws itself, and the lamplight;
- * it follows the sheet from the same pose (deskStage.ts). When the pen touches
+ * it follows the sheet from the same pose (deskStage.ts). As the pen comes to
  * the sheet, it turns flat to face the reader, and the pointer is mapped back
  * onto the paper through the corners the browser draws, so a stroke lands where
  * it is drawn at any angle.

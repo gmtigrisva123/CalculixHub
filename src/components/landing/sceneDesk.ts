@@ -340,10 +340,11 @@ void main() {
   vec2 p = vec2(gl_FragCoord.x / uDpr, uView.y - gl_FragCoord.y / uDpr);
   float along;
   float beam = beamAt(p, along);
-  // Faint rays round the lamp, drifting very slowly.
-  vec2 d = p - uApex;
-  float angle = atan(d.y, d.x);
-  float rays = 0.8 + 0.2 * sin(angle * 41.0 + uTime * 0.11) * sin(angle * 23.0 - uTime * 0.07);
+  // Faint rays from the lamp, drifting very slowly: by how far off the beam's axis a pixel lies, as seen from the lamp.
+  vec2 axis = normalize(uTarget - uApex);
+  vec2 d = normalize(p - uApex);
+  float off = d.x * axis.y - d.y * axis.x;
+  float rays = 0.8 + 0.2 * sin(off * 41.0 + uTime * 0.11) * sin(off * 23.0 - uTime * 0.07);
   vec2 e = (p - uTarget) / uPool;
   float pool = exp(-dot(e, e) * 2.4);
   float a = (uStrength * beam * rays + uPoolStrength * pool) * clipAt(p, uClip, uClipR) * occlusionAt(p, uOcc, uOccR, 48.0);
@@ -739,7 +740,19 @@ export function createDeskExtras(self: DeskScene, style: CSSStyleDeclaration, st
       beamUniforms.uTarget.value.copy(target);
       beamUniforms.uTan.value = (self.objects.width * arrived.scale * (self.narrow ? 0.55 : 0.4)) / Math.max(1, apex.distanceTo(target));
       beamUniforms.uPool.value.set(self.objects.width * arrived.scale * 0.62, self.objects.height * arrived.scale * 0.5);
-      beamUniforms.uRect.value.set(stage.x, stage.y, stage.w, stage.h);
+      // Only where the light can fall: the cone out to where it fades, and the pool, within the stage.
+      const reach = apex.distanceTo(target) * 1.55;
+      const dir = target.clone().sub(apex).normalize();
+      const spread = reach * beamUniforms.uTan.value;
+      const far = apex.clone().addScaledVector(dir, reach);
+      const pool = beamUniforms.uPool.value;
+      const xs = [apex.x, far.x - dir.y * spread, far.x + dir.y * spread, target.x - pool.x * 1.3, target.x + pool.x * 1.3];
+      const ys = [apex.y, far.y + dir.x * spread, far.y - dir.x * spread, target.y - pool.y * 1.3, target.y + pool.y * 1.3];
+      const left = Math.max(stage.x, Math.min(...xs));
+      const top = Math.max(stage.y, Math.min(...ys));
+      const right = Math.min(stage.x + stage.w, Math.max(...xs));
+      const bottom = Math.min(stage.y + stage.h, Math.max(...ys));
+      beamUniforms.uRect.value.set(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
       beamUniforms.uView.value.set(frame.cw, frame.ch);
       beamUniforms.uClip.value.set(stage.x, stage.y, stage.w, stage.h);
       beamUniforms.uClipR.value = stage.r;

@@ -14,8 +14,8 @@ export type ThreadEvent =
   | { type: 'chord-drag'; active: boolean }
   // The chord figure has begun to draw itself in: the circle of light under it hands over.
   | { type: 'chord-draw' }
+  // The reader has taken the pen on the desk's sheet (the stage's pencil steps aside).
   | { type: 'desk-draw'; active: boolean }
-  | { type: 'desk-demo'; progress: number; x: number; y: number }
   | { type: 'pointer-scene'; scene: string | null };
 
 type Handler = (event: ThreadEvent) => void;
