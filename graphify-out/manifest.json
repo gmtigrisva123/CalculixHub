@@ -1344,9 +1344,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/ArchiveLadder.tsx": {
-    "mtime": 1795823881.6589952,
-    "seen": 1795826265.25313,
-    "ast_hash": "65ca95b9206eab3fc470f94ce97232f8",
+    "mtime": 1795840681.8525221,
+    "seen": 1795840901.3008883,
+    "ast_hash": "3d6cf821e6729d53fcf209830e7decd5",
     "semantic_hash": ""
   },
   "src/components/landing/ChordPlayground.tsx": {
@@ -1392,9 +1392,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/JourneyStack.tsx": {
-    "mtime": 1795823881.6589952,
-    "seen": 1795826265.2531366,
-    "ast_hash": "37b11942cd727158edb51d39bfac7d5c",
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.3008962,
+    "ast_hash": "5fefbf992506234198a87584666aabbd",
     "semantic_hash": ""
   },
   "src/components/landing/LandingChapters.tsx": {
@@ -1422,9 +1422,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/MarginRails.tsx": {
-    "mtime": 1795827640.8773882,
-    "seen": 1795828419.011341,
-    "ast_hash": "e8ab8d677ac84a5b3ca554a79d489b76",
+    "mtime": 1795840692.9154058,
+    "seen": 1795840901.300901,
+    "ast_hash": "6d938e26a49f1efaf3231fdc304207d3",
     "semantic_hash": ""
   },
   "src/components/landing/Opening.tsx": {
@@ -5934,9 +5934,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/sceneArchive.ts": {
-    "mtime": 1795827150.7716825,
-    "seen": 1795827307.1057487,
-    "ast_hash": "1a6154e5414be6e766f45a521153c8d3",
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.3009448,
+    "ast_hash": "d1aa7a2f69224df3e4f5e3f4b65553e5",
     "semantic_hash": ""
   },
   "src/components/landing/sceneDesk.ts": {
@@ -5976,9 +5976,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/sceneWorkspace.ts": {
-    "mtime": 1795827150.771697,
-    "seen": 1795827307.105755,
-    "ast_hash": "c336c2eef9a7989e3ce6f4a60b501869",
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.3009598,
+    "ast_hash": "1b418ea39b0807dbd114bf337ad0a8e3",
     "semantic_hash": ""
   },
   "src/components/landing/threadKit.ts": {
@@ -6027,6 +6027,30 @@
     "mtime": 1795840406.0091405,
     "seen": 1795840672.7481627,
     "ast_hash": "da4f1f7b2671f37af84ebd1b3c1abe9f",
+    "semantic_hash": ""
+  },
+  "src/components/landing/archiveStairs.test.ts": {
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.300913,
+    "ast_hash": "5660e0e9f48f1b4ddfb3acd3df56cfdc",
+    "semantic_hash": ""
+  },
+  "src/components/landing/archiveStairs.ts": {
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.300915,
+    "ast_hash": "6041539780bdf7ed45a5be3c88827fc0",
+    "semantic_hash": ""
+  },
+  "src/components/landing/workspacePile.test.ts": {
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.3009772,
+    "ast_hash": "39d804ca620d8cb02e3c17d7614c8264",
+    "semantic_hash": ""
+  },
+  "src/components/landing/workspacePile.ts": {
+    "mtime": 1795840681.852713,
+    "seen": 1795840901.3009784,
+    "ast_hash": "3e049842bb9fdd4f52ff6367a7b38f95",
     "semantic_hash": ""
   },
   "package-lock.json": {
