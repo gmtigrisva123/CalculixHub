@@ -20,6 +20,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { ENGINE_RUN, TIER_BANDS, certainty, type EngineStep } from './engineRun';
+import { ENGINE } from './copy';
 import { Arrow, GLIDE, Magnetic, SPRING, SplitText } from './kit';
 
 const RUN = ENGINE_RUN;
@@ -39,12 +40,7 @@ const THETA_MAX = 3.4;
 const x = (theta: number) => PAD + ((theta - THETA_MIN) / (THETA_MAX - THETA_MIN)) * (W - 2 * PAD);
 const VISIBLE = RUN.grid.map((theta, index) => ({ theta, index })).filter(node => node.theta >= THETA_MIN - 1e-9 && node.theta <= THETA_MAX + 1e-9);
 
-const BEATS = [
-  { title: 'It starts open-minded.', body: 'Before the first answer, any level is possible.' },
-  { title: 'Each answer narrows it down.', body: 'Right answers move the guess up. Misses move it down.' },
-  { title: 'Each question fits.', body: 'Not too easy, not too hard.' },
-  { title: 'It stops when it’s sure.', body: `This time, after ${ANSWERS} questions.` },
-];
+const BEATS = ENGINE.beats(RUN);
 
 /** Which beat of the story a playhead position belongs to. */
 function beatAt(k: number) {
@@ -162,11 +158,11 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
         <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale }}>
           <div className="lx-engine-grid" aria-hidden="true" />
           <header className="lx-engine-head">
-            <SplitText as="h2" id="lx-engine-title" className="lx-engine-title" text="Watch it find *your level.*" />
-            <p className="lx-engine-note">Scroll to watch one student’s placement, answer by answer.</p>
+            <SplitText as="h2" id="lx-engine-title" className="lx-engine-title" text={ENGINE.title} />
+            <p className="lx-engine-note">{ENGINE.note}</p>
           </header>
 
-          <ol className="lx-beats" aria-label="How placement works">
+          <ol className="lx-beats" aria-label={ENGINE.beatsLabel}>
             {BEATS.map((item, index) => (
               <li key={item.title} className="lx-beat" data-state={index === beat ? 'active' : index < beat ? 'past' : 'ahead'}>
                 <span className="lx-beat-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
@@ -180,18 +176,18 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
 
           <div className="lx-instrument">
             <dl className="lx-readouts">
-              <div><dt>Questions</dt><dd className="lx-tabular">{answered}</dd></div>
-              <div><dt>Level</dt><dd><span ref={tierRef}>Intermediate</span></dd></div>
+              <div><dt>{ENGINE.readouts.questions}</dt><dd className="lx-tabular">{answered}</dd></div>
+              <div><dt>{ENGINE.readouts.level}</dt><dd><span ref={tierRef}>{ENGINE.levelAtStart}</span></dd></div>
               <div className="lx-sure">
-                <dt>How sure</dt>
+                <dt>{ENGINE.readouts.sure}</dt>
                 <dd>
                   <span className="lx-sure-track" aria-hidden="true"><span ref={sureRef} className="lx-sure-fill" /></span>
-                  <span className="sr-only">{answered === ANSWERS ? 'Sure enough to stop' : 'Not sure yet'}</span>
+                  <span className="sr-only">{answered === ANSWERS ? ENGINE.sureness.sure : ENGINE.sureness.unsure}</span>
                 </dd>
               </div>
             </dl>
 
-            <svg className="lx-chart" viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
+            <svg className="lx-chart" viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={ENGINE.chartLabel(RUN)}>
               <defs>
                 <linearGradient id="lx-curve-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" style={{ stopColor: 'var(--lx-cyan)', stopOpacity: 0.42 }} />
@@ -217,7 +213,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
               <g ref={estimateRef} className="lx-estimate">
                 <line x1={0} x2={0} y1={100} y2={BASE} />
                 <circle cx={0} cy={100} r={5.5} />
-                <text ref={markRef} x={0} y={82} textAnchor="middle">YOU</text>
+                <text ref={markRef} x={0} y={82} textAnchor="middle">{ENGINE.marker}</text>
               </g>
               <g className="lx-rug">
                 <AnimatePresence initial={false}>
@@ -238,8 +234,8 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                   ))}
                 </AnimatePresence>
               </g>
-              <text className="lx-axis-end" x={PAD} y={BASE + 22}>easier</text>
-              <text className="lx-axis-end" x={W - PAD} y={BASE + 22} textAnchor="end">harder</text>
+              <text className="lx-axis-end" x={PAD} y={BASE + 22}>{ENGINE.axis.easier}</text>
+              <text className="lx-axis-end" x={W - PAD} y={BASE + 22} textAnchor="end">{ENGINE.axis.harder}</text>
             </svg>
 
             <AnimatePresence>
@@ -251,9 +247,9 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                   exit={{ opacity: 0, y: 16, scale: 0.98 }}
                   transition={{ duration: 0.7, ease: GLIDE }}
                 >
-                  <span className="lx-verdict-label">Level found</span>
+                  <span className="lx-verdict-label">{ENGINE.verdict.label}</span>
                   <strong>{RUN.tier}</strong>
-                  <span className="lx-verdict-copy">Start with {RUN.source} problems.</span>
+                  <span className="lx-verdict-copy">{ENGINE.verdict.copy(RUN)}</span>
                 </m.div>
               )}
             </AnimatePresence>
@@ -268,13 +264,13 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
                 >
                   {latest ? (
                     <>
-                      <span className="lx-ticker-q">Q{answered}</span>
+                      <span className="lx-ticker-q">{ENGINE.ticker.question(answered)}</span>
                       <span className="lx-ticker-dot" style={{ background: DOMAIN_TONE[latest.item!.domain] }} aria-hidden="true" />
-                      <span>{latest.item!.source} {latest.item!.domain.toLowerCase()}</span>
-                      <span className={latest.correct ? 'lx-ticker-result is-right' : 'lx-ticker-result is-miss'}>{latest.correct ? 'Right' : 'Missed'}</span>
+                      <span>{ENGINE.ticker.item(latest.item!.source, latest.item!.domain)}</span>
+                      <span className={latest.correct ? 'lx-ticker-result is-right' : 'lx-ticker-result is-miss'}>{ENGINE.ticker.result(latest.correct)}</span>
                     </>
                   ) : (
-                    <><span className="lx-ticker-q">Q0</span><span>No answers yet</span></>
+                    <><span className="lx-ticker-q">{ENGINE.ticker.question(0)}</span><span>{ENGINE.ticker.empty}</span></>
                   )}
                 </m.p>
               </AnimatePresence>
@@ -284,11 +280,11 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
           <div className="lx-engine-cta">
             <Magnetic>
               <button type="button" className="lx-btn lx-btn-cream" onClick={onRegister}>
-                <span>Find your own level</span>
+                <span>{ENGINE.action}</span>
                 <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
               </button>
             </Magnetic>
-            <span className="lx-engine-cta-note">Free account</span>
+            <span className="lx-engine-cta-note">{ENGINE.actionNote}</span>
           </div>
         </m.div>
       </div>

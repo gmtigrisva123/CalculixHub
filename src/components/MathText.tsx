@@ -22,7 +22,7 @@ interface Segment {
   display: boolean;
 }
 
-function parseSegments(source: string): Segment[] {
+export function parseSegments(source: string): Segment[] {
   const segments: Segment[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;

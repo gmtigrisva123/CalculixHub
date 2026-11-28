@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { m, useInView, useReducedMotion } from 'motion/react';
 import { drawPage, extendStroke, type ScratchInk, type ScratchStroke, type ScratchTool } from '../../domain/scratch';
 import { PHASE_LABEL, dateKey, daysUntil, trainingPlan } from '../../domain/raceDay';
+import { DESK } from './copy';
 import { Arrow, Magnetic, Rise, SplitText, Stagger, StaggerItem, useStageArrival } from './kit';
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
@@ -65,10 +66,10 @@ function demoUpTo(count: number): ScratchStroke[] {
 }
 
 const TOOLS: readonly { tool: ScratchTool; label: string }[] = [
-  { tool: 'pen', label: 'Pen' },
-  { tool: 'accent', label: 'Red pen' },
-  { tool: 'mark', label: 'Highlighter' },
-  { tool: 'eraser', label: 'Eraser' },
+  { tool: 'pen', label: DESK.sheet.tools.pen },
+  { tool: 'accent', label: DESK.sheet.tools.accent },
+  { tool: 'mark', label: DESK.sheet.tools.mark },
+  { tool: 'eraser', label: DESK.sheet.tools.eraser },
 ];
 
 function Sheet() {
@@ -165,25 +166,25 @@ function Sheet() {
       <span className="lx-desk-tape" aria-hidden="true" />
       <div className="lx-desk-paper">
         <canvas ref={canvas} className={`lx-desk-canvas is-${tool}`} onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
-          role="img" aria-label="Scratch paper with a right triangle drawn on it. You can draw on it with a mouse, finger or stylus." />
+          role="img" aria-label={DESK.sheet.label} />
         {!cleared && (
           <div className={`lx-desk-labels${labelled ? ' is-shown' : ''}`} aria-hidden="true">
-            <span style={{ left: '46%', top: '82%' } as Vars}>12</span>
-            <span style={{ left: '10%', top: '52%' } as Vars}>5</span>
-            <span style={{ left: '51%', top: '40%' } as Vars}>13</span>
-            <span className="is-red" style={{ left: '25%', top: '56%' } as Vars}>h = ?</span>
+            <span style={{ left: '46%', top: '82%' } as Vars}>{DESK.sheet.figure.base}</span>
+            <span style={{ left: '10%', top: '52%' } as Vars}>{DESK.sheet.figure.side}</span>
+            <span style={{ left: '51%', top: '40%' } as Vars}>{DESK.sheet.figure.hypotenuse}</span>
+            <span className="is-red" style={{ left: '25%', top: '56%' } as Vars}>{DESK.sheet.figure.altitude}</span>
           </div>
         )}
       </div>
       <div className="lx-desk-tools">
-        <div role="radiogroup" aria-label="Tool">
+        <div role="radiogroup" aria-label={DESK.sheet.toolsLabel}>
           {TOOLS.map(({ tool: value, label }) => (
             <button key={value} type="button" role="radio" aria-checked={tool === value} aria-label={label} title={label} className={`is-${value}`} onClick={() => setTool(value)}><i aria-hidden="true" /></button>
           ))}
         </div>
-        <button type="button" className="lx-desk-clear" onClick={() => { setMine([]); setCleared(true); }} disabled={cleared && !drawn}>Fresh sheet</button>
+        <button type="button" className="lx-desk-clear" onClick={() => { setMine([]); setCleared(true); }} disabled={cleared && !drawn}>{DESK.sheet.clear}</button>
       </div>
-      {!drawn && labelled && <p className="lx-desk-nudge" aria-hidden="true">go on, draw on it<svg viewBox="0 0 60 40" fill="none"><path d="M4 6c14 2 30 10 40 26M44 32l-9-3M44 32l2-9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></p>}
+      {!drawn && labelled && <p className="lx-desk-nudge" aria-hidden="true">{DESK.sheet.nudge}<svg viewBox="0 0 60 40" fill="none"><path d="M4 6c14 2 30 10 40 26M44 32l-9-3M44 32l2-9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></p>}
     </div>
   );
 }
@@ -201,25 +202,25 @@ function CountdownCard({ onRegister }: { onRegister: () => void }) {
     <div className="lx-desk-card">
       <span className="lx-desk-pin" aria-hidden="true" />
       <label className="lx-desk-date">
-        <span>My contest is on</span>
+        <span>{DESK.card.date}</span>
         <input type="date" value={date} min={addDays(1)} max={addDays(730)} onChange={event => setDate(event.target.value)} />
       </label>
       <p className="lx-desk-count" aria-live="polite">
-        <strong className="lx-tabular">{left > 0 ? left : '—'}</strong>
-        <span>{left > 0 ? `${left === 1 ? 'day' : 'days'} to go` : 'pick a day ahead of today'}</span>
+        <strong className="lx-tabular">{left > 0 ? left : DESK.card.noCount}</strong>
+        <span>{left > 0 ? DESK.card.toGo(left) : DESK.card.pickDay}</span>
       </p>
       {first && (
         <>
-          <ol className="lx-desk-track" aria-label={`${weeks.length} weeks: build, sharpen, taper`}>
+          <ol className="lx-desk-track" aria-label={DESK.card.track(weeks.length)}>
             {weeks.map(week => <li key={week.index} className={`is-${week.phase}`} style={{ '--span': week.days } as Vars} />)}
           </ol>
-          <p className="lx-desk-legend" aria-hidden="true"><i className="is-build" />Build<i className="is-sharpen" />Sharpen<i className="is-taper" />Taper</p>
-          <p className="lx-desk-week"><b>This week: {PHASE_LABEL[first.phase].toLowerCase()}.</b> {first.problemsPerDay} problems a day, your weakest topic first.</p>
+          <p className="lx-desk-legend" aria-hidden="true"><i className="is-build" />{DESK.card.legend.build}<i className="is-sharpen" />{DESK.card.legend.sharpen}<i className="is-taper" />{DESK.card.legend.taper}</p>
+          <p className="lx-desk-week"><b>{DESK.card.thisWeek(PHASE_LABEL[first.phase].toLowerCase())}</b> {DESK.card.perDay(first.problemsPerDay)}</p>
         </>
       )}
       <Magnetic strength={0.12}>
         <button type="button" className="lx-btn lx-btn-ink" onClick={onRegister}>
-          <span>Start my countdown</span>
+          <span>{DESK.card.action}</span>
           <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
         </button>
       </Magnetic>
@@ -235,12 +236,10 @@ export default function DeskSection({ onRegister }: { onRegister: () => void }) 
       <m.div className="lx-desk-stage" data-tone="ink" style={arrival}>
         <div className="lx-wrap lx-desk-grid">
           <header className="lx-desk-copy">
-            <SplitText as="h2" id="lx-desk-title" className="lx-h2" text={'Pen, paper,\nand *a date.*'} />
-            <Rise as="p" className="lx-lead">Contest maths is done by hand, toward a day on the calendar. So every page has scratch paper under it, and your practice counts down to the day that matters.</Rise>
+            <SplitText as="h2" id="lx-desk-title" className="lx-h2" text={DESK.title} />
+            <Rise as="p" className="lx-lead">{DESK.lead}</Rise>
             <Stagger as="ul" className="lx-desk-points" delay={0.1} gap={0.09}>
-              <StaggerItem as="li"><b>Scratch paper</b> on every screen. Press S and it slides in beside the problem.</StaggerItem>
-              <StaggerItem as="li"><b>A countdown</b> to your contest, with the weeks before it planned: build, sharpen, taper.</StaggerItem>
-              <StaggerItem as="li"><b>A card to share</b> when a streak or a rank is worth showing someone.</StaggerItem>
+              {DESK.points.map(point => <StaggerItem key={point.strong} as="li"><b>{point.strong}</b>{` ${point.rest}`}</StaggerItem>)}
             </Stagger>
           </header>
           <div className="lx-desk-objects">

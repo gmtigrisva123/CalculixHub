@@ -8,19 +8,10 @@
 
 import { useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
-import { PLANS, dollars } from '../../../shared/plans';
+import { FAQ } from './copy';
 import { Arrow, GLIDE, Rise, SPRING, SplitText, fade } from './kit';
 
-const FAQS: [string, string][] = [
-  ['What is CalculixHub?', 'A place to practise contest maths: find your level, solve real past problems, and learn from full solutions.'],
-  ['Do I need to be an Olympiad student?', 'No. The quiz finds a good starting point for you, from AMC up to IMO.'],
-  ['Is Free really free?', 'Yes. Placement, practice, every past paper and the Arena are free, with no trial clock and no adverts.'],
-  ['What does Pro add, and what does it cost?', `${dollars(PLANS.pro.price.monthly)} a month, or ${dollars(PLANS.pro.price.yearly)} a year. It adds a week-by-week plan up to your contest date, printable progress reports and every share-card design. Anything still being built is marked on the pricing table.`],
-  ['Can I cancel?', 'Any time, from the Plan page. You keep Pro until the period you paid for ends.'],
-  ['What if I get stuck?', 'Take a hint first. When you’re ready, read the full solution. You can come back to any problem.'],
-  ['How do the AI explanations work?', 'The tutor answers with Google’s Gemini. In Settings, under Live tutor, three steps walk you through getting a free key from your own Google account. Google’s free allowance covers normal practice, and anything beyond it is between you and Google, not us.'],
-  ['Can I take my data with me, or delete it?', 'Both. Settings has a download of everything stored about you, and a delete-account button that removes it for good.'],
-];
+const FAQS = FAQ.items;
 
 export default function FaqSection() {
   const [open, setOpen] = useState<number | null>(0);
@@ -28,13 +19,13 @@ export default function FaqSection() {
     <section className="lx-faq" id="faq" data-tone="paper" aria-labelledby="lx-faq-title">
       <div className="lx-wrap lx-faq-grid">
         <header className="lx-faq-head">
-          <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={'Questions,\nanswered.'} />
+          <SplitText as="h2" id="lx-faq-title" className="lx-h2" text={FAQ.title} />
           <Rise delay={0.12}>
-            <a className="lx-link" href="/?auth=signup&tab=community">Ask in the community <Arrow size={15} /></a>
+            <a className="lx-link" href={FAQ.href}>{FAQ.link} <Arrow size={15} /></a>
           </Rise>
         </header>
         <m.div className="lx-faq-list" initial="hidden" whileInView="shown" viewport={{ once: true, amount: 0.15 }} variants={{ shown: { transition: { staggerChildren: 0.07 } } }}>
-          {FAQS.map(([question, answer], index) => {
+          {FAQS.map(({ question, answer }, index) => {
             const expanded = open === index;
             return (
               <m.article

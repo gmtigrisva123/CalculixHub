@@ -17,11 +17,12 @@ import { m, useReducedMotion, useScroll, useSpring, useTransform, useVelocity, t
 import MathText from '../MathText';
 import { ARCHIVE_CONTESTS, ARCHIVE_FIGURES } from './archiveFigures';
 import { ARCHIVE_SAMPLES } from './archiveSamples';
+import { ARCHIVE } from './copy';
 import { Arrow, CountUp, GLIDE, Magnetic, Rise, SplitText } from './kit';
 
 /** Each bank's step, as a share of the tallest: a staircase of difficulty, not of size. */
 const STEP = [0.44, 0.61, 0.8, 1];
-const GLYPHS = ['∑', '∫', '≡', 'π', '∞', '√', '∂', '≅', 'ℤ', '∴'];
+const GLYPHS = ARCHIVE.glyphs;
 
 export default function ArchiveLadder() {
   const reduce = Boolean(useReducedMotion());
@@ -34,14 +35,14 @@ export default function ArchiveLadder() {
     <section className="lx-archive" id="archive" data-tone="paper" aria-labelledby="lx-archive-title">
       <div className="lx-wrap">
         <header className="lx-section-head lx-section-head-split">
-          <SplitText as="h2" id="lx-archive-title" className="lx-h2" text={'Every past paper,\nfrom *AMC to IMO.*'} />
+          <SplitText as="h2" id="lx-archive-title" className="lx-h2" text={ARCHIVE.title} />
           <Rise as="p" className="lx-lead" delay={0.1}>
-            {ARCHIVE_FIGURES.problems.toLocaleString('en-US')} problems from {ARCHIVE_FIGURES.papers} past exams, {ARCHIVE_FIGURES.firstYear} to {ARCHIVE_FIGURES.lastYear}. Take a whole paper, or one problem at a time.
+            {ARCHIVE.lead(ARCHIVE_FIGURES)}
           </Rise>
         </header>
       </div>
 
-      <div className="lx-marquee" aria-label="Contests in the archive">
+      <div className="lx-marquee" aria-label={ARCHIVE.contestsLabel}>
         <m.div style={reduce ? undefined : { skewX: skew }}>
           <MarqueeRow duration={46} velocity={smooth} still={reduce} className="lx-marquee-names">
             {ARCHIVE_CONTESTS.map((contest, index) => (
@@ -63,7 +64,7 @@ export default function ArchiveLadder() {
       </div>
 
       <div className="lx-wrap">
-        <ol className="lx-ladder" aria-label="The archive, from easier contests to harder ones">
+        <ol className="lx-ladder" aria-label={ARCHIVE.ladderLabel}>
           {ARCHIVE_FIGURES.families.map((entry, index) => (
             <m.li
               key={entry.family}
@@ -90,24 +91,24 @@ export default function ArchiveLadder() {
                   variants={{ hidden: { opacity: 0, y: 16 }, shown: { opacity: 1, y: 0, transition: { duration: 0.8, ease: GLIDE, delay: 0.35 + 0.12 * index } } }}
                 >
                   <strong><CountUp value={entry.problems} delay={0.3 + 0.12 * index} /></strong>
-                  <span>problems</span>
+                  <span>{ARCHIVE.problems}</span>
                 </m.div>
               </div>
             </m.li>
           ))}
           <li className="lx-ladder-axis" aria-hidden="true">
-            <span>easier</span>
+            <span>{ARCHIVE.axis.easier}</span>
             <span className="lx-ladder-rule" />
             <Arrow direction="right" size={14} />
-            <span>harder</span>
+            <span>{ARCHIVE.axis.harder}</span>
           </li>
         </ol>
 
         <div className="lx-archive-foot">
           <Rise delay={0.08}>
             <Magnetic>
-              <a className="lx-btn lx-btn-ink" href="/?auth=signup&tab=archive">
-                <span>Open the archive</span>
+              <a className="lx-btn lx-btn-ink" href={ARCHIVE.href}>
+                <span>{ARCHIVE.action}</span>
                 <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
               </a>
             </Magnetic>

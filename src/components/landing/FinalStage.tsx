@@ -10,6 +10,7 @@
 
 import { useLayoutEffect, useRef } from 'react';
 import { m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
+import { FINAL } from './copy';
 import { Arrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
 
 /*
@@ -70,29 +71,29 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
 
         <div className="lx-wrap lx-final-grid">
           <div className="lx-final-letter">
-            <SplitText as="h2" id="lx-final-title" className="lx-h2" text={'You’re allowed\nto *not know yet.*'} />
-            <Rise as="p" className="lx-lead">Cross things out. Try a smaller case. Come back tomorrow.</Rise>
+            <SplitText as="h2" id="lx-final-title" className="lx-h2" text={FINAL.title} />
+            <Rise as="p" className="lx-lead">{FINAL.lead}</Rise>
           </div>
 
           <div className="lx-final-paths">
             <PathCard
-              title="Try a problem"
-              copy="Pick one and give it a go."
-              action="Open practice"
-              href="/?auth=signup&tab=learn"
+              title={FINAL.paths.practice.title}
+              copy={FINAL.paths.practice.copy}
+              action={FINAL.paths.practice.action}
+              href={FINAL.paths.practice.href}
               delay={0}
             />
             <PathCard
-              title="Find your level"
-              copy="A quiz that adapts as you answer."
-              action="Create a free account"
+              title={FINAL.paths.level.title}
+              copy={FINAL.paths.level.copy}
+              action={FINAL.paths.level.action}
               onClick={onRegister}
               featured
               delay={0.1}
             />
           </div>
         </div>
-        <p className="lx-final-caption" aria-hidden="true">progress is rarely a straight line.</p>
+        <p className="lx-final-caption" aria-hidden="true">{FINAL.caption}</p>
       </m.div>
     </section>
   );

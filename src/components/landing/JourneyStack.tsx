@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, m, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import MathText from '../MathText';
 import { ENGINE_RUN } from './engineRun';
+import { WORKSPACE } from './copy';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
 import { Arrow, GLIDE, Rise, SplitText } from './kit';
 
@@ -31,44 +32,17 @@ export default function JourneyStack({ onRegister }: JourneyStackProps) {
   const stackRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: stackRef, offset: ['start start', 'end end'] });
   const steps: Step[] = [
-    {
-      title: 'Find your level.',
-      copy: 'A quiz that adapts to every answer you give.',
-      action: 'Find my level',
-      tone: 'paper',
-      visual: <PlacementVisual />,
-    },
-    {
-      title: 'Practise with hints and solutions.',
-      copy: 'Try a problem, take a hint, then read the full solution.',
-      action: 'Start practising',
-      href: '/?auth=signup&tab=learn',
-      tone: 'mist',
-      visual: <LearnVisual />,
-    },
-    {
-      title: 'Compete in timed contests.',
-      copy: 'Live, timed contests against other students.',
-      action: 'See the Arena',
-      href: '/?auth=signup&tab=compete',
-      tone: 'ink',
-      visual: <ArenaVisual />,
-    },
-    {
-      title: 'A nudge, not the answer.',
-      copy: 'Stuck? The tutor asks a guiding question. You can also post the problem in the community.',
-      action: 'Ask in the community',
-      href: '/?auth=signup&tab=community',
-      tone: 'cream',
-      visual: <TutorVisual />,
-    },
+    { ...WORKSPACE.steps[0], visual: <PlacementVisual /> },
+    { ...WORKSPACE.steps[1], visual: <LearnVisual /> },
+    { ...WORKSPACE.steps[2], visual: <ArenaVisual /> },
+    { ...WORKSPACE.steps[3], visual: <TutorVisual /> },
   ];
 
   return (
     <section className="lx-journey" id="workspace" data-tone="paper" aria-labelledby="lx-journey-title">
       <div className="lx-wrap">
         <header className="lx-section-head">
-          <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'Practise, compete,\nget *unstuck.*'} />
+          <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={WORKSPACE.title} />
         </header>
         <div className="lx-stack" ref={stackRef}>
           {steps.map((step, index) => (
@@ -139,7 +113,7 @@ function PlacementVisual() {
   return (
     <div className="lx-vis lx-vis-placement" ref={ref}>
       <div className="lx-vis-readout">
-        <span>{index ? <>Question <b className="lx-tabular">{index}</b></> : 'Before the first answer'}</span>
+        <span>{index ? <>{WORKSPACE.pictures.placement.question} <b className="lx-tabular">{index}</b></> : WORKSPACE.pictures.placement.start}</span>
         <span className="lx-vis-pill">{step.tier}</span>
       </div>
       <svg viewBox="0 0 360 214">
@@ -158,7 +132,7 @@ function PlacementVisual() {
           />
         ))}
       </svg>
-      <span className="lx-vis-caption">Each answer narrows it down.</span>
+      <span className="lx-vis-caption">{WORKSPACE.pictures.placement.caption}</span>
     </div>
   );
 }
@@ -172,25 +146,25 @@ function LearnVisual() {
   return (
     <div className="lx-vis lx-vis-learn" ref={ref}>
       <div className="lx-sheet-card">
-        <span className="lx-sheet-tag">Algebra</span>
-        <MathText className="lx-sheet-question" text="If $x+y+z=0$, why does $x^3+y^3+z^3=3xyz$?" />
+        <span className="lx-sheet-tag">{WORKSPACE.pictures.learn.tag}</span>
+        <MathText className="lx-sheet-question" text={WORKSPACE.pictures.learn.question} />
         <m.p
           className="lx-sheet-pencil"
           initial={{ clipPath: 'inset(0 100% 0 0)' }}
           animate={show ? { clipPath: 'inset(0 0% 0 0)' } : undefined}
           transition={{ duration: 1.6, ease: [0.45, 0, 0.2, 1], delay: 0.5 }}
         >
-          Look for a factor before you expand.
+          {WORKSPACE.pictures.learn.pencil}
         </m.p>
         <m.div className="lx-sheet-step" {...at(1.9)}>
-          <MathText text="$x^3+y^3+z^3-3xyz$" />
+          <MathText text={WORKSPACE.pictures.learn.steps[0]} />
         </m.div>
         <m.div className="lx-sheet-step" {...at(2.3)}>
-          <MathText text="$=(x+y+z)(x^2+y^2+z^2-xy-yz-zx)$" />
+          <MathText text={WORKSPACE.pictures.learn.steps[1]} />
         </m.div>
         <m.div className="lx-sheet-step is-final" {...at(2.8)}>
-          <MathText text="$=0$" />
-          <span className="lx-sheet-check">✓ so the two sides agree</span>
+          <MathText text={WORKSPACE.pictures.learn.steps[2]} />
+          <span className="lx-sheet-check">{WORKSPACE.pictures.learn.check}</span>
         </m.div>
       </div>
     </div>
@@ -216,13 +190,13 @@ function ArenaVisual() {
           <circle cx="60" cy="60" r="50" className="lx-arena-track" />
           <circle cx="60" cy="60" r="50" className="lx-arena-sweep" pathLength={100} />
         </svg>
-        <span className="lx-arena-live"><span className="lx-live" aria-hidden="true" />Live</span>
+        <span className="lx-arena-live"><span className="lx-live" aria-hidden="true" />{WORKSPACE.pictures.arena.live}</span>
       </div>
       <ol className="lx-arena-board">
         {order.map((solver, rank) => (
           <m.li key={solver.id} layout transition={{ type: 'spring', visualDuration: 0.55, bounce: 0.2 }} data-you={solver.you || undefined}>
             <span className="lx-arena-rank">{rank + 1}</span>
-            <span className="lx-arena-who">{solver.you ? 'You' : <span className="lx-arena-avatar" data-seat={solver.id} />}</span>
+            <span className="lx-arena-who">{solver.you ? WORKSPACE.pictures.arena.you : <span className="lx-arena-avatar" data-seat={solver.id} />}</span>
             <span className="lx-arena-bar"><m.span animate={{ scaleX: solver.score / 100 }} transition={{ duration: 0.8, ease: GLIDE }} initial={false} /></span>
             <span className="lx-arena-score lx-tabular">{solver.score}</span>
           </m.li>
@@ -232,12 +206,7 @@ function ArenaVisual() {
   );
 }
 
-const CHAT = [
-  { who: 'learner', text: 'I’m stuck on the two chords.' },
-  { who: 'tutor', text: 'What do you know about where two chords cross?' },
-  { who: 'learner', text: 'PA × PB = PC × PD?' },
-  { who: 'tutor', text: 'Exactly. Now, where could the centre be?' },
-] as const;
+const CHAT = WORKSPACE.pictures.tutor.chat;
 
 function TutorVisual() {
   const { ref, tick, inView } = useLoop(CHAT.length + 2, 1700);
@@ -254,7 +223,7 @@ function TutorVisual() {
             exit={{ opacity: 0, transition: { duration: 0.2 } }}
             transition={{ type: 'spring', visualDuration: 0.45, bounce: 0.25 }}
           >
-            {line.who === 'tutor' && <span className="lx-bubble-who">Tutor</span>}
+            {line.who === 'tutor' && <span className="lx-bubble-who">{WORKSPACE.pictures.tutor.label}</span>}
             {line.text}
           </m.p>
         ))}

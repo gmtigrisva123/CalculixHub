@@ -12,8 +12,9 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { m } from 'motion/react';
-import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
+import { PLANS, PLAN_ORDER, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
 import { billingConfig } from '../../services/data/plan';
+import { PRICING } from './copy';
 import { Arrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
 
 
@@ -29,14 +30,14 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
       <div className="lx-wrap">
         <header className="lx-section-head lx-plans-head">
           <div>
-            <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={'Free to practise.\n*Pro* for the season.'} />
+            <SplitText as="h2" id="lx-plans-title" className="lx-h2" text={PRICING.title} />
           </div>
           <Rise className="lx-cycle-wrap" delay={0.1}>
-            <div className="lx-cycle" role="radiogroup" aria-label="Billing period">
+            <div className="lx-cycle" role="radiogroup" aria-label={PRICING.billing.label}>
               {(['monthly', 'yearly'] as const).map(value => (
                 <button key={value} type="button" role="radio" aria-checked={cycle === value} onClick={() => setCycle(value)}>
                   {cycle === value && <m.span layoutId="lx-cycle-thumb" className="lx-cycle-thumb" transition={SPRING.press} />}
-                  <span>{value === 'monthly' ? 'Monthly' : 'Yearly'}{value === 'yearly' && <em>save {saving}%</em>}</span>
+                  <span>{PRICING.billing.cycle[value]}{value === 'yearly' && <em>{PRICING.billing.save(saving)}</em>}</span>
                 </button>
               ))}
             </div>
@@ -51,12 +52,12 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
                 <h3 className="lx-plan-name">{plan.name}</h3>
                 <Price plan={plan} cycle={cycle} />
                 <p className="lx-plan-audience">{plan.audience}</p>
-                {id !== 'free' && <p className="lx-plan-plus">Everything in {id === 'pro' ? 'Free' : 'Pro'}, and</p>}
+                {id !== 'free' && <p className="lx-plan-plus">{PRICING.plus[id]}</p>}
                 <ul className="lx-plan-list">
                   {plan.features.map(feature => (
                     <li key={feature.label} className={feature.state === 'planned' ? 'is-soon' : undefined}>
                       {feature.state === 'ready' ? <Check /> : <Soon />}
-                      <span>{feature.label}{feature.state === 'planned' && <em>in the works</em>}</span>
+                      <span>{feature.label}{feature.state === 'planned' && <em>{PRICING.soon}</em>}</span>
                     </li>
                   ))}
                 </ul>
@@ -64,7 +65,7 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
                   {id === 'free' && (
                     <Magnetic>
                       <button type="button" className="lx-btn lx-btn-ink" onClick={onRegister}>
-                        <span>Create a free account</span>
+                        <span>{PRICING.actions.free}</span>
                         <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
                       </button>
                     </Magnetic>
@@ -72,19 +73,19 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
                   {id === 'pro' && (
                     <>
                       <Magnetic>
-                        <a className="lx-btn lx-btn-cream" href="/?auth=signup&tab=plan">
-                          <span>{checkout ? 'Start with Pro' : 'Try Pro in the preview'}</span>
+                        <a className="lx-btn lx-btn-cream" href={PRICING.href}>
+                          <span>{checkout ? PRICING.actions.pro.checkout : PRICING.actions.pro.preview}</span>
                           <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
                         </a>
                       </Magnetic>
-                      {checkout === false && <p className="lx-plan-fine">Checkout isn’t open yet. Until it is, every account gets Pro’s features at no charge, and you’ll hear before that changes.</p>}
-                      {checkout && <p className="lx-plan-fine">Cancel any time. You keep Pro until the period you paid for ends.</p>}
+                      {checkout === false && <p className="lx-plan-fine">{PRICING.fine.preview}</p>}
+                      {checkout && <p className="lx-plan-fine">{PRICING.fine.checkout}</p>}
                     </>
                   )}
                   {id === 'team' && (
                     <>
-                      <a className="lx-link" href="/?auth=signup&tab=plan">Tell us about your group <Arrow size={15} /></a>
-                      <p className="lx-plan-fine">From {TEAM_MIN_SEATS} students, arranged with you directly.</p>
+                      <a className="lx-link" href={PRICING.href}>{PRICING.actions.team} <Arrow size={15} /></a>
+                      <p className="lx-plan-fine">{PRICING.fine.team}</p>
                     </>
                   )}
                 </div>
@@ -94,9 +95,7 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
         </div>
 
         <Stagger as="ul" className="lx-plan-promises" gap={0.1}>
-          <StaggerItem as="li"><b>Free is not a trial.</b> Placement, practice, the archive and the Arena don’t expire.</StaggerItem>
-          <StaggerItem as="li"><b>No adverts, no data for sale.</b> Pro and Team are what pay for the servers.</StaggerItem>
-          <StaggerItem as="li"><b>Leave with your work.</b> Download everything, or delete your account, from Settings.</StaggerItem>
+          {PRICING.promises.map(promise => <StaggerItem key={promise.strong} as="li"><b>{promise.strong}</b>{` ${promise.rest}`}</StaggerItem>)}
         </Stagger>
       </div>
     </section>
@@ -104,13 +103,13 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
 }
 
 function Price({ plan, cycle }: { plan: Plan; cycle: BillingCycle }) {
-  if (plan.price.monthly === 0) return <p className="lx-plan-price"><strong>$0</strong><span>for as long as you like</span></p>;
+  if (plan.price.monthly === 0) return <p className="lx-plan-price"><strong>{PRICING.free.price}</strong><span>{PRICING.free.note}</span></p>;
   const cents = cycle === 'yearly' ? monthlyEquivalent(plan) : plan.price.monthly;
   return (
     <p className="lx-plan-price">
       {/* Keyed on the figure so a change of period swaps the number with a small lift instead of a jump. */}
       <m.strong key={cents} className="lx-tabular" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING.press, opacity: { duration: 0.2 } }}>{dollars(cents)}</m.strong>
-      <span>{plan.unit ? `${plan.unit}, ` : ''}a month{cycle === 'yearly' ? `, billed ${dollars(plan.price.yearly)} a year` : ''}</span>
+      <span>{PRICING.cadence(plan, cycle)}</span>
     </p>
   );
 }

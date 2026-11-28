@@ -19,19 +19,23 @@ import { AnimatePresence, m, useAnimationControls, useReducedMotion } from 'moti
 import MathText from '../MathText';
 import { TOPIC_ROOMS, type TopicRoom } from './topicRooms';
 import { ChalkFilter, TOPIC_BOARDS } from './TopicBoards';
+import { TOPICS } from './copy';
 import { Arrow, GLIDE, Magnetic, Rise, SplitText, useSpotlight } from './kit';
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+const LETTERS = TOPICS.slip.letters;
+
+/** Where each ghost formula (TOPICS.ghosts, in the same order) was left on the board. */
+const GHOST_PLACES = [
+  { x: '3%', y: '16%', turn: -7, size: 30 },
+  { x: '63%', y: '5%', turn: 4, size: 28 },
+  { x: '71%', y: '51%', turn: -3, size: 26 },
+  { x: '1%', y: '58%', turn: 5, size: 30 },
+  { x: '40%', y: '91%', turn: -2, size: 26 },
+  { x: '84%', y: '88%', turn: 6, size: 26 },
+];
 
 /** Faint remains of what was rubbed out before the lesson, as on any real board. */
-const GHOSTS = [
-  { text: 'a² + b² = c²', x: '3%', y: '16%', turn: -7, size: 30 },
-  { text: 'e^{iπ} + 1 = 0', x: '63%', y: '5%', turn: 4, size: 28 },
-  { text: '∑ 1/n² = π²/6', x: '71%', y: '51%', turn: -3, size: 26 },
-  { text: 'n! ≡ ?', x: '1%', y: '58%', turn: 5, size: 30 },
-  { text: '(n choose k)', x: '40%', y: '91%', turn: -2, size: 26 },
-  { text: '∠ABC = 90°', x: '84%', y: '88%', turn: 6, size: 26 },
-];
+const GHOSTS = TOPICS.ghosts.map((text, index) => ({ text, ...GHOST_PLACES[index] }));
 
 export default function TopicsChapter({ onRegister }: { onRegister: () => void }) {
   return (
@@ -46,11 +50,11 @@ export default function TopicsChapter({ onRegister }: { onRegister: () => void }
 
         <header className="lx-topics-head lx-wrap">
           <div>
-            <SplitText as="h2" id="lx-topics-title" className="lx-h2" text={'Four kinds of problem.\nWhich one is *yours?*'} />
+            <SplitText as="h2" id="lx-topics-title" className="lx-h2" text={TOPICS.title} />
           </div>
           <div className="lx-topics-intro">
             <Rise as="p" className="lx-lead" delay={0.1}>
-              Contest problems fall into four topics. Try one real problem from the archive in each.
+              {TOPICS.lead}
             </Rise>
             <Rise delay={0.2}>
               <p className="lx-topics-aside">
@@ -58,7 +62,7 @@ export default function TopicsChapter({ onRegister }: { onRegister: () => void }
                   <path d="M6 6C8 30 30 44 60 46" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   <path d="M50 38L61 46L49 52" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span>no sign-up, no timer — just have a go</span>
+                <span>{TOPICS.handNote}</span>
               </p>
             </Rise>
           </div>
@@ -70,13 +74,13 @@ export default function TopicsChapter({ onRegister }: { onRegister: () => void }
 
         <div className="lx-wrap lx-topics-foot">
           <Rise>
-            <p className="lx-topics-foot-note">Can&rsquo;t pick one?</p>
-            <p className="lx-topics-foot-line">Start with a short placement and we&rsquo;ll find your level.</p>
+            <p className="lx-topics-foot-note">{TOPICS.foot.note}</p>
+            <p className="lx-topics-foot-line">{TOPICS.foot.line}</p>
           </Rise>
           <Rise delay={0.1}>
             <Magnetic>
               <button type="button" className="lx-btn lx-btn-cream" onClick={onRegister}>
-                <span>Find your level</span>
+                <span>{TOPICS.foot.action}</span>
                 <span className="lx-btn-icon" aria-hidden="true"><Arrow /></span>
               </button>
             </Magnetic>
@@ -115,12 +119,12 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
   };
 
   const status = solved
-    ? 'Yes — that’s it.'
+    ? TOPICS.slip.solved
     : struck.length === 0
       ? ''
       : struck.length >= problem.options.length - 1
-        ? 'Only one left…'
-        : 'Not quite — have another go.';
+        ? TOPICS.slip.lastOne
+        : TOPICS.slip.wrong;
 
   return (
     <article ref={spot} className="lx-topic" id={id} aria-labelledby={`${id}-title`} data-topic={index + 1} data-solved={solved || undefined}>
@@ -140,7 +144,7 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
           <p className="lx-slip-ref">{problem.ref}</p>
           <MathText className="lx-slip-prompt" text={problem.prompt} />
 
-          <div className="lx-opts" role="group" aria-label="Answer choices">
+          <div className="lx-opts" role="group" aria-label={TOPICS.slip.choicesLabel}>
             {problem.options.map((option, choice) => {
               const wrong = struck.includes(choice);
               const right = solved && choice === problem.answer;
@@ -172,7 +176,7 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
                   {status && <p className="lx-slip-pencil">{status}</p>}
                   {nudge
                     ? <MathText className="lx-slip-hint" text={room.hint} />
-                    : <button type="button" className="lx-slip-nudge" onClick={() => setNudge(true)}>Need a nudge?</button>}
+                    : <button type="button" className="lx-slip-nudge" onClick={() => setNudge(true)}>{TOPICS.slip.nudge}</button>}
                 </m.div>
               )}
             </AnimatePresence>
@@ -181,8 +185,8 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
 
         <footer className="lx-topic-foot">
           <p className="lx-topic-covers">{room.covers}</p>
-          <a className="lx-topic-go" href={`/?auth=signup&tab=learn&topic=${encodeURIComponent(room.topic)}`}>
-            <span>{solved ? `More ${room.topic.toLowerCase()}` : `Start with ${room.topic.toLowerCase()}`}</span>
+          <a className="lx-topic-go" href={TOPICS.room.href(room.topic)}>
+            <span>{solved ? TOPICS.room.more(room.topic) : TOPICS.room.start(room.topic)}</span>
             <span className="lx-topic-go-icon" aria-hidden="true"><Arrow size={14} /></span>
           </a>
         </footer>
