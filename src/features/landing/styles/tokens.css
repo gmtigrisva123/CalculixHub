@@ -1,0 +1,61 @@
+/*
+ * Landing v2 tokens (docs/landing-v2-brief.md §7.2 colour, §8.2 motion).
+ *
+ * The landing has its own two worlds, Night and Day, and does not follow the
+ * app's light and dark themes (§3.4), so nothing here reads a theme variable.
+ * Each colour is the hex of the brief's OKLCH value, which it matches exactly
+ * once rounded to sRGB. Contrast ratios are against the world's own ground.
+ */
+
+.lx2 {
+  /* Night */
+  --n-0: #040712; /* oklch(0.13 0.028 268): the night ground */
+  --n-1: #090f1e; /* oklch(0.17 0.034 268): stage */
+  --n-2: #12192a; /* oklch(0.215 0.036 268): raised surfaces (cards) */
+  --n-line: #30374a; /* oklch(0.34 0.035 268): hairlines */
+  --n-text: #f2f3f8; /* oklch(0.965 0.006 268): text, 18.2:1 */
+  --n-mute: #a7aebe; /* oklch(0.75 0.025 268): secondary text, 9.0:1 */
+  --n-dim: #737a8d; /* oklch(0.58 0.03 268): captions at 14px and up only, 4.7:1 */
+
+  /* Day */
+  --d-0: #f5f7fa; /* oklch(0.975 0.005 265): the day ground, cool paper */
+  --d-1: #eaedf2; /* oklch(0.945 0.008 265): surfaces */
+  --d-line: #d0d4dc; /* oklch(0.87 0.012 265): hairlines */
+  --d-text: #101524; /* oklch(0.2 0.03 268): text, 16.9:1 */
+  --d-mute: #515869; /* oklch(0.46 0.03 268): secondary text, 6.6:1 */
+
+  /* Cool light is the instrument, warm light is you (§5.3). */
+  --ion: #abd7fd; /* oklch(0.86 0.07 245): the instrument's particles */
+  --ion-strong: #80bdfb; /* oklch(0.78 0.11 250): links and focus on Night */
+  --ion-ink: #2256bb; /* oklch(0.48 0.17 262): links and focus on Day, 6.3:1 */
+  --sun: #fce2ac; /* oklch(0.92 0.075 85): your particles */
+  --sun-strong: #f8bf6c; /* oklch(0.84 0.12 75): your accent on Night */
+  --sun-ink: #925a1a; /* oklch(0.52 0.105 65): your accent on Day, 5.3:1 */
+
+  /* Right and wrong, and nothing else (§5.3). Night's values; Day's are below. */
+  --right: #5ed99e; /* oklch(0.80 0.14 160) */
+  --slip: #fd7466; /* oklch(0.72 0.17 28) */
+
+  /*
+   * The app's four topic hues (src/styles/tokens.css, src/index.css), written
+   * out because the app's own variables change with its theme and the landing
+   * does not.
+   */
+  --topic-algebra: #c8842a;
+  --topic-geometry: #2f9c8c;
+  --topic-combinatorics: #8b5cf6;
+  --topic-number-theory: #0ea5e9;
+
+  /* Motion (§8.2) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 200ms;
+  --dur-base: 320ms;
+  --dur-long: 560ms;
+}
+
+.lx2 [data-world='day'] {
+  --right: #17754e; /* oklch(0.50 0.105 160) */
+  --slip: #be3029; /* oklch(0.53 0.18 28) */
+}

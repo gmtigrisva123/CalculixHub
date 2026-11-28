@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import katex from 'katex';
-import { findArchivePaper, loadArchivePaper } from '../../domain/examArchive';
+import { findArchivePaper, loadArchivePaper } from '../../../domain/examArchive';
 import { ARCHIVE_SAMPLES } from './archiveSamples';
 import { TOPIC_ROOMS } from './topicRooms';
 

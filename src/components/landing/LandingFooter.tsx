@@ -12,6 +12,7 @@ import type { RefObject } from 'react';
 import { m, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
 import { Arrow, BrandMark } from './kit';
 import { scrollToTarget } from './smoothScroll';
+import { FOOTER_LINKS } from '../../features/landing/data/footer';
 
 const WORD = 'calculixhub';
 
@@ -44,8 +45,9 @@ export default function LandingFooter({ contentRef }: LandingFooterProps) {
         </p>
 
         <div className="lx-footer-bottom lx-wrap">
-          <a className="lx-top" href="/?preview=ios">iPhone preview <Arrow size={13} /></a>
-          <a className="lx-top" href="/?preview=mac">MacBook preview <Arrow size={13} /></a>
+          {FOOTER_LINKS.map(link => (
+            <a key={link.href} className="lx-top" href={link.href}>{link.label} <Arrow size={13} /></a>
+          ))}
           <button type="button" className="lx-top" onClick={() => scrollToTarget(0)}>
             Back to top <Arrow direction="up" size={13} />
           </button>

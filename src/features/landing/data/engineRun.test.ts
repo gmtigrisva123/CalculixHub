@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ITEM_BANK } from '../../domain/itemBank';
-import { estimateAbility, evaluatePlacement, TARGET_SEM, type ResponseRecord } from '../../domain/irt';
+import { ITEM_BANK } from '../../../domain/itemBank';
+import { estimateAbility, evaluatePlacement, TARGET_SEM, type ResponseRecord } from '../../../domain/irt';
 import { ENGINE_RUN, SIMULATED_LEARNER, TIER_BANDS, certainty, simulatePlacement } from './engineRun';
 
 describe('the landing page placement replay', () => {

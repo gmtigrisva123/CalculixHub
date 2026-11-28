@@ -11,19 +11,14 @@
  * feels like.
  */
 
-export type Rng = () => number;
+import { mulberry32, type Rng } from '../../lib/random';
 
-/** A small, fast, seedable generator: the same seed draws the same forms. */
-export function mulberry32(seed: number): Rng {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/*
+ * The seeded generator lives in src/lib/random.ts now (docs/landing-v2-brief.md
+ * §4.2). It is re-exported so this landing's other modules keep finding it here
+ * until the landing is removed.
+ */
+export { mulberry32, type Rng };
 
 // ---------------------------------------------------------------------------
 // The hero: the Lorenz attractor

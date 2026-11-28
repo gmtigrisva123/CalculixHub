@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ARCHIVE_FAMILIES, ARCHIVE_PAPERS, archiveCounts } from '../../domain/examArchive';
+import { ARCHIVE_FAMILIES, ARCHIVE_PAPERS, archiveCounts } from '../../../domain/examArchive';
 import { ARCHIVE_CONTESTS, ARCHIVE_FIGURES } from './archiveFigures';
 
 describe('the archive figures quoted on the landing page', () => {

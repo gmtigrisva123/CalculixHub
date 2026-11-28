@@ -20,8 +20,16 @@ import { initialConfirmationElsewhere, initialEmailConfirmation, initialPassword
  * that most landing visits never use. It loads when someone asks for it, and
  * in the background once the landing page has settled, so the form is already
  * there by the time a button is pressed.
+ *
+ * Landing v2 («Signal», docs/landing-v2-brief.md) is built behind a flag until
+ * it replaces this landing page: `?landing=v2` in the URL, or VITE_LANDING_V2=1
+ * in the build environment (§15.1). Without either nothing changes. The two
+ * landings are separate chunks, so a visit downloads only the one it shows.
  */
-export const LandingPage = lazyWithPreload(() => import('./landing/LandingPage'));
+const landingV2 = (): boolean =>
+  import.meta.env.VITE_LANDING_V2 === '1' || new URLSearchParams(window.location.search).get('landing') === 'v2';
+
+export const LandingPage = lazyWithPreload(() => (landingV2() ? import('../features/landing/LandingPage') : import('./landing/LandingPage')));
 export const AuthFlow = lazyWithPreload(() => import('./WelcomeScreen'));
 
 if (bootVariant === 'landing') void LandingPage.preload();
