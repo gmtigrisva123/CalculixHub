@@ -183,6 +183,7 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
     uMorphLook: { value: new Vector4() },
     uGround: { value: zero4() },
     uGroundR: { value: new Vector4() },
+    uPaper: { value: [new Vector4(), new Vector4()] },
     uPointer: { value: new Vector2(-9999, -9999) },
     uPointerPower: { value: 0 },
     uPointerRadius: { value: 150 },
@@ -357,6 +358,13 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
       uniforms.uGround.value[i].set(rect ? rect.x : 0, rect ? rect.y : 0, rect ? rect.w : 0, rect ? rect.h : 0);
       uniforms.uGroundR.value.setComponent(i, rect ? rect.r : 0);
     }
+    let quad: readonly number[] | null = null;
+    for (const entry of scenes.list) {
+      quad = entry.paperQuad?.(frame) ?? null;
+      if (quad) break;
+    }
+    const [a, b] = uniforms.uPaper.value;
+    if (quad) { a.set(quad[0], quad[1], quad[2], quad[3]); b.set(quad[4], quad[5], quad[6], quad[7]); } else { a.set(0, 0, 0, 0); b.set(0, 0, 0, 0); }
   };
 
   // --- The frame -------------------------------------------------------------------------

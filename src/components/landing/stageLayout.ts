@@ -180,6 +180,12 @@ export function readStageValue(key: string): number | undefined {
   return published.get(key)?.get();
 }
 
+/** Lets the stage read `value` by name (readStageValue); returns the undo. */
+export function publishStageValue(key: string, value: MotionValue<number>): () => void {
+  published.set(key, value);
+  return () => { if (published.get(key) === value) published.delete(key); };
+}
+
 /** One step of the follow spring (stiffness 170, damping 26, mass 0.5), sub-stepped for stability. */
 export function followStep(state: { x: number; v: number }, target: number, dt: number): void {
   const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
@@ -220,11 +226,7 @@ export function useStageSpring(source: MotionValue<number>, { key, still = false
     return stop;
   }, [source, out, still]);
 
-  useEffect(() => {
-    if (!key) return;
-    published.set(key, out);
-    return () => { if (published.get(key) === out) published.delete(key); };
-  }, [key, out]);
+  useEffect(() => (key ? publishStageValue(key, out) : undefined), [key, out]);
 
   return out;
 }

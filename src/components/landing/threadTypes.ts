@@ -80,6 +80,11 @@ export interface ThreadScene {
   present(): boolean;
   slot(frame: StageFrame, out: Slot, row: number): void;
   ink?(frame: StageFrame, out: InkRect[]): void;
+  /**
+   * A sheet of paper lying inside one of this scene's ink stages, as its four corners on screen
+   * (x, y pairs, clockwise from the top left): over it the thread is drawn as ink again.
+   */
+  paperQuad?(frame: StageFrame): readonly number[] | null;
 }
 
 /** Something a scene draws besides the thread: meshes, lights, paper. */

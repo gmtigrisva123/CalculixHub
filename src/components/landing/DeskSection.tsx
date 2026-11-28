@@ -8,61 +8,34 @@
  * same drawing code. Beside it is an index card with a contest date on it.
  * Change the date and the weeks rearrange themselves, using the same planner
  * the dashboard uses. Nothing here is a recording of the product.
+ *
+ * Both lie on a desk seen at a three-quarter angle: one plane of real elements
+ * turned in CSS 3D, under a lamp. The WebGL stage, when there is one, draws a
+ * pencil whose tip rides the triangle as it draws itself, and the lamplight;
+ * it follows the sheet from the same pose (deskStage.ts). When the pen touches
+ * the sheet, it turns flat to face the reader, and the pointer is mapped back
+ * onto the paper through the corners the browser draws, so a stroke lands where
+ * it is drawn at any angle.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { m, useInView, useReducedMotion } from 'motion/react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { AnimatePresence, m, useInView, useMotionValue, useReducedMotion, type MotionValue } from 'motion/react';
 import { drawPage, extendStroke, type ScratchInk, type ScratchStroke, type ScratchTool } from '../../domain/scratch';
 import { PHASE_LABEL, dateKey, daysUntil, trainingPlan } from '../../domain/raceDay';
-import { Arrow, Magnetic, Rise, SplitText, Stagger, StaggerItem, useStageArrival } from './kit';
+import { useMediaQuery } from '../../hooks/useBreakpoint';
+import { Arrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useStageArrival } from './kit';
+import {
+  DEMO_POINTS, DESK_ARRIVAL_KEY, DESK_DEMO_KEY, DESK_FLAT_KEY, DESK_NARROW, DESK_SETTLE_EDGES,
+  demoProgress, demoUpTo, deskPose, planeTransform, quadToSquare, sheetTransform, squareToQuad, type Quad,
+} from './deskStage';
+import { PRIORITY, onTick, wake } from './pageClock';
+import { publishStageValue, useStageScroll, useStageSpring } from './stageLayout';
+import { emitThread } from './threadBus';
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 
 /** The sheet is always paper, whatever the visitor's theme: it is an object on the desk. */
 const INK: ScratchInk = { pen: '#22333b', accent: '#c2552d', mark: '#e2a93b' };
-
-/** A line from a to b with a hand's slight wander. The wobble is a fixed function of position, so it is the same every visit. */
-function handLine(tool: ScratchTool, ax: number, ay: number, bx: number, by: number, steps = 26): ScratchStroke {
-  const points: number[] = [];
-  const nx = -(by - ay), ny = bx - ax;
-  const length = Math.hypot(nx, ny) || 1;
-  for (let step = 0; step <= steps; step++) {
-    const t = step / steps;
-    const wobble = Math.sin(t * 9.4 + ax * 31) * 0.0022 * Math.sin(t * Math.PI);
-    points.push(ax + (bx - ax) * t + (nx / length) * wobble, ay + (by - ay) * t + (ny / length) * wobble);
-  }
-  return { tool, points };
-}
-
-/* A 5-12-13 triangle, its altitude to the hypotenuse, the right-angle marks, and one side picked out. */
-const BASE = 0.64, RISE = BASE * 5 / 12;
-const A = [0.16, 0.56], B = [A[0] + BASE, A[1]], C = [A[0], A[1] - RISE];
-/* Where the altitude from the right angle meets the hypotenuse. */
-const ALONG = RISE ** 2 / (BASE ** 2 + RISE ** 2);
-const FOOT = [C[0] + BASE * ALONG, C[1] + RISE * ALONG];
-const DEMO: readonly ScratchStroke[] = [
-  handLine('pen', A[0], A[1], B[0], B[1], 34),
-  handLine('pen', B[0], B[1], C[0], C[1], 36),
-  handLine('pen', C[0], C[1], A[0], A[1], 20),
-  handLine('accent', A[0], A[1], FOOT[0], FOOT[1], 18),
-  handLine('accent', A[0] + 0.03, A[1], A[0] + 0.03, A[1] - 0.03, 5),
-  handLine('accent', A[0] + 0.03, A[1] - 0.03, A[0], A[1] - 0.03, 5),
-  handLine('mark', A[0] + 0.01, A[1] + 0.035, B[0] - 0.01, B[1] + 0.035, 22),
-];
-const DEMO_POINTS = DEMO.reduce((total, stroke) => total + stroke.points.length / 2, 0);
-
-/** The first `count` points of the demo, stroke by stroke. */
-function demoUpTo(count: number): ScratchStroke[] {
-  const shown: ScratchStroke[] = [];
-  let left = Math.floor(count);
-  for (const stroke of DEMO) {
-    if (left <= 0) break;
-    const take = Math.min(left, stroke.points.length / 2);
-    shown.push({ tool: stroke.tool, points: stroke.points.slice(0, take * 2) });
-    left -= take;
-  }
-  return shown;
-}
 
 const TOOLS: readonly { tool: ScratchTool; label: string }[] = [
   { tool: 'pen', label: 'Pen' },
@@ -71,11 +44,16 @@ const TOOLS: readonly { tool: ScratchTool; label: string }[] = [
   { tool: 'eraser', label: 'Eraser' },
 ];
 
-function Sheet() {
+/** How long the sheet stays flat after the pen leaves it, before it lies back on the desk (ms). */
+const LIE_BACK = { mouse: 700, touch: 2200 } as const;
+
+function Sheet({ settle, narrow }: { settle: MotionValue<number>; narrow: boolean }) {
   const reduce = Boolean(useReducedMotion());
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const inView = useInView(frame, { once: true, amount: 0.5 });
+  const corners = useRef<(HTMLElement | null)[]>([]);
+  // Once most of the sheet is in view: the thread has come down onto it by then (sceneDesk.ts, deskLeg).
+  const inView = useInView(frame, { once: true, amount: 0.85 });
   const [tool, setTool] = useState<ScratchTool>('pen');
   const [mine, setMine] = useState<ScratchStroke[]>([]);
   const [cleared, setCleared] = useState(false);
@@ -86,6 +64,21 @@ function Sheet() {
   mineRef.current = mine;
   const clearedRef = useRef(cleared);
   clearedRef.current = cleared;
+
+  // How far the triangle has drawn itself (0–1), and how flat the sheet is (0 on the desk, 1 facing the reader):
+  // the stage reads both by name, so its pencil and the sheet move together.
+  const demo = useMotionValue(reduce ? 1 : 0);
+  useEffect(() => publishStageValue(DESK_DEMO_KEY, demo), [demo]);
+  const flatTarget = useMotionValue(0);
+  const flat = useStageSpring(flatTarget, { key: DESK_FLAT_KEY, still: reduce });
+  const transform = useMotionValue('none');
+  useLayoutEffect(() => {
+    const update = () => transform.set(sheetTransform(deskPose(settle.get(), narrow), flat.get()));
+    update();
+    const stopSettle = settle.on('change', update);
+    const stopFlat = flat.on('change', update);
+    return () => { stopSettle(); stopFlat(); };
+  }, [settle, flat, narrow, transform]);
 
   // The sheet's size in CSS pixels, measured when it changes rather than on every frame:
   // reading clientWidth inside the drawing loop made the browser lay the page out each time.
@@ -106,21 +99,25 @@ function Sheet() {
     drawPage(context, live.current ? [...strokes, live.current] : strokes, width, INK);
   }, []);
 
-  // The triangle draws itself once, the first time the sheet is properly on screen.
+  // The triangle draws itself once, the first time the sheet is properly on screen. It runs on the page
+  // clock, so the pencil the stage draws follows the very point the sheet has reached this frame.
   useEffect(() => {
     if (!inView || reduce) { paint(); return; }
-    let raf = 0;
-    const started = performance.now();
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - started - 350) / 2600);
-      shown.current = progress <= 0 ? 0 : (1 - (1 - progress) ** 2) * DEMO_POINTS;
+    let started = 0;
+    const stop = onTick(tick => {
+      started ||= tick.now;
+      const progress = demoProgress(tick.now - started);
+      demo.set(progress);
+      shown.current = progress * DEMO_POINTS;
       paint();
-      if (progress < 1) raf = requestAnimationFrame(tick);
-      else setLabelled(true);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [inView, reduce, paint]);
+      if (progress < 1) return true;
+      setLabelled(true);
+      stop();
+      return false;
+    }, PRIORITY.progress);
+    wake();
+    return stop;
+  }, [inView, reduce, paint, demo]);
 
   useEffect(() => { paint(); }, [mine, cleared, paint]);
   useEffect(() => {
@@ -134,38 +131,99 @@ function Sheet() {
     return () => observer.disconnect();
   }, [paint]);
 
-  const at = (event: { clientX: number; clientY: number }, target: HTMLCanvasElement) => {
-    const box = target.getBoundingClientRect();
-    return [(event.clientX - box.left) / box.width, (event.clientY - box.top) / box.width] as const;
+  // The sheet lies on a desk turned in 3D, so the pointer cannot be mapped through the canvas's bounding box.
+  // Its four corners, as the browser draws them this moment, give the exact projective map back to the paper,
+  // whether it is lying on the desk, turning flat, or flat.
+  const map = useRef<number[] | null>(null);
+  const measureCorners = () => {
+    const points = corners.current.map(corner => {
+      const box = corner?.getBoundingClientRect();
+      return [box?.left ?? 0, box?.top ?? 0] as const;
+    });
+    map.current = points.length === 4 ? squareToQuad(points as unknown as Quad) : null;
+  };
+  const at = (event: { clientX: number; clientY: number }) => {
+    const { width, height } = size.current;
+    if (!map.current || !width) return [0, 0] as const;
+    const [u, v] = quadToSquare(map.current, event.clientX, event.clientY);
+    return [u, (v * height) / width] as const;
+  };
+
+  // As the pen comes to the sheet it turns flat to face the reader, so ink lands exactly where it is drawn;
+  // once the pen has left it, it lies back down. With a mouse that is as the pointer settles on the paper,
+  // before the press; a finger or a stylus has no hover, so its first touch lifts the paper, and the stroke
+  // starts once the paper faces it rather than sliding about under it.
+  const lieBack = useRef(0);
+  const arm = useRef(0);
+  const waiting = useRef(false);
+  const holdFlat = () => {
+    window.clearTimeout(lieBack.current);
+    window.clearTimeout(arm.current);
+    if (flatTarget.get() !== 1) { flatTarget.set(1); wake(); }
+  };
+  const releaseFlat = (after: number) => {
+    window.clearTimeout(lieBack.current);
+    window.clearTimeout(arm.current);
+    lieBack.current = window.setTimeout(() => { if (!live.current && !waiting.current) { flatTarget.set(0); wake(); } }, after);
+  };
+  useEffect(() => () => { window.clearTimeout(lieBack.current); window.clearTimeout(arm.current); }, []);
+  const facing = () => reduce || flat.get() > 0.97;
+
+  const startStroke = (event: { clientX: number; clientY: number }) => {
+    measureCorners();
+    live.current = { tool, points: [] };
+    extendStroke(live.current, ...at(event));
+    paint();
   };
   const begin = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    live.current = { tool, points: [] };
-    extendStroke(live.current, ...at(event, event.currentTarget));
-    paint();
+    holdFlat();
+    emitThread({ type: 'desk-draw', active: true });
+    if (facing()) startStroke(event);
+    else waiting.current = true;
   };
   const move = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (waiting.current) {
+      if (facing()) { waiting.current = false; startStroke(event); }
+      return;
+    }
     if (!live.current) return;
+    measureCorners();
     const samples = event.nativeEvent.getCoalescedEvents?.() ?? [];
     let changed = false;
-    for (const sample of samples.length ? samples : [event.nativeEvent]) changed = extendStroke(live.current, ...at(sample, event.currentTarget)) || changed;
+    for (const sample of samples.length ? samples : [event.nativeEvent]) changed = extendStroke(live.current, ...at(sample)) || changed;
     if (changed) paint();
   };
-  const end = () => {
+  const end = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const stroke = live.current;
     live.current = null;
+    waiting.current = false;
+    emitThread({ type: 'desk-draw', active: false });
+    if (event.pointerType !== 'mouse') releaseFlat(LIE_BACK.touch);
     if (stroke && stroke.points.length >= 2) setMine(current => [...current, stroke]);
   };
 
   const drawn = mine.length > 0;
 
   return (
-    <div className="lx-desk-sheet" ref={frame}>
+    <m.div
+      className="lx-desk-sheet"
+      ref={frame}
+      style={{ transform }}
+      onPointerEnter={event => { if (event.pointerType === 'mouse' && flatTarget.get() === 1) holdFlat(); }}
+      onPointerLeave={event => { if (event.pointerType === 'mouse') releaseFlat(LIE_BACK.mouse); }}
+    >
       <span className="lx-desk-tape" aria-hidden="true" />
       <div className="lx-desk-paper">
         <canvas ref={canvas} className={`lx-desk-canvas is-${tool}`} onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
+          onPointerEnter={event => {
+            if (event.pointerType !== 'mouse') return;
+            window.clearTimeout(arm.current);
+            arm.current = window.setTimeout(holdFlat, 140);
+          }}
           role="img" aria-label="Scratch paper with a right triangle drawn on it. You can draw on it with a mouse, finger or stylus." />
+        {[0, 1, 2, 3].map(corner => <i key={corner} className="lx-desk-corner" data-corner={corner} ref={node => { corners.current[corner] = node; }} aria-hidden="true" />)}
         {!cleared && (
           <div className={`lx-desk-labels${labelled ? ' is-shown' : ''}`} aria-hidden="true">
             <span style={{ left: '46%', top: '82%' } as Vars}>12</span>
@@ -184,7 +242,7 @@ function Sheet() {
         <button type="button" className="lx-desk-clear" onClick={() => { setMine([]); setCleared(true); }} disabled={cleared && !drawn}>Fresh sheet</button>
       </div>
       {!drawn && labelled && <p className="lx-desk-nudge" aria-hidden="true">go on, draw on it<svg viewBox="0 0 60 40" fill="none"><path d="M4 6c14 2 30 10 40 26M44 32l-9-3M44 32l2-9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></p>}
-    </div>
+    </m.div>
   );
 }
 
@@ -210,8 +268,23 @@ function CountdownCard({ onRegister }: { onRegister: () => void }) {
       </p>
       {first && (
         <>
+          {/* The weeks re-divide when the date changes: each segment slides and stretches to its new place
+              (measured once and animated as a transform, so the card is not laid out again every frame). */}
           <ol className="lx-desk-track" aria-label={`${weeks.length} weeks: build, sharpen, taper`}>
-            {weeks.map(week => <li key={week.index} className={`is-${week.phase}`} style={{ '--span': week.days } as Vars} />)}
+            <AnimatePresence initial={false} mode="popLayout">
+              {weeks.map(week => (
+                <m.li
+                  key={week.index}
+                  layout="position"
+                  className={`is-${week.phase}`}
+                  style={{ '--span': week.days } as Vars}
+                  initial={{ opacity: 0, scaleX: 0.2 }}
+                  animate={{ opacity: 1, scaleX: 1 }}
+                  exit={{ opacity: 0, scaleX: 0.2 }}
+                  transition={SPRING.settle}
+                />
+              ))}
+            </AnimatePresence>
           </ol>
           <p className="lx-desk-legend" aria-hidden="true"><i className="is-build" />Build<i className="is-sharpen" />Sharpen<i className="is-taper" />Taper</p>
           <p className="lx-desk-week"><b>This week: {PHASE_LABEL[first.phase].toLowerCase()}.</b> {first.problemsPerDay} problems a day, your weakest topic first.</p>
@@ -229,7 +302,26 @@ function CountdownCard({ onRegister }: { onRegister: () => void }) {
 
 export default function DeskSection({ onRegister }: { onRegister: () => void }) {
   const sectionRef = useRef<HTMLElement>(null);
-  const arrival = useStageArrival(sectionRef);
+  const objectsRef = useRef<HTMLDivElement>(null);
+  const reduce = Boolean(useReducedMotion());
+  const narrow = useMediaQuery(`(max-width: ${DESK_NARROW}px)`);
+  const arrival = useStageArrival(sectionRef, DESK_ARRIVAL_KEY);
+
+  // The desk settles from a steeper lean as it arrives: a pure function of the scroll, which the stage
+  // works out for itself from the same edges (deskStage.ts), so its pencil lies on this very plane.
+  const settleScroll = useStageScroll(objectsRef, DESK_SETTLE_EDGES);
+  const settle = useMotionValue(1);
+  const plane = useMotionValue('none');
+  useLayoutEffect(() => {
+    const update = () => {
+      settle.set(reduce ? 1 : settleScroll.get());
+      plane.set(planeTransform(deskPose(settle.get(), narrow)));
+    };
+    update();
+    return settleScroll.on('change', update);
+  }, [settleScroll, reduce, narrow, settle, plane]);
+  const perspective = deskPose(1, narrow).perspective;
+
   return (
     <section ref={sectionRef} className="lx-desk" id="desk" aria-labelledby="lx-desk-title">
       <m.div className="lx-desk-stage" data-tone="ink" style={arrival}>
@@ -243,9 +335,12 @@ export default function DeskSection({ onRegister }: { onRegister: () => void }) 
               <StaggerItem as="li"><b>A card to share</b> when a streak or a rank is worth showing someone.</StaggerItem>
             </Stagger>
           </header>
-          <div className="lx-desk-objects">
-            <Rise y={50} panel amount={0.2}><Sheet /></Rise>
-            <Rise y={50} panel delay={0.12} amount={0.2}><CountdownCard onRegister={onRegister} /></Rise>
+          {/* The desk, seen at a three-quarter angle: a plane of real elements turned in CSS 3D. */}
+          <div className="lx-desk-objects" ref={objectsRef} style={{ perspective: `${perspective}px` }}>
+            <m.div className="lx-desk-plane" style={{ transform: plane }}>
+              <Sheet settle={settle} narrow={narrow} />
+              <Rise y={30} panel delay={0.12} amount={0.2}><CountdownCard onRegister={onRegister} /></Rise>
+            </m.div>
           </div>
         </div>
       </m.div>

@@ -8,10 +8,17 @@
  * drawn with an open dashed ring and the words "in the works". While checkout
  * is not switched on, the Pro card says so and offers the preview instead of a
  * purchase.
+ *
+ * The three cards lie like sheets on the cream; Pro is raised toward the
+ * reader, and its edge is the hero's pearl tube of light, its colours running
+ * slowly round it. On the WebGL stage the thread runs round that edge too.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { m } from 'motion/react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { m, useMotionValue, useReducedMotion } from 'motion/react';
+import { useMediaQuery } from '../../hooks/useBreakpoint';
+import { PLANS_SETTLE_EDGES, PLANS_STACKED, plansTilt } from './plansStage';
+import { useStageScroll } from './stageLayout';
 import { PLANS, PLAN_ORDER, TEAM_MIN_SEATS, dollars, monthlyEquivalent, yearlySaving, type BillingCycle, type Plan, type PlanId } from '../../../shared/plans';
 import { billingConfig } from '../../services/data/plan';
 import { Arrow, Magnetic, Rise, SPRING, SplitText, Stagger, StaggerItem, useSpotlight } from './kit';
@@ -23,6 +30,21 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
   const [checkout, setCheckout] = useState<boolean | null>(null);
   useEffect(() => { let alive = true; void billingConfig().then(config => { if (alive) setCheckout(config.checkout); }); return () => { alive = false; }; }, []);
   const saving = yearlySaving(PLANS.pro);
+
+  // The three sheets lie tipped back as the chapter arrives and rise to face the reader (plansStage.ts).
+  const stageRef = useRef<HTMLDivElement>(null);
+  const reduce = Boolean(useReducedMotion());
+  const stacked = useMediaQuery(`(max-width: ${PLANS_STACKED}px)`);
+  const settle = useStageScroll(stageRef, PLANS_SETTLE_EDGES);
+  const tilt = useMotionValue('none');
+  useLayoutEffect(() => {
+    const update = () => {
+      const degrees = reduce ? 0 : plansTilt(settle.get(), stacked);
+      tilt.set(degrees > 0.001 ? `rotateX(${Math.round(degrees * 1000) / 1000}deg)` : 'none');
+    };
+    update();
+    return settle.on('change', update);
+  }, [settle, reduce, stacked, tilt]);
 
   return (
     <section className="lx-plans" id="plans" data-tone="paper" aria-labelledby="lx-plans-title">
@@ -43,7 +65,8 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
           </Rise>
         </header>
 
-        <div className="lx-plan-grid">
+        <div className="lx-plan-stage" ref={stageRef}>
+        <m.div className="lx-plan-grid" style={{ transform: tilt }}>
           {PLAN_ORDER.map((id, index) => {
             const plan = PLANS[id];
             return (
@@ -91,6 +114,7 @@ export default function PlansSection({ onRegister }: { onRegister: () => void })
               </PlanCard>
             );
           })}
+        </m.div>
         </div>
 
         <Stagger as="ul" className="lx-plan-promises" gap={0.1}>
@@ -119,7 +143,11 @@ function PlanCard({ children, featured = false, delay }: { children: ReactNode; 
   const ref = useSpotlight<HTMLDivElement>();
   return (
     <Rise className={featured ? 'lx-plan is-featured' : 'lx-plan'} delay={delay} y={44} panel>
-      <div ref={ref} className="lx-plan-inner lx-spot" data-tone={featured ? 'ink' : undefined}>{children}</div>
+      <div ref={ref} className="lx-plan-inner lx-spot" data-tone={featured ? 'ink' : undefined} data-plan-featured={featured || undefined}>
+        {/* The hero's tube of light, round this card's edge: one turning gradient behind a ring-shaped mask. */}
+        {featured && <span className="lx-plan-tube" aria-hidden="true"><i /></span>}
+        {children}
+      </div>
     </Rise>
   );
 }

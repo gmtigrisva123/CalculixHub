@@ -4,3 +4,10 @@
  * This chapter's styles for the 3D rebuild. Older shared rules for it still
  * live in landing-experience.css; what is new or changed is here.
  */
+
+/* An answer's text fades up as its height eases open (the height and the fade are FaqSection's). */
+.lx-faq-answer p { animation: lx-faq-rise 0.6s var(--lx-glide) 0.05s both; }
+@keyframes lx-faq-rise { from { translate: 0 10px; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .lx-faq-answer p { animation: none; }
+}

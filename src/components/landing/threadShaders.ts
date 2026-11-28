@@ -40,6 +40,11 @@ float sdRoundRect(vec2 p, vec4 rect, float radius) {
   vec2 q = abs(p - c) - rect.zw * 0.5 + radius;
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
+// How far p lies (px) to the right of the line a to b on screen (y down): inside, for a quad wound clockwise.
+float edgeSide(vec2 a, vec2 b, vec2 p) {
+  vec2 e = b - a;
+  return (e.x * (p.y - a.y) - e.y * (p.x - a.x)) / max(length(e), 1e-3);
+}
 // 1 where nothing is in front, 0 inside an occluder; soft over a few pixels.
 float occlusionAt(vec2 p, vec4 occ[4], vec4 radii, float feather) {
   float seen = 1.0;
@@ -95,6 +100,8 @@ uniform vec4 uMorphLook;
 
 uniform vec4 uGround[4];
 uniform vec4 uGroundR;
+// A sheet of paper lying inside an ink stage (four corners on screen, clockwise from the top left), or zeros.
+uniform vec4 uPaper[2];
 
 uniform vec2 uPointer;
 uniform float uPointerPower;
@@ -341,6 +348,15 @@ void main() {
     vec4 r = uGround[i];
     if (r.z <= 0.0) continue;
     inside = max(inside, 1.0 - smoothstep(-3.0, 3.0, sdRoundRect(screen, r, uGroundR[i])));
+  }
+  // Over a sheet of paper lying on an ink stage, ink again.
+  if (uPaper[0].z != uPaper[0].x || uPaper[1].w != uPaper[0].y) {
+    vec2 c0 = uPaper[0].xy;
+    vec2 c1 = uPaper[0].zw;
+    vec2 c2 = uPaper[1].xy;
+    vec2 c3 = uPaper[1].zw;
+    float d = min(min(edgeSide(c0, c1, screen), edgeSide(c1, c2, screen)), min(edgeSide(c2, c3, screen), edgeSide(c3, c0, screen)));
+    inside *= 1.0 - smoothstep(-2.0, 2.0, d);
   }
   vInk = 1.0 - inside;
 

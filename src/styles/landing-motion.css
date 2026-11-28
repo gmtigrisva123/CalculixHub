@@ -109,18 +109,19 @@
 
 /* The press: quick on the way down, so it is felt; the release rides the spring above. */
 .lx-plan-inner:active, .lx-path:active { transform: scale(0.985); transition-duration: 0.12s; transition-timing-function: ease-out; }
+.lx-plan.is-featured .lx-plan-inner:active { transform: translateZ(calc(var(--lx-raise, 0) * 1px)) scale(calc((1 - var(--lx-raise, 0) / 1600) * 0.985)); }
 .lx-cycle button:active, .lx-top:active, .lx-desk-clear:active { transform: scale(0.96); transition-duration: 0.1s; transition-timing-function: ease-out; }
 .lx-desk-tools [role='radio']:active { scale: 1; transform: scale(0.88); transition-duration: 0.1s; transition-timing-function: ease-out; }
 .lx-faq-item h3 button:active .lx-faq-sign { scale: 0.9; }
 .lx-link:active { translate: 0 1px; }
 
 /* The two desk objects straighten on a spring, the way a sheet settles when you square it up. */
-.lx-desk-sheet, .lx-desk-card { transition: rotate 0.8s var(--lx-glide), translate 0.8s var(--lx-glide); transition: rotate 0.8s var(--lx-spring), translate 0.8s var(--lx-spring); }
+.lx-desk-card { transition: rotate 0.8s var(--lx-glide), translate 0.8s var(--lx-glide); transition: rotate 0.8s var(--lx-spring), translate 0.8s var(--lx-spring); }
 
 @media (hover: hover) and (pointer: fine) {
   .lx-plan-inner:hover { transform: translateY(-5px); }
-  .lx-plan.is-featured .lx-plan-inner:hover { transform: translateY(-7px); }
-  .lx-desk-sheet:hover, .lx-desk-card:hover { translate: 0 -4px; }
+  .lx-plan.is-featured .lx-plan-inner:hover { transform: translateZ(calc(var(--lx-raise, 0) * 1px)) scale(calc(1 - var(--lx-raise, 0) / 1600)) translateY(-7px); }
+  .lx-desk-card:hover { translate: 0 -4px; }
   .lx-desk-tools [role='radio']:hover { transform: scale(1.1); }
   .lx-cycle button:hover:not([aria-checked='true']) { color: var(--lx-ink); }
   .lx-faq-item h3 button:hover .lx-faq-sign { scale: 1.08; }
@@ -130,16 +131,17 @@
  * 4. Repairs
  * ------------------------------------------------------------------------ */
 
-/* The countdown's week track re-divides at once when the date changes. Animating
-   flex-grow laid the card out again on every frame for a bar ten pixels tall. */
-.lx-desk-track li { transition: none; }
+/* The countdown's week track: animating flex-grow laid the card out again on every frame for a bar ten
+   pixels tall. The segments now move as a layout animation (measured once, animated as a transform). */
+.lx-desk-track li { transition: background-color 0.5s ease; }
 
 /* --------------------------------------------------------------------------
  * Reduced motion: everything above that moves, stops. Fades are kept.
  * ------------------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {
-  .lx-btn, .lx-btn-icon, .lx-plan-inner, .lx-path, .lx-desk-sheet, .lx-desk-card, .lx-desk-tools [role='radio'], .lx-cycle button, .lx-top, .lx-faq-sign, .lx-desk-clear { transition-property: background, background-color, color, box-shadow, opacity; }
-  .lx-plan-inner:hover, .lx-plan.is-featured .lx-plan-inner:hover { transform: none; }
-  .lx-desk-sheet:hover, .lx-desk-card:hover { translate: none; }
+  .lx-btn, .lx-btn-icon, .lx-plan-inner, .lx-path, .lx-desk-card, .lx-desk-tools [role='radio'], .lx-cycle button, .lx-top, .lx-faq-sign, .lx-desk-clear { transition-property: background, background-color, color, box-shadow, opacity; }
+  .lx-plan-inner:hover { transform: none; }
+  .lx-plan.is-featured .lx-plan-inner:hover { transform: translateZ(calc(var(--lx-raise, 0) * 1px)) scale(calc(1 - var(--lx-raise, 0) / 1600)); }
+  .lx-desk-card:hover { translate: none; }
 }

@@ -1,10 +1,13 @@
 /*
- * "Your desk": a night stage with two objects lying on it.
+ * "Your desk": a night stage with two objects lying on it, seen at a
+ * three-quarter angle under a lamp.
  *
  * The scratch sheet and the index card are paper in every theme, because they
- * are things on the desk rather than panels of the page. Each sits a degree or
- * two off square and straightens under the pointer, the way you would
- * straighten a sheet before writing on it.
+ * are things on the desk rather than panels of the page. They lie on one plane
+ * turned in CSS 3D (deskStage.ts holds the pose, shared with the WebGL stage,
+ * which draws the pencil and the lamplight on top). When the pen touches the
+ * sheet it turns flat to face the reader, so what you draw lands where you
+ * point; when you leave it, it lies back down.
  */
 .lx-desk { padding: 0 var(--lx-frame); }
 .lx-desk-stage {
@@ -36,10 +39,27 @@
 .lx-desk-points li::before { content: ''; position: absolute; left: 2px; top: 0.72em; width: 12px; height: 1.5px; background: var(--lx-brass); }
 .lx-desk-points b { font-weight: 560; color: var(--lx-on-night); }
 
-.lx-desk-objects { position: relative; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(290px, 1fr); gap: clamp(14px, 1.6vw, 26px); align-items: end; }
+.lx-desk-objects { position: relative; perspective-origin: 50% 50%; }
+/* The desk itself: the plane the sheet and the card lie on. Its transform is set from the pose each frame. */
+.lx-desk-plane {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(290px, 1fr);
+  gap: clamp(14px, 1.6vw, 26px);
+  align-items: end;
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
 
 /* ---- The sheet ---------------------------------------------------------- */
-.lx-desk-sheet { position: relative; rotate: -1.6deg; transition: rotate 0.7s var(--lx-glide); }
+.lx-desk-sheet { position: relative; transform-origin: 50% 50%; will-change: transform; }
+/* The paper's corners, as the browser draws them: the pointer is mapped back onto the paper through them. */
+.lx-desk-corner { position: absolute; width: 0; height: 0; pointer-events: none; }
+.lx-desk-corner[data-corner='0'] { left: 0; top: 0; }
+.lx-desk-corner[data-corner='1'] { left: 100%; top: 0; }
+.lx-desk-corner[data-corner='2'] { left: 100%; top: 100%; }
+.lx-desk-corner[data-corner='3'] { left: 0; top: 100%; }
 .lx-desk-paper {
   position: relative;
   aspect-ratio: 4 / 3;
@@ -102,7 +122,7 @@
 .lx-desk-count strong { font-family: var(--lx-sans); font-size: clamp(60px, 6vw, 92px); font-weight: 540; font-variant-numeric: tabular-nums; line-height: 0.9; letter-spacing: -0.05em; }
 .lx-desk-count span { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--lx-pencil); }
 .lx-desk-track { display: flex; gap: 3px; width: 100%; height: 10px; margin: 2px 0 0; padding: 0; list-style: none; }
-.lx-desk-track li { flex: var(--span) 1 0; min-width: 3px; border-radius: 3px; background: #7a97a0; transition: flex-grow 0.5s var(--lx-glide); }
+.lx-desk-track li { flex: var(--span) 1 0; min-width: 3px; border-radius: 3px; background: #7a97a0; transform-origin: 0 50%; transition: background-color 0.5s var(--lx-glide); }
 .lx-desk-track li.is-build { background: #209d8c; }
 .lx-desk-track li.is-sharpen { background: #c8842a; }
 .lx-desk-legend { display: flex; align-items: center; gap: 5px; margin: -6px 0 0; font-size: 12px; color: var(--lx-muted); }
@@ -115,7 +135,7 @@
 .lx-desk-card .lx-btn { min-height: 46px; font-size: 15px; }
 
 @media (hover: hover) and (pointer: fine) {
-  .lx-desk-sheet:hover, .lx-desk-card:hover { rotate: 0deg; }
+  .lx-desk-card:hover { rotate: 0deg; }
   .lx-desk-clear:hover:not(:disabled) { color: var(--lx-on-night); }
 }
 
@@ -124,12 +144,11 @@
   .lx-desk-copy { max-width: 720px; }
 }
 @media (max-width: 720px) {
-  .lx-desk-objects { grid-template-columns: minmax(0, 1fr); gap: 34px; }
-  .lx-desk-sheet { rotate: -1deg; }
+  .lx-desk-plane { grid-template-columns: minmax(0, 1fr); gap: 34px; }
   .lx-desk-card { rotate: 0.8deg; }
   .lx-desk-nudge { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lx-desk-sheet, .lx-desk-card, .lx-desk-labels span { transition: none; }
+  .lx-desk-card, .lx-desk-labels span { transition: none; }
   .lx-desk-nudge { animation: none; }
 }
