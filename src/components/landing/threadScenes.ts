@@ -122,7 +122,9 @@ export class HeroScene implements ThreadScene {
 
     out.shape = SHAPE.lorenz;
     place(out.matrix, frame, cx, cy, ppu, ppu * 1.45, [TILT + this.pitch.x, TURN + sway + this.yaw.x, 0.04]);
-    out.p[0].set(0.0075 * (1 - 0.7 * cover), cover, intro, 0.01);
+    // It loosens and slows as the sheet covers it. The threads are only a few pixels apart, so the
+    // loosening starts gently (eased in) or the form would dissolve in the first touch of the wheel.
+    out.p[0].set(0.0075 * (1 - 0.7 * cover), cover ** 2.4, intro, 0.01);
     const base = frame.cw < 760 ? 0.03 : 0.024;
     out.look.set(1.9 * base * ppu, (1 - 0.7 * cover) * (1 - 0.5 * cover), 1, 1);
     out.clip.set(rect.x, rect.y, rect.w, rect.h);
@@ -399,12 +401,14 @@ export function createLegs(hero: HeroScene, _idea: IdeaScene, engine: EngineScen
       window: frame => {
         if (!hero.present()) return null;
         const start = hero.sheetBox.top - frame.vh;
-        return [start + frame.vh * 0.04, start + frame.vh * 0.56];
+        return [start + frame.vh * 0.04, start + frame.vh * 0.62];
       },
-      stagger: 0.6,
-      orderByU: 0.3,
-      swirl: 70,
-      lift: 140,
+      // A long stagger, ordered mostly along the path: the thread is drawn out of the tangle
+      // end first, so the butterfly stays itself while it unravels instead of dissolving at once.
+      stagger: 2.2,
+      orderByU: 0.6,
+      swirl: 36,
+      lift: 70,
     },
     {
       to: 'engine',
