@@ -30,6 +30,8 @@ export interface PaperEdge {
   r: number;
   /** How curled it is, 0 (flat) to 1. */
   curl: number;
+  /** How deep the lip reaches into the sheet, px, when it differs from the default. */
+  band?: number;
 }
 
 const VERTEX = /* glsl */ `
@@ -46,11 +48,13 @@ uniform float uDpr;
 uniform vec3 uPaper;
 uniform vec3 uShadow;
 uniform float uBand;
+uniform float uOverlay;
 void main() {
   vec2 p = vec2(gl_FragCoord.x / uDpr, uView.y - gl_FragCoord.y / uDpr);
   float across = clamp((p.x - uEdge.x) / uEdge.z, 0.0, 1.0);
   // Corners lift more than the middle, the way a sheet pushed across a table curls.
-  float rise = uCurl * (4.0 + 20.0 * pow(abs(across * 2.0 - 1.0), 6.0));
+  // (In overlay mode there is no paper to paint past the real edge, so the lift shows in the shadow alone.)
+  float rise = uOverlay > 0.5 ? 0.0 : uCurl * (4.0 + 20.0 * pow(abs(across * 2.0 - 1.0), 6.0));
   float edge = uEdge.y - uSide * rise;
   vec4 paper = uSide > 0.0 ? vec4(uEdge.x, edge, uEdge.z, 6000.0) : vec4(uEdge.x, edge - 6000.0, uEdge.z, 6000.0);
   float sd = sdRoundRect(p, paper, uEdge.w);
@@ -64,7 +68,14 @@ void main() {
     // The bow: a sheet that is not quite flat is a little brighter down its middle.
     shade += uCurl * 0.012 * (cos((across - 0.5) * 3.14159) - 0.6) * (1.0 - lip);
     // By the inner end of the band every term has died away: the colour is the DOM paper's, so no seam.
-    gl_FragColor = vec4(uPaper * shade, 1.0);
+    if (uOverlay > 0.5) {
+      // Over paper that carries a tone of its own, only the light and shade of the curl are laid on it.
+      float dark = max(0.0, 1.0 - shade) * 3.0;
+      float light = max(0.0, shade - 1.0) * 3.0;
+      gl_FragColor = vec4(vec3(light), dark);
+    } else {
+      gl_FragColor = vec4(uPaper * shade, 1.0);
+    }
   } else {
     // The contact shadow on what is underneath: tight and dark where the lip is lifted.
     float reach = 8.0 + 18.0 * uCurl;
@@ -78,7 +89,14 @@ void main() {
  * below the edge (a sheet sliding up) and -1 when it lies above (a sheet
  * lifting away from what is beneath it).
  */
-export function createPaperEdge(locate: (frame: StageFrame) => PaperEdge | null, side: 1 | -1, style: CSSStyleDeclaration, band = 34): Extra {
+export function createPaperEdge(
+  locate: (frame: StageFrame) => PaperEdge | null,
+  side: 1 | -1,
+  style: CSSStyleDeclaration,
+  band = 34,
+  /** Shade the paper that is there instead of painting paper over it (for a sheet whose colour is toned). */
+  overlay = false,
+): Extra {
   const uniforms = {
     uView: { value: new Vector2(1, 1) },
     uEdge: { value: new Vector4() },
@@ -86,6 +104,7 @@ export function createPaperEdge(locate: (frame: StageFrame) => PaperEdge | null,
     uCurl: { value: 0 },
     uDpr: { value: 1 },
     uBand: { value: band },
+    uOverlay: { value: overlay ? 1 : 0 },
     uPaper: { value: new Vector3(...cssColorToSrgb(style.getPropertyValue('--lx-paper'), [0.97, 0.96, 0.94])) },
     uShadow: { value: new Vector3(0.02, 0.05, 0.08) },
   };
@@ -123,9 +142,11 @@ export function createPaperEdge(locate: (frame: StageFrame) => PaperEdge | null,
       uniforms.uDpr.value = frame.dpr;
       uniforms.uEdge.value.set(edge.x, edge.y, edge.w, edge.r);
       uniforms.uCurl.value = edge.curl;
+      uniforms.uBand.value = edge.band ?? band;
       // The quad covers the edge with room for the shadow on one side and the lip on the other.
-      const above = side > 0 ? 90 : band + 30;
-      const below = side > 0 ? band + 30 : 90;
+      const lip = edge.band ?? band;
+      const above = side > 0 ? 90 : lip + 30;
+      const below = side > 0 ? lip + 30 : 90;
       const top = edge.y - above;
       const height = above + below;
       mesh.position.set(edge.x + edge.w / 2 - frame.cw / 2, frame.ch / 2 - (top + height / 2), 0);

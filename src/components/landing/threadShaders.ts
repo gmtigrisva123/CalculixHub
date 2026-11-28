@@ -232,7 +232,7 @@ vec3 shapeAt(float shape, vec4 P[3], float u, float speed, float seed, float str
 
   // The closing line, with a small butterfly at its tip.
   // P0 = data row, thickness, where the butterfly starts (u), bloom 0–1.
-  // P1 = tip position (local), butterfly scale. P2.x = drawn share of the line.
+  // P1 = tip position (local), butterfly scale. P2 = drawn share of the line, turn, tilt.
   if (u < P[0].z) {
     float s = u / P[0].z;
     vec4 d = dataAt(P[0].x, s * P[2].x);
@@ -245,7 +245,14 @@ vec3 shapeAt(float shape, vec4 P[3], float u, float speed, float seed, float str
   float uu = fract(b + uTime * 0.01 * speed);
   vec4 here = along(uu * (LENGTH - 1.0));
   fast = here.w;
-  vec3 wing = (here.xyz + dir * stray * 0.8) * P[1].w * P[0].w;
+  vec3 wing = here.xyz + dir * stray * 0.8;
+  // Turned and tilted like the hero's butterfly, so the wings open towards the reader.
+  float ct = cos(P[2].y);
+  float st = sin(P[2].y);
+  wing = vec3(wing.x * ct + wing.z * st, wing.y, wing.z * ct - wing.x * st);
+  float cx = cos(P[2].z);
+  float sx = sin(P[2].z);
+  wing = vec3(wing.x, wing.y * cx - wing.z * sx, wing.y * sx + wing.z * cx) * P[1].w * P[0].w;
   crest = pow(0.5 + 0.5 * cos((uu * 9.0 - uTime * 0.05) * 6.2831853), 30.0);
   return P[1].xyz + wing;
 }

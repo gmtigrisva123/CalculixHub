@@ -2265,7 +2265,9 @@
 }
 .lx-final-curve { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
 .lx-final-trace { fill: none; stroke: oklch(100% 0 0 / 0.06); stroke-width: 2; stroke-dasharray: 2 9; stroke-linecap: round; }
-.lx-final-line { fill: none; stroke: var(--lx-cyan); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; filter: drop-shadow(0 0 10px oklch(85% 0.095 208 / 0.6)); }
+.lx-final-line { fill: none; stroke: var(--lx-cyan); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+/* The line's glow is a wide, faint stroke drawn under it, not a filter: a filter is re-rasterised on every frame the line draws. */
+.lx-final-glow { fill: none; stroke: oklch(85% 0.095 208 / 0.16); stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; }
 .lx-final-halo { fill: oklch(83% 0.12 76 / 0.18); }
 .lx-final-tip { fill: var(--lx-brass); }
 .lx-final-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(32px, 6vw, 110px); align-items: end; }

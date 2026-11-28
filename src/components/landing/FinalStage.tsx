@@ -5,34 +5,51 @@
  * single pencilled line climbs the stage as it is scrolled through — dipping,
  * looping back, and still ending higher than it started — with a point of light
  * at its tip. Progress is rarely a straight line; this one is drawn by the
- * reader's own scrolling.
+ * reader's own scrolling, through the follow spring, so it runs on a moment
+ * after the scroll stops.
+ *
+ * Where WebGL runs, the stage draws the line as a tube of light receding into
+ * the dark, and when it is fully drawn its tip blooms into a small Lorenz
+ * butterfly (sceneFinal.ts): the page ends where it began. The stage reads the
+ * very values this component draws with (useStageSpring with a key), so the
+ * two can never disagree. The SVG here is the drawing without WebGL; its path
+ * (finalLine.ts) keeps to the floor under the words and climbs behind the two
+ * cards, so it never crosses a line of text.
  */
 
 import { useLayoutEffect, useRef } from 'react';
-import { m, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
-import { Arrow, Magnetic, Rise, SPRING, SplitText, useSpotlight, useStageArrival } from './kit';
-
-/*
- * The line keeps to the floor of the stage under the words, then climbs behind
- * the two path cards and breaks out above them: it never crosses a line of text.
- */
-const PATH = 'M-20 652C80 652 140 612 220 616S330 668 400 642 470 566 540 592 610 662 680 612 720 482 760 422 820 302 880 332 960 382 1010 262 1080 122 1150 140 1196 96 1222 70';
+import { m, useInView, useMotionValueEvent, useReducedMotion, useTransform } from 'motion/react';
+import { Arrow, Magnetic, Rise, SplitText, useSpotlight, useStageArrival } from './kit';
+import { useStageScroll, useStageSpring } from './stageLayout';
+import { useStageState } from './ThreadStage';
+import { FINAL_ARRIVAL_KEY, FINAL_DRAWN_KEY, FINAL_PATH } from './finalLine';
+import { useMediaQuery } from '../../hooks/useBreakpoint';
 
 interface FinalStageProps {
   onRegister: () => void;
 }
 
 export default function FinalStage({ onRegister }: FinalStageProps) {
-  const reduce = useReducedMotion();
+  const reduce = Boolean(useReducedMotion());
+  const gl = useStageState();
   const sectionRef = useRef<HTMLElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const tipRef = useRef<SVGGElement>(null);
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start 0.9', 'end 0.75'] });
-  // The line is drawn by the scroll, through a spring: it keeps pace while the reader
+  /*
+   * The line must finish where it can be seen, because its end is where the
+   * butterfly opens. On a wide stage it ends near the stage's top-right corner,
+   * so it is drawn as the stage rises into view and done as its top reaches
+   * the top of the screen. On a narrow one it runs along the stage's floor,
+   * so it is drawn as that floor comes up the screen.
+   */
+  const wide = useMediaQuery('(min-width: 961px)');
+  const wideProgress = useStageScroll(sectionRef, ['start 0.9', 'start 0.04']);
+  const narrowProgress = useStageScroll(sectionRef, ['end 1.05', 'end 0.7']);
+  // The line is drawn by the scroll, through the follow spring: it keeps pace while the reader
   // scrolls and runs on a moment after they stop, the way a pencil finishes its stroke.
-  const eased = useSpring(scrollYProgress, SPRING.follow);
+  const eased = useStageSpring(wide ? wideProgress : narrowProgress, { key: FINAL_DRAWN_KEY, still: reduce });
   const drawn = useTransform(eased, [0, 0.85], [reduce ? 1 : 0.02, 1]);
-  const arrival = useStageArrival(sectionRef);
+  const arrival = useStageArrival(sectionRef, FINAL_ARRIVAL_KEY);
 
   /*
    * The pencil tip rides the end of the drawn line. Finding a point along an
@@ -43,7 +60,8 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
    * the page's first seconds. The path's length never changes, so it is
    * measured once.
    */
-  const onScreen = useInView(sectionRef, { margin: '300px 0px' });
+  // While the stage draws the line in 3D the SVG is put away, and asking it for points would only cost a layout.
+  const onScreen = useInView(sectionRef, { margin: '300px 0px' }) && gl !== 'on';
   const length = useRef(0);
   const placeTip = (value: number) => {
     const path = pathRef.current;
@@ -59,9 +77,11 @@ export default function FinalStage({ onRegister }: FinalStageProps) {
   return (
     <section ref={sectionRef} className="lx-final" id="begin" aria-labelledby="lx-final-title">
       <m.div className="lx-final-stage" data-tone="ink" style={arrival}>
-        <svg className="lx-final-curve" viewBox="0 0 1240 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <path d={PATH} className="lx-final-trace" />
-          <m.path ref={pathRef} d={PATH} className="lx-final-line" style={{ pathLength: drawn }} />
+        <svg className="lx-final-curve" data-gl-swap viewBox="0 0 1240 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <path d={FINAL_PATH} className="lx-final-trace" />
+          {/* A wide, faint stroke under the line for its glow: a filter here would be re-rasterised on every frame it draws. */}
+          <m.path d={FINAL_PATH} className="lx-final-glow" style={{ pathLength: drawn }} />
+          <m.path ref={pathRef} d={FINAL_PATH} className="lx-final-line" style={{ pathLength: drawn }} />
           <g ref={tipRef}>
             <circle r="22" className="lx-final-halo" />
             <circle r="5.5" className="lx-final-tip" />

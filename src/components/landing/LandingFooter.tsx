@@ -3,13 +3,15 @@
  *
  * The page's content sits on a raised sheet; the footer waits underneath it,
  * pinned to the bottom of the screen, and the sheet's lower edge lifts away to
- * reveal it. As it is uncovered the wordmark rises letter by letter. The
+ * reveal it, catching the light with a slight curl as it goes (drawn by the
+ * WebGL stage; see sceneFinal.ts). As it is uncovered the wordmark rises letter by letter. The
  * reveal is driven by how far the sheet has lifted, never by an observer — the
  * footer is technically on screen the whole time, behind everything.
  */
 
 import type { RefObject } from 'react';
-import { m, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { m, useReducedMotion, useTransform, type MotionValue } from 'motion/react';
+import { useStageScroll } from './stageLayout';
 import { Arrow, BrandMark } from './kit';
 import { scrollToTarget } from './smoothScroll';
 
@@ -22,7 +24,8 @@ interface LandingFooterProps {
 export default function LandingFooter({ contentRef }: LandingFooterProps) {
   const reduce = Boolean(useReducedMotion());
   // 0 when the sheet's bottom edge reaches the bottom of the screen, 1 when it has cleared the top.
-  const { scrollYProgress: lift } = useScroll({ target: contentRef, offset: ['end end', 'end start'] });
+  // On the page clock, so the wordmark and the stage's curl of the sheet's edge (sceneFinal.ts) read one value.
+  const lift = useStageScroll(contentRef, ['end end', 'end start']);
   const drift = useTransform(lift, [0, 0.35], ['-18%', '0%']);
 
   return (

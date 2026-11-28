@@ -29,9 +29,13 @@
 .lx-thread.is-ready { opacity: 1; }
 .lx-thread-canvas { display: block; width: 100%; height: 100%; }
 
-/* What the stage draws instead, cross-faded as it arrives. */
-.lx [data-gl-swap] { transition: opacity 0.9s var(--lx-glide); }
-.lx[data-gl='on'] [data-gl-swap] { opacity: 0; }
+/*
+ * What the stage draws instead, cross-faded as it arrives, then put away
+ * (visibility) so a drawing nobody can see is not painted while the page
+ * scrolls. It comes back at once if the stage is lost.
+ */
+.lx [data-gl-swap] { transition: opacity 0.9s var(--lx-glide), visibility 0s linear 0s; }
+.lx[data-gl='on'] [data-gl-swap] { opacity: 0; visibility: hidden; transition: opacity 0.9s var(--lx-glide), visibility 0s linear 0.9s; }
 
 @media (prefers-reduced-motion: reduce) {
   .lx-thread, .lx [data-gl-swap] { transition: none; }

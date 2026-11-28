@@ -174,8 +174,9 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
             </dl>
 
             {/* The 3D chart is drawn over this box; the SVG inside is the drawing without WebGL. */}
-            <div className="lx-chart-wrap" data-engine-chart ref={chartRef}>
-            <svg className="lx-chart" data-gl-swap viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
+            {/* The description lives on the box, which stays in place whichever drawing is showing. */}
+            <div className="lx-chart-wrap" data-engine-chart ref={chartRef} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
+            <svg className="lx-chart" data-gl-swap viewBox={`0 0 ${W} ${HEIGHT}`} aria-hidden="true">
               <defs>
                 <linearGradient id="lx-curve-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" style={{ stopColor: 'var(--lx-cyan)', stopOpacity: 0.42 }} />
