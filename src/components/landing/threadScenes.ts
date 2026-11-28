@@ -223,9 +223,9 @@ export class IdeaScene implements ThreadScene {
     const y = this.lineY(frame);
     out.shape = SHAPE.line;
     place(out.matrix, frame, this.foot.left + this.foot.width / 2, y);
-    // The reading bead needs the line to hold still under it, so the line does not drift while it reads.
+    // The line holds still (the reading bead needs it to, and a resting line has no reason to move).
     const [bead, strength] = this.bead(frame);
-    out.p[0].set(this.foot.width, 1.2, 2.4, frame.still || strength > 0.01 ? 0 : 0.0016);
+    out.p[0].set(this.foot.width, 1.2, 2.4, 0);
     out.p[1].set(bead, strength, 0, 0);
     out.look.set(2.5, 0.95, 0.13, 0);
     // The words under the rule sit in front of a thread on its way down to the engine.
@@ -235,7 +235,8 @@ export class IdeaScene implements ThreadScene {
     });
     out.occR.set(6, 6, 0, 0);
     out.shade.y = 10;
-    out.flowing = !frame.still;
+    // At rest on the rule the line is still: a stage that only drifts a hair would redraw every frame for nothing.
+    out.flowing = false;
   }
 }
 
