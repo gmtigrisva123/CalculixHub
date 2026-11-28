@@ -297,7 +297,7 @@ export class EngineScene implements ThreadScene {
     this.pinned = section?.dataset.pinned !== 'false';
     this.stage = docBox(stage, pin);
     this.chart = docBox(chart, pin);
-    for (const name of ['readouts', 'verdict', 'ticker']) {
+    for (const name of ['readouts', 'verdict', 'ticker', 'beats', 'engine-cta']) {
       this.boxes[name] = docBox(query(`.lx-engine-stage .lx-${name}`), pin);
     }
     this.radius = stageRadius();
@@ -386,7 +386,16 @@ export class EngineScene implements ThreadScene {
     out.data = data;
     out.look.set(2.2, 1.2, 0.13, 0);
     out.clip.set(chart.stage.x, chart.stage.y, chart.stage.w, chart.stage.h);
-    out.shade.x = chart.stage.r;
+    out.shade.set(chart.stage.r, 10, 0, 0);
+    // The stage's words are in front: a thread leaving the chart passes behind the beats, the verdict and the button.
+    const { scale } = chart.stage;
+    const panels = ['beats', 'engine-cta', 'ticker', ...(replayAt(chart.playhead, frame.still).beat === 3 ? ['verdict'] : [])];
+    panels.slice(0, 4).forEach((name, i) => {
+      const box = this.boxes[name];
+      if (!box?.width) return;
+      out.occ[i].set(chart.stage.x + (box.left - this.stage.left) * scale - 8, chart.stage.y + (box.top - this.stage.top) * scale - 8, box.width * scale + 16, box.height * scale + 16);
+      out.occR.setComponent(i, 10);
+    });
   }
 }
 

@@ -12,6 +12,8 @@
 export type ThreadEvent =
   | { type: 'topic-choice'; room: number; right: boolean }
   | { type: 'chord-drag'; active: boolean }
+  // The chord figure has begun to draw itself in: the circle of light under it hands over.
+  | { type: 'chord-draw' }
   | { type: 'desk-draw'; active: boolean }
   | { type: 'desk-demo'; progress: number; x: number; y: number }
   | { type: 'pointer-scene'; scene: string | null };

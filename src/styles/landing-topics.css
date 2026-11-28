@@ -3,4 +3,44 @@
  *
  * This chapter's styles for the 3D rebuild. Older shared rules for it still
  * live in landing-experience.css; what is new or changed is here.
+ *
+ * With the WebGL stage drawing, the thread lies on this board as chalk dust
+ * and the rooms' symbols are 3D chalk glyphs (sceneTopics.ts). What is
+ * styled here is the board's own: the formulas rubbed out before the lesson,
+ * drifting at three depths, and the type symbols the glyphs stand in for.
  */
+
+/* --------------------------------------------------------------------------
+ * What was rubbed out, at three depths. Each formula is its own small layer,
+ * moved by transform as the board passes (TopicsChapter.tsx); the blur on it
+ * is fixed, painted once, and never animated.
+ * ------------------------------------------------------------------------ */
+
+.lx-topics-ghosts span { will-change: transform; }
+.lx-topics-ghosts [data-depth='0'] { color: oklch(100% 0 0 / 0.04); filter: blur(1.3px); }
+.lx-topics-ghosts [data-depth='1'] { color: oklch(100% 0 0 / 0.055); filter: blur(0.6px); }
+.lx-topics-ghosts [data-depth='2'] { color: oklch(100% 0 0 / 0.075); filter: blur(0.2px); }
+
+/* --------------------------------------------------------------------------
+ * The type symbol: the drawing without WebGL. It answers a room's choices
+ * as the 3D glyph does, with a shake (TopicsChapter.tsx) and a ring.
+ * ------------------------------------------------------------------------ */
+
+.lx-topic-symbol { position: relative; display: inline-block; }
+.lx-topic-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.5em;
+  height: 1.5em;
+  translate: -50% -46%;
+  overflow: visible;
+  pointer-events: none;
+}
+.lx-topic-ring path {
+  stroke: var(--tone);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
