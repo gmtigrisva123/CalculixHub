@@ -71,3 +71,18 @@
   /* At phone width only the live tier keeps its label, as in the SVG chart. */
   .lx-chart-labels > [data-tier]:not([data-active]) { visibility: hidden; }
 }
+
+/* --------------------------------------------------------------------------
+ * The engine below 900px (or on a short screen): unpinned. The stage scrolls
+ * like any block and the replay runs while its chart passes through the
+ * screen (EngineStory.tsx, ENGINE_UNPINNED_EDGES). The chart keeps its own
+ * shape, so its box (and the 3D chart drawn over it) never collapses.
+ * ------------------------------------------------------------------------ */
+
+@media (max-width: 900px), (max-height: 560px) {
+  .lx-engine { height: auto; }
+  .lx-engine-pin { position: relative; height: auto; min-height: 0; }
+  .lx-engine-stage { height: auto; min-height: 0; grid-template-rows: auto auto auto auto; }
+  .lx-engine .lx-instrument { min-height: 0; }
+  .lx-engine .lx-chart-wrap { flex: none; aspect-ratio: 800 / 440; }
+}

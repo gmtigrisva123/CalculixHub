@@ -31,6 +31,8 @@ import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useTransform
 import { TIER_BANDS } from './engineRun';
 import { ANSWERS, CHART, RUG_LEVEL, RUN, chartX as x, heightAtEstimate, replayAt, weightAt } from './engineReplay';
 import { useStageScroll } from './stageLayout';
+import { ENGINE_PINNED, ENGINE_UNPINNED_EDGES } from './engineReplay';
+import { useMediaQuery } from '../../hooks/useBreakpoint';
 import { Arrow, GLIDE, Magnetic, SPRING, SplitText } from './kit';
 
 // Chart geometry, in viewBox units (shared with the 3D chart).
@@ -55,8 +57,19 @@ interface EngineStoryProps {
 export default function EngineStory({ onRegister }: EngineStoryProps) {
   const reduce = Boolean(useReducedMotion());
   const sectionRef = useRef<HTMLElement>(null);
-  // Written by the page clock in the scroll's own frame: the same numbers the 3D chart reads.
-  const playhead = useStageScroll(sectionRef, ['start start', 'end end']);
+  const chartRef = useRef<HTMLDivElement>(null);
+  /*
+   * Pinned on a screen wide and tall enough to hold the whole instrument; below
+   * that the stage scrolls like any other block and the replay runs while its
+   * chart passes through the screen. Both playheads are written by the page
+   * clock in the scroll's own frame (the same numbers the 3D chart reads); the
+   * section says which one is in use (data-pinned), so the stage cannot pick
+   * the other.
+   */
+  const pinned = useMediaQuery(ENGINE_PINNED);
+  const pinnedPlayhead = useStageScroll(sectionRef, ['start start', 'end end']);
+  const passingPlayhead = useStageScroll(chartRef, ENGINE_UNPINNED_EDGES);
+  const playhead = pinned ? pinnedPlayhead : passingPlayhead;
   const arrival = useStageScroll(sectionRef, ['start end', 'start start']);
   // The stage grows into the frame as it arrives. Scale only: its corner radius used to
   // tighten on the way in, which repainted the whole stage on every frame of the approach.
@@ -119,7 +132,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
   const done = beat === 3;
 
   return (
-    <section ref={sectionRef} className="lx-engine" id="engine" aria-labelledby="lx-engine-title">
+    <section ref={sectionRef} className="lx-engine" id="engine" data-pinned={pinned ? 'true' : 'false'} aria-labelledby="lx-engine-title">
       <div className="lx-engine-pin">
         <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale }}>
           <div className="lx-engine-grid" aria-hidden="true" />
@@ -161,7 +174,7 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
             </dl>
 
             {/* The 3D chart is drawn over this box; the SVG inside is the drawing without WebGL. */}
-            <div className="lx-chart-wrap" data-engine-chart>
+            <div className="lx-chart-wrap" data-engine-chart ref={chartRef}>
             <svg className="lx-chart" data-gl-swap viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
               <defs>
                 <linearGradient id="lx-curve-fill" x1="0" y1="0" x2="0" y2="1">

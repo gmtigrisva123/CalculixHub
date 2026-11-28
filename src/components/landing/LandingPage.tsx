@@ -44,6 +44,29 @@ const chaptersCode: Promise<Chapters | null> = import('./LandingChapters').catch
  */
 const AFTER_ENTRANCE = 1350;
 
+/**
+ * Where the reader was, kept for a reload or a return through history.
+ *
+ * The chapters arrive after the page has loaded, so a browser restoring the
+ * scroll position on a reload restores it against a page that is still a few
+ * screens long, clamps it, and leaves the reader near the top. The landing
+ * page keeps the position itself instead: it is written as the page is left,
+ * and on a reload every chapter is mounted at once and the reader is returned
+ * to it in one step.
+ */
+const RESTORE_KEY = 'lx-landing-scroll';
+
+function savedScroll(): number | null {
+  try {
+    const entry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (!entry || (entry.type !== 'reload' && entry.type !== 'back_forward')) return null;
+    const value = Number(sessionStorage.getItem(RESTORE_KEY));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 interface LandingPageProps {
   liveStats: { registeredUsers: number; testsCompleted: number; problemsSolved: number };
   onSignIn: () => void;
@@ -69,7 +92,20 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
   const [whole, setWhole] = useState(false);
   // Whether the WebGL stage is drawing: CSS swaps the DOM drawings it replaces on this attribute.
   const gl = useStageState();
+  // Read once, at mount: a position to return to after a reload.
+  const [restore] = useState(() => (window.location.hash.length > 1 ? null : savedScroll()));
   useSmoothScroll(!reduce);
+
+  useEffect(() => {
+    const previous = history.scrollRestoration;
+    history.scrollRestoration = 'manual';
+    const save = () => { try { sessionStorage.setItem(RESTORE_KEY, String(Math.round(window.scrollY))); } catch { /* private mode */ } };
+    window.addEventListener('pagehide', save);
+    return () => {
+      window.removeEventListener('pagehide', save);
+      history.scrollRestoration = previous;
+    };
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -84,9 +120,10 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
     onChapterDemand(everything);
     void afterChapters().then(() => { if (live) setWhole(true); });
 
-    // A link straight to a chapter (/#plans), or a reader who asked for no
-    // motion and so has no entrance to protect: mount everything at once.
-    if (window.location.hash.length > 1 || reduce) everything();
+    // A link straight to a chapter (/#plans), a reload in the middle of the
+    // page, or a reader who asked for no motion and so has no entrance to
+    // protect: mount everything at once.
+    if (window.location.hash.length > 1 || restore !== null || reduce) everything();
     const timer = window.setTimeout(() => { cancelIdle = whenIdle(begin, 600); }, AFTER_ENTRANCE);
     // Any sign of leaving the first screen starts the chapters without waiting for the timer.
     const intents = ['wheel', 'touchstart', 'keydown'] as const;
@@ -99,15 +136,16 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
       for (const type of intents) window.removeEventListener(type, begin);
       onChapterDemand(null);
     };
-  }, [reduce]);
+  }, [reduce, restore]);
 
-  // Arriving with a section in the URL (/#plans) lands on it once the page exists.
+  // Arriving with a section in the URL (/#plans), or reloading mid-page, lands there once the page exists.
   useEffect(() => {
     if (!whole) return;
     const id = window.location.hash.slice(1);
     const target = id ? document.getElementById(id) : null;
     if (target) requestAnimationFrame(() => scrollToTarget(target, { immediate: true }));
-  }, [whole]);
+    else if (restore !== null) requestAnimationFrame(() => scrollToTarget(restore, { immediate: true }));
+  }, [whole, restore]);
 
   const Rails = whole ? chapters?.MarginRails : undefined;
   const Rest = chapters?.default;

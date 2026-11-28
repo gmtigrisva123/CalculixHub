@@ -33,6 +33,16 @@ export const CHART = {
 
 export const chartX = (theta: number) => CHART.PAD + ((theta - CHART.THETA_MIN) / (CHART.THETA_MAX - CHART.THETA_MIN)) * (CHART.W - 2 * CHART.PAD);
 
+/**
+ * When the engine is pinned: a screen at least 901px wide and 561px tall. Below
+ * that the stage scrolls past instead (on a phone it is shorter than the
+ * screen), and the replay runs while the chart is comfortably in view: from its
+ * top a little below the middle of the screen until its foot nears the top
+ * (useStageScroll edges, shared with the 3D chart).
+ */
+export const ENGINE_PINNED = '(min-width: 901px) and (min-height: 561px)';
+export const ENGINE_UNPINNED_EDGES = ['start 0.72', 'end 0.18'] as const;
+
 /** Where on the playhead the replay starts and ends: a short hold at either end. */
 export const REPLAY_START = 0.07;
 export const REPLAY_SPAN = 0.8;

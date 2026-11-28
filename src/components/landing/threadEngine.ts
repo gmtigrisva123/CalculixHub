@@ -91,6 +91,10 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
 
   let renderer: WebGLRenderer | null = null;
   try {
+    // Ask the browser first: without WebGL 2, three.js would only fail loudly on the way to the same answer.
+    const probe = document.createElement('canvas').getContext('webgl2');
+    if (!probe) throw new Error('no WebGL 2');
+    probe.getExtension('WEBGL_lose_context')?.loseContext();
     renderer = new WebGLRenderer({
       canvas,
       // Points are soft sprites and need no multisampling; the few meshes do, where pixels are large.

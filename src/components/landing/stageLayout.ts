@@ -228,3 +228,48 @@ export function useStageSpring(source: MotionValue<number>, { key, still = false
 
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Elements that may sit inside a pinned (sticky) parent
+// ---------------------------------------------------------------------------
+
+export interface Tracked {
+  /** The element's box: in the document, or relative to its sticky ancestor when it has one. */
+  box: Box;
+  sticky: null | {
+    /** The sticky element's static box, its container's box, and its `top` offset. */
+    self: Box;
+    container: Box;
+    top: number;
+  };
+}
+
+/**
+ * Measure an element so its place on screen can be worked out for any scroll
+ * position without asking the DOM again, including when it rides inside a
+ * `position: sticky` parent (the hero, the engine's pin). Reads computed style,
+ * so call it from a measure, never from a frame.
+ */
+export function track(element: HTMLElement): Tracked {
+  let sticky: HTMLElement | null = null;
+  for (let node: HTMLElement | null = element; node && node !== document.body; node = node.parentElement) {
+    if (getComputedStyle(node).position === 'sticky') { sticky = node; break; }
+  }
+  if (!sticky || !sticky.parentElement) return { box: docBox(element), sticky: null };
+  const container = docBox(sticky.parentElement);
+  const self = docBox(sticky);
+  const within = element === sticky ? { ...self, top: 0, left: 0 } : docBox(element, sticky);
+  return {
+    box: { top: within.top, left: within.left, width: element.offsetWidth, height: element.offsetHeight },
+    sticky: { self, container, top: Number.parseFloat(getComputedStyle(sticky).top) || 0 },
+  };
+}
+
+/** A tracked element's box on screen at scroll position `y` (transforms excepted). */
+export function rectAt(tracked: Tracked, y: number): Box {
+  const { box, sticky } = tracked;
+  if (!sticky) return { top: box.top - y, left: box.left, width: box.width, height: box.height };
+  const { self, container, top } = sticky;
+  const stuck = Math.min(Math.max(self.top - y, top), container.top + container.height - self.height - y);
+  return { top: stuck + box.top, left: self.left + box.left, width: box.width, height: box.height };
+}

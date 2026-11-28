@@ -20,7 +20,7 @@ import { docBox, progressAt, type Box } from './stageLayout';
 import { EMPTY_BOX as EMPTY, cameraDistance, follow, place, query, resetSlot, stageRadius, stickyTop } from './threadKit';
 import { POLY_SAMPLES, clamp01, curveHeights, lerp, smoothstep } from './threadShapes';
 import { SHAPE } from './threadShaders';
-import { CHART, REPLAY_START, RUN, replayAt, weightAt } from './engineReplay';
+import { CHART, ENGINE_UNPINNED_EDGES, REPLAY_START, RUN, replayAt, weightAt } from './engineReplay';
 import { TILT, TURN } from './ParticleField';
 import type { InkRect, Leg, Slot, StageFrame, ThreadScene } from './threadTypes';
 
@@ -250,6 +250,8 @@ export class EngineScene implements ThreadScene {
   private data = new Float32Array(POLY_SAMPLES * 4);
   private weights = new Float64Array(RUN.grid.length);
   private matrix = new Matrix4();
+  /** Whether the section is pinned (the DOM says so on data-pinned, from the same media query). */
+  private pinned = true;
   /** Boxes inside the pin, for the meshes' occluders and the labels. */
   boxes: Record<string, Box> = {};
 
@@ -262,6 +264,7 @@ export class EngineScene implements ThreadScene {
     if (!this.found) return;
     this.section = docBox(section);
     this.pin = { ...docBox(pin), top: this.section.top };
+    this.pinned = section?.dataset.pinned !== 'false';
     this.stage = docBox(stage, pin);
     this.chart = docBox(chart, pin);
     for (const name of ['readouts', 'verdict', 'ticker']) {
@@ -279,9 +282,11 @@ export class EngineScene implements ThreadScene {
 
   /** Where the chart is this frame: the pin on screen, the stage's arrival scale, then the camera. */
   chartFrame(frame: StageFrame): ChartFrame {
-    const pinTop = stickyTop(this.pin, this.section, frame.y);
+    const pinTop = this.pinned ? stickyTop(this.pin, this.section, frame.y) : this.pin.top - frame.y;
     const arrival = progressAt(this.section, ['start end', 'start start'], frame.y, frame.vh);
-    const playhead = progressAt(this.section, ['start start', 'end end'], frame.y, frame.vh);
+    const playhead = this.pinned
+      ? progressAt(this.section, ['start start', 'end end'], frame.y, frame.vh)
+      : progressAt({ ...this.chart, top: this.pin.top + this.chart.top }, ENGINE_UNPINNED_EDGES, frame.y, frame.vh);
     const scale = frame.still ? 1 : lerp(0.9, 1, arrival);
     const stageTop = pinTop + this.stage.top;
     const originX = this.stage.left + this.stage.width / 2;

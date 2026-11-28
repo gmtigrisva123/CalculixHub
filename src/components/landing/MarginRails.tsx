@@ -22,8 +22,13 @@
  * that width nothing is mounted and no frame is ever scheduled.
  *
  * Everything that moves every frame is written straight to the DOM or a
- * canvas from one requestAnimationFrame loop; React only re-renders when the
- * chapter changes.
+ * canvas from the page clock (pageClock.ts), in the same frame as the scroll;
+ * React only re-renders when the chapter changes. Nothing here asks the DOM
+ * where things are while the page scrolls: the chapters and the stages are
+ * measured when the layout changes (stageLayout.ts), and each frame places
+ * them from the scroll position alone. (The rails used to read the position of
+ * ten sections and six stages on every frame, which made the browser bring
+ * its layout up to date mid-frame whenever anything else had just moved.)
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -33,6 +38,8 @@ import { useMediaQuery } from '../../hooks/useBreakpoint';
 import { GLIDE, SPRING, fade } from './kit';
 import { scrollToTarget } from './smoothScroll';
 import { FIGURE_POINTS, figure, type FigureName } from './marginFigures';
+import { PRIORITY, onTick } from './pageClock';
+import { onMeasure, rectAt, track, type Tracked } from './stageLayout';
 import '../../styles/landing-margins.css';
 
 interface Chapter {
@@ -126,13 +133,17 @@ function Rails() {
     if (!root || !left || !right || !flowL || !flowR || !figCanvas || !stream) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const sections = CHAPTERS.map(c => document.getElementById(c.id));
     // The drifting patterns, and the last value written to each thing that is only touched on change.
     const grids = Array.from(root.querySelectorAll<HTMLElement>('.mr-grid > i'));
     const rulers = Array.from(root.querySelectorAll<HTMLElement>('.mr-ruler > i'));
     const written = { arrive: '', tail: '' };
     // The ink stages, and the archive's full-bleed marquee. Where one reaches into a margin, the margin steps aside for it.
-    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee'));
+    // The ink stages and the full-bleed bands. Where one reaches into a margin, the margin steps aside for it.
+    const STAGES = '.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee, [data-rail-mask]';
+    let stages: { element: HTMLElement; at: Tracked }[] = [];
+    let chapters: (Tracked | null)[] = [];
+    let lastChapterBottom = 0;
+    let scrollRange = 1;
     const hero = document.querySelector<HTMLElement>('.lx-hero-stage');
     const masks = ['', ''];
     type Box = { top: number; bottom: number; left: number; right: number };
@@ -162,6 +173,19 @@ function Rails() {
 
     // ---------------------------------------------------------------- sizing
     const size = { lw: 0, lh: 0, rw: 0, rh: 0, fig: 0, rLeft: 0, rTop: 0, lLeft: 0 };
+    // Where the chapters and stages are in the document: read when the layout changes, never per frame.
+    const measureLayout = () => {
+      stages = Array.from(document.querySelectorAll<HTMLElement>(STAGES)).map(element => ({ element, at: track(element) }));
+      chapters = CHAPTERS.map(c => {
+        const element = document.getElementById(c.id);
+        return element ? track(element) : null;
+      });
+      const last = chapters[chapters.length - 1];
+      lastChapterBottom = last ? last.box.top + last.box.height : 0;
+      scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    };
+    const stopMeasure = onMeasure(measureLayout);
+
     const measure = () => {
       const lr = left.getBoundingClientRect();
       const rr = right.getBoundingClientRect();
@@ -335,10 +359,28 @@ function Rails() {
     };
 
     // ------------------------------------------------------- formula stream
+    // Each formula's size, measured once (and again on resize) in one pass, so recycling a slot never forces a layout.
+    let formulaSizes: [number, number][] = [];
+    let streamWidth = 120;
+    const measureFormulas = () => {
+      const probe = stream.children[0] as HTMLDivElement | undefined;
+      if (!probe) return;
+      const keep = probe.innerHTML;
+      const transform = probe.style.transform;
+      probe.style.transform = 'none';
+      formulaSizes = rendered.map(html => {
+        probe.innerHTML = html;
+        return [probe.offsetWidth || 120, probe.offsetHeight || 30];
+      });
+      probe.innerHTML = keep;
+      probe.style.transform = transform;
+      streamWidth = stream.clientWidth;
+    };
     type Slot = { el: HTMLDivElement; y: number; x: number; z: number; speed: number; phase: number; scale: number; rot: number; h: number };
     const slots: Slot[] = Array.from(stream.children).map(el => ({ el: el as HTMLDivElement, y: 0, x: 0, z: 0, speed: 0, phase: 0, scale: 1, rot: 0, h: 0 }));
     let nextFormula = Math.floor(Math.random() * FORMULAS.length);
     const recycle = (s: Slot, startY: number) => {
+      const shown = nextFormula;
       s.el.innerHTML = rendered[nextFormula];
       s.el.dataset.tone = nextFormula % 5 === 2 ? 'warm' : nextFormula % 3 === 0 ? 'pencil' : 'ink';
       nextFormula = (nextFormula + 3) % FORMULAS.length;
@@ -346,9 +388,10 @@ function Rails() {
       s.speed = 10 + s.z * 16;
       s.phase = Math.random() * Math.PI * 2;
       s.rot = (Math.random() - 0.5) * 7;
-      const width = s.el.offsetWidth || 120;
-      s.h = s.el.offsetHeight || 30;
-      const room = Math.max(40, stream.clientWidth);
+      // Sizes are measured once per formula (see measureFormulas), not on every recycle.
+      const [width, height] = formulaSizes[shown] ?? [120, 30];
+      s.h = height;
+      const room = Math.max(40, streamWidth);
       const base = 0.72 + s.z * 0.42;
       s.scale = Math.min(base, (room * 0.94) / width);
       s.x = Math.random() * Math.max(0, room - width * s.scale);
@@ -370,38 +413,33 @@ function Rails() {
 
     const ro = new ResizeObserver(() => {
       measure();
+      measureFormulas();
       slots.forEach((s, i) => recycle(s, (size.rh / SLOTS) * i + Math.random() * 40));
     });
     ro.observe(left);
     ro.observe(right);
     measure();
+    measureFormulas();
     slots.forEach((s, i) => recycle(s, (size.rh / SLOTS) * i + Math.random() * 40));
 
     // ------------------------------------------------------------------ loop
-    let raf = 0;
-    let last = performance.now();
-    let lastY = window.scrollY;
     let vel = 0;
     let shownPct = -1;
 
-    const frame = (nowMs: number) => {
-      raf = requestAnimationFrame(frame);
-      const now = nowMs / 1000;
-      const dt = Math.min(0.05, (nowMs - last) / 1000);
-      last = nowMs;
-
-      const y = window.scrollY;
-      const instant = dt > 0 ? (y - lastY) / dt / 60 : 0; // px per 60fps frame
-      lastY = y;
-      vel += (instant - vel) * 0.18;
+    const frame = (tick: { y: number; vy: number; vh: number; now: number; dt: number }) => {
+      const now = tick.now / 1000;
+      const dt = tick.dt;
+      const y = tick.y;
+      // The old loop's units: px per 60 fps frame, lightly smoothed.
+      vel += (tick.vy / 60 - vel) * 0.18;
 
       // Where the reader is.
-      const vh = window.innerHeight;
+      const vh = tick.vh;
       const line = vh * ANCHOR;
-      const tops = sections.map(s => (s ? s.getBoundingClientRect().top : Infinity));
+      const tops = chapters.map(c => (c ? rectAt(c, y).top : Infinity));
       let index = 0;
       for (let i = 0; i < tops.length; i += 1) if (tops[i] <= line) index = i;
-      const nextTop = index + 1 < tops.length ? tops[index + 1] : (sections[index]?.getBoundingClientRect().bottom ?? line);
+      const nextTop = index + 1 < tops.length ? tops[index + 1] : lastChapterBottom - y;
       const frac = clamp((line - tops[index]) / Math.max(1, nextTop - tops[index]));
       const along = clamp((index + frac) / (CHAPTERS.length - 1));
 
@@ -436,18 +474,17 @@ function Rails() {
 
       if (fillRef.current) fillRef.current.style.transform = `scaleY(${along})`;
       if (cometRef.current) cometRef.current.style.transform = `translate3d(0,${(along * 100).toFixed(3)}%,0)`;
-      const doc = document.documentElement.scrollHeight - vh;
-      const pct = Math.round(clamp(doc > 0 ? y / doc : 0) * 100);
+      const pct = Math.round(clamp(y / scrollRange) * 100);
       if (pct !== shownPct && pctRef.current) {
         shownPct = pct;
         pctRef.current.textContent = String(pct).padStart(3, '0');
       }
 
-      const rects: Box[] = stages.map(st => {
-        const r = st.getBoundingClientRect();
+      const rects: Box[] = stages.map(({ element, at }) => {
+        const r = rectAt(at, y);
         // The hero stays pinned under the next sheet as it slides over; only its uncovered part counts.
-        const bottom = st === hero ? Math.min(r.bottom, tops[1]) : r.bottom;
-        return { top: r.top, bottom, left: r.left, right: r.right };
+        const bottom = element === hero ? Math.min(r.top + r.height, tops[1]) : r.top + r.height;
+        return { top: r.top, bottom, left: r.left, right: r.left + r.width };
       });
       maskRail(left, 0, size.lLeft, size.lLeft + size.lw, rects, vh);
       maskRail(right, 1, size.rLeft, size.rLeft + size.rw, rects, vh);
@@ -455,7 +492,7 @@ function Rails() {
       const live = arrive > 0.9 && masks[0] === 'none';
       if ((root.dataset.live === '1') !== live) root.dataset.live = live ? '1' : '';
 
-      if (arrive <= 0.001) return; // nothing to see yet: keep the canvases idle
+      if (arrive <= 0.001) return false; // nothing to see yet: keep the canvases idle
 
       if (!reduce) {
         drawFlow(flowL, flowA, size.lw, size.lh, size.lLeft, now, vel, 0);
@@ -469,12 +506,15 @@ function Rails() {
         }
       }
       drawFigure(now, dt, vel);
+      // The ink flows on its own: keep the clock running while the rails are on screen (never under reduced motion).
+      return !reduce;
     };
 
-    raf = requestAnimationFrame(frame);
+    const stopTick = onTick(frame, PRIORITY.late);
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopTick();
+      stopMeasure();
       ro.disconnect();
       window.removeEventListener('pointermove', onPointer);
     };
