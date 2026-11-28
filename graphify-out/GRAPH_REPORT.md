@@ -1,7 +1,7 @@
 # Graph Report - CalculixHub  (2026-11-28)
 
 ## Corpus Check
-- 988 files · ~1,380,283 words
+- 988 files · ~1,380,335 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 115 file(s) not represented in the graph (top: .csv 51, .css 46, (none) 8)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `31b75a8e`
+- Built from commit: `11c766a9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -492,16 +492,16 @@
 10. `CORE DIRECTIVE: PREMIUM MOBILE APP IMAGE DIRECTION` - 39 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `0.3 What stays` --references--> `simulatePlacement()`  [INFERRED]
-  docs/landing-3d/SPEC.md → src/components/landing/engineRun.ts
 - `2.2 Scenes and the files they live in` --references--> `Hero()`  [INFERRED]
   docs/landing-3d/SPEC.md → src/components/landing/Opening.tsx
-- `2.3.4 The thread and its state machine` --references--> `lorenzPath()`  [INFERRED]
-  docs/landing-3d/SPEC.md → src/components/landing/particleShapes.ts
-- `7.1 Magnetic buttons and spotlight cards` --references--> `Rise()`  [INFERRED]
-  docs/landing-3d/SPEC.md → src/components/landing/kit.tsx
+- `0.3 What stays` --references--> `simulatePlacement()`  [INFERRED]
+  docs/landing-3d/SPEC.md → src/components/landing/engineRun.ts
+- `Appendix A: how the numbers were measured` --references--> `simulatePlacement()`  [INFERRED]
+  docs/landing-3d/SPEC.md → src/components/landing/engineRun.ts
 - `11.1 No WebGL, or a software rasteriser` --references--> `drawFallback()`  [INFERRED]
   docs/landing-3d/SPEC.md → src/components/landing/ParticleField.tsx
+- `2.3.4 The thread and its state machine` --references--> `lorenzPath()`  [INFERRED]
+  docs/landing-3d/SPEC.md → src/components/landing/particleShapes.ts
 
 ## Import Cycles
 - None detected.
@@ -2281,7 +2281,7 @@ Nodes (4): LX_PORT, LX_REPORT_DIR, LX_ROOT, env
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `clamp()` connect `clamp` to `JourneyStack.tsx`?**
-  _High betweenness centrality (0.160) - this node is a cross-community bridge._
+  _High betweenness centrality (0.145) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Capacitor`, `UIKit`, `RFC-9457` to the rest of the system?**
@@ -2289,8 +2289,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `.agents/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `react` to `TopicBoards.tsx`, `Inbox.tsx`, `JourneyStack.tsx`, `Learn.tsx`, `EpicycleStage.tsx`, `entrance.ts`, `Opening.tsx`, `WelcomeScreen.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `Community.tsx`, `Dashboard.tsx`, `MathText`, `Profile.tsx`, `Workspace.tsx`, `Settings.tsx`, `PostComposer.tsx`, `GroundTones.tsx`, `package.json`, `EngineStory.tsx`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `archiveModel.ts`, `dependencies`, `archiveModel.ts`, `AITutorChat.tsx`, `LearnCatalog.tsx`, `InstallAppButton.tsx`, `ParticleField.tsx`, `macbookStage.ts`, `WorkspaceShell.tsx`, `ThemeContext.tsx`, `Arena.tsx`, `Leaderboard.tsx`, `Comments.tsx`, `useAuth`, `ArchiveHero.tsx`, `archiveModel.test.ts`, `LandingReading.tsx`, `AuthContext.tsx`, `plan.ts`, `Topic`, `kit.tsx`, `Panel.tsx`, `copy.test.ts`, `circles.ts`, `copy.ts`, `model.ts`, `geminiClient.ts`, `DeskSection.tsx`, `irt.ts`, `offline.ts`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+  _High betweenness centrality (0.097) - this node is a cross-community bridge._
 - **Should `.claude/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
 - **Why does `Hero enrichment — when, what, and how much` connect `Hero enrichment — when, what, and how much` to `.claude/skills/hallmark/SKILL.md`, `Eight enrichment archetypes`, `clamp`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
