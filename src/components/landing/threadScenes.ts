@@ -171,6 +171,9 @@ export class IdeaScene implements ThreadScene {
   private foot = EMPTY;
   private sub = EMPTY;
   private cta = EMPTY;
+  private text = EMPTY;
+  /** The centre of each word of the idea, in reading order, for the reading bead. */
+  private words: number[] = [];
   private found = false;
 
   measure() {
@@ -180,6 +183,27 @@ export class IdeaScene implements ThreadScene {
     this.foot = docBox(foot);
     this.sub = docBox(query('.lx-idea-sub'));
     this.cta = docBox(query('.lx-idea-cta'));
+    const heading = query('.lx-idea');
+    this.text = docBox(heading);
+    this.words = Array.from(heading?.querySelectorAll<HTMLElement>('.lx-lit') ?? []).map(word => {
+      const box = docBox(word);
+      return box.left + box.width / 2;
+    });
+  }
+
+  /**
+   * The bead of light that reads along the thread: it rides under the word
+   * being lit (the words light by the same progress, in Opening.tsx), and
+   * fades once the last one has been read.
+   */
+  private bead(frame: StageFrame): [number, number] {
+    if (!this.words.length) return [0, 0];
+    const progress = progressAt(this.text, ['start 0.85', 'end 0.5'], frame.y, frame.vh);
+    const at = Math.min(this.words.length - 1, progress * this.words.length);
+    const i = Math.floor(at);
+    const x = lerp(this.words[i], this.words[Math.min(this.words.length - 1, i + 1)], at - i);
+    const strength = smoothstep(0, 0.04, progress) * (1 - smoothstep(0.92, 1, progress));
+    return [clamp01((x - this.foot.left) / Math.max(1, this.foot.width)), strength * 2.2];
   }
 
   present() { return this.found; }
@@ -197,7 +221,10 @@ export class IdeaScene implements ThreadScene {
     const y = this.lineY(frame);
     out.shape = SHAPE.line;
     place(out.matrix, frame, this.foot.left + this.foot.width / 2, y);
-    out.p[0].set(this.foot.width, 1.2, 2.4, frame.still ? 0 : 0.0016);
+    // The reading bead needs the line to hold still under it, so the line does not drift while it reads.
+    const [bead, strength] = this.bead(frame);
+    out.p[0].set(this.foot.width, 1.2, 2.4, frame.still || strength > 0.01 ? 0 : 0.0016);
+    out.p[1].set(bead, strength, 0, 0);
     out.look.set(2.5, 0.95, 0.13, 0);
     // The words under the rule sit in front of a thread on its way down to the engine.
     const occ = [this.sub, this.cta];

@@ -171,12 +171,15 @@ vec3 shapeAt(float shape, vec4 P[3], float u, float speed, float seed, float str
   }
 
   if (shape < 2.5) {
-    // A line along x: P0 = length, wave, thickness, flow.
+    // A line along x: P0 = length, wave, thickness, flow. P1 = a bead of light at u = P1.x, of strength P1.y.
     float uu = fract(u + uTime * P[0].w);
     float x = (uu - 0.5) * P[0].x;
     float wave = P[0].y * sin(uu * 11.0 + uTime * 0.7) * sin(uu * PI);
     ends = smoothstep(0.0, 0.02, uu) * smoothstep(1.0, 0.98, uu);
-    crest = pow(0.5 + 0.5 * cos((uu * 3.0 - uTime * 0.04) * 6.2831853), 24.0);
+    crest = P[1].y > 0.0
+      ? P[1].y * exp(-pow((uu - P[1].x) * 26.0, 2.0))
+      : pow(0.5 + 0.5 * cos((uu * 3.0 - uTime * 0.04) * 6.2831853), 24.0);
+    fast = crest;
     return vec3(x, wave, 0.0) + dir * stray * P[0].z * 30.0;
   }
 
