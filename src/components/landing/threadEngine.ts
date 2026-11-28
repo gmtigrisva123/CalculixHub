@@ -279,7 +279,24 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
     if (hasPointerScene) wake();
   };
   const onPointerLeave = () => { pointer.active = false; wake(); };
+  /*
+   * The touch equivalent of hovering over the butterfly: a tap stirs it where
+   * the finger landed, the form turns a little toward the touch, and both
+   * settle again a moment later. A tap never holds the page: scrolling stays
+   * the platform's own.
+   */
+  let release = 0;
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.pointerType === 'mouse') return;
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    pointer.active = true;
+    window.clearTimeout(release);
+    release = window.setTimeout(() => { pointer.active = false; wake(); }, 900);
+    if (hasPointerScene) wake();
+  };
   window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('pointerdown', onPointerDown, { passive: true });
   document.documentElement.addEventListener('pointerleave', onPointerLeave);
   let hasPointerScene = false;
 
@@ -471,6 +488,8 @@ export function startThreadStage({ host, still, onReady, onFail, onRestore }: St
     resizeObserver.disconnect();
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerdown', onPointerDown);
+    window.clearTimeout(release);
     document.documentElement.removeEventListener('pointerleave', onPointerLeave);
     canvas.removeEventListener('webglcontextlost', onLost);
     canvas.removeEventListener('webglcontextrestored', onRestored);
