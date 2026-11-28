@@ -137,9 +137,9 @@ function Rails() {
     const grids = Array.from(root.querySelectorAll<HTMLElement>('.mr-grid > i'));
     const rulers = Array.from(root.querySelectorAll<HTMLElement>('.mr-ruler > i'));
     const written = { arrive: '', tail: '' };
-    // The ink stages, and the archive's full-bleed marquee. Where one reaches into a margin, the margin steps aside for it.
-    // The ink stages and the full-bleed bands. Where one reaches into a margin, the margin steps aside for it.
-    const STAGES = '.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee, [data-rail-mask]';
+    // The ink stages and the full-bleed bands (the archive's marquee and its pinned staircase). Where one
+    // reaches into a margin, the margin steps aside for it.
+    const STAGES = '.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee, .lx-stairs-pin, [data-rail-mask]';
     let stages: { element: HTMLElement; at: Tracked }[] = [];
     let chapters: (Tracked | null)[] = [];
     let lastChapterBottom = 0;
