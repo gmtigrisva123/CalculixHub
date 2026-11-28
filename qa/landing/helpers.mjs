@@ -124,7 +124,8 @@ export async function applyProfile(cdp, name) {
  *
  * An LCP entry's element is described when the entry arrives, because a node
  * removed later (the static hero, at takeover) reads back as null. `inStatic`
- * says whether it was part of the static first frame (#lx-static).
+ * says whether it was part of the static first frame (#lx-static), and
+ * `inHero` whether it was part of that frame's hero.
  */
 export async function installVitals(page) {
   await page.addInitScript(() => {
@@ -150,6 +151,7 @@ export async function installVitals(page) {
         size: entry.size,
         element: describe(element) || (entry.id ? `#${entry.id}` : null),
         inStatic: element ? Boolean(element.closest && element.closest('#lx-static')) : null,
+        inHero: element ? Boolean(element.closest && element.closest('#lx-static .lx-hero')) : null,
         text: element && !entry.url ? (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60) : null,
         url: entry.url ? String(entry.url).slice(0, 120) : null,
       });
@@ -189,6 +191,7 @@ export async function readVitals(page) {
       lcpSize: last ? last.size : null,
       lcpElement: last ? last.element : null,
       lcpInStatic: last ? last.inStatic : null,
+      lcpInHero: last ? last.inHero : null,
       lcpText: last ? last.text : null,
       lcpUrl: last ? last.url : null,
       lcpEntries: vitals.lcp,

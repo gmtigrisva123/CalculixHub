@@ -21,7 +21,10 @@
  *     stylesheet so the cascade matches the live page: the rules that decide
  *     who sees the static frame (landing-static.css), the landing's own rules
  *     that apply to that markup (picked by beasties from the CSS this build
- *     emitted for the landing), and the reading version's styles;
+ *     emitted for the landing);
+ *   - the reading version's styles in a <noscript><style> right after it: a
+ *     browser running script never parses them (it holds the reading version
+ *     hidden), so they cost a JavaScript visitor nothing before first paint;
  *   - the page's JSON-LD (a data block: it never runs, so the CSP's script
  *     hash is not involved).
  */
@@ -140,7 +143,8 @@ export default function landingStatic() {
       let html = await readFile(htmlPath, 'utf8');
       if (html.split(ROOT_TAG).length !== 2) throw new Error(`landing-static: expected exactly one ${ROOT_TAG} in index.html`);
       if (!html.includes('</head>')) throw new Error('landing-static: index.html has no </head>');
-      const style = `<style id="lx-static-css">${staticCss}\n${critical}\n${readingCss}</style>`;
+      if (/<\/noscript/i.test(readingCss)) throw new Error('landing-static: the reading styles must not close their <noscript>');
+      const style = `<style id="lx-static-css">${staticCss}\n${critical}</style><noscript><style id="lx-reading-css">${readingCss}</style></noscript>`;
       const data = jsonLd.map(item => `<script type="application/ld+json">${scriptJson(item)}</script>`).join('');
       html = html.replace('</head>', `${style}${data}</head>`);
       html = html.replace(ROOT_TAG, `<div id="lx-static">${markup}</div>${ROOT_TAG}`);

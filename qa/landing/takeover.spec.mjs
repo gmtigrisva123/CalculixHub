@@ -204,14 +204,20 @@ test('phone profile: the LCP is the static hero @m1', async ({ browser }, testIn
   test.skip(testInfo.project.name !== 'phone', 'measured on the phone profile');
   const vitals = await measureVitals(browser, 'phone');
   const element = vitals.lcpElement || '';
-  // The static h1, one of its words, its text, or the hero lead.
-  const hero = /#lx-hero-title(?![\w-])|\.lx-hero-title(?![\w-])|\.lx-wi(?![\w-])|\.lx-w(?![\w-])|\.lx-hero-lead(?![\w-])/.test(element);
+  /*
+   * The largest paint must come from the static hero, painted from the HTML
+   * before any script has run (SPEC §2.6). Which of its elements that is, is
+   * Chrome's call: today the hero's grain, painted with the first frame, which
+   * outsizes any one word of the headline (each word is its own candidate, and
+   * the words wait in their masks for the cue).
+   */
+  const hero = vitals.lcpInHero === true;
   const report = readReport('takeover.json');
   report.lcp = { measuredAt: new Date().toISOString(), lcp: round(vitals.lcp), element: vitals.lcpElement, inStatic: vitals.lcpInStatic, text: vitals.lcpText, url: vitals.lcpUrl, entries: vitals.lcpEntries, fcp: round(vitals.fcp), cls: round(vitals.cls, 4) };
   writeReport('takeover.json', report);
   testInfo.annotations.push({ type: 'phone LCP', description: `${round(vitals.lcp)} ms, ${vitals.lcpElement} (in #lx-static: ${vitals.lcpInStatic})` });
 
-  expect.soft(hero, `the LCP element is the static hero's headline or lead (it was ${element || 'none'}; entries ${JSON.stringify(vitals.lcpEntries)})`).toBe(true);
+  expect.soft(hero, `the LCP element belongs to the static hero, #lx-static .lx-hero (it was ${element || 'none'}; entries ${JSON.stringify(vitals.lcpEntries)})`).toBe(true);
   expect.soft(vitals.lcpInStatic, 'the LCP element belonged to the static first frame (#lx-static)').toBe(true);
   if (ENFORCE) expect.soft(vitals.lcp, 'phone LCP, ms (SPEC M1: <= 2,500)').toBeLessThanOrEqual(2500);
 });
