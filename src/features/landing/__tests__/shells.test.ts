@@ -9,37 +9,52 @@ const NO_STATS = { registeredUsers: 0, testsCompleted: 0, problemsSolved: 0 };
 const render = (liveStats: LandingPageProps['liveStats'] = NO_STATS) =>
   renderToStaticMarkup(createElement(LandingPage, { liveStats, onSignIn: () => {}, onRegister: () => {} }));
 
-/** The attributes of every <section> in the markup, in document order. */
-const sections = (html: string): Record<string, string>[] =>
-  [...html.matchAll(/<section([^>]*)>/g)].map(([, attributes]) =>
-    Object.fromEntries([...attributes.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, name, value]) => [name, value])));
+interface Shell {
+  attributes: Record<string, string>;
+  /** The inline style, one entry per declaration. */
+  style: Record<string, string>;
+  inner: string;
+}
+
+/** Every <section> in the markup, in document order. */
+const shells = (html: string): Shell[] =>
+  [...html.matchAll(/<section([^>]*)>(.*?)<\/section>/g)].map(([, rawAttributes, inner]) => {
+    const attributes = Object.fromEntries([...rawAttributes.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, name, value]) => [name, value]));
+    const style = Object.fromEntries((attributes.style ?? '').split(';').filter(Boolean).map(declaration => {
+      const colon = declaration.indexOf(':');
+      return [declaration.slice(0, colon).trim(), declaration.slice(colon + 1).trim()];
+    }));
+    return { attributes, style, inner };
+  });
 
 describe('the landing v2 scene shells', () => {
   it('are all in the document from the first render, one per scene, in order', () => {
-    expect(sections(render()).map(section => section.id)).toEqual(SCENES.map(scene => scene.id));
+    expect(shells(render()).map(shell => shell.attributes.id)).toEqual(SCENES.map(scene => scene.id));
   });
 
-  it('carry each scene’s world, scroll budget and name', () => {
-    const found = sections(render());
+  it('carry exactly each scene’s world, scroll budget and name', () => {
+    const found = shells(render());
     SCENES.forEach((scene, index) => {
-      const section = found[index];
-      expect(section['data-world'], scene.id).toBe(scene.world);
-      expect(section['aria-label'], scene.id).toBe(scene.label);
-      expect('data-pinned' in section, scene.id).toBe(scene.pinned);
-      if (scene.budget === 'content') {
-        expect(section['data-budget'], scene.id).toBe('content');
-      } else {
-        expect(section['data-budget'], scene.id).toBe('fixed');
-        expect(section.style, scene.id).toContain(`--budget-desktop:${scene.budget.desktop}`);
-        expect(section.style, scene.id).toContain(`--budget-mobile:${scene.budget.mobile}`);
+      const { attributes, style } = found[index];
+      expect(attributes['data-world'], scene.id).toBe(scene.world);
+      expect(attributes['aria-label'], scene.id).toBe(scene.label);
+      expect('data-pinned' in attributes, scene.id).toBe(scene.pinned);
+      expect(attributes['data-budget'], scene.id).toBe(scene.budget === 'content' ? 'content' : 'fixed');
+      const expected: Record<string, string> = {};
+      if (scene.budget !== 'content') {
+        expected['--budget-desktop'] = String(scene.budget.desktop);
+        expected['--budget-mobile'] = String(scene.budget.mobile);
       }
-      if (scene.dawn) expect(section.style, scene.id).toContain(`--dawn:${scene.dawn}`);
+      if (scene.dawn) expected['--dawn'] = String(scene.dawn);
+      expect(style, scene.id).toEqual(expected);
     });
   });
 
-  it('give every pinned scene a sticky stage, and only those', () => {
-    const stages = render().match(/class="lx2-stage"/g) ?? [];
-    expect(stages).toHaveLength(SCENES.filter(scene => scene.pinned).length);
+  it('are empty, but for a sticky stage in each pinned scene', () => {
+    const found = shells(render());
+    SCENES.forEach((scene, index) => {
+      expect(found[index].inner, scene.id).toBe(scene.pinned ? '<div class="lx2-stage"></div>' : '');
+    });
   });
 
   it('never show the live stats they are handed', () => {

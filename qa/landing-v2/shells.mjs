@@ -133,6 +133,7 @@ for (const { name, options, mobile } of VIEWPORTS) {
   const map = await overview.newPage();
   await map.goto(`${BASE}/?landing=v2`, { waitUntil: 'networkidle' });
   await map.waitForSelector('.lx2 section');
+  await map.waitForSelector('#boot', { state: 'detached' }); // the first frame's cover fades out over the page
   await map.addStyleTag({ content: `
     .lx2 section { outline: ${mobile ? 4 : 10}px solid #80bdfb; outline-offset: -${mobile ? 4 : 10}px; }
     .lx2 section[data-world='day'] { outline-color: #f8bf6c; }

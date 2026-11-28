@@ -23,11 +23,14 @@ import { initialConfirmationElsewhere, initialEmailConfirmation, initialPassword
  *
  * Landing v2 («Signal», docs/landing-v2-brief.md) is built behind a flag until
  * it replaces this landing page: `?landing=v2` in the URL, or VITE_LANDING_V2=1
- * in the build environment (§15.1). Without either nothing changes. The two
- * landings are separate chunks, so a visit downloads only the one it shows.
+ * in the build environment (§15.1). Without either nothing changes, and v2 is
+ * never downloaded. The flag chooses only the landing drawn here: until Phase 7
+ * the forms (WelcomeScreen) still import the current landing as their way back,
+ * so a v2 visit fetches it too once the forms preload.
  */
 const landingV2 = (): boolean =>
-  import.meta.env.VITE_LANDING_V2 === '1' || new URLSearchParams(window.location.search).get('landing') === 'v2';
+  import.meta.env.VITE_LANDING_V2 === '1'
+  || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('landing') === 'v2');
 
 export const LandingPage = lazyWithPreload(() => (landingV2() ? import('../features/landing/LandingPage') : import('./landing/LandingPage')));
 export const AuthFlow = lazyWithPreload(() => import('./WelcomeScreen'));

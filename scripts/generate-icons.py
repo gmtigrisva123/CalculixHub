@@ -21,8 +21,8 @@ Requires Pillow, and numpy for the link-preview card. Outputs:
   /favicon.ico before (or instead of) reading the page's <link rel="icon">.
 - public/og-image.png  the 1200x630 card chat apps, social networks and search
   show when the site's link is shared: the landing hero in miniature, with the
-  figures read from archiveFigures.ts. Crawlers cache it by URL, so bump the
-  ?v= in index.html when it changes.
+  figures read from src/features/landing/data/archiveFigures.ts. Crawlers
+  cache it by URL, so bump the ?v= in index.html when it changes.
 - ios/ assets          the app icon and launch image, when ios/ exists.
 """
 
@@ -310,7 +310,7 @@ def load_font(names: list[str], size: int):
 
 def archive_figures(root: pathlib.Path) -> dict[str, int]:
     """The landing page's own figures, read from the file that holds them, so the card cannot disagree with the page."""
-    text = (root / "src" / "components" / "landing" / "archiveFigures.ts").read_text()
+    text = (root / "src" / "features" / "landing" / "data" / "archiveFigures.ts").read_text()
     figures = {}
     for key in ("problems", "papers", "firstYear", "lastYear"):
         match = re.search(rf"^\s{{2}}{key}:\s*(\d+),", text, re.M)

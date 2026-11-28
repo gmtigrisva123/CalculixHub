@@ -6,6 +6,9 @@
  * takes its mobile budget on a phone (narrower than 768px). A scene sized by
  * its content is at least one screen tall until its content arrives, plus any
  * dawn at its top. So the page has its full length from the first render.
+ *
+ * Heights are in svh alone: every browser the brief targets (§14.5) has it,
+ * and a vh line before a var()-based svh line could never act as a fallback.
  */
 
 .lx2 {
@@ -24,12 +27,10 @@
 }
 
 .lx2-scene[data-budget='fixed'] {
-  height: calc(var(--budget) * 1vh);
   height: calc(var(--budget) * 1svh);
 }
 
 .lx2-scene[data-budget='content'] {
-  min-height: calc((100 + var(--dawn, 0)) * 1vh);
   min-height: calc((100 + var(--dawn, 0)) * 1svh);
 }
 
@@ -37,6 +38,5 @@
 .lx2-stage {
   position: sticky;
   top: 0;
-  height: 100vh;
   height: 100svh;
 }
