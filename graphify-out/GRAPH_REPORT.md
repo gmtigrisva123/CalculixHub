@@ -1,7 +1,7 @@
 # Graph Report - CalculixHub  (2026-11-28)
 
 ## Corpus Check
-- 1002 files · ~1,383,178 words
+- 1002 files · ~1,383,333 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 119 file(s) not represented in the graph (top: .csv 51, .css 50, (none) 8)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5ad01d93`
+- Built from commit: `f37ce156`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -465,8 +465,8 @@
 1. `react` - 126 edges
 2. `motion` - 69 edges
 3. `lucide-react` - 60 edges
-4. `StageFrame` - 58 edges
-5. `TailwindConfigGenerator` - 58 edges
+4. `TailwindConfigGenerator` - 58 edges
+5. `StageFrame` - 58 edges
 6. `CommunityFeed()` - 58 edges
 7. `vitest` - 58 edges
 8. `Topic` - 45 edges
@@ -2215,7 +2215,7 @@ Nodes (3): white, $type, $value
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `clamp()` connect `clamp` to `MarginRails.tsx`?**
-  _High betweenness centrality (0.141) - this node is a cross-community bridge._
+  _High betweenness centrality (0.127) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `TailwindConfigGenerator` (e.g. with `TestGeneratedConfigIsValidJs` and `TestTailwindConfigGenerator`) actually correct?**
   _`TailwindConfigGenerator` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Capacitor`, `UIKit`, `RFC-9457` to the rest of the system?**
@@ -2223,8 +2223,8 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `.agents/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.019801980198019802 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `Inbox.tsx` to `TopicBoards.tsx`, `react`, `Community.tsx`, `glyphs.ts`, `Leaderboard.tsx`, `DeskSection.tsx`, `RaceDay.tsx`, `MathText`, `Dashboard.tsx`, `Profile.tsx`, `AuthContext.tsx`, `ArchiveLadder.tsx`, `Workspace.tsx`, `Settings.tsx`, `WelcomeScreen.tsx`, `GroundTones.tsx`, `package.json`, `AdminWorkspace.tsx`, `ArenaStage.tsx`, `ExamArchive.tsx`, `geminiClient.ts`, `dependencies`, `LandingNav.tsx`, `ThemeContext.tsx`, `EpicycleStage.tsx`, `geminiClient.ts`, `TopicTiles.tsx`, `Instruments.tsx`, `MomentumChart.tsx`, `archiveModel.ts`, `ParticleField.tsx`, `macbookStage.ts`, `WorkspaceShell.tsx`, `main.tsx`, `types.ts`, `Comments.tsx`, `useAuth`, `ArchiveHero.tsx`, `JourneyStack.tsx`, `EngineStory.tsx`, `plan.ts`, `lobbyModel.test.ts`, `Learn.tsx`, `shareCard.ts`, `Panel.tsx`, `feed.ts`, `PlansSection.tsx`, `MarginRails.tsx`, `model.ts`, `DeskSection.tsx`, `irt.ts`, `LandingPage.tsx`, `offline.ts`?**
-  _High betweenness centrality (0.091) - this node is a cross-community bridge._
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
 - **Should `.claude/skills/hallmark/references/component-cookbook.md` be split into smaller, more focused modules?**
   _Cohesion score 0.020618556701030927 - nodes in this community are weakly interconnected._
-- **Why does `Hero enrichment — when, what, and how much` connect `Hero enrichment — when, what, and how much` to `clamp`, `Eight enrichment archetypes`, `.claude/skills/hallmark/SKILL.md`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+- **Why does `Hero enrichment — when, what, and how much` connect `Hero enrichment — when, what, and how much` to `Eight enrichment archetypes`, `clamp`, `.agents/skills/hallmark/references/macrostructures.md`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._

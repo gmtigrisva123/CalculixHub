@@ -1356,9 +1356,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/DeskSection.tsx": {
-    "mtime": 1795843332.7210944,
-    "seen": 1795843941.6073864,
-    "ast_hash": "e8122d941b7df84dc55aae466606c519",
+    "mtime": 1795844449.5408583,
+    "seen": 1795845213.8460276,
+    "ast_hash": "081f87b85640633bf96dd0c6aa931ce7",
     "semantic_hash": ""
   },
   "src/components/landing/EngineStory.tsx": {
@@ -5874,9 +5874,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/threadBus.ts": {
-    "mtime": 1795840406.0091405,
-    "seen": 1795840672.748169,
-    "ast_hash": "153e046313b30aaea7639ddcb71a4aeb",
+    "mtime": 1795844449.5404103,
+    "seen": 1795845213.846112,
+    "ast_hash": "80ee56d511cc51d7ee234a7f7257df06",
     "semantic_hash": ""
   },
   "src/components/landing/threadEngine.ts": {
@@ -5940,9 +5940,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/sceneDesk.ts": {
-    "mtime": 1795843272.489062,
-    "seen": 1795843941.607491,
-    "ast_hash": "08f8b076e61557c765214bec359d25e2",
+    "mtime": 1795844864.0965111,
+    "seen": 1795845213.8460917,
+    "ast_hash": "35d0dcefe94f7ca837991786cfda2a65",
     "semantic_hash": ""
   },
   "src/components/landing/sceneFaq.ts": {
