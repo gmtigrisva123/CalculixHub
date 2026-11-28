@@ -12,37 +12,84 @@
  * The rooms are staggered rather than gridded, the lettering is a hand, and
  * the stage ends on a chalk ledge. All of it is still one honest row of four
  * links into the product.
+ *
+ * With the WebGL stage drawing (sceneTopics.ts), the thread arrives here as
+ * chalk dust that settles on the board, and each room's symbol is a 3D
+ * chalk glyph that answers the reader: it shudders and puffs dust at a wrong
+ * choice, and draws a chalk ring round itself at a right one while the dust
+ * swirls into the explanation. Each choice is told to the stage on the
+ * thread bus. The type symbol underneath is the drawing without WebGL, and
+ * it answers too: a small shake, and a ring drawn in the room's colour.
  */
 
-import { useState } from 'react';
-import { AnimatePresence, m, useAnimationControls, useReducedMotion } from 'motion/react';
+import { useRef, useState } from 'react';
+import { AnimatePresence, m, useAnimationControls, useReducedMotion, useTransform, type MotionValue } from 'motion/react';
 import MathText from '../MathText';
-import { TOPIC_ROOMS, type TopicRoom } from './topicRooms';
+import { TOPIC_ROOMS, ringPath, type TopicRoom } from './topicRooms';
 import { ChalkFilter, TOPIC_BOARDS } from './TopicBoards';
 import { Arrow, GLIDE, Magnetic, Rise, SplitText, useSpotlight } from './kit';
+import { useStageScroll } from './stageLayout';
+import { emitThread } from './threadBus';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
-/** Faint remains of what was rubbed out before the lesson, as on any real board. */
+/**
+ * Faint remains of what was rubbed out before the lesson, as on any real
+ * board, at three depths: the far ones rubbed nearly away and drifting
+ * slowest, the near ones freshest and drifting fastest as the board passes.
+ */
 const GHOSTS = [
-  { text: 'a² + b² = c²', x: '3%', y: '16%', turn: -7, size: 30 },
-  { text: 'e^{iπ} + 1 = 0', x: '63%', y: '5%', turn: 4, size: 28 },
-  { text: '∑ 1/n² = π²/6', x: '71%', y: '51%', turn: -3, size: 26 },
-  { text: 'n! ≡ ?', x: '1%', y: '58%', turn: 5, size: 30 },
-  { text: '(n choose k)', x: '40%', y: '91%', turn: -2, size: 26 },
-  { text: '∠ABC = 90°', x: '84%', y: '88%', turn: 6, size: 26 },
-];
+  { text: 'a² + b² = c²', x: '3%', y: '16%', turn: -7, size: 30, depth: 1 },
+  { text: 'e^{iπ} + 1 = 0', x: '63%', y: '5%', turn: 4, size: 28, depth: 0 },
+  { text: '∑ 1/n² = π²/6', x: '71%', y: '51%', turn: -3, size: 26, depth: 2 },
+  { text: 'n! ≡ ?', x: '1%', y: '58%', turn: 5, size: 30, depth: 0 },
+  { text: '(n choose k)', x: '40%', y: '91%', turn: -2, size: 26, depth: 1 },
+  { text: '∠ABC = 90°', x: '84%', y: '88%', turn: 6, size: 26, depth: 2 },
+  { text: 'sin²θ + cos²θ = 1', x: '46%', y: '27%', turn: 3, size: 24, depth: 0 },
+  { text: 'x ≡ 2 (mod 3)', x: '8%', y: '79%', turn: -4, size: 27, depth: 2 },
+  { text: 'V − E + F = 2', x: '57%', y: '71%', turn: 2, size: 24, depth: 1 },
+  { text: 'φ² = φ + 1', x: '27%', y: '44%', turn: -5, size: 28, depth: 2 },
+] as const;
+
+/** How far each depth drifts against the board over its passage, px: far, middle, near. */
+const DRIFT: [number, number][] = [[-70, 70], [90, -90], [240, -240]];
+
+/** The ring the type symbol draws round itself when the room is answered (the 3D glyph's ring, in SVG). */
+const RING_D = (() => {
+  const points = ringPath(64).map(([x, y]) => [50 + x * 34, 50 - y * 34]);
+  return points.map(([x, y], index) => `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join('');
+})();
+
+function Ghosts({ drift, still }: { drift: MotionValue<number>; still: boolean }) {
+  const far = useTransform(drift, [0, 1], DRIFT[0]);
+  const middle = useTransform(drift, [0, 1], DRIFT[1]);
+  const near = useTransform(drift, [0, 1], DRIFT[2]);
+  const layers = [far, middle, near];
+  return (
+    <div className="lx-topics-ghosts" aria-hidden="true">
+      {GHOSTS.map(ghost => (
+        <m.span
+          key={ghost.text}
+          data-depth={ghost.depth}
+          style={{ left: ghost.x, top: ghost.y, fontSize: ghost.size, rotate: ghost.turn, y: still ? 0 : layers[ghost.depth] }}
+        >
+          {ghost.text}
+        </m.span>
+      ))}
+    </div>
+  );
+}
 
 export default function TopicsChapter({ onRegister }: { onRegister: () => void }) {
+  const reduce = Boolean(useReducedMotion());
+  const stageRef = useRef<HTMLDivElement>(null);
+  // On the page clock, so the drifting formulas and the dust on the stage read one scroll.
+  const drift = useStageScroll(stageRef, ['start end', 'end start']);
   return (
     <section className="lx-topics" id="topics" aria-labelledby="lx-topics-title">
       <ChalkFilter />
-      <div className="lx-topics-stage" data-tone="ink">
-        <div className="lx-topics-ghosts" aria-hidden="true">
-          {GHOSTS.map(ghost => (
-            <span key={ghost.text} style={{ left: ghost.x, top: ghost.y, fontSize: ghost.size, rotate: `${ghost.turn}deg` }}>{ghost.text}</span>
-          ))}
-        </div>
+      <div ref={stageRef} className="lx-topics-stage" data-tone="ink">
+        <Ghosts drift={drift} still={reduce} />
 
         <header className="lx-topics-head lx-wrap">
           <div>
@@ -99,6 +146,7 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
   const spot = useSpotlight<HTMLElement>();
   const reduce = Boolean(useReducedMotion());
   const shake = useAnimationControls();
+  const shudder = useAnimationControls();
   const [struck, setStruck] = useState<number[]>([]);
   const [solved, setSolved] = useState(false);
   const [nudge, setNudge] = useState(false);
@@ -106,12 +154,18 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
 
   const choose = (choice: number) => {
     if (solved || struck.includes(choice)) return;
-    if (choice === problem.answer) {
+    const right = choice === problem.answer;
+    // The stage's glyph answers too: a shudder and a puff, or a ring and a swirl of dust.
+    emitThread({ type: 'topic-choice', room: index, right });
+    if (right) {
       setSolved(true);
       return;
     }
     setStruck(list => [...list, choice]);
-    if (!reduce) void shake.start({ x: [0, -7, 6, -4, 2, 0], transition: { duration: 0.42, ease: 'easeOut' } });
+    if (!reduce) {
+      void shake.start({ x: [0, -7, 6, -4, 2, 0], transition: { duration: 0.42, ease: 'easeOut' } });
+      void shudder.start({ rotate: [0, -11, 9, -6, 3, 0], transition: { duration: 0.6, ease: 'easeOut' } });
+    }
   };
 
   const status = solved
@@ -126,7 +180,18 @@ function TopicRoomCard({ room, index }: { room: TopicRoom; index: number }) {
     <article ref={spot} className="lx-topic" id={id} aria-labelledby={`${id}-title`} data-topic={index + 1} data-solved={solved || undefined}>
       <Rise className="lx-topic-inner" y={44} amount={0.2} panel>
         <header className="lx-topic-head">
-          <span className="lx-topic-symbol" aria-hidden="true">{room.symbol}</span>
+          {/* The drawing without WebGL; with it, the stage's 3D chalk glyph stands exactly here. */}
+          <m.span className="lx-topic-symbol" data-topic-glyph data-gl-swap aria-hidden="true" animate={shudder}>
+            {room.symbol}
+            <svg className="lx-topic-ring" viewBox="0 0 100 100" fill="none" aria-hidden="true" focusable="false">
+              <m.path
+                d={RING_D}
+                initial={false}
+                animate={{ pathLength: solved ? 1 : 0, opacity: solved ? 1 : 0 }}
+                transition={reduce ? { duration: 0 } : { pathLength: { duration: 0.95, ease: GLIDE }, opacity: { duration: 0.15 } }}
+              />
+            </svg>
+          </m.span>
         </header>
         <h3 id={`${id}-title`} className="lx-topic-title">{room.topic}</h3>
         <p className="lx-topic-feel">{room.feel}</p>

@@ -98,3 +98,25 @@ export const TOPIC_ROOMS: TopicRoom[] = [
     reason: 'Since $2024=2^3\\cdot 11\\cdot 23$, the prime $23$ has to appear, and it first does in $23!$. The $2^3$ and $11$ are already there.',
   },
 ];
+
+/**
+ * The chalk ring a room draws round its symbol when it is answered: a
+ * circle by hand, a little wider than tall, begun at the upper left and run
+ * clockwise a touch past where it started, drifting outward as hands do, so
+ * the join overlaps instead of closing. Points in units of the symbol's
+ * height, y up, centred on the symbol. The WebGL stage draws it in chalk
+ * round the 3D glyph (sceneTopics.ts); without the stage the DOM draws the
+ * same path round the type.
+ */
+export function ringPath(samples = 96): [number, number][] {
+  const start = 2.35;
+  const sweep = Math.PI * 2 * 1.09;
+  const points: [number, number][] = [];
+  for (let i = 0; i < samples; i += 1) {
+    const s = i / (samples - 1);
+    const a = start - sweep * s;
+    const r = 1 + 0.035 * Math.sin(a * 3 + 0.7) + 0.07 * s;
+    points.push([Math.cos(a) * 0.98 * r, Math.sin(a) * 0.84 * r]);
+  }
+  return points;
+}

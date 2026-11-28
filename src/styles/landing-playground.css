@@ -3,4 +3,97 @@
  *
  * This chapter's styles for the 3D rebuild. Older shared rules for it still
  * live in landing-experience.css; what is new or changed is here.
+ *
+ * The thread of light arrives in this chapter from the engine above and
+ * closes into the figure's circle (scenePlayground.ts). It is drawn on the
+ * fixed WebGL canvas, which sits over the sections' type; this section makes
+ * no stacking context, so its heading can simply stand above the canvas and
+ * the light passes behind the words on its way down.
  */
+
+.lx-play > .lx-wrap > .lx-section-head { position: relative; z-index: 6; }
+
+/* --------------------------------------------------------------------------
+ * The card: it rises into place with the scroll, and tilts toward the
+ * pointer in perspective. Both are transforms on two nested layers, so the
+ * card is never laid out again while it moves.
+ * ------------------------------------------------------------------------ */
+
+.lx-play-arrive { will-change: transform, opacity; }
+.lx-play .lx-bezel { will-change: transform; }
+.lx-play-card { position: relative; }
+
+/*
+ * A soft specular sheen where the pointer is, as on a sheet of good paper
+ * turned toward a lamp. It is one gradient on a layer nearly twice the
+ * card's size (so its edge is never on the card), moved by transform only.
+ * Its light is kept faint enough that the type under it stays well inside
+ * AA contrast.
+ */
+.lx-play-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.7s var(--lx-glide);
+}
+.lx-play-sheen > span {
+  position: absolute;
+  inset: -45%;
+  background: radial-gradient(21% 28% at 50% 50%, oklch(100% 0 0 / 0.42), oklch(100% 0 0 / 0.15) 42%, oklch(100% 0 0 / 0.04) 72%, oklch(100% 0 0 / 0) 100%);
+  will-change: transform;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lx-play .lx-bezel:hover .lx-play-sheen { opacity: 1; }
+}
+.lx-play .lx-bezel[data-held] .lx-play-sheen { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+ * The figure's own box. The SVG fills it exactly (no inline gap, no margin
+ * of its own), so the stage can find the circle from the box.
+ * ------------------------------------------------------------------------ */
+
+.lx-chord-frame { margin: 8px 0 4px; }
+.lx-chord-frame > .lx-chord-svg { display: block; margin: 0; }
+
+/* --------------------------------------------------------------------------
+ * While C is held, the one number that refuses to move pulses.
+ * ------------------------------------------------------------------------ */
+
+.lx-invariant-power { position: relative; isolation: isolate; }
+.lx-invariant-power strong { display: inline-block; transform-origin: 100% 62%; }
+.lx-invariant-power::after {
+  content: '';
+  position: absolute;
+  right: -22px;
+  bottom: -16px;
+  z-index: -1;
+  width: 118px;
+  height: 74px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(46.5% 0.075 222 / 0.2), oklch(46.5% 0.075 222 / 0.06) 60%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+.lx-invariant[data-held] .lx-invariant-power strong { animation: lx-power-pulse 1.3s var(--lx-glide) infinite; }
+.lx-invariant[data-held] .lx-invariant-power::after { animation: lx-power-halo 1.3s var(--lx-glide) infinite; }
+@keyframes lx-power-pulse {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.09); }
+  100% { transform: scale(1); }
+}
+@keyframes lx-power-halo {
+  0% { opacity: 0; transform: scale(0.72); }
+  22% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-play-sheen { display: none; }
+  .lx-invariant[data-held] .lx-invariant-power strong,
+  .lx-invariant[data-held] .lx-invariant-power::after { animation: none; }
+  .lx-invariant[data-held] .lx-invariant-power::after { opacity: 0.8; }
+}
