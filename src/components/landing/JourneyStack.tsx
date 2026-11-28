@@ -1,18 +1,35 @@
 /**
- * "The workspace": four ways in, as cards that stack.
+ * "The workspace": four ways in, as cards dealt onto a pile.
  *
  * Each card is sticky a little lower than the one before, so scrolling deals
- * them onto a pile; as a card is covered it settles back — smaller, dimmer —
- * like paper under paper. Each carries a small working picture of its part of
- * the product, which plays when the card arrives and rests when it leaves.
+ * them onto a pile. A card arrives a touch raised and turned, and squares up
+ * as it lands. The card it lands on tips back in 3D the way paper under paper
+ * does: its top edge leans away from you, it sinks back and gets a little
+ * smaller for every card on it, and a dim layer rises over it. Every pose is a
+ * pure function of the scroll (workspacePile.ts), written from the page clock
+ * in the scroll's own frame, so the pile rewinds exactly and the stage's
+ * thread, waiting in the margin beside it (sceneWorkspace.ts), reads the same
+ * numbers.
+ *
+ * Each card carries a small working picture of its part of the product. It
+ * plays only while its card is on top of the pile, and rests the moment the
+ * next card covers it.
+ *
+ * On a narrow screen the cards are dealt into a plain column instead (a pinned
+ * card taller than the screen could never be read to its foot), with no 3D,
+ * and each picture plays while its card is on screen. With reduced motion the
+ * pile keeps its layout and its dimming, but nothing tips or turns.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AnimatePresence, m, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import MathText from '../MathText';
 import { ENGINE_RUN } from './engineRun';
+import { PRIORITY, currentTick, onTick, type Tick } from './pageClock';
+import { docBox, onMeasure } from './stageLayout';
+import { cardOnTop, cardPose, cardTransform, measurePile, pileAt, type PileBox, type PileSlot, type PileState } from './workspacePile';
 import { useMediaQuery } from '../../hooks/useBreakpoint';
-import { Arrow, GLIDE, Rise, SplitText } from './kit';
+import { Arrow, GLIDE, SplitText } from './kit';
 
 interface JourneyStackProps {
   onRegister: () => void;
@@ -24,72 +41,135 @@ interface Step {
   action: string;
   href?: string;
   tone: 'paper' | 'mist' | 'ink' | 'cream';
-  visual: ReactNode;
+  visual: (active: boolean) => ReactNode;
 }
 
+const STEPS: Step[] = [
+  {
+    title: 'Find your level.',
+    copy: 'A quiz that adapts to every answer you give.',
+    action: 'Find my level',
+    tone: 'paper',
+    visual: active => <PlacementVisual active={active} />,
+  },
+  {
+    title: 'Practise with hints and solutions.',
+    copy: 'Try a problem, take a hint, then read the full solution.',
+    action: 'Start practising',
+    href: '/?auth=signup&tab=learn',
+    tone: 'mist',
+    visual: active => <LearnVisual active={active} />,
+  },
+  {
+    title: 'Compete in timed contests.',
+    copy: 'Live, timed contests against other students.',
+    action: 'See the Arena',
+    href: '/?auth=signup&tab=compete',
+    tone: 'ink',
+    visual: active => <ArenaVisual active={active} />,
+  },
+  {
+    title: 'A nudge, not the answer.',
+    copy: 'Stuck? The tutor asks a guiding question. You can also post the problem in the community.',
+    action: 'Ask in the community',
+    href: '/?auth=signup&tab=community',
+    tone: 'cream',
+    visual: active => <TutorVisual active={active} />,
+  },
+];
+
 export default function JourneyStack({ onRegister }: JourneyStackProps) {
+  const reduce = Boolean(useReducedMotion());
+  // Only a wide screen pins the pile; below it the cards stand in a plain column.
+  const wide = useMediaQuery('(min-width: 901px)');
+  const mode = wide ? 'pile' : 'column';
   const stackRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: stackRef, offset: ['start start', 'end end'] });
-  const steps: Step[] = [
-    {
-      title: 'Find your level.',
-      copy: 'A quiz that adapts to every answer you give.',
-      action: 'Find my level',
-      tone: 'paper',
-      visual: <PlacementVisual />,
-    },
-    {
-      title: 'Practise with hints and solutions.',
-      copy: 'Try a problem, take a hint, then read the full solution.',
-      action: 'Start practising',
-      href: '/?auth=signup&tab=learn',
-      tone: 'mist',
-      visual: <LearnVisual />,
-    },
-    {
-      title: 'Compete in timed contests.',
-      copy: 'Live, timed contests against other students.',
-      action: 'See the Arena',
-      href: '/?auth=signup&tab=compete',
-      tone: 'ink',
-      visual: <ArenaVisual />,
-    },
-    {
-      title: 'A nudge, not the answer.',
-      copy: 'Stuck? The tutor asks a guiding question. You can also post the problem in the community.',
-      action: 'Ask in the community',
-      href: '/?auth=signup&tab=community',
-      tone: 'cream',
-      visual: <TutorVisual />,
-    },
-  ];
+  // Which cards' pictures may play: a bit per card.
+  const [playing, setPlaying] = useState(0);
+
+  useLayoutEffect(() => {
+    const stack = stackRef.current;
+    if (!stack) return;
+    const cards = Array.from(stack.querySelectorAll<HTMLElement>('[data-pile-card]'));
+    const dims = Array.from(stack.querySelectorAll<HTMLElement>('[data-pile-dim]'));
+    const pinned = mode === 'pile';
+    let pile: { container: PileBox; slots: PileSlot[] } | null = null;
+    const state: PileState = { tops: [], covered: [], dealt: [] };
+    let mask = -1;
+    // The last value written to each element, per property: the DOM is only touched when a value changes.
+    const written = { transform: new Map<HTMLElement, string>(), opacity: new Map<HTMLElement, string>() };
+    const put = (element: HTMLElement | undefined, property: 'transform' | 'opacity', value: string) => {
+      if (!element || written[property].get(element) === value) return;
+      written[property].set(element, value);
+      element.style[property] = value;
+    };
+
+    const update = (tick: Pick<Tick, 'y' | 'vh'>) => {
+      if (!pile) return;
+      pileAt(pile.slots, pile.container, tick.y, tick.vh, state);
+      let next = 0;
+      if (pinned) {
+        for (let i = 0; i < cards.length; i += 1) {
+          const pose = cardPose(state.covered[i] ?? 0, state.dealt[i] ?? 1, i);
+          // With reduced motion nothing tips or turns; the dimming is a fade, and stays.
+          if (!reduce) put(cards[i], 'transform', cardTransform(pose));
+          put(dims[i], 'opacity', pose.dim.toFixed(3));
+          put(dims[i], 'transform', `translate3d(0px, ${((1 - pose.rise) * 100).toFixed(2)}%, 0px)`);
+        }
+        const top = cardOnTop(state, pile.slots, tick.vh);
+        next = top >= 0 ? 1 << top : 0;
+      } else {
+        // In the column every card is its own top: its picture plays while most of it is on screen.
+        pile.slots.forEach((slot, i) => {
+          const top = state.tops[i];
+          const seen = Math.min(tick.vh, top + slot.height) - Math.max(0, top);
+          if (seen > Math.min(slot.height, tick.vh) * 0.45) next |= 1 << i;
+        });
+      }
+      if (next !== mask) {
+        mask = next;
+        setPlaying(next);
+      }
+    };
+
+    const stopMeasure = onMeasure(() => {
+      pile = measurePile(stack, element => docBox(element).top, pinned);
+      update(currentTick());
+    });
+    const stopTick = onTick(update, PRIORITY.progress + 2);
+    return () => {
+      stopMeasure();
+      stopTick();
+      // Leaving the pile (a resize to a phone, reduced motion switched on): no pose is left behind.
+      for (const element of written.transform.keys()) element.style.transform = '';
+      for (const element of written.opacity.keys()) element.style.opacity = '';
+    };
+  }, [mode, reduce]);
 
   return (
-    <section className="lx-journey" id="workspace" data-tone="paper" aria-labelledby="lx-journey-title">
+    <section className="lx-journey" id="workspace" data-tone="paper" data-mode={mode} aria-labelledby="lx-journey-title">
       <div className="lx-wrap">
         <header className="lx-section-head">
           <SplitText as="h2" id="lx-journey-title" className="lx-h2" text={'Practise, compete,\nget *unstuck.*'} />
         </header>
-        <div className="lx-stack" ref={stackRef}>
-          {steps.map((step, index) => (
-            <StackCard key={step.title} step={step} index={index} total={steps.length} progress={scrollYProgress} onRegister={onRegister} />
+        <div className="lx-stack" ref={stackRef} data-pile>
+          {STEPS.map((step, index) => (
+            <StackCard key={step.title} step={step} index={index} active={Boolean(playing & (1 << index))} onRegister={onRegister} />
           ))}
+          {/* Room for the last card to land and the whole pile to rest a moment before it leaves. */}
+          <div className="lx-pile-hold" aria-hidden="true" />
+          {/* The margin rule beside the pile, for a page without the WebGL stage (which draws it in light). */}
+          <i className="lx-pile-rule" data-gl-swap aria-hidden="true" />
         </div>
       </div>
     </section>
   );
 }
 
-function StackCard({ step, index, total, progress, onRegister }: { step: Step; index: number; total: number; progress: MotionValue<number>; onRegister: () => void }) {
-  const reduce = useReducedMotion();
-  // Only a pinned pile settles back; in the narrow, unpinned column every card stays as it is.
-  const pinned = useMediaQuery('(min-width: 901px)') && !reduce;
-  const start = index / total;
-  const scale = useTransform(progress, [start, 1], [1, pinned ? 1 - (total - 1 - index) * 0.04 : 1]);
-  const dim = useTransform(progress, [start + 0.5 / total, 1], [0, pinned ? (total - 1 - index) * 0.12 : 0]);
+function StackCard({ step, index, active, onRegister }: { step: Step; index: number; active: boolean; onRegister: () => void }) {
   return (
-    <div className="lx-stack-slot" style={{ ['--i' as string]: index }}>
-      <m.article className="lx-card" data-card-tone={step.tone} data-tone={step.tone === 'ink' ? 'ink' : undefined} style={{ scale }}>
+    <div className="lx-stack-slot" data-pile-slot style={{ ['--i' as string]: index }}>
+      <article className="lx-card" data-pile-card data-card-tone={step.tone} data-tone={step.tone === 'ink' ? 'ink' : undefined} data-active={active ? 'true' : 'false'}>
         <div className="lx-card-copy">
           <h3 className="lx-card-title">{step.title}</h3>
           <p className="lx-card-text">{step.copy}</p>
@@ -97,9 +177,9 @@ function StackCard({ step, index, total, progress, onRegister }: { step: Step; i
             ? <a className="lx-link" href={step.href}>{step.action} <Arrow size={15} /></a>
             : <button type="button" className="lx-link" onClick={onRegister}>{step.action} <Arrow direction="right" size={15} /></button>}
         </div>
-        <div className="lx-card-visual" aria-hidden="true">{step.visual}</div>
-        <m.div className="lx-card-dim" style={{ opacity: dim }} aria-hidden="true" />
-      </m.article>
+        <div className="lx-card-visual" aria-hidden="true">{step.visual(active)}</div>
+        <div className="lx-card-dim" data-pile-dim aria-hidden="true" />
+      </article>
     </div>
   );
 }
@@ -108,18 +188,19 @@ function StackCard({ step, index, total, progress, onRegister }: { step: Step; i
 // Visuals
 // ---------------------------------------------------------------------------
 
-/** Steps through the landing page's placement replay on a loop while on screen. */
-function useLoop(length: number, interval: number) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.4 });
+/**
+ * A step counter that ticks only while its card is on top. Under reduced
+ * motion it holds the last step, the finished picture, and never ticks.
+ */
+function useLoop(length: number, interval: number, active: boolean) {
   const reduce = useReducedMotion();
   const [tick, setTick] = useState(reduce ? length - 1 : 0);
   useEffect(() => {
-    if (!inView || reduce) return;
+    if (!active || reduce) return;
     const timer = window.setInterval(() => setTick(value => (value + 1) % length), interval);
     return () => window.clearInterval(timer);
-  }, [inView, reduce, length, interval]);
-  return { ref, tick, inView };
+  }, [active, reduce, length, interval]);
+  return tick;
 }
 
 const MINI_STEPS = ENGINE_RUN.steps;
@@ -132,12 +213,12 @@ const MINI_PATHS = MINI_STEPS.map(step => miniCurve(step.weights));
 const MINI_LEVEL = MINI_STEPS.slice(1).map((step, index, all) =>
   all.slice(0, index).filter(previous => Math.abs(previous.item!.b - step.item!.b) < 0.2).length);
 
-function PlacementVisual() {
-  const { ref, tick } = useLoop(MINI_STEPS.length + 3, 900);
+function PlacementVisual({ active }: { active: boolean }) {
+  const tick = useLoop(MINI_STEPS.length + 3, 900, active);
   const index = Math.min(tick, MINI_STEPS.length - 1);
   const step = MINI_STEPS[index];
   return (
-    <div className="lx-vis lx-vis-placement" ref={ref}>
+    <div className="lx-vis lx-vis-placement" data-active={active ? 'true' : 'false'}>
       <div className="lx-vis-readout">
         <span>{index ? <>Question <b className="lx-tabular">{index}</b></> : 'Before the first answer'}</span>
         <span className="lx-vis-pill">{step.tier}</span>
@@ -163,32 +244,36 @@ function PlacementVisual() {
   );
 }
 
-function LearnVisual() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.5 });
-  const reduce = useReducedMotion();
-  const show = inView || Boolean(reduce);
-  const at = (delay: number) => ({ initial: { opacity: 0, y: 10 }, animate: show ? { opacity: 1, y: 0 } : undefined, transition: { duration: 0.7, ease: GLIDE, delay } });
+/** The worked problem, revealed a line at a time: the hint, two steps, the check. Then it starts over. */
+const LEARN_STEPS = 9;
+
+function LearnVisual({ active }: { active: boolean }) {
+  const tick = useLoop(LEARN_STEPS, 650, active);
+  const at = (from: number, delay = 0) => ({
+    initial: false as const,
+    animate: tick >= from ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 },
+    transition: { duration: tick >= from ? 0.7 : 0.25, ease: GLIDE, delay: tick >= from ? delay : 0 },
+  });
   return (
-    <div className="lx-vis lx-vis-learn" ref={ref}>
+    <div className="lx-vis lx-vis-learn" data-active={active ? 'true' : 'false'}>
       <div className="lx-sheet-card">
         <span className="lx-sheet-tag">Algebra</span>
         <MathText className="lx-sheet-question" text="If $x+y+z=0$, why does $x^3+y^3+z^3=3xyz$?" />
         <m.p
           className="lx-sheet-pencil"
-          initial={{ clipPath: 'inset(0 100% 0 0)' }}
-          animate={show ? { clipPath: 'inset(0 0% 0 0)' } : undefined}
-          transition={{ duration: 1.6, ease: [0.45, 0, 0.2, 1], delay: 0.5 }}
+          initial={false}
+          animate={{ clipPath: tick >= 1 ? 'inset(0 0% 0 0)' : 'inset(0 100% 0 0)' }}
+          transition={tick >= 1 ? { duration: 1.6, ease: [0.45, 0, 0.2, 1] } : { duration: 0.25, ease: GLIDE }}
         >
           Look for a factor before you expand.
         </m.p>
-        <m.div className="lx-sheet-step" {...at(1.9)}>
+        <m.div className="lx-sheet-step" {...at(3)}>
           <MathText text="$x^3+y^3+z^3-3xyz$" />
         </m.div>
-        <m.div className="lx-sheet-step" {...at(2.3)}>
+        <m.div className="lx-sheet-step" {...at(4)}>
           <MathText text="$=(x+y+z)(x^2+y^2+z^2-xy-yz-zx)$" />
         </m.div>
-        <m.div className="lx-sheet-step is-final" {...at(2.8)}>
+        <m.div className="lx-sheet-step is-final" {...at(5)}>
           <MathText text="$=0$" />
           <span className="lx-sheet-check">✓ so the two sides agree</span>
         </m.div>
@@ -205,12 +290,12 @@ const SOLVERS = [
 ];
 const ROUNDS = [[62, 71, 55, 48], [74, 71, 58, 49], [74, 78, 64, 57], [86, 78, 66, 61]];
 
-function ArenaVisual() {
-  const { ref, tick } = useLoop(ROUNDS.length, 2100);
+function ArenaVisual({ active }: { active: boolean }) {
+  const tick = useLoop(ROUNDS.length, 2100, active);
   const scores = ROUNDS[tick];
   const order = SOLVERS.map((solver, index) => ({ ...solver, score: scores[index] })).sort((a, b) => b.score - a.score);
   return (
-    <div className="lx-vis lx-vis-arena" ref={ref}>
+    <div className="lx-vis lx-vis-arena" data-active={active ? 'true' : 'false'}>
       <div className="lx-arena-clock">
         <svg viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="50" className="lx-arena-track" />
@@ -239,13 +324,13 @@ const CHAT = [
   { who: 'tutor', text: 'Exactly. Now, where could the centre be?' },
 ] as const;
 
-function TutorVisual() {
-  const { ref, tick, inView } = useLoop(CHAT.length + 2, 1700);
+function TutorVisual({ active }: { active: boolean }) {
+  const tick = useLoop(CHAT.length + 2, 1700, active);
   const shown = Math.min(CHAT.length, tick + 1);
   return (
-    <div className="lx-vis lx-vis-tutor" ref={ref}>
+    <div className="lx-vis lx-vis-tutor" data-active={active ? 'true' : 'false'}>
       <AnimatePresence initial={false}>
-        {inView && CHAT.slice(0, shown).map((line, index) => (
+        {CHAT.slice(0, shown).map((line, index) => (
           <m.p
             key={index}
             className={line.who === 'tutor' ? 'lx-bubble is-tutor' : 'lx-bubble'}
@@ -259,7 +344,7 @@ function TutorVisual() {
           </m.p>
         ))}
       </AnimatePresence>
-      {inView && shown < CHAT.length && (
+      {active && shown < CHAT.length && (
         <span className="lx-typing" aria-hidden="true"><span /><span /><span /></span>
       )}
     </div>

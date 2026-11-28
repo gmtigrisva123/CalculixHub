@@ -131,8 +131,8 @@ function Rails() {
     const grids = Array.from(root.querySelectorAll<HTMLElement>('.mr-grid > i'));
     const rulers = Array.from(root.querySelectorAll<HTMLElement>('.mr-ruler > i'));
     const written = { arrive: '', tail: '' };
-    // The ink stages, and the archive's full-bleed marquee. Where one reaches into a margin, the margin steps aside for it.
-    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee'));
+    // The ink stages, and the archive's full-bleed marquee and staircase. Where one reaches into a margin, the margin steps aside for it.
+    const stages = Array.from(document.querySelectorAll<HTMLElement>('.lx-hero-stage, .lx-engine-stage, .lx-topics-stage, .lx-desk-stage, .lx-final-stage, .lx-marquee, .lx-stairs-pin'));
     const hero = document.querySelector<HTMLElement>('.lx-hero-stage');
     const masks = ['', ''];
     type Box = { top: number; bottom: number; left: number; right: number };

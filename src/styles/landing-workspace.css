@@ -3,4 +3,66 @@
  *
  * This chapter's styles for the 3D rebuild. Older shared rules for it still
  * live in landing-experience.css; what is new or changed is here.
+ *
+ * The pile is CSS 3D: each sticky slot is its own little camera, looking down
+ * at the card from above, so a card pushed back into the pile also rises
+ * toward the vanishing point and its top edge shows above the card on it.
+ * JourneyStack.tsx writes each card's pose (workspacePile.ts) as a transform;
+ * nothing here is animated by CSS while scrolling.
  */
+
+.lx-journey {
+  /* The margin beside the pile, where the thread waits as a rule: the margin of your working. */
+  --pile-margin: clamp(34px, 3.6vw, 54px);
+}
+
+.lx-journey[data-mode='pile'] .lx-stack { padding-left: var(--pile-margin); }
+.lx-journey[data-mode='pile'] .lx-stack-slot {
+  /* Dealt a little lower each time, and clear of the nav island above (its foot is near 88px). */
+  top: calc(118px + var(--i) * 24px);
+  perspective: 1500px;
+  /* The eye is well above the pile, so a card pushed back into it rises toward the vanishing point and its top shows. */
+  perspective-origin: 50% -130%;
+}
+/* The last card lands, and the finished pile rests a moment before it leaves. */
+.lx-pile-hold { display: none; }
+.lx-journey[data-mode='pile'] .lx-pile-hold { display: block; height: calc(24svh + 64px); }
+.lx-journey[data-mode='pile'] .lx-card {
+  /* Paper under paper tips back about its foot. */
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+/*
+ * The dim layer rises over a covered card from its foot, as the card on it is
+ * dealt. It is taller than the card, with a soft leading edge that is carried
+ * up past the card's top once it has fully risen, so no hard line is drawn.
+ */
+.lx-card .lx-card-dim {
+  inset: -32% 0 0 0;
+  opacity: 0;
+  transform: translate3d(0, 100%, 0);
+  background: linear-gradient(0deg, oklch(13% 0.03 232) 0%, oklch(13% 0.03 232 / 0.8) 60%, oklch(13% 0.03 232 / 0) 76%);
+  will-change: opacity, transform;
+}
+
+/* A picture only moves while its card is on top; under the pile, every loop in it rests. */
+.lx-vis[data-active='false'],
+.lx-vis[data-active='false'] *,
+.lx-vis[data-active='false'] *::before,
+.lx-vis[data-active='false'] *::after { animation-play-state: paused; }
+
+/* The margin rule, drawn in ink for a page without the WebGL stage (the stage draws it in light). */
+.lx-pile-rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--pile-margin) * 0.4);
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, oklch(46.5% 0.075 222 / 0.38) 6%, oklch(46.5% 0.075 222 / 0.38) 94%, transparent);
+}
+.lx-journey[data-mode='column'] .lx-pile-rule { left: -11px; }
+@media (max-width: 560px) {
+  .lx-journey[data-mode='column'] .lx-pile-rule { left: -10px; }
+}

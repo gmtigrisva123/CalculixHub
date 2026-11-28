@@ -3,4 +3,361 @@
  *
  * This chapter's styles for the 3D rebuild. Older shared rules for it still
  * live in landing-experience.css; what is new or changed is here.
+ *
+ * Four stacks of paper on one floor, built from plain boxes in CSS 3D: a front
+ * face showing the edges of the stacked sheets, a side, a top, and on top the
+ * one sheet that lifts. The faces are drawn once (static gradients, never
+ * animated); scrolling only moves the track and the sheets by transform, and
+ * fades the labels. ArchiveLadder.tsx writes those from archiveStairs.ts, and
+ * the stage projects the thread from the same numbers, so the sizes below are
+ * read back from the DOM rather than repeated anywhere in script.
  */
+
+.lx-stairs {
+  /* One stack: its front's width, its depth (also how tall its top sheet stands), the tallest one's height. */
+  --ream-w: clamp(252px, 23vw, 360px);
+  --ream-d: calc(var(--ream-w) * 1.18);
+  --ream-h: clamp(330px, 60svh, 620px);
+  --ream-gap: calc(var(--ream-w) * 0.58);
+  /* Paper: the sheets' faces, their edges, and the darker edge lines between papers. */
+  --ream-paper: oklch(98.4% 0.007 84);
+  --ream-edge: oklch(94.6% 0.013 82);
+  --ream-line: oklch(82% 0.022 78 / 0.5);
+  --ream-seam: oklch(72% 0.03 74 / 0.42);
+  --ream-band: oklch(45% 0.075 222);
+  position: relative;
+}
+
+/* Older papers are a shade warmer: the archive goes back to 1959. */
+.lx-ream:nth-child(2) { --ream-paper: oklch(98% 0.01 84); --ream-edge: oklch(94% 0.016 82); --ream-band: oklch(39.5% 0.068 224); }
+.lx-ream:nth-child(3) { --ream-paper: oklch(97.6% 0.013 84); --ream-edge: oklch(93.4% 0.019 80); --ream-band: oklch(34% 0.058 227); }
+.lx-ream:nth-child(4) { --ream-paper: oklch(97.2% 0.017 84); --ream-edge: oklch(92.6% 0.023 79); --ream-band: oklch(28% 0.046 230); }
+
+/* --------------------------------------------------------------------------
+ * The stack, as a box of paper (both layouts share its faces)
+ * ------------------------------------------------------------------------ */
+
+.lx-ream { position: relative; list-style: none; }
+.lx-ream-box { position: relative; }
+.lx-ream-face { position: absolute; }
+
+.lx-ream-face.is-front {
+  inset: 0;
+  overflow: hidden;
+  background:
+    /* A darker seam every so often: the stack is many papers, not one block. */
+    repeating-linear-gradient(180deg, transparent 0 21px, var(--ream-seam) 21px 22px),
+    repeating-linear-gradient(180deg, var(--ream-line) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, oklch(100% 0 0 / 0.55), transparent 22%, oklch(40% 0.03 70 / 0.08)),
+    var(--ream-edge);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.9), inset 1px 0 0 oklch(100% 0 0 / 0.5);
+}
+.lx-ream-face.is-side {
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 21px, var(--ream-seam) 21px 22px),
+    repeating-linear-gradient(180deg, var(--ream-line) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, oklch(30% 0.03 70 / 0.1), oklch(30% 0.03 70 / 0.24)),
+    var(--ream-edge);
+}
+.lx-ream-face.is-top {
+  background:
+    /* The next sheet down: faint lines of print, seen as the top one lifts. */
+    repeating-linear-gradient(180deg, transparent 0 14px, oklch(55% 0.03 230 / 0.1) 14px 15px) 12% 18% / 76% 64% no-repeat,
+    linear-gradient(180deg, oklch(100% 0 0 / 0.5), transparent),
+    var(--ream-paper);
+}
+
+/* The band round each stack, the way a ream comes wrapped. */
+.lx-ream-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: clamp(14px, 1.8vw, 22px);
+  display: grid;
+  gap: 7px;
+  padding: 14px 18px 13px;
+  color: var(--lx-paper);
+  background:
+    linear-gradient(180deg, oklch(100% 0 0 / 0.1), transparent 40%, oklch(0% 0 0 / 0.12)),
+    var(--ream-band);
+  box-shadow: 0 1px 0 oklch(100% 0 0 / 0.16) inset, 0 6px 12px -8px oklch(15% 0.03 232 / 0.45);
+}
+.lx-ream-band .lx-ladder-family { color: var(--lx-paper); font-size: clamp(25px, 2.1vw, 32px); }
+.lx-ream-label { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.lx-ream-band .lx-ladder-format { font-size: 13px; color: oklch(93% 0.02 220); }
+.lx-ream-count { font-family: var(--lx-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: oklch(90% 0.025 215); }
+.lx-ream-count strong { margin-right: 4px; font-family: var(--lx-sans); font-size: 21px; font-weight: 500; letter-spacing: -0.04em; text-transform: none; color: var(--lx-paper); }
+.lx-ream-band-side {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: clamp(14px, 1.8vw, 22px);
+  height: 92px;
+  background: linear-gradient(90deg, oklch(0% 0 0 / 0.16), oklch(0% 0 0 / 0.34)), var(--ream-band);
+}
+
+/* The lifted sheet's shadow on the stack's front, at the top. Its opacity follows the lift. */
+.lx-ream-lift {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 64px;
+  opacity: 0;
+  background: linear-gradient(180deg, oklch(20% 0.03 232 / 0.2), transparent);
+  pointer-events: none;
+}
+
+/* Without the WebGL stage, the stair edges are inked on the stacks themselves. */
+.lx-ream-thread {
+  position: absolute;
+  inset: 0;
+  border-top: 2px solid var(--lx-accent);
+  border-left: 2px solid oklch(46.5% 0.075 222 / 0.55);
+  pointer-events: none;
+}
+
+/* The top sheet: an exam page with one problem on it. */
+.lx-ream-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: clamp(18px, 1.7vw, 24px) clamp(18px, 1.6vw, 24px) 16px;
+  background:
+    /* Light catching the top of the page, and a breath of shade where it bends at its foot. */
+    linear-gradient(180deg, oklch(100% 0 0 / 0.6), transparent 30%),
+    linear-gradient(0deg, oklch(40% 0.03 70 / 0.07), transparent 10%),
+    var(--ream-paper);
+  box-shadow: 0 0 0 1px oklch(24% 0.028 228 / 0.07) inset;
+  color: var(--lx-ink);
+}
+.lx-ream-print { display: block; }
+.lx-ream-sheet figcaption {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--lx-rule);
+  font-family: var(--lx-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lx-accent);
+}
+.lx-ream-problem {
+  display: block;
+  font-family: var(--lx-serif);
+  font-size: clamp(16.5px, 1.25vw, 19px);
+  line-height: 1.5;
+  color: var(--lx-ink);
+}
+.lx-ream-problem .katex { font-size: 1.02em; }
+/* Room for working, ruled the way answer paper is. */
+.lx-ream-ruled {
+  flex: 1;
+  min-height: 40px;
+  background: repeating-linear-gradient(180deg, transparent 0 25px, oklch(70% 0.04 230 / 0.28) 25px 26px);
+}
+
+/* --------------------------------------------------------------------------
+ * The track: pinned, travelling, in 3D (wide screens, motion allowed)
+ * ------------------------------------------------------------------------ */
+
+/*
+ * The stage is pinned, and the runway's height gives the travel. The stage is
+ * taller than the screen: it reaches down past the foot of the screen to the
+ * floor the tallest stack stands on, so when the pin lets go and the stage
+ * scrolls away the stacks are seen standing on their floor, never cut off by
+ * the stage's own edge. The camera frames the top of it, one screen tall
+ * (.lx-stairs-view), with the stack in focus 70% of the way down.
+ */
+.lx-stairs {
+  --stairs-view: max(100svh, 640px);
+  --stairs-pin: calc(var(--stairs-view) * 0.7 + var(--ream-h) + 96px);
+}
+.lx-stairs[data-mode='track'] { height: calc(var(--stairs-pin) + 280svh); }
+.lx-stairs[data-mode='track'] .lx-stairs-pin {
+  position: sticky;
+  top: 0;
+  height: var(--stairs-pin);
+  overflow: hidden;
+  /* The perspective and its origin are written by ArchiveLadder.tsx from the view's size (archiveStairs.ts). */
+  perspective: 1600px;
+}
+.lx-stairs-view { position: absolute; left: 0; right: 0; top: 0; height: var(--stairs-view); pointer-events: none; }
+.lx-stairs[data-mode='track'] .lx-stairs-track {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ream-gap);
+  margin: 0;
+  padding: 0;
+  transform-style: preserve-3d;
+  /*
+   * Posed by trackTransform (archiveStairs.ts): moved, and scaled from its own
+   * corner for the opening shot. No will-change here: a layer promoted for a
+   * changing transform keeps the raster scale it started at, and the type on
+   * the stacks would stay as soft as it was in the small opening shot.
+   */
+  transform-origin: 0 0 0;
+}
+.lx-stairs[data-mode='track'] .lx-ream {
+  flex: none;
+  width: var(--ream-w);
+  height: calc(var(--ream-h) * var(--k));
+  transform-style: preserve-3d;
+}
+.lx-stairs[data-mode='track'] .lx-ream-box {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  /* Must match STAIRS.turn: the stage replays this turn to put the thread on the edges. */
+  transform: rotateY(-12deg);
+  transform-origin: 50% 50% 0;
+}
+.lx-stairs[data-mode='track'] .lx-ream-face.is-side {
+  top: 0;
+  left: 100%;
+  width: var(--ream-d);
+  height: 100%;
+  transform-origin: 0 50%;
+  transform: rotateY(90deg);
+}
+.lx-stairs[data-mode='track'] .lx-ream-face.is-top {
+  left: 0;
+  bottom: 100%;
+  width: 100%;
+  height: var(--ream-d);
+  transform-origin: 50% 100%;
+  transform: rotateX(90deg);
+}
+/* A soft shadow on the floor under each stack, lit from the left. */
+.lx-stairs[data-mode='track'] .lx-ream-floor {
+  position: absolute;
+  left: -14%;
+  top: 100%;
+  width: 150%;
+  height: calc(var(--ream-d) * 1.25);
+  transform-origin: 50% 0;
+  transform: rotateX(-90deg);
+  background: radial-gradient(56% 50% at 54% 36%, oklch(30% 0.04 70 / 0.26), oklch(30% 0.04 70 / 0.08) 62%, transparent 76%);
+  pointer-events: none;
+}
+.lx-stairs[data-mode='track'] .lx-ream-sheet {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  width: 100%;
+  height: var(--ream-d);
+  transform-origin: 50% 100%;
+  /* Flat on its stack until the stage lifts it (sheetTransform at lift 0). */
+  transform: rotateY(-12deg) translate3d(0, -1.5px, 0) rotateX(90deg);
+  box-shadow: 0 0 0 1px oklch(24% 0.028 228 / 0.07) inset, 0 26px 40px -26px oklch(20% 0.03 232 / 0.45);
+}
+.lx-stairs[data-mode='track'] .lx-ream-label { opacity: 0; }
+
+/* Where the climb is, on the axis from easier to harder. */
+.lx-stairs-axis {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: clamp(98px, 13svh, 132px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(var(--lx-max), 100% - 2 * var(--lx-gutter));
+  transform: translateX(-50%);
+  font-family: var(--lx-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lx-muted);
+  pointer-events: none;
+}
+.lx-stairs-axis .lx-arrow { margin-left: -14px; color: var(--lx-muted); }
+.lx-stairs-axis-rule { position: relative; flex: 1; height: 1px; background: var(--lx-rule); }
+.lx-stairs-axis-fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, oklch(46.5% 0.075 222 / 0.35), var(--lx-accent));
+}
+.lx-stairs-axis-stop { position: absolute; top: 0; }
+.lx-stairs-axis-stop > i { position: absolute; left: -0.5px; top: -4px; width: 1px; height: 9px; background: var(--lx-rule); }
+.lx-stairs-axis-stop > span {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  translate: -50% 0;
+  transition: color 0.4s ease;
+}
+.lx-stairs-axis-stop[data-active] > span { color: var(--lx-accent); }
+.lx-stairs-axis-marker { position: absolute; inset: 0; transform: translate3d(0, 0, 0); }
+.lx-stairs-axis-marker > i {
+  position: absolute;
+  left: -4.5px;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lx-accent);
+  box-shadow: 0 0 0 4px oklch(46.5% 0.075 222 / 0.14);
+}
+
+/* --------------------------------------------------------------------------
+ * The list: nothing pinned, nothing travelling (narrow, short, or still)
+ * ------------------------------------------------------------------------ */
+
+.lx-stairs[data-mode='list'] { width: min(var(--lx-max), 100% - 2 * var(--lx-gutter)); margin-inline: auto; }
+.lx-stairs[data-mode='list'] .lx-stairs-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  align-items: end;
+  gap: 40px clamp(20px, 2.4vw, 32px);
+  margin: 0;
+  padding: 0;
+}
+.lx-stairs[data-mode='list'] .lx-ream { display: flex; flex-direction: column; gap: 24px; }
+/* The problem stands on its stack: first on screen, after the bank's name for a screen reader. */
+.lx-stairs[data-mode='list'] .lx-ream-sheet {
+  order: -1;
+  position: relative;
+  margin-right: 14px;
+  border-radius: 2px;
+  rotate: -0.8deg;
+  box-shadow: 0 0 0 1px oklch(24% 0.028 228 / 0.07) inset, 0 18px 34px -24px oklch(20% 0.03 232 / 0.5);
+}
+.lx-stairs[data-mode='list'] .lx-ream:nth-child(even) .lx-ream-sheet { rotate: 0.7deg; }
+.lx-stairs[data-mode='list'] .lx-ream-ruled { flex: none; height: 52px; }
+/* A box drawn in oblique: a front, and a sliver of top and side sheared back from it. */
+.lx-stairs[data-mode='list'] .lx-ream-box { height: max(124px, calc(var(--k) * 280px)); margin-right: 14px; }
+.lx-stairs[data-mode='list'] .lx-ream-face.is-top {
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 14px;
+  transform-origin: 0 100%;
+  transform: skewX(-45deg);
+}
+.lx-stairs[data-mode='list'] .lx-ream-face.is-side {
+  left: 100%;
+  top: 0;
+  width: 14px;
+  height: 100%;
+  transform-origin: 0 0;
+  transform: skewY(-45deg);
+}
+.lx-stairs[data-mode='list'] .lx-ream-band-side { display: none; }
+.lx-stairs[data-mode='list'] .lx-ream-floor { position: absolute; left: 4%; right: -6%; bottom: -14px; height: 18px; background: radial-gradient(50% 50% at 50% 30%, oklch(30% 0.04 70 / 0.22), transparent 72%); }
+.lx-stairs[data-mode='list'] .lx-ream-lift { display: none; }
+.lx-stairs[data-mode='list'] .lx-ladder-axis { margin-top: 18px; }
+
+@media (max-width: 560px) {
+  .lx-stairs[data-mode='list'] .lx-stairs-track { gap: 44px; }
+  .lx-ream-band .lx-ladder-family { font-size: 24px; }
+}
