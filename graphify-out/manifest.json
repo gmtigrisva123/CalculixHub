@@ -1362,9 +1362,9 @@
     "semantic_hash": ""
   },
   "src/components/landing/EngineStory.tsx": {
-    "mtime": 1795823881.6589952,
-    "seen": 1795826265.2531323,
-    "ast_hash": "620f16ac564b9fffd4183ca5a7671b14",
+    "mtime": 1795826610.7025056,
+    "seen": 1795827004.135819,
+    "ast_hash": "e1456d0add83c4c1255a828b841767f8",
     "semantic_hash": ""
   },
   "src/components/landing/FaqSection.tsx": {
@@ -5886,21 +5886,21 @@
     "semantic_hash": ""
   },
   "src/components/landing/threadExtras.ts": {
-    "mtime": 1795825908.5830677,
-    "seen": 1795826265.2531693,
-    "ast_hash": "742b13895f571aac1db4f36aa0a437be",
+    "mtime": 1795826782.5416722,
+    "seen": 1795827004.1358712,
+    "ast_hash": "f36b96f362556dc5cac4df016a1727fc",
     "semantic_hash": ""
   },
   "src/components/landing/threadScenes.ts": {
-    "mtime": 1795825841.7442374,
-    "seen": 1795826265.2531703,
-    "ast_hash": "a68875898eddf51d1256f9ca2ebab5c5",
+    "mtime": 1795826782.5413673,
+    "seen": 1795827004.1358728,
+    "ast_hash": "d16efacf6bcaa2636a0325028f4dba8a",
     "semantic_hash": ""
   },
   "src/components/landing/threadShaders.ts": {
-    "mtime": 1795826204.541443,
-    "seen": 1795826265.2531707,
-    "ast_hash": "92024dac8b2cdb6ecaf367a3847265a9",
+    "mtime": 1795826912.411232,
+    "seen": 1795827004.1358738,
+    "ast_hash": "33e0116703ac8c265bc47b81727fada2",
     "semantic_hash": ""
   },
   "src/components/landing/threadShapes.test.ts": {
@@ -5919,6 +5919,18 @@
     "mtime": 1795825771.8870628,
     "seen": 1795826265.2531729,
     "ast_hash": "4fe6536387fd2cbf0979087eca1713f5",
+    "semantic_hash": ""
+  },
+  "src/components/landing/glEngine.ts": {
+    "mtime": 1795826565.2874181,
+    "seen": 1795827004.13585,
+    "ast_hash": "4bddbfdb860a3d36ae7402c8d248c65c",
+    "semantic_hash": ""
+  },
+  "src/components/landing/glPaper.ts": {
+    "mtime": 1795826886.8910506,
+    "seen": 1795827004.1358519,
+    "ast_hash": "6a09adbdb9f1fd535a9c2f119159381e",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -36,3 +36,38 @@
 @media (prefers-reduced-motion: reduce) {
   .lx-thread, .lx [data-gl-swap] { transition: none; }
 }
+
+/* --------------------------------------------------------------------------
+ * The engine, in 3D (glEngine.ts)
+ *
+ * The SVG chart is the drawing without WebGL. With the stage drawing, these
+ * labels take over from the SVG's: real text, placed each frame where the 3D
+ * anchor they name lands on screen. They sit in the stage's own box, so they
+ * scale with it as it arrives.
+ * ------------------------------------------------------------------------ */
+
+.lx-chart-labels { position: absolute; inset: 0; z-index: 2; display: none; pointer-events: none; }
+.lx[data-gl='on'] .lx-chart-labels { display: block; }
+.lx-chart-labels > span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--lx-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lx-on-night-muted);
+  opacity: 0;
+  will-change: transform;
+  transition: color 0.5s ease;
+}
+.lx-chart-labels > [data-tier] { translate: -50% -50%; }
+.lx-chart-labels > [data-tier][data-active] { color: var(--lx-cyan); }
+.lx-chart-labels > [data-end='easier'] { translate: 0 -50%; }
+.lx-chart-labels > [data-end='harder'] { translate: -100% -50%; }
+.lx-chart-labels > [data-you] { translate: -50% -50%; font-weight: 600; letter-spacing: 0.14em; color: var(--lx-brass); }
+@media (max-width: 900px) {
+  /* At phone width only the live tier keeps its label, as in the SVG chart. */
+  .lx-chart-labels > [data-tier]:not([data-active]) { visibility: hidden; }
+}

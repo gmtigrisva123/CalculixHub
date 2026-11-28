@@ -15,28 +15,26 @@
  * every frame, so the curve, the marker and the meter are written straight to
  * the SVG and DOM nodes; React only re-renders when something discrete changes
  * (a new answer, a new beat of the story).
+ *
+ * Where WebGL runs, the chart is drawn in 3D by the page's stage (glEngine.ts):
+ * the curve becomes a ribbon of light, the tiers frosted-glass slabs, each
+ * answer a bead that drops onto the axis. Both drawings read the replay from
+ * engineReplay.ts and the playhead from the page clock, so the readouts here
+ * and the ribbon there are always on the same answer. The SVG below stays in
+ * the document as the drawing for a machine without WebGL, and the labels the
+ * 3D chart needs (tiers, easier and harder, YOU) stay DOM text, moved by the
+ * stage to where their 3D anchors land.
  */
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import { ENGINE_RUN, TIER_BANDS, certainty, type EngineStep } from './engineRun';
+import { AnimatePresence, m, useMotionValueEvent, useReducedMotion, useTransform } from 'motion/react';
+import { TIER_BANDS } from './engineRun';
+import { ANSWERS, CHART, RUG_LEVEL, RUN, chartX as x, heightAtEstimate, replayAt, weightAt } from './engineReplay';
+import { useStageScroll } from './stageLayout';
 import { Arrow, GLIDE, Magnetic, SPRING, SplitText } from './kit';
 
-const RUN = ENGINE_RUN;
-const ANSWERS = RUN.steps.length - 1;
-const SURE = RUN.steps.map((_, index) => certainty(RUN, index));
-
-// Chart geometry, in viewBox units.
-const W = 800;
-const PAD = 26;
-const BASE = 318;
-const CURVE_H = 236;
-const RUG = 380;
-const RUG_STEP = 16;
-const HEIGHT = 440;
-const THETA_MIN = -3.4;
-const THETA_MAX = 3.4;
-const x = (theta: number) => PAD + ((theta - THETA_MIN) / (THETA_MAX - THETA_MIN)) * (W - 2 * PAD);
+// Chart geometry, in viewBox units (shared with the 3D chart).
+const { W, PAD, BASE, CURVE_H, RUG, RUG_STEP, HEIGHT, THETA_MIN, THETA_MAX } = CHART;
 const VISIBLE = RUN.grid.map((theta, index) => ({ theta, index })).filter(node => node.theta >= THETA_MIN - 1e-9 && node.theta <= THETA_MAX + 1e-9);
 
 const BEATS = [
@@ -45,20 +43,6 @@ const BEATS = [
   { title: 'Each question fits.', body: 'Not too easy, not too hard.' },
   { title: 'It stops when it’s sure.', body: `This time, after ${ANSWERS} questions.` },
 ];
-
-/** Which beat of the story a playhead position belongs to. */
-function beatAt(k: number) {
-  if (k < 0.6) return 0;
-  if (k < 5.6) return 1;
-  if (k < ANSWERS - 0.4) return 2;
-  return 3;
-}
-
-const smooth = (t: number) => t * t * (3 - 2 * t);
-
-/** Dots for answers at similar difficulty stack upwards instead of overlapping. */
-const RUG_LEVEL = RUN.steps.slice(1).map((step, index, all) =>
-  all.slice(0, index).filter(previous => Math.abs(previous.item!.b - step.item!.b) < 0.14).length);
 
 const DOMAIN_TONE: Record<string, string> = {
   Algebra: 'var(--lx-w1-a)', Geometry: 'var(--lx-w2-a)', Combinatorics: 'var(--lx-w3-a)', 'Number Theory': 'var(--lx-w4-a)',
@@ -71,8 +55,9 @@ interface EngineStoryProps {
 export default function EngineStory({ onRegister }: EngineStoryProps) {
   const reduce = Boolean(useReducedMotion());
   const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress: playhead } = useScroll({ target: sectionRef, offset: ['start start', 'end end'] });
-  const { scrollYProgress: arrival } = useScroll({ target: sectionRef, offset: ['start end', 'start start'] });
+  // Written by the page clock in the scroll's own frame: the same numbers the 3D chart reads.
+  const playhead = useStageScroll(sectionRef, ['start start', 'end end']);
+  const arrival = useStageScroll(sectionRef, ['start end', 'start start']);
   // The stage grows into the frame as it arrives. Scale only: its corner radius used to
   // tighten on the way in, which repainted the whole stage on every frame of the approach.
   const stageScale = useTransform(arrival, [0, 1], [reduce ? 1 : 0.9, 1]);
@@ -89,22 +74,13 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
   const tierRef = useRef<HTMLSpanElement>(null);
   const sureRef = useRef<HTMLSpanElement>(null);
   const bandRefs = useRef<(SVGGElement | null)[]>([]);
-  const frame = useRef(0);
 
   const draw = useCallback((progress: number) => {
-    // A short hold at either end: the open start gets a moment, and so does the result.
-    const k = Math.max(0, Math.min(ANSWERS, ((progress - 0.07) / 0.8) * ANSWERS));
-    const from = Math.min(ANSWERS, Math.floor(k));
-    const to = Math.min(ANSWERS, from + 1);
-    const raw = k - from;
-    const t = reduce ? Math.round(raw) : smooth(Math.max(0, Math.min(1, (raw - 0.12) / 0.76)));
-    const a: EngineStep = RUN.steps[from];
-    const b: EngineStep = RUN.steps[to];
-    const mix = (p: number, q: number) => p + (q - p) * t;
+    const state = replayAt(progress, reduce);
 
     let line = '';
     for (const { theta, index } of VISIBLE) {
-      const weight = mix(a.weights[index], b.weights[index]);
+      const weight = weightAt(state, index);
       const px = x(theta).toFixed(1);
       const py = (BASE - (weight / RUN.peak) * CURVE_H).toFixed(1);
       line += `${line ? 'L' : 'M'}${px} ${py}`;
@@ -114,44 +90,30 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
     lineRef.current?.setAttribute('d', line);
     glowRef.current?.setAttribute('d', line);
 
-    const theta = mix(a.theta, b.theta);
-    const sem = mix(a.sem, b.sem);
     // Height of the interpolated curve at the estimate, for the marker's top.
-    const position = ((theta - RUN.grid[0]) / (RUN.grid[1] - RUN.grid[0]));
-    const lower = Math.max(0, Math.min(RUN.grid.length - 2, Math.floor(position)));
-    const blend = position - lower;
-    const heightAt = (step: EngineStep) => step.weights[lower] * (1 - blend) + step.weights[lower + 1] * blend;
-    const top = BASE - (mix(heightAt(a), heightAt(b)) / RUN.peak) * CURVE_H;
+    const top = BASE - (heightAtEstimate(state) / RUN.peak) * CURVE_H;
     if (estimateRef.current) {
-      estimateRef.current.style.transform = `translateX(${x(theta).toFixed(1)}px)`;
+      estimateRef.current.style.transform = `translateX(${x(state.theta).toFixed(1)}px)`;
       estimateRef.current.querySelector('line')?.setAttribute('y1', top.toFixed(1));
       estimateRef.current.querySelector('circle')?.setAttribute('cy', top.toFixed(1));
     }
     markRef.current?.setAttribute('y', (top - 18).toFixed(1));
     if (intervalRef.current) {
-      intervalRef.current.setAttribute('x', x(theta - sem).toFixed(1));
-      intervalRef.current.setAttribute('width', (x(theta + sem) - x(theta - sem)).toFixed(1));
+      intervalRef.current.setAttribute('x', x(state.theta - state.sem).toFixed(1));
+      intervalRef.current.setAttribute('width', (x(state.theta + state.sem) - x(state.theta - state.sem)).toFixed(1));
     }
-    if (sureRef.current) sureRef.current.style.transform = `scaleX(${mix(SURE[from], SURE[to]).toFixed(3)})`;
-    const tier = TIER_BANDS.find(band => theta >= band.from && theta < band.to) ?? TIER_BANDS[1];
+    if (sureRef.current) sureRef.current.style.transform = `scaleX(${state.sure.toFixed(3)})`;
+    const tier = TIER_BANDS[state.tierIndex];
     if (tierRef.current && tierRef.current.textContent !== tier.tier) tierRef.current.textContent = tier.tier;
-    bandRefs.current.forEach((node, index) => node?.toggleAttribute('data-active', TIER_BANDS[index] === tier));
+    bandRefs.current.forEach((node, index) => node?.toggleAttribute('data-active', index === state.tierIndex));
 
-    setAnswered(Math.min(ANSWERS, Math.floor(k + 0.88)));
-    setBeat(beatAt(k));
+    setAnswered(state.answered);
+    setBeat(state.beat);
   }, [reduce]);
 
-  useMotionValueEvent(playhead, 'change', () => {
-    if (frame.current) return;
-    frame.current = requestAnimationFrame(() => {
-      frame.current = 0;
-      draw(playhead.get());
-    });
-  });
-  useLayoutEffect(() => {
-    draw(playhead.get());
-    return () => cancelAnimationFrame(frame.current);
-  }, [draw, playhead]);
+  // The playhead is written once per frame by the page clock, so drawing on its change is drawing once per frame.
+  useMotionValueEvent(playhead, 'change', value => draw(value));
+  useLayoutEffect(() => { draw(playhead.get()); }, [draw, playhead]);
 
   const latest = answered > 0 ? RUN.steps[answered] : null;
   const done = beat === 3;
@@ -161,6 +123,13 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
       <div className="lx-engine-pin">
         <m.div className="lx-engine-stage" data-tone="ink" style={{ scale: stageScale }}>
           <div className="lx-engine-grid" aria-hidden="true" />
+          {/* Labels for the 3D chart, placed each frame by the stage where their anchors land. */}
+          <div className="lx-chart-labels" data-engine-labels aria-hidden="true">
+            {TIER_BANDS.map(band => <span key={band.tier} data-tier>{band.tier}</span>)}
+            <span data-end="easier">easier</span>
+            <span data-end="harder">harder</span>
+            <span data-you>YOU</span>
+          </div>
           <header className="lx-engine-head">
             <SplitText as="h2" id="lx-engine-title" className="lx-engine-title" text="Watch it find *your level.*" />
             <p className="lx-engine-note">Scroll to watch one student’s placement, answer by answer.</p>
@@ -191,7 +160,9 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
               </div>
             </dl>
 
-            <svg className="lx-chart" viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
+            {/* The 3D chart is drawn over this box; the SVG inside is the drawing without WebGL. */}
+            <div className="lx-chart-wrap" data-engine-chart>
+            <svg className="lx-chart" data-gl-swap viewBox={`0 0 ${W} ${HEIGHT}`} role="img" aria-label={`The guess of one student’s level, after each answer. It was sure after ${ANSWERS} questions: ${RUN.tier}.`}>
               <defs>
                 <linearGradient id="lx-curve-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" style={{ stopColor: 'var(--lx-cyan)', stopOpacity: 0.42 }} />
@@ -241,22 +212,21 @@ export default function EngineStory({ onRegister }: EngineStoryProps) {
               <text className="lx-axis-end" x={PAD} y={BASE + 22}>easier</text>
               <text className="lx-axis-end" x={W - PAD} y={BASE + 22} textAnchor="end">harder</text>
             </svg>
+            </div>
 
-            <AnimatePresence>
-              {done && (
-                <m.div
-                  className="lx-verdict"
-                  initial={{ opacity: 0, y: 24, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 16, scale: 0.98 }}
-                  transition={{ duration: 0.7, ease: GLIDE }}
-                >
-                  <span className="lx-verdict-label">Level found</span>
-                  <strong>{RUN.tier}</strong>
-                  <span className="lx-verdict-copy">Start with {RUN.source} problems.</span>
-                </m.div>
-              )}
-            </AnimatePresence>
+            {/* Always in the document (hidden until the end) so the 3D stage can measure it and keep its light behind it. */}
+            <m.div
+              className="lx-verdict"
+              aria-hidden={!done}
+              initial={false}
+              animate={done ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ ...SPRING.settle, opacity: { duration: 0.5, ease: GLIDE } }}
+              style={{ visibility: done ? 'visible' : 'hidden', transitionProperty: 'visibility', transitionDelay: done ? '0s' : '0.5s' }}
+            >
+              <span className="lx-verdict-label">Level found</span>
+              <strong>{RUN.tier}</strong>
+              <span className="lx-verdict-copy">Start with {RUN.source} problems.</span>
+            </m.div>
             <div className="lx-ticker" aria-live="polite">
               <AnimatePresence mode="popLayout" initial={false}>
                 <m.p

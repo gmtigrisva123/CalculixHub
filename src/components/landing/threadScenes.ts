@@ -177,12 +177,27 @@ export class HeroScene implements ThreadScene {
     // The sheet in front: everything below its top edge is covered, except what has lifted onto it.
     const sheetTop = this.sheet.top - frame.y;
     if (sheetTop < frame.ch) {
-      out.occ[0].set(this.sheet.left, sheetTop, this.sheet.width, frame.ch * 2);
+      // The curled lip stands a little proud of the edge; the butterfly is behind that too.
+      const lip = (this.sheetEdge(frame)?.curl ?? 0) * 8;
+      out.occ[0].set(this.sheet.left, sheetTop - lip, this.sheet.width, frame.ch * 2);
       out.occR.x = this.radius;
     }
     out.flowing = !frame.still;
     out.pointer = frame.still ? 0 : this.power;
     out.pointerRadius = Math.min(rect.w, rect.h) * 0.17;
+  }
+
+  /**
+   * The sheet's leading edge while it slides over the hero: curled while it
+   * moves (more when it moves fast), flat once it has settled at the top.
+   */
+  sheetEdge(frame: StageFrame) {
+    if (!this.found) return null;
+    const cover = this.cover(frame);
+    if (cover <= 0.001 || cover >= 0.999) return null;
+    const motion = frame.still ? 0.6 : 0.55 + 0.45 * Math.min(1, Math.abs(frame.vy) / 1600);
+    const curl = smoothstep(0, 0.05, cover) * (1 - smoothstep(0.78, 1, cover)) * motion;
+    return { x: this.sheet.left, y: this.sheet.top - frame.y, w: this.sheet.width, r: this.radius, curl };
   }
 
   /** True while the intro is still assembling or the pointer springs are moving. */
@@ -258,14 +273,28 @@ export class IdeaScene implements ThreadScene {
 // ---------------------------------------------------------------------------
 
 export interface ChartFrame {
-  /** Screen position of chart point (vx, vy) in the SVG's viewBox units. */
-  toScreen(vx: number, vy: number): [number, number];
-  /** Pixels per viewBox unit, after the stage's own scale. */
+  /** Chart space (viewBox units about the axis centre, y up, z toward the viewer) to world. */
+  matrix: Matrix4;
+  /** A chart-space point, on screen (CSS px). */
+  project(x: number, y: number, z?: number): [number, number];
+  /** Pixels per chart unit at the axis, after the stage's scale. */
   unit: number;
   stage: InkRect & { scale: number };
   playhead: number;
   arrival: number;
+  /** The pinned stage's top on screen: what the DOM inside it moves with. */
+  pinTop: number;
 }
+
+/** Where the engine's camera is for a playhead: a slow dolly in with a slight rise, then a tilt down the axis at the verdict. */
+export function engineCamera(playhead: number, still: boolean) {
+  if (still) return { pitch: 0.12, yaw: 0, zoom: 1 };
+  const dolly = smoothstep(0.02, 0.9, playhead);
+  const verdict = smoothstep(0.86, 0.97, playhead);
+  return { pitch: 0.06 + 0.14 * dolly + 0.3 * verdict, yaw: -0.3 * verdict, zoom: 0.97 + 0.07 * dolly - 0.02 * verdict };
+}
+
+const chartPoint = new Vector3();
 
 export class EngineScene implements ThreadScene {
   id = 'engine';
@@ -278,6 +307,9 @@ export class EngineScene implements ThreadScene {
   private heights = new Float32Array(POLY_SAMPLES);
   private data = new Float32Array(POLY_SAMPLES * 4);
   private weights = new Float64Array(RUN.grid.length);
+  private matrix = new Matrix4();
+  /** Boxes inside the pin, for the meshes' occluders and the labels. */
+  boxes: Record<string, Box> = {};
 
   measure() {
     const section = query('.lx-engine');
@@ -290,6 +322,9 @@ export class EngineScene implements ThreadScene {
     this.pin = { ...docBox(pin), top: this.section.top };
     this.stage = docBox(stage, pin);
     this.chart = docBox(chart, pin);
+    for (const name of ['readouts', 'verdict', 'ticker']) {
+      this.boxes[name] = docBox(query(`.lx-engine-stage .lx-${name}`), pin);
+    }
     this.radius = stageRadius();
   }
 
@@ -297,7 +332,10 @@ export class EngineScene implements ThreadScene {
 
   sectionBox() { return this.section; }
 
-  /** Where the chart is this frame: the pin's place on screen, then the stage's arrival scale. */
+  /** The stage's box inside the pin, before its arrival scale. */
+  stageBox() { return this.stage; }
+
+  /** Where the chart is this frame: the pin on screen, the stage's arrival scale, then the camera. */
   chartFrame(frame: StageFrame): ChartFrame {
     const pinTop = stickyTop(this.pin, this.section, frame.y);
     const arrival = progressAt(this.section, ['start end', 'start start'], frame.y, frame.vh);
@@ -305,18 +343,26 @@ export class EngineScene implements ThreadScene {
     const scale = frame.still ? 1 : lerp(0.9, 1, arrival);
     const stageTop = pinTop + this.stage.top;
     const originX = this.stage.left + this.stage.width / 2;
-    const originY = stageTop;
     const k = Math.min(this.chart.width / CHART.W, this.chart.height / CHART.HEIGHT);
     const offX = this.chart.left + (this.chart.width - CHART.W * k) / 2;
     const offY = pinTop + this.chart.top + (this.chart.height - CHART.HEIGHT * k) / 2;
-    const toScreen = (vx: number, vy: number): [number, number] => {
-      const sx = offX + vx * k;
-      const sy = offY + vy * k;
-      return [originX + (sx - originX) * scale, originY + (sy - originY) * scale];
+    // The stage scales about its top centre (transform-origin: 50% 0%).
+    const sx = originX + (offX + (CHART.W / 2) * k - originX) * scale;
+    const sy = stageTop + (offY + CHART.BASE * k - stageTop) * scale;
+    const unit = k * scale;
+    const camera = engineCamera(playhead, frame.still);
+    place(this.matrix, frame, sx, sy, unit * camera.zoom, unit * camera.zoom, [camera.pitch, camera.yaw, 0]);
+    const matrix = this.matrix;
+    const distance = frame.ch / 2 / Math.tan((30 * Math.PI) / 360);
+    const project = (x: number, y: number, z = 0): [number, number] => {
+      chartPoint.set(x, y, z).applyMatrix4(matrix);
+      const f = distance / (distance - chartPoint.z);
+      return [frame.cw / 2 + chartPoint.x * f, frame.ch / 2 - chartPoint.y * f];
     };
     return {
-      toScreen,
-      unit: k * scale,
+      matrix,
+      project,
+      unit,
       stage: {
         x: originX + (this.stage.left - originX) * scale,
         y: stageTop,
@@ -327,6 +373,7 @@ export class EngineScene implements ThreadScene {
       },
       playhead,
       arrival,
+      pinTop,
     };
   }
 
@@ -342,7 +389,12 @@ export class EngineScene implements ThreadScene {
     for (let i = 0; i < this.weights.length; i += 1) this.weights[i] = weightAt(state, i);
     curveHeights(RUN.grid, this.weights as unknown as number[], RUN.peak, CHART.THETA_MIN, CHART.THETA_MAX, POLY_SAMPLES, this.heights);
     for (let i = 0; i < POLY_SAMPLES; i += 1) this.data[i * 4] = this.heights[i];
-    return { state, data: this.data };
+    return { state, data: this.data, heights: this.heights };
+  }
+
+  /** How far the thread has lifted off the axis into the prior (it rests flat until the pin begins). */
+  lift(playhead: number, still: boolean) {
+    return still ? 1 : smoothstep(0, REPLAY_START * 0.9, playhead);
   }
 
   slot(frame: StageFrame, out: Slot, row: number) {
@@ -350,17 +402,12 @@ export class EngineScene implements ThreadScene {
     if (!this.found) return;
     const chart = this.chartFrame(frame);
     const { data } = this.curve(chart.playhead, frame.still);
-    const [cx, cy] = chart.toScreen(CHART.W / 2, CHART.BASE);
     out.shape = SHAPE.curve;
-    place(out.matrix, frame, cx, cy);
-    const width = (CHART.W - 2 * CHART.PAD) * chart.unit;
-    const height = CHART.CURVE_H * chart.unit;
-    // The thread lifts off the axis into the prior during the replay's opening hold.
-    const lift = frame.still ? 1 : smoothstep(0, REPLAY_START, chart.playhead);
-    out.p[0].set(width, height, lift, 1.6);
+    out.matrix.copy(chart.matrix);
+    out.p[0].set(CHART.W - 2 * CHART.PAD, CHART.CURVE_H, this.lift(chart.playhead, frame.still), 1.4);
     out.p[1].set(row, 0, 0, 0);
     out.data = data;
-    out.look.set(2.3, 1.15, 0.12, 0);
+    out.look.set(2.2, 1.2, 0.13, 0);
     out.clip.set(chart.stage.x, chart.stage.y, chart.stage.w, chart.stage.h);
     out.shade.x = chart.stage.r;
   }

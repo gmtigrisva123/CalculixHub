@@ -315,8 +315,9 @@ void main() {
     float dpdx = a * cos(a * q.x + t) * cos(b * q.y - t) + 0.5 * c * cos(c * (q.x + q.y) + 1.7 * t);
     float dpdy = -b * sin(a * q.x + t) * sin(b * q.y - t) + 0.5 * c * cos(c * (q.x + q.y) + 1.7 * t);
     vec2 curl = vec2(dpdy, -dpdx);
-    float spin = near * 0.7;
-    vec2 swirl = vec2(-q.y, q.x) * spin * uPointerRadius * 0.35 + curl * near * 9.0;
+    // A gentle vortex round the pointer, broken up by the field so it reads as a stir, not a whirlpool.
+    float spin = near * near * 0.55;
+    vec2 swirl = vec2(-q.y, q.x) * spin * uPointerRadius * 0.28 + curl * near * 5.5;
     world.xy += vec2(swirl.x, -swirl.y);
     mv = viewMatrix * vec4(world, 1.0);
     clip = projectionMatrix * mv;
@@ -349,10 +350,10 @@ void main() {
   float perspective = uCamDist / max(1.0, -mv.z);
 
   float visible = shown * seen * ends;
-  gl_PointSize = visible > 0.002 ? size * uDpr * perspective * (mix(0.86, 1.1, depth) + near * 1.2 + crest * 0.8 + spark * 1.3) : 0.0;
+  gl_PointSize = visible > 0.002 ? size * uDpr * perspective * (mix(0.86, 1.1, depth) + near * 0.8 + crest * 0.8 + spark * 1.3) : 0.0;
   vColor = colour * (0.85 + 0.3 * twinkle) + crest * 0.3 + spark * 0.4;
   vHalo = dust ? 0.0 : 0.08 + 0.14 * fast + crest * 0.25 + spark * 0.5;
-  vAlpha = ((alpha + crest * 0.3 * alpha) * mix(0.6, 1.12, depth) * twinkle + near * 0.2) * visible;
+  vAlpha = ((alpha + crest * 0.3 * alpha) * mix(0.6, 1.12, depth) * twinkle + near * 0.14) * visible;
 }`;
 
 export const THREAD_FRAGMENT = /* glsl */ `
