@@ -12,11 +12,17 @@
  * It is not created at all for reduced motion: the preference asks for scroll
  * to track the input device exactly, and the cheapest way to honour that is to
  * leave the browser in charge.
+ *
+ * Lenis does not run a loop of its own. The page clock (pageClock.ts) advances
+ * it at the start of each frame and then hands the new position to everything
+ * that follows the scroll, so the WebGL stage and the DOM read the same value
+ * in the same frame and cannot drift apart.
  */
 
 import { useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
+import { attachLenis, wake } from './pageClock';
 
 let active: Lenis | null = null;
 
@@ -26,11 +32,15 @@ const travel = (t: number) => (t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? 2 ** (20 * 
 export function useSmoothScroll(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
-    const lenis = new Lenis({ autoRaf: true, lerp: 0.1, wheelMultiplier: 0.95, stopInertiaOnNavigate: true });
+    const lenis = new Lenis({ autoRaf: false, lerp: 0.1, wheelMultiplier: 0.95, stopInertiaOnNavigate: true });
     active = lenis;
+    attachLenis(lenis);
     return () => {
       lenis.destroy();
-      if (active === lenis) active = null;
+      if (active === lenis) {
+        active = null;
+        attachLenis(null);
+      }
     };
   }, [enabled]);
 }
@@ -55,6 +65,7 @@ export function scrollToTarget(target: HTMLElement | number, { offset = 0, immed
     active.resize();
     const distance = Math.abs(destination - window.scrollY);
     active.scrollTo(destination, { immediate: jump, duration: Math.min(2.2, 0.9 + distance / 5200), easing: travel, force: true });
+    wake();
     return;
   }
   window.scrollTo({ top: destination, behavior: jump ? 'auto' : 'smooth' });

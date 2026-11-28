@@ -4,13 +4,15 @@ import LandingNav from './LandingNav';
 import Opening from './Opening';
 import LandingFooter from './LandingFooter';
 import GroundTones from './GroundTones';
+import ThreadStage, { useStageState } from './ThreadStage';
 import { afterChapters, onChapterDemand } from './chapters';
 import { scrollToTarget, useSmoothScroll } from './smoothScroll';
 import { whenIdle } from '../../lib/lazy';
 /*
  * Every landing stylesheet is imported here, in this order, including the ones
  * whose markup arrives later with the chapters. The order is the cascade:
- * landing-motion.css is written to come last and win.
+ * landing-motion.css is written to come last and win, and landing-thread.css
+ * after it: it only says what the WebGL stage replaces once it is drawing.
  */
 import '../../styles/landing-margins.css';
 import '../../styles/landing-experience.css';
@@ -18,6 +20,7 @@ import '../../styles/landing-frame.css';
 import '../../styles/landing-desk.css';
 import '../../styles/landing-plans.css';
 import '../../styles/landing-motion.css';
+import '../../styles/landing-thread.css';
 
 type Chapters = typeof import('./LandingChapters');
 
@@ -58,6 +61,8 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
   const [all, setAll] = useState(false);
   // Every chapter is in the document: the parts that measure them can start.
   const [whole, setWhole] = useState(false);
+  // Whether the WebGL stage is drawing: CSS swaps the DOM drawings it replaces on this attribute.
+  const gl = useStageState();
   useSmoothScroll(!reduce);
 
   useEffect(() => {
@@ -102,12 +107,14 @@ export default function LandingPage({ onSignIn, onRegister }: LandingPageProps) 
   const Rest = chapters?.default;
 
   return (
-    <div className="lx">
+    <div className="lx" data-gl={gl}>
       <a className="lx-skip" href="#idea">Skip to the content</a>
       <LandingNav onSignIn={onSignIn} onRegister={onRegister} chapters={whole} />
       <div className="lx-content" ref={contentRef}>
         <GroundTones />
         {Rails && <Rails />}
+        {/* One fixed WebGL stage for every scene: over the grounds, under the type. */}
+        <ThreadStage />
         <main className="lx-main">
           <Opening onRegister={onRegister} />
           {/* Until the chapters are in, a stretch of blank paper keeps the footer out of reach. */}

@@ -1,0 +1,38 @@
+/*
+ * The WebGL stage (ThreadStage.tsx, threadEngine.ts).
+ *
+ * One canvas, fixed to the viewport, sits inside the content sheet's stacking
+ * context above every ground and stage and below the page's type: z-index 4,
+ * under the margin rails (5) and the raised headings (6), over the sections
+ * (auto). It never takes the pointer. Its height is the largest viewport
+ * (lvh), so a phone's address bar can come and go without the canvas being
+ * resized under it.
+ *
+ * `data-gl` on the landing root says whether it is drawing. While it is, the
+ * DOM drawings it replaces are put away; before it arrives, and on a machine
+ * that cannot run it ("off"), they stay.
+ */
+
+.lx-thread {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s var(--lx-glide);
+  contain: strict;
+}
+.lx-thread.is-ready { opacity: 1; }
+.lx-thread-canvas { display: block; width: 100%; height: 100%; }
+
+/* What the stage draws instead, cross-faded as it arrives. */
+.lx [data-gl-swap] { transition: opacity 0.9s var(--lx-glide); }
+.lx[data-gl='on'] [data-gl-swap] { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-thread, .lx [data-gl-swap] { transition: none; }
+}

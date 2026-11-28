@@ -5,81 +5,26 @@
  * wrapper, so as the reader scrolls the manifesto rises over it like a sheet
  * drawn across a lit table: the stage recedes, its words lift away, and the
  * butterfly loosens into the dark. Once the sheet has covered it, the wrapper ends
- * and the hero leaves with it — it is never uncovered again, which is what lets
- * its render loop stop (the IntersectionObserver sees it go).
+ * and the hero leaves with it — it is never uncovered again. The butterfly
+ * itself is drawn by the page's one WebGL stage (threadEngine.ts), which reads
+ * the same `cover` value from the page clock, so the stage receding here and
+ * the light receding there are one movement.
  *
  * The idea is the page's thesis in three short lines, lit word by word as they
  * are read: dim words ahead of the reader, full ink behind.
  */
 
-import { forwardRef, lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { m, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react';
+import { forwardRef, lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { m, useMotionValueEvent, useReducedMotion, useTransform, type MotionValue } from 'motion/react';
 import { ARCHIVE_FIGURES } from './archiveFigures';
 import { Arrow, CountUp, Eyebrow, GLIDE, Magnetic, Rise, SPRING, SplitText, fade } from './kit';
 import { jumpTo } from './LandingNav';
 import HeroGlow from './HeroGlow';
-import { whenIdle } from '../../lib/lazy';
-import { afterChapters } from './chapters';
+import { useHeroCue, useStageState } from './ThreadStage';
+import { useStageScroll } from './stageLayout';
 
-const ParticleField = lazy(() => import('./ParticleField'));
-
-/**
- * The moment the hero may start to move.
- *
- * The page is mounted in one go: ten sections, some twenty screens tall. The
- * browser then has to lay all of it out and paint the first screen, and for
- * that stretch the main thread is busy. An entrance that starts at mount runs
- * straight into it: the clock keeps going while no frames are drawn, so the
- * headline skips half its rise and lands with a jolt. That was the stutter on
- * arrival.
- *
- * So the entrance waits for two things. First, for the browser to have drawn a
- * frame of the finished layout (two animation frames after mount: one for the
- * layout, one to prove the next frame came). Second, for the display face, so
- * the words rise in their real type rather than swapping part-way up; it is
- * preloaded and normally already in hand, and the wait is capped so a slow
- * font can only delay the entrance by a moment, never hold it.
- */
-function useHeroCue(): boolean {
-  const [cued, setCued] = useState(false);
-  useEffect(() => {
-    let live = true;
-    const fonts = typeof document.fonts?.load === 'function'
-      ? document.fonts.load("560 1em 'Geist'").catch(() => undefined)
-      : Promise.resolve();
-    const painted = new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    const cap = new Promise<void>(resolve => window.setTimeout(resolve, 900));
-    void Promise.all([painted, Promise.race([fonts, cap])]).then(() => { if (live) setCued(true); });
-    return () => { live = false; };
-  }, []);
-  return cued;
-}
-
-/**
- * The butterfly's code is three.js, most of half a megabyte. Asking for it at
- * mount meant it arrived, was parsed and compiled its shaders in the middle of
- * the headline's entrance.
- *
- * The first seconds are now taken in turn, so no two heavy things overlap: the
- * headline lands; the chapters below are mounted while the hero is still (a
- * busy moment nobody can see, because nothing on screen is moving); and only
- * then is the butterfly asked for. Its particles gather out of the dark on
- * their own, which is the entrance they were written to make. If the chapters
- * are slow to arrive the butterfly does not wait for ever.
- */
-function useFieldCue(cued: boolean): boolean {
-  const [field, setField] = useState(false);
-  useEffect(() => {
-    if (!cued) return;
-    let live = true;
-    let cancelIdle = () => {};
-    const show = () => { if (live) cancelIdle = whenIdle(() => { if (live) setField(true); }, 800); };
-    void afterChapters().then(show);
-    const patience = window.setTimeout(show, 5000);
-    return () => { live = false; window.clearTimeout(patience); cancelIdle(); };
-  }, [cued]);
-  return field;
-}
+/** The 2D butterfly, fetched only on a machine where the WebGL stage cannot run. */
+const ParticleFallback = lazy(() => import('./ParticleField'));
 
 interface OpeningProps {
   onRegister: () => void;
@@ -87,8 +32,9 @@ interface OpeningProps {
 
 export default function Opening({ onRegister }: OpeningProps) {
   const sheetRef = useRef<HTMLElement>(null);
-  // 0 while the sheet waits below the fold, 1 once it has covered the hero.
-  const { scrollYProgress: cover } = useScroll({ target: sheetRef, offset: ['start end', 'start start'] });
+  // 0 while the sheet waits below the fold, 1 once it has covered the hero. Written by the page
+  // clock in the scroll's own frame, so the stage receding and the butterfly receding agree.
+  const cover = useStageScroll(sheetRef, ['start end', 'start start']);
   return (
     <div className="lx-opening">
       <Hero cover={cover} onRegister={onRegister} />
@@ -103,46 +49,39 @@ export default function Opening({ onRegister }: OpeningProps) {
 
 function Hero({ cover, onRegister }: { cover: MotionValue<number>; onRegister: () => void }) {
   const reduce = Boolean(useReducedMotion());
-  const [ready, setReady] = useState(false);
   const cued = useHeroCue();
-  const field = useFieldCue(cued);
+  // The butterfly is drawn by the shared WebGL stage; this 2D one is only for a machine without it.
+  const gl = useStageState();
   const shown = cued ? { opacity: 1, y: 0 } : undefined;
   const stageScale = useTransform(cover, [0, 1], [1, reduce ? 1 : 0.9]);
   const stageY = useTransform(cover, [0, 1], ['0vh', reduce ? '0vh' : '-4vh']);
   const copyY = useTransform(cover, [0, 0.8], ['0vh', reduce ? '0vh' : '-16vh']);
   const copyOpacity = useTransform(cover, [0.05, 0.6], [1, 0]);
   const shade = useTransform(cover, [0, 1], [0, 0.55]);
-  const release = useTransform(cover, [0, 1], [0, 1]);
 
   return (
     <section className="lx-hero" id="top" data-tone="ink" aria-labelledby="lx-hero-title">
       <m.div className="lx-hero-stage" style={{ scale: stageScale, y: stageY }}>
         <div className="lx-hero-sky" aria-hidden="true" />
-        {field && <Suspense fallback={null}>
-          <ParticleField
-            release={release}
-            still={reduce}
-            className={ready ? 'lx-hero-field is-ready' : 'lx-hero-field'}
-            onReady={() => setReady(true)}
-          />
-        </Suspense>}
+        {gl === 'off' && <Suspense fallback={null}><ParticleFallback className="lx-hero-field is-ready" /></Suspense>}
         <div className="lx-hero-vignette" aria-hidden="true" />
         <div className="lx-hero-grain" aria-hidden="true" />
 
         <m.div className="lx-hero-copy" style={{ y: copyY, opacity: copyOpacity }}>
           {/*
-            The opening choreography: eyebrow, headline word by word, lead, then
-            the two ways in. The buttons are on screen inside the first second,
-            and can be clicked from the first frame; nothing waits on a flourish.
+            The opening choreography: the headline rises word by word, then the
+            eyebrow above it, the lead, and the two ways in. The buttons are on
+            screen inside the first second, and can be clicked from the first
+            frame; nothing waits on a flourish.
           */}
-          <m.div initial={{ opacity: 0, y: 14 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.02, opacity: fade(0.02) }}>
+          <m.div initial={{ opacity: 0, y: 14 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.3, opacity: fade(0.3) }}>
             <Eyebrow>Competition mathematics · AMC to IMO</Eyebrow>
           </m.div>
-          <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" play={cued} delay={0.1} stagger={0.07} />
-          <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.38, opacity: fade(0.38) }}>
+          <SplitText as="h1" id="lx-hero-title" className="lx-hero-title" text={'Stay with\nthe *question*.'} trigger="mount" play={cued} delay={0.04} stagger={0.07} />
+          <m.p className="lx-hero-lead" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.4, opacity: fade(0.4) }}>
             Contest problems chosen to fit your level, each with a hint and a full solution.
           </m.p>
-          <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.48, opacity: fade(0.48) }}>
+          <m.div className="lx-hero-actions" initial={{ opacity: 0, y: 18 }} animate={shown} transition={{ ...SPRING.arrive, delay: 0.5, opacity: fade(0.5) }}>
             <Magnetic>
               <button type="button" className="lx-btn lx-btn-cream" onClick={onRegister}>
                 <span>Find your level</span>
@@ -222,7 +161,7 @@ const IDEA_WORDS = IDEA.flatMap((line, row) => line.words.map((text, position) =
 const Manifesto = forwardRef<HTMLElement>(function Manifesto(_, ref) {
   const reduce = Boolean(useReducedMotion());
   const textRef = useRef<HTMLHeadingElement>(null);
-  const { scrollYProgress } = useScroll({ target: textRef, offset: ['start 0.85', 'end 0.5'] });
+  const scrollYProgress = useStageScroll(textRef, ['start 0.85', 'end 0.5']);
   const total = IDEA_WORDS.length;
 
   return (

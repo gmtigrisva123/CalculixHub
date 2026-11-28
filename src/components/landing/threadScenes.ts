@@ -1,0 +1,411 @@
+/**
+ * The thread's stations: where it is in each chapter, and how it travels
+ * between them.
+ *
+ *   hero     the Lorenz butterfly, flowing; it loosens and slows as the sheet
+ *            covers it, and its particles are drawn into one thread
+ *   idea     that thread, hanging across the screen while the sheet of paper
+ *            slides beneath it (words light as it passes them), until the
+ *            sheet's foot rule arrives and the thread settles on it
+ *   engine   the rule lifts into the engine's belief curve, the real
+ *            posterior of a real placement, scrubbed by the scroll
+ *
+ * Every position is worked out from layout measured when the page changes
+ * (stageLayout.ts) and the scroll of this frame, with the same formulas the
+ * DOM uses for its own transforms, so the light sits exactly on the page.
+ */
+
+import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
+import { docBox, progressAt, type Box } from './stageLayout';
+import { POLY_SAMPLES, clamp01, curveHeights, lerp, smoothstep } from './threadShapes';
+import { SHAPE } from './threadShaders';
+import { CHART, REPLAY_START, RUN, replayAt, weightAt } from './engineReplay';
+import { TILT, TURN } from './ParticleField';
+import type { InkRect, Leg, Slot, StageFrame, ThreadScene } from './threadTypes';
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+const EMPTY: Box = { top: 0, left: 0, width: 0, height: 0 };
+const query = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector);
+
+/** Where a `position: sticky; top: 0` element sits on screen, from its static box and its container's. */
+export function stickyTop(element: Box, container: Box, y: number, top = 0): number {
+  return Math.min(Math.max(element.top - y, top), container.top + container.height - element.height - y);
+}
+
+/** The page's stage radius, read from its token once per measure. */
+export function stageRadius(): number {
+  const root = query('.lx');
+  if (!root) return 14;
+  const probe = Number.parseFloat(getComputedStyle(root).getPropertyValue('--lx-stage-r'));
+  // clamp(10px, 1.1vw, 16px): resolve the vw term ourselves when the token is not a plain length.
+  return Number.isFinite(probe) && probe > 0 ? probe : Math.min(16, Math.max(10, window.innerWidth * 0.011));
+}
+
+const position = new Vector3();
+const quaternion = new Quaternion();
+const scaling = new Vector3();
+const euler = new Euler();
+
+/** Place a shape: its origin at screen point (sx, sy), scaled, then turned. */
+export function place(out: Matrix4, frame: StageFrame, sx: number, sy: number, scale = 1, depth = scale, turn?: [number, number, number], z = 0): Matrix4 {
+  position.set(sx - frame.cw / 2, frame.ch / 2 - sy, z);
+  if (turn) quaternion.setFromEuler(euler.set(turn[0], turn[1], turn[2]));
+  else quaternion.identity();
+  scaling.set(scale, scale, depth);
+  return out.compose(position, quaternion, scaling);
+}
+
+export function resetSlot(slot: Slot): void {
+  slot.shape = SHAPE.none;
+  slot.matrix.identity();
+  for (const p of slot.p) p.set(0, 0, 0, 0);
+  slot.look.set(2, 1, 1, 0);
+  slot.clip.set(0, 0, 0, 0);
+  slot.shade.set(0, 2, 0, 0);
+  for (const o of slot.occ) o.set(0, 0, 0, 0);
+  slot.occR.set(0, 0, 0, 0);
+  slot.data = null;
+  slot.flowing = false;
+  slot.pointer = 0;
+  slot.pointerRadius = 150;
+}
+
+// ---------------------------------------------------------------------------
+// The hero: the butterfly
+// ---------------------------------------------------------------------------
+
+/** The hero stage's transform while the sheet covers it: matches Opening.tsx exactly. */
+export function heroRecede(cover: number, still: boolean) {
+  return { scale: still ? 1 : lerp(1, 0.9, cover), lift: still ? 0 : -0.04 * cover };
+}
+
+export class HeroScene implements ThreadScene {
+  id = 'hero';
+  private opening = EMPTY;
+  private hero = EMPTY;
+  private stage = EMPTY;
+  private sheet = EMPTY;
+  private radius = 14;
+  private found = false;
+  private yaw = { x: 0, v: 0 };
+  private pitch = { x: 0, v: 0 };
+  private power = 0;
+  private introAt = 0;
+  /** Exposed for the paper curl: where the sheet's top edge is. */
+  sheetBox = EMPTY;
+
+  measure() {
+    const opening = query('.lx-opening');
+    const hero = query('.lx-hero');
+    const stage = query('.lx-hero-stage');
+    const sheet = query('.lx-manifesto');
+    this.found = Boolean(opening && hero && stage && sheet);
+    if (!this.found) return;
+    this.opening = docBox(opening);
+    // A sticky element's static place is the top of its container (it is the first child).
+    this.hero = { ...docBox(hero), top: this.opening.top };
+    this.stage = docBox(stage, hero);
+    this.sheet = docBox(sheet);
+    this.sheetBox = this.sheet;
+    this.radius = stageRadius();
+  }
+
+  present() { return this.found; }
+
+  cover(frame: StageFrame) {
+    return progressAt(this.sheet, ['start end', 'start start'], frame.y, frame.vh);
+  }
+
+  /** The stage on screen this frame, after it recedes. */
+  stageRect(frame: StageFrame) {
+    const top = stickyTop(this.hero, this.opening, frame.y) + this.stage.top;
+    const { scale, lift } = heroRecede(this.cover(frame), frame.still);
+    const originX = this.stage.left + this.stage.width / 2;
+    const originY = top + this.stage.height * 0.2;
+    const x = originX + (this.stage.left - originX) * scale;
+    const y = originY + (top - originY) * scale + lift * frame.vh;
+    return { x, y, w: this.stage.width * scale, h: this.stage.height * scale, r: this.radius * scale, scale };
+  }
+
+  ink(frame: StageFrame, out: InkRect[]) {
+    if (!this.found) return;
+    const rect = this.stageRect(frame);
+    // Under the sheet, the stage is paper: only its uncovered part is night.
+    const sheetTop = this.sheet.top - frame.y;
+    const h = Math.min(rect.h, sheetTop - rect.y);
+    if (h > 0) out.push({ x: rect.x, y: rect.y, w: rect.w, h: Math.max(0, h), r: rect.r });
+  }
+
+  slot(frame: StageFrame, out: Slot) {
+    resetSlot(out);
+    if (!this.found) return;
+    const cover = this.cover(frame);
+    const rect = this.stageRect(frame);
+    const wide = this.stage.width >= 960;
+    const aspect = this.stage.width / Math.max(1, this.stage.height);
+    // The framing ParticleField had: right of the words when wide, above them when narrow.
+    let cx = rect.x + rect.w * (wide ? 0.75 : 0.5);
+    let cy = rect.y + rect.h * (wide ? 0.48 : 0.5 - (aspect < 0.8 ? 0.27 : 0.2));
+    if (!wide && frame.vw <= 760 && frame.vh <= 740) cy -= rect.h * 0.16;
+    const share = wide ? 0.77 : 0.78;
+    const ppu = ((Math.min(rect.w, rect.h) / 2) * share) / 2.75 / (wide ? 1 : 1.04);
+    if (!wide) cx = rect.x + rect.w * 0.5;
+
+    // The camera orbits with the pointer: at most ±5° of yaw and ±3° of pitch, on the follow spring.
+    const p = frame.pointer;
+    const inside = p.active && p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h && cover < 0.6;
+    const targetYaw = inside && !frame.still ? ((p.x - rect.x) / rect.w - 0.5) * 2 * (5 * Math.PI / 180) : 0;
+    const targetPitch = inside && !frame.still ? ((p.y - rect.y) / rect.h - 0.5) * 2 * (3 * Math.PI / 180) : 0;
+    follow(this.yaw, targetYaw, frame.dt);
+    follow(this.pitch, targetPitch, frame.dt);
+    this.power += ((inside ? 1 : 0) - this.power) * (1 - Math.exp(-frame.dt * 4));
+
+    if (!this.introAt) this.introAt = frame.now;
+    const intro = frame.still ? 1 : clamp01((frame.now - this.introAt) / 2600);
+    const sway = frame.still ? 0 : 0.28 * Math.sin(frame.time * 0.09);
+
+    out.shape = SHAPE.lorenz;
+    place(out.matrix, frame, cx, cy, ppu, ppu * 1.45, [TILT + this.pitch.x, TURN + sway + this.yaw.x, 0.04]);
+    out.p[0].set(0.0075 * (1 - 0.7 * cover), cover, intro, 0.01);
+    const base = frame.cw < 760 ? 0.03 : 0.024;
+    out.look.set(1.9 * base * ppu, (1 - 0.7 * cover) * (1 - 0.5 * cover), 1, 1);
+    out.clip.set(rect.x, rect.y, rect.w, rect.h);
+    out.shade.set(rect.r, 2, wide ? 0.72 : 0, wide ? 0.7 : 0.9);
+    // The sheet in front: everything below its top edge is covered, except what has lifted onto it.
+    const sheetTop = this.sheet.top - frame.y;
+    if (sheetTop < frame.ch) {
+      out.occ[0].set(this.sheet.left, sheetTop, this.sheet.width, frame.ch * 2);
+      out.occR.x = this.radius;
+    }
+    out.flowing = !frame.still;
+    out.pointer = frame.still ? 0 : this.power;
+    out.pointerRadius = Math.min(rect.w, rect.h) * 0.17;
+  }
+
+  /** True while the intro is still assembling or the pointer springs are moving. */
+  settling(frame: StageFrame) {
+    return (!frame.still && frame.now - this.introAt < 2700) || Math.abs(this.yaw.v) + Math.abs(this.pitch.v) > 1e-4;
+  }
+}
+
+/** One step of the page's `follow` spring (stiffness 170, damping 26, mass 0.5). */
+export function follow(state: { x: number; v: number }, target: number, dt: number) {
+  const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+  const h = dt / steps;
+  for (let i = 0; i < steps; i += 1) {
+    const acceleration = (-170 * (state.x - target) - 26 * state.v) / 0.5;
+    state.v += acceleration * h;
+    state.x += state.v * h;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The idea: one line across the sheet
+// ---------------------------------------------------------------------------
+
+/** Where the thread hangs while the sheet slides beneath it, as a share of the screen's height. */
+export const READING_LINE = 0.8;
+
+export class IdeaScene implements ThreadScene {
+  id = 'idea';
+  private foot = EMPTY;
+  private sub = EMPTY;
+  private cta = EMPTY;
+  private found = false;
+
+  measure() {
+    const foot = query('.lx-idea-foot');
+    this.found = Boolean(foot);
+    if (!foot) return;
+    this.foot = docBox(foot);
+    this.sub = docBox(query('.lx-idea-sub'));
+    this.cta = docBox(query('.lx-idea-cta'));
+  }
+
+  present() { return this.found; }
+
+  /** The rule's place on screen, or the reading line while the rule is still below it. */
+  lineY(frame: StageFrame) {
+    return Math.min(frame.vh * READING_LINE, this.foot.top - frame.y);
+  }
+
+  footTop() { return this.foot.top; }
+
+  slot(frame: StageFrame, out: Slot) {
+    resetSlot(out);
+    if (!this.found) return;
+    const y = this.lineY(frame);
+    out.shape = SHAPE.line;
+    place(out.matrix, frame, this.foot.left + this.foot.width / 2, y);
+    out.p[0].set(this.foot.width, 1.2, 2.4, frame.still ? 0 : 0.0016);
+    out.look.set(2.5, 0.95, 0.13, 0);
+    // The words under the rule sit in front of a thread on its way down to the engine.
+    const occ = [this.sub, this.cta];
+    occ.forEach((box, index) => {
+      if (box.width) out.occ[index].set(box.left - 8, box.top - frame.y - 6, box.width + 16, box.height + 12);
+    });
+    out.occR.set(6, 6, 0, 0);
+    out.shade.y = 10;
+    out.flowing = !frame.still;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The engine: the belief curve
+// ---------------------------------------------------------------------------
+
+export interface ChartFrame {
+  /** Screen position of chart point (vx, vy) in the SVG's viewBox units. */
+  toScreen(vx: number, vy: number): [number, number];
+  /** Pixels per viewBox unit, after the stage's own scale. */
+  unit: number;
+  stage: InkRect & { scale: number };
+  playhead: number;
+  arrival: number;
+}
+
+export class EngineScene implements ThreadScene {
+  id = 'engine';
+  private section = EMPTY;
+  private pin = EMPTY;
+  private stage = EMPTY;
+  private chart = EMPTY;
+  private radius = 14;
+  private found = false;
+  private heights = new Float32Array(POLY_SAMPLES);
+  private data = new Float32Array(POLY_SAMPLES * 4);
+  private weights = new Float64Array(RUN.grid.length);
+
+  measure() {
+    const section = query('.lx-engine');
+    const pin = query('.lx-engine-pin');
+    const stage = query('.lx-engine-stage');
+    const chart = query('[data-engine-chart]');
+    this.found = Boolean(section && pin && stage && chart);
+    if (!this.found) return;
+    this.section = docBox(section);
+    this.pin = { ...docBox(pin), top: this.section.top };
+    this.stage = docBox(stage, pin);
+    this.chart = docBox(chart, pin);
+    this.radius = stageRadius();
+  }
+
+  present() { return this.found; }
+
+  sectionBox() { return this.section; }
+
+  /** Where the chart is this frame: the pin's place on screen, then the stage's arrival scale. */
+  chartFrame(frame: StageFrame): ChartFrame {
+    const pinTop = stickyTop(this.pin, this.section, frame.y);
+    const arrival = progressAt(this.section, ['start end', 'start start'], frame.y, frame.vh);
+    const playhead = progressAt(this.section, ['start start', 'end end'], frame.y, frame.vh);
+    const scale = frame.still ? 1 : lerp(0.9, 1, arrival);
+    const stageTop = pinTop + this.stage.top;
+    const originX = this.stage.left + this.stage.width / 2;
+    const originY = stageTop;
+    const k = Math.min(this.chart.width / CHART.W, this.chart.height / CHART.HEIGHT);
+    const offX = this.chart.left + (this.chart.width - CHART.W * k) / 2;
+    const offY = pinTop + this.chart.top + (this.chart.height - CHART.HEIGHT * k) / 2;
+    const toScreen = (vx: number, vy: number): [number, number] => {
+      const sx = offX + vx * k;
+      const sy = offY + vy * k;
+      return [originX + (sx - originX) * scale, originY + (sy - originY) * scale];
+    };
+    return {
+      toScreen,
+      unit: k * scale,
+      stage: {
+        x: originX + (this.stage.left - originX) * scale,
+        y: stageTop,
+        w: this.stage.width * scale,
+        h: this.stage.height * scale,
+        r: this.radius,
+        scale,
+      },
+      playhead,
+      arrival,
+    };
+  }
+
+  ink(frame: StageFrame, out: InkRect[]) {
+    if (!this.found) return;
+    const { stage } = this.chartFrame(frame);
+    if (stage.y < frame.ch && stage.y + stage.h > 0) out.push(stage);
+  }
+
+  /** The curve's samples for a replay position: the engine's posterior, blended between answers. */
+  curve(playhead: number, still: boolean) {
+    const state = replayAt(playhead, still);
+    for (let i = 0; i < this.weights.length; i += 1) this.weights[i] = weightAt(state, i);
+    curveHeights(RUN.grid, this.weights as unknown as number[], RUN.peak, CHART.THETA_MIN, CHART.THETA_MAX, POLY_SAMPLES, this.heights);
+    for (let i = 0; i < POLY_SAMPLES; i += 1) this.data[i * 4] = this.heights[i];
+    return { state, data: this.data };
+  }
+
+  slot(frame: StageFrame, out: Slot, row: number) {
+    resetSlot(out);
+    if (!this.found) return;
+    const chart = this.chartFrame(frame);
+    const { data } = this.curve(chart.playhead, frame.still);
+    const [cx, cy] = chart.toScreen(CHART.W / 2, CHART.BASE);
+    out.shape = SHAPE.curve;
+    place(out.matrix, frame, cx, cy);
+    const width = (CHART.W - 2 * CHART.PAD) * chart.unit;
+    const height = CHART.CURVE_H * chart.unit;
+    // The thread lifts off the axis into the prior during the replay's opening hold.
+    const lift = frame.still ? 1 : smoothstep(0, REPLAY_START, chart.playhead);
+    out.p[0].set(width, height, lift, 1.6);
+    out.p[1].set(row, 0, 0, 0);
+    out.data = data;
+    out.look.set(2.3, 1.15, 0.12, 0);
+    out.clip.set(chart.stage.x, chart.stage.y, chart.stage.w, chart.stage.h);
+    out.shade.x = chart.stage.r;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The legs between them
+// ---------------------------------------------------------------------------
+
+export function createLegs(hero: HeroScene, idea: IdeaScene, engine: EngineScene): Leg[] {
+  return [
+    {
+      from: 'hero',
+      to: 'idea',
+      // While the sheet covers the hero: its particles are drawn into one thread hanging over the page.
+      window: frame => {
+        if (!hero.present()) return null;
+        const start = hero.sheetBox.top - frame.vh;
+        return [start + frame.vh * 0.04, start + frame.vh * 0.56];
+      },
+      stagger: 0.6,
+      orderByU: 0.3,
+      swirl: 70,
+      lift: 140,
+    },
+    {
+      from: 'idea',
+      to: 'engine',
+      // While the engine's stage arrives: the rule peels off the sheet and drops onto the stage's axis.
+      window: frame => {
+        if (!engine.present()) return null;
+        const top = engine.sectionBox().top;
+        return [top - frame.vh * 0.92, top - frame.vh * 0.04];
+      },
+      stagger: 0.45,
+      orderByU: 0.6,
+      swirl: 40,
+      lift: 90,
+    },
+  ];
+}
+
+export function createScenes() {
+  const hero = new HeroScene();
+  const idea = new IdeaScene();
+  const engine = new EngineScene();
+  return { hero, idea, engine, list: [hero, idea, engine] as ThreadScene[], legs: createLegs(hero, idea, engine) };
+}
